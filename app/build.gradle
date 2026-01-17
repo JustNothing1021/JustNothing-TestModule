@@ -1,0 +1,166 @@
+
+
+plugins {
+    id 'com.android.application'
+}
+
+
+
+android {
+    namespace 'com.justnothing.testmodule'
+    compileSdkVersion 36
+
+    defaultConfig {
+        applicationId "com.justnothing.testmodule"
+        minSdk 26
+        targetSdk 36
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        viewBinding true
+    }
+
+    configurations {
+        all*.exclude group: 'androidx.lifecycle', module: 'lifecycle-viewmodel-ktx'
+    }
+}
+
+dependencies {
+    implementation libs.androidx.appcompat
+    implementation libs.material.v1110
+    implementation libs.androidx.constraintlayout.v221
+    implementation libs.androidx.navigation.fragment.v277
+    implementation libs.androidx.navigation.ui.v277
+    implementation libs.firebase.crashlytics.buildtools
+    implementation libs.bsh
+    implementation 'cn.hutool:hutool-all:5.8.20'
+
+    compileOnly libs.xposed.api
+
+    testImplementation libs.junit
+    androidTestImplementation libs.androidx.junit.v130
+    androidTestImplementation libs.androidx.espresso.core.v370
+}
+
+
+configurations.configureEach {
+    resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+        if (details.requested.group == 'androidx.lifecycle') {
+            details.useVersion "2.7.0"
+        }
+    }
+}
+
+def clientSourceDir = layout.buildDirectory.dir('libs/source')
+def clientJarDir = layout.buildDirectory.dir('libs/client')
+
+
+tasks.register('createClientSourceJar', Jar) {
+    group = 'build'
+    description = '创建客户端源代码的Jar (还不能直接用, app_process认不出来)'
+    archiveBaseName = 'methods-client'
+    destinationDirectory = clientSourceDir
+
+    def javaClassesDir = project.objects.directoryProperty()
+    javaClassesDir.set(tasks.named('compileDebugJavaWithJavac').flatMap { it.destinationDirectory })
+
+    from(javaClassesDir) {
+        include 'com/justnothing/methodsclient/**'
+        include 'com/justnothing/testmodule/**'
+        exclude 'com/justnothing/testmodule/ui'     // 因为没必要其实
+        exclude 'com/justnothing/testmodule/databinding'
+        exclude '**/*.java'
+    }
+
+    manifest {
+        attributes(
+                'Main-Class': 'com.justnothing.methodsclient.StreamClient',
+                'Created-By': "Gradle ${gradle.gradleVersion}"
+        )
+    }
+
+    dependsOn tasks.named('compileDebugJavaWithJavac')
+}
+
+tasks.register('dexifyClientSourceJar') {
+    group = 'build'
+    description = '将客户端源代码Jar转换为dex'
+    dependsOn tasks.named('createClientSourceJar')
+    doLast {
+        def inputJarFile = tasks.named('createClientSourceJar').get().archiveFile.get().asFile
+        def outputDir = new File(clientSourceDir.get().toString())
+        outputDir.mkdirs()
+        for (File oldFile : outputDir.listFiles({file -> file.name.endsWith(".dex")} as FileFilter))
+            oldFile.delete()
+        logger.lifecycle("开始将 ${inputJarFile.absolutePath} 转换为dex格式...")
+        logger.lifecycle("输出目录: ${outputDir.absolutePath}")
+        def androidSdkDir = android.sdkDirectory
+        def xposedLibPath = "${project.projectDir}\\libs\\XposedBridgeApi.jar"
+        def androidLibPath = "${androidSdkDir}\\platforms\\android-27\\android.jar"
+        if (androidSdkDir != null) {
+            def d8Tool = new File(androidSdkDir, "build-tools/${android.buildToolsVersion}/d8.bat").absolutePath
+            providers.exec {
+                workingDir project.projectDir
+                commandLine d8Tool,
+                        '--release',
+                        '--lib', androidLibPath,
+                        '--lib', xposedLibPath,
+                        inputJarFile.absolutePath,
+                        '--output', outputDir.absolutePath
+            }.standardOutput.asText.get()
+        } else {
+            throw new GradleException("无法找到Android SDK路径")
+        }
+
+        def dexFiles = outputDir.listFiles({ file -> file.name.endsWith('.dex') } as FileFilter)
+        if (dexFiles && dexFiles.length > 0) {
+            logger.lifecycle("转换成功, 文件列表: ")
+            dexFiles.each { file ->
+                logger.lifecycle("${file.absolutePath} (大小${file.length()} bytes)")
+            }
+        } else {
+            throw new GradleException("未生成预期的dex文件")
+        }
+    }
+}
+
+tasks.register('createClientJar', Jar) {
+    group = 'build'
+    description = '创建methods的Java客户端Jar文件'
+    archiveBaseName = 'methods-client'
+    destinationDirectory = clientJarDir
+
+    dependsOn tasks.named('dexifyClientSourceJar')
+
+    from (clientSourceDir) {
+        include '*.dex'
+    }
+
+    manifest {
+        attributes(
+                'Dex-Main-Class': 'com.justnothing.methodsclient.StreamClient',
+                'Created-By': "Gradle ${gradle.gradleVersion}",
+                'Build-Time': new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+        )
+    }
+}
+
