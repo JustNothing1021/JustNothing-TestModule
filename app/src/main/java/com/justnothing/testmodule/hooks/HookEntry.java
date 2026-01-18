@@ -64,6 +64,7 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
     public static final String TAG = "HookEntry";
     private final PerformanceMonitor performanceMonitor = new PerformanceMonitor();
     private static final HookEntryLogger logger = new HookEntryLogger();
+    private static final long FILE_OPERATION_DELAY = 500;
     public static class HookEntryLogger extends Logger {
 
         @Override
@@ -263,6 +264,20 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
         return true;
     }
 
+    private static void scheduleFileOperations() {
+        new Thread(() -> {
+            try {
+                Thread.sleep(FILE_OPERATION_DELAY);
+                logger.info("延迟执行文件操作");
+                executeFileOperations();
+            } catch (InterruptedException e) {
+                logger.error("延迟执行文件操作被中断", e);
+            } catch (Exception e) {
+                logger.error("延迟执行文件操作失败", e);
+            }
+        }, "FileOperationThread").start();
+    }
+
 
     // 研究半天得到的教训: 不要在initZygote的时候创建线程, 会因为不完整的系统加载爆掉
     // F DEBUG   : signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x8
@@ -289,12 +304,10 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
 
             for (ZygoteHook hook : zygoteHooks) {
                 String hookName = hook.getHookName();
-
                 if (!hook.isHookEnabled()) {
                     logger.debug("Hook " + hookName + " 已被禁用，跳过安装");
                     continue;
                 }
-
                 boolean succeed = true;
                 double hookBegin = System.currentTimeMillis() / 1000.0f;
 
@@ -340,7 +353,6 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
 
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam param) {
-        // logger.useXposedLog(true);
         logger.info("通过handleLoadPackage处理" + param.packageName);
         BootMonitor.markPackageLoadStarted(param.packageName, param.processName);
         boolean packageLoadSuccess = true;
@@ -388,9 +400,7 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
                 packageLoadSuccess = false;
             }
             
-            if (!BootMonitor.isZygotePhase()) {
-                executeFileOperations();
-            }
+            scheduleFileOperations();
 
         } catch (Throwable e) {
             logger.error("加载hook失败，详细信息:\n", e);

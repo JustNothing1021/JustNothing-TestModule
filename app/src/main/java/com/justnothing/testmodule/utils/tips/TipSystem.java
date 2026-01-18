@@ -45,9 +45,25 @@ public class TipSystem {
 
     private void initializeSpecialTips() {
         List<TipCallback> specialTips = new ArrayList<>();
-        
+
+        Supplier<String> t = () -> {
+            List<String> stringList = List.of(
+                    "其实点击按钮可以打开功能（好吧是人都知道）",
+                    "事实证明, 不写bat可以让人心情舒畅",
+                    "祝你破解顺利！",
+                    "其实进bootloader不一定是变砖了",
+                    "你曾经历过900E的恐惧吗？",
+                    "我完全听不懂，所以，这应该是艺术",
+                    "AI太好用了你知道吗",
+                    "有的时候不一定要找别人问问题，可以上网搜索",
+                    "手表无法开机时可以用超级恢复救砖",
+                    "怎么不算是一种公益呢？"
+            );
+            // Random.nextInt(int, int) -> int 在设备上找不到。。。
+            return stringList.get(Math.abs(random.nextInt()) % stringList.size());
+        };
         specialTips.add(new SpecialTipCallback(
-            "一个啥也不是的Xposed模块",
+            t.get(),
             0
         ));
         
@@ -59,24 +75,13 @@ public class TipSystem {
             @Override
             public boolean shouldShow() {
                 Calendar calendar = Calendar.getInstance();
-                int month = calendar.get(Calendar.MONTH) + 1;
+                int month = calendar.get(Calendar.MONTH) + 1;   // 为什么要加1啊，太诡异了
                 int day = calendar.get(Calendar.DAY_OF_MONTH);
                 return month == 1 && day == 1;
             }
         });
         
-        specialTips.add(new SpecialTipCallback(
-            "今天是元宵节！",
-            80
-        ) {
-            @Override
-            public boolean shouldShow() {
-                Calendar calendar = Calendar.getInstance();
-                int month = calendar.get(Calendar.MONTH) + 1;
-                int day = calendar.get(Calendar.DAY_OF_MONTH);
-                return month == 1 && day == 15;
-            }
-        });
+
         
         specialTips.add(new SpecialTipCallback(
             "今天是植树节，但就算不去植树也可以保护环境，比如随手关灯之类的",
@@ -276,6 +281,24 @@ public class TipSystem {
                 }
             }
         });
+
+
+        specialTips.add(new SpecialTipCallback(
+                "今天是元宵节！",
+                90
+        ) {
+            @Override
+            public boolean shouldShow() {
+                try {
+                    Date date = new Date();
+                    ChineseDate chineseDate = new ChineseDate(date);
+                    return chineseDate.getMonth() == 1 && chineseDate.getDay() == 15;
+                } catch (Exception e) {
+                    logger.error("农历计算出错，信息: " + e.getMessage());
+                    return false;
+                }
+            }
+        });
         
         specialTips.add(new SpecialTipCallback(
             "今天是中秋节，月圆人团圆！",
@@ -374,7 +397,7 @@ public class TipSystem {
             @Override
             public boolean shouldShow() {
                 Calendar calendar = Calendar.getInstance();
-                int month = calendar.get(Calendar.MONTH);
+                int month = calendar.get(Calendar.MONTH) + 1;
                 int day = calendar.get(Calendar.DAY_OF_MONTH);
                 return month == 1 && day == 15;
             }
@@ -387,7 +410,7 @@ public class TipSystem {
             @Override
             public boolean shouldShow() {
                 Calendar calendar = Calendar.getInstance();
-                int month = calendar.get(Calendar.MONTH);
+                int month = calendar.get(Calendar.MONTH) + 1;
                 int day = calendar.get(Calendar.DAY_OF_MONTH);
                 return month == 1 && day == 16;
             }
@@ -400,7 +423,7 @@ public class TipSystem {
             @Override
             public boolean shouldShow() {
                 Calendar calendar = Calendar.getInstance();
-                int month = calendar.get(Calendar.MONTH);
+                int month = calendar.get(Calendar.MONTH) + 1;
                 int day = calendar.get(Calendar.DAY_OF_MONTH);
                 return month == 8 && day == 18;
             }
@@ -413,7 +436,7 @@ public class TipSystem {
             @Override
             public boolean shouldShow() {
                 Calendar calendar = Calendar.getInstance();
-                int month = calendar.get(Calendar.MONTH);
+                int month = calendar.get(Calendar.MONTH) + 1;
                 int day = calendar.get(Calendar.DAY_OF_MONTH);
                 return month == 9 && day == 11;
             }
@@ -426,7 +449,7 @@ public class TipSystem {
             @Override
             public boolean shouldShow() {
                 Calendar calendar = Calendar.getInstance();
-                int month = calendar.get(Calendar.MONTH);
+                int month = calendar.get(Calendar.MONTH) + 1;
                 int day = calendar.get(Calendar.DAY_OF_MONTH);
                 return month == 10 && day == 21;
             }
@@ -856,7 +879,7 @@ public class TipSystem {
             @Override
             public String getContent() {
                 Calendar calendar = Calendar.getInstance();
-                long begin = 2023L * 12L + 10L;
+                long begin = 2023L * 12L + 10L - 1L;
                 long now = calendar.get(Calendar.YEAR) * 12L - calendar.get(Calendar.MONTH);
                 long diff = now - begin;
                 if (diff <= 0) {

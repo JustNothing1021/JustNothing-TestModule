@@ -12,20 +12,21 @@ import java.util.Map;
 
 public class PerformanceMonitor extends Logger {
     private static final String TAG = "PerformanceMonitor";
-    
     private boolean enabled;
     private long warningThreshold;
     private long criticalThreshold;
     private boolean thresholdAlertsEnabled;
     private long lastUpdateTime;
     private static final long UPDATE_INTERVAL = 1000;
-    private boolean pendingUpdate;
-
     private final Map<String, Long> startTime = new HashMap<>();
     private final Map<String, HookUpdate> pendingUpdates = new HashMap<>();
     private static final int MAX_PENDING_UPDATES = 50;
     private int pendingUpdateCount = 0;
+    private static final long WRITE_DELAY = 300;
 
+
+    private boolean configLoaded = false;
+    private boolean loadConfigPending = false;
 
     public PerformanceMonitor() {
         enabled = true;
@@ -33,10 +34,30 @@ public class PerformanceMonitor extends Logger {
         criticalThreshold = 100;
         thresholdAlertsEnabled = true;
         lastUpdateTime = System.currentTimeMillis();
-        pendingUpdate = false;
-        loadConfig();
+        scheduleConfigLoad();
     }
     
+    private void scheduleConfigLoad() {
+        if (loadConfigPending) {
+            return;
+        }
+        
+        loadConfigPending = true;
+        new Thread(() -> {
+            try {
+                Thread.sleep(WRITE_DELAY);
+                loadConfig();
+                configLoaded = true;
+            } catch (InterruptedException e) {
+                error("延迟加载配置被中断", e);
+            } catch (Exception e) {
+                error("延迟加载配置失败", e);
+            } finally {
+                loadConfigPending = false;
+            }
+        }, "ConfigLoadThread").start();
+    }
+
     @Override
     public String getTag() {
         return TAG;
@@ -74,11 +95,24 @@ public class PerformanceMonitor extends Logger {
             
             long currentTime = System.currentTimeMillis();
             if (pendingUpdateCount >= MAX_PENDING_UPDATES || (currentTime - lastUpdateTime) >= UPDATE_INTERVAL) {
-                flushPendingUpdates();
+                scheduleDelayedWrite();
             }
         } catch (Exception e) {
             error("更新性能数据失败", e);
         }
+    }
+
+    private void scheduleDelayedWrite() {
+        new Thread(() -> {
+            try {
+                Thread.sleep(WRITE_DELAY);
+                flushPendingUpdates();
+            } catch (InterruptedException e) {
+                error("延迟写入性能数据被中断", e);
+            } catch (Exception e) {
+                error("延迟写入性能数据失败", e);
+            }
+        }, "PerformanceDataWriteThread").start();
     }
     
     private void flushPendingUpdates() {
@@ -238,14 +272,19 @@ public class PerformanceMonitor extends Logger {
     }
 
     public void clearStats() {
-        try {
-            JSONObject data = new JSONObject();
-            data.put("enabled", enabled);
-            data.put("hooks", new JSONArray());
-            DataBridge.writePerformanceData(data);
-        } catch (JSONException e) {
-            error("清除统计数据失败", e);
-        }
+        new Thread(() -> {
+            try {
+                Thread.sleep(WRITE_DELAY);
+                JSONObject data = new JSONObject();
+                data.put("enabled", enabled);
+                data.put("hooks", new JSONArray());
+                DataBridge.writePerformanceData(data);
+            } catch (InterruptedException e) {
+                error("清除统计数据被中断", e);
+            } catch (JSONException e) {
+                error("清除统计数据失败", e);
+            }
+        }, "ClearStatsThread").start();
     }
 
     public boolean isEnabled() {
@@ -259,16 +298,7 @@ public class PerformanceMonitor extends Logger {
 
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
-        try {
-            JSONObject data = DataBridge.readPerformanceData();
-            data.put("enabled", enabled);
-            data.put("warningThreshold", warningThreshold);
-            data.put("criticalThreshold", criticalThreshold);
-            data.put("thresholdAlertsEnabled", thresholdAlertsEnabled);
-            DataBridge.writePerformanceData(data);
-        } catch (JSONException e) {
-            error("设置启用状态失败", e);
-        }
+        scheduleConfigSave();
     }
     
     public long getWarningThreshold() {
@@ -277,7 +307,7 @@ public class PerformanceMonitor extends Logger {
     
     public void setWarningThreshold(long warningThreshold) {
         this.warningThreshold = warningThreshold;
-        saveConfig();
+        scheduleConfigSave();
     }
     
     public long getCriticalThreshold() {
@@ -286,7 +316,7 @@ public class PerformanceMonitor extends Logger {
     
     public void setCriticalThreshold(long criticalThreshold) {
         this.criticalThreshold = criticalThreshold;
-        saveConfig();
+        scheduleConfigSave();
     }
     
     public boolean isThresholdAlertsEnabled() {
@@ -295,9 +325,35 @@ public class PerformanceMonitor extends Logger {
     
     public void setThresholdAlertsEnabled(boolean enabled) {
         this.thresholdAlertsEnabled = enabled;
-        saveConfig();
+        scheduleConfigSave();
     }
     
+
+    private void loadConfig() {
+        try {
+            JSONObject data = DataBridge.readPerformanceData();
+            enabled = data.optBoolean("enabled", true);
+            warningThreshold = data.optLong("warningThreshold", 50);
+            criticalThreshold = data.optLong("criticalThreshold", 100);
+            thresholdAlertsEnabled = data.optBoolean("thresholdAlertsEnabled", true);
+        } catch (Exception e) {
+            error("加载配置失败", e);
+        }
+    }
+
+    private void scheduleConfigSave() {
+        new Thread(() -> {
+            try {
+                Thread.sleep(WRITE_DELAY);
+                saveConfig();
+            } catch (InterruptedException e) {
+                error("延迟保存配置被中断", e);
+            } catch (Exception e) {
+                error("延迟保存配置失败", e);
+            }
+        }, "ConfigSaveThread").start();
+    }
+
     private void saveConfig() {
         try {
             JSONObject data = DataBridge.readPerformanceData();
@@ -308,18 +364,6 @@ public class PerformanceMonitor extends Logger {
             DataBridge.writePerformanceData(data);
         } catch (JSONException e) {
             error("保存配置失败", e);
-        }
-    }
-    
-    private void loadConfig() {
-        try {
-            JSONObject data = DataBridge.readPerformanceData();
-            enabled = data.optBoolean("enabled", true);
-            warningThreshold = data.optLong("warningThreshold", 50);
-            criticalThreshold = data.optLong("criticalThreshold", 100);
-            thresholdAlertsEnabled = data.optBoolean("thresholdAlertsEnabled", true);
-        } catch (Exception e) {
-            error("加载配置失败", e);
         }
     }
 
