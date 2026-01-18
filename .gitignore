@@ -21,4 +21,7 @@ gradle/wrapper/dists/
 # 我解出来的源代码，可能传不上去（因为太多了）
 /system_source
 
+# 签名文件，防止爆破掉
+testmodule-keystore.jks
+
 

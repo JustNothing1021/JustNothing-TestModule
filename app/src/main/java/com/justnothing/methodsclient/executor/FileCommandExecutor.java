@@ -11,6 +11,7 @@ import com.justnothing.methodsclient.StreamClient;
 import com.justnothing.methodsclient.monitor.PerformanceMonitor;
 import com.justnothing.testmodule.constants.AppEnvironment;
 import com.justnothing.testmodule.constants.FileDirectory;
+import com.justnothing.testmodule.hooks.HookEntry;
 import com.justnothing.testmodule.utils.functions.CmdUtils;
 
 import java.io.BufferedReader;
@@ -375,7 +376,7 @@ public class FileCommandExecutor {
         if (AppEnvironment.isHookEnv()) {
             try {
                 logger.info("在Hook环境中直接调用HookEntry.executeFileOperations()");
-                com.justnothing.testmodule.hooks.HookEntry.executeFileOperations();
+                HookEntry.executeFileOperations();
                 logger.info("Hook数据写入完成");
                 return true;
             } catch (Exception e) {
