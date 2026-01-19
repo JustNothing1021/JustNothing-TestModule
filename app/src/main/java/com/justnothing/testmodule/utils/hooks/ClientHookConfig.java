@@ -66,6 +66,8 @@ public class ClientHookConfig {
         logger.info("将" + name + "的状态设置为" + enabled);
         states.put(name, enabled);
         DataBridge.writeClientHookConfig(new JSONObject(states));
+        
+        DataBridge.forceRefreshServerHookStatus();
     }
 
     public static Map<String, Boolean> getAllHookStates() {

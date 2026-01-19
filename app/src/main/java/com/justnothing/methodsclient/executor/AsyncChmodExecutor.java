@@ -1,8 +1,10 @@
 package com.justnothing.methodsclient.executor;
 
 import com.justnothing.testmodule.utils.data.BootMonitor;
-import com.justnothing.testmodule.utils.functions.Logger;
 import com.justnothing.testmodule.utils.functions.CmdUtils;
+import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.io.RootProcessPool;
+import com.justnothing.testmodule.utils.io.IOManager;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -175,8 +177,8 @@ public class AsyncChmodExecutor extends Logger {
 
     private static boolean executeChmodSync(String targetPath, String permissions, boolean recursive) {
         long timeoutMs = SYNC_TIMEOUT_MS;
-        int maxRetries =  3;
-        int retryDelayMs = 1000;
+        int maxRetries = 2;
+        int retryDelayMs = 500;
         
         String chmodCmd;
         if (recursive) {
@@ -189,15 +191,15 @@ public class AsyncChmodExecutor extends Logger {
         
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-                CmdUtils.CommandOutput result = CmdUtils.runRootCommand(chmodCmd, timeoutMs);
+                IOManager.ProcessResult result = RootProcessPool.executeCommand(chmodCmd, timeoutMs);
                 
-                if (result.succeed()) {
+                if (result.isSuccess()) {
                     logInfo("chmod执行成功, 命令内容: " + chmodCmd + ", 尝试: " + attempt);
                     return true;
                 } else {
-                    int exitCode = result.stat();
-                    String stdout = result.stdout();
-                    String stderr = result.stderr();
+                    int exitCode = result.exitCode;
+                    String stdout = result.stdout;
+                    String stderr = result.stderr;
                     
                     if (exitCode == 10 && attempt < maxRetries) {
                         logWarn("chmod尝试 " + attempt + " 失败 (权限问题), 退出码: " + exitCode + 

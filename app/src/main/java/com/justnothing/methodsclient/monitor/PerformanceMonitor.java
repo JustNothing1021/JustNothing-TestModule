@@ -4,6 +4,7 @@ import static com.justnothing.testmodule.constants.CommandClient.PERFORMANCE_DAT
 
 import com.justnothing.methodsclient.StreamClient;
 import com.justnothing.testmodule.utils.functions.CmdUtils;
+import com.justnothing.testmodule.utils.io.IOManager;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -60,69 +61,72 @@ public class PerformanceMonitor {
             return;
         }
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String[] parts = line.split("=");
-                if (parts.length == 2) {
-                    String key = parts[0].trim();
-                    long value = Long.parseLong(parts[1].trim());
+        try {
+            String content = IOManager.readFile(file.getAbsolutePath());
+            if (content != null) {
+                String[] lines = content.split("\n");
+                for (String line : lines) {
+                    String[] parts = line.split("=");
+                    if (parts.length == 2) {
+                        String key = parts[0].trim();
+                        long value = Long.parseLong(parts[1].trim());
 
-                    switch (key) {
-                        case "totalCommands":
-                            totalCommands.set(value);
-                            break;
-                        case "commandsCompleted":
-                            commandsCompleted.set(value);
-                            break;
-                        case "commandsFailed":
-                            commandsFailed.set(value);
-                            break;
-                        case "socketCommands":
-                            socketCommands.set(value);
-                            break;
-                        case "socketCommandsCompleted":
-                            socketCommandsCompleted.set(value);
-                            break;
-                        case "socketCommandsFailed":
-                            socketCommandsFailed.set(value);
-                            break;
-                        case "totalSocketTime":
-                            totalSocketTime.set(value);
-                            break;
-                        case "fastestSocketTime":
-                            fastestSocketTime.set(value);
-                            break;
-                        case "slowestSocketTime":
-                            slowestSocketTime.set(value);
-                            break;
-                        case "totalBytesRead":
-                            totalBytesRead.set(value);
-                            break;
-                        case "totalCharsRead":
-                            totalCharsRead.set(value);
-                            break;
-                        case "totalConnections":
-                            totalConnections.set(value);
-                            break;
-                        case "fileCommands":
-                            fileCommands.set(value);
-                            break;
-                        case "fileCommandsCompleted":
-                            fileCommandsCompleted.set(value);
-                            break;
-                        case "fileCommandsFailed":
-                            fileCommandsFailed.set(value);
-                            break;
-                        case "totalFileTime":
-                            totalFileTime.set(value);
-                            break;
-                        case "fastestFileTime":
-                            fastestFileTime.set(value);
-                            break;
-                        case "slowestFileTime":
-                            slowestFileTime.set(value);
-                            break;
+                        switch (key) {
+                            case "totalCommands":
+                                totalCommands.set(value);
+                                break;
+                            case "commandsCompleted":
+                                commandsCompleted.set(value);
+                                break;
+                            case "commandsFailed":
+                                commandsFailed.set(value);
+                                break;
+                            case "socketCommands":
+                                socketCommands.set(value);
+                                break;
+                            case "socketCommandsCompleted":
+                                socketCommandsCompleted.set(value);
+                                break;
+                            case "socketCommandsFailed":
+                                socketCommandsFailed.set(value);
+                                break;
+                            case "totalSocketTime":
+                                totalSocketTime.set(value);
+                                break;
+                            case "fastestSocketTime":
+                                fastestSocketTime.set(value);
+                                break;
+                            case "slowestSocketTime":
+                                slowestSocketTime.set(value);
+                                break;
+                            case "totalBytesRead":
+                                totalBytesRead.set(value);
+                                break;
+                            case "totalCharsRead":
+                                totalCharsRead.set(value);
+                                break;
+                            case "totalConnections":
+                                totalConnections.set(value);
+                                break;
+                            case "fileCommands":
+                                fileCommands.set(value);
+                                break;
+                            case "fileCommandsCompleted":
+                                fileCommandsCompleted.set(value);
+                                break;
+                            case "fileCommandsFailed":
+                                fileCommandsFailed.set(value);
+                                break;
+                            case "totalFileTime":
+                                totalFileTime.set(value);
+                                break;
+                            case "fastestFileTime":
+                                fastestFileTime.set(value);
+                                break;
+                            case "slowestFileTime":
+                                slowestFileTime.set(value);
+                                break;
+                        }
                     }
                 }
             }
@@ -148,42 +152,28 @@ public class PerformanceMonitor {
             }
         }
 
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(PERFORMANCE_DATA_FILE))) {
-            writer.write("totalCommands=" + totalCommands.get());
-            writer.newLine();
-            writer.write("commandsCompleted=" + commandsCompleted.get());
-            writer.newLine();
-            writer.write("commandsFailed=" + commandsFailed.get());
-            writer.newLine();
-            writer.write("socketCommands=" + socketCommands.get());
-            writer.newLine();
-            writer.write("socketCommandsCompleted=" + socketCommandsCompleted.get());
-            writer.newLine();
-            writer.write("socketCommandsFailed=" + socketCommandsFailed.get());
-            writer.newLine();
-            writer.write("totalSocketTime=" + totalSocketTime.get());
-            writer.newLine();
-            writer.write("fastestSocketTime=" + fastestSocketTime.get());
-            writer.newLine();
-            writer.write("slowestSocketTime=" + slowestSocketTime.get());
-            writer.newLine();
-            writer.write("totalBytesRead=" + totalBytesRead.get());
-            writer.newLine();
-            writer.write("totalCharsRead=" + totalCharsRead.get());
-            writer.newLine();
-            writer.write("totalConnections=" + totalConnections.get());
-            writer.newLine();
-            writer.write("fileCommands=" + fileCommands.get());
-            writer.newLine();
-            writer.write("fileCommandsCompleted=" + fileCommandsCompleted.get());
-            writer.newLine();
-            writer.write("fileCommandsFailed=" + fileCommandsFailed.get());
-            writer.newLine();
-            writer.write("totalFileTime=" + totalFileTime.get());
-            writer.newLine();
-            writer.write("fastestFileTime=" + fastestFileTime.get());
-            writer.newLine();
-            writer.write("slowestFileTime=" + slowestFileTime.get());
+        StringBuilder sb = new StringBuilder();
+        sb.append("totalCommands=").append(totalCommands.get()).append("\n");
+        sb.append("commandsCompleted=").append(commandsCompleted.get()).append("\n");
+        sb.append("commandsFailed=").append(commandsFailed.get()).append("\n");
+        sb.append("socketCommands=").append(socketCommands.get()).append("\n");
+        sb.append("socketCommandsCompleted=").append(socketCommandsCompleted.get()).append("\n");
+        sb.append("socketCommandsFailed=").append(socketCommandsFailed.get()).append("\n");
+        sb.append("totalSocketTime=").append(totalSocketTime.get()).append("\n");
+        sb.append("fastestSocketTime=").append(fastestSocketTime.get()).append("\n");
+        sb.append("slowestSocketTime=").append(slowestSocketTime.get()).append("\n");
+        sb.append("totalBytesRead=").append(totalBytesRead.get()).append("\n");
+        sb.append("totalCharsRead=").append(totalCharsRead.get()).append("\n");
+        sb.append("totalConnections=").append(totalConnections.get()).append("\n");
+        sb.append("fileCommands=").append(fileCommands.get()).append("\n");
+        sb.append("fileCommandsCompleted=").append(fileCommandsCompleted.get()).append("\n");
+        sb.append("fileCommandsFailed=").append(fileCommandsFailed.get()).append("\n");
+        sb.append("totalFileTime=").append(totalFileTime.get()).append("\n");
+        sb.append("fastestFileTime=").append(fastestFileTime.get()).append("\n");
+        sb.append("slowestFileTime=").append(slowestFileTime.get());
+
+        try {
+            IOManager.writeFile(PERFORMANCE_DATA_FILE, sb.toString());
         } catch (IOException e) {
             logger.warn("保存性能统计数据失败: " + e.getMessage());
         }

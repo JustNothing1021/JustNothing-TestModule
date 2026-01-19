@@ -13,6 +13,7 @@ import com.justnothing.testmodule.constants.AppEnvironment;
 import com.justnothing.testmodule.constants.FileDirectory;
 import com.justnothing.testmodule.hooks.HookEntry;
 import com.justnothing.testmodule.utils.functions.CmdUtils;
+import com.justnothing.testmodule.utils.io.IOManager;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -100,11 +101,7 @@ public class FileCommandExecutor {
                 return new ExecutionResult(false, "", error.toString());
             }
 
-            try (FileOutputStream fos = new FileOutputStream(input);
-                 OutputStreamWriter writer = new OutputStreamWriter(fos, StandardCharsets.UTF_8)) {
-                writer.write(command);
-                writer.flush();
-            }
+            IOManager.writeFile(inputFile, command);
 
             if (!input.exists() || input.length() == 0) {
                 error.append("无法创建输入文件");
@@ -149,24 +146,17 @@ public class FileCommandExecutor {
                 }
 
                 if (fileFound) {
-                    FileInputStream fis = new FileInputStream(outputFile);
-                    InputStreamReader reader = new InputStreamReader(fis, StandardCharsets.UTF_8);
-                    char[] buffer = new char[BUFFER_SIZE];
-                    int chars;
-                    long totalChars = 0;
-
-                    while ((chars = reader.read(buffer)) != -1) {
-                        String chunk = new String(buffer, 0, chars);
-                        output.append(chunk);
-                        System.out.print(chunk);
-                        totalChars += chars;
+                    String fileContent = IOManager.readFile(outputFile);
+                    if (fileContent != null) {
+                        output.append(fileContent);
+                        System.out.print(fileContent);
+                        long totalChars = fileContent.length();
+                        success = true;
+                        logger.info("文件模式执行成功，输出字符数: " + totalChars);
+                    } else {
+                        error.append("读取输出文件失败");
+                        logger.error("读取输出文件失败");
                     }
-
-                    reader.close();
-                    fis.close();
-
-                    success = true;
-                    logger.info("文件模式执行成功，输出字符数: " + totalChars);
                 } else {
                     error.append("文件模式执行超时");
                     logger.error("文件模式执行超时");
@@ -252,11 +242,7 @@ public class FileCommandExecutor {
                 return false;
             }
 
-            try (FileOutputStream fos = new FileOutputStream(input);
-                 OutputStreamWriter writer = new OutputStreamWriter(fos, StandardCharsets.UTF_8)) {
-                writer.write(command);
-                writer.flush();
-            }
+            IOManager.writeFile(inputFile, command);
 
             if (!input.exists() || input.length() == 0) {
                 System.err.println("无法创建输入文件");
@@ -296,22 +282,16 @@ public class FileCommandExecutor {
                 }
 
                 if (fileFound) {
-                    FileInputStream fis = new FileInputStream(outputFile);
-                    InputStreamReader reader = new InputStreamReader(fis, StandardCharsets.UTF_8);
-                    char[] buffer = new char[BUFFER_SIZE];
-                    int chars;
-                    long totalChars = 0;
-
-                    while ((chars = reader.read(buffer)) != -1) {
-                        System.out.print(new String(buffer, 0, chars));
-                        totalChars += chars;
+                    String fileContent = IOManager.readFile(outputFile);
+                    if (fileContent != null) {
+                        System.out.print(fileContent);
+                        long totalChars = fileContent.length();
+                        success = true;
+                        logger.info("文件模式执行成功，输出字符数: " + totalChars);
+                    } else {
+                        System.err.println("读取输出文件失败");
+                        logger.error("读取输出文件失败");
                     }
-
-                    reader.close();
-                    fis.close();
-
-                    success = true;
-                    logger.info("文件模式执行成功，输出字符数: " + totalChars);
                 } else {
                     System.err.println("文件模式执行超时");
                     logger.error("文件模式执行超时");
@@ -515,19 +495,11 @@ public class FileCommandExecutor {
 
 
     public static String readOutputFile(String filePath) {
-        StringBuilder content = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(new FileInputStream(filePath), StandardCharsets.UTF_8))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if (content.length() > 0) {
-                    content.append("\n");
-                }
-                content.append(line);
-            }
+        try {
+            return IOManager.readFile(filePath);
         } catch (Exception e) {
             logger.warn("读取输出文件失败: " + e.getMessage());
+            return "";
         }
-        return content.toString();
     }
 }

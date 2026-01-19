@@ -1,6 +1,8 @@
 package com.justnothing.testmodule.utils.data;
 
 import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
+import com.justnothing.testmodule.utils.io.IOManager;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -18,7 +20,6 @@ public class PerformanceMonitor extends Logger {
     private boolean thresholdAlertsEnabled;
     private long lastUpdateTime;
     private static final long UPDATE_INTERVAL = 1000;
-    private final Map<String, Long> startTime = new HashMap<>();
     private final Map<String, HookUpdate> pendingUpdates = new HashMap<>();
     private static final int MAX_PENDING_UPDATES = 50;
     private int pendingUpdateCount = 0;
@@ -41,21 +42,18 @@ public class PerformanceMonitor extends Logger {
         if (loadConfigPending) {
             return;
         }
-        
+
         loadConfigPending = true;
-        new Thread(() -> {
+        ThreadPoolManager.schedule(() -> {
             try {
-                Thread.sleep(WRITE_DELAY);
                 loadConfig();
                 configLoaded = true;
-            } catch (InterruptedException e) {
-                error("延迟加载配置被中断", e);
             } catch (Exception e) {
                 error("延迟加载配置失败", e);
             } finally {
                 loadConfigPending = false;
             }
-        }, "ConfigLoadThread").start();
+        }, WRITE_DELAY, java.util.concurrent.TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -63,21 +61,11 @@ public class PerformanceMonitor extends Logger {
         return TAG;
     }
 
-    public void startHook(String hookName) {
-        if (!enabled) return;
-        if (BootMonitor.isZygotePhase()) return;
-        startTime.put(hookName, System.currentTimeMillis());
-    }
 
-    public void endHook(String hookName) {
+    public void markHookLoad(String hookName, long begin, long end) {
         if (!enabled) return;
         if (BootMonitor.isZygotePhase()) return;
-        Long startTime = this.startTime.remove(hookName);
-        if (startTime == null) {
-            warn("没有记录" + hookName + "的开始时间, 将会默认为1");
-            startTime = System.currentTimeMillis() - 1L;
-        }
-        long executionTime = System.currentTimeMillis() - startTime;
+        long executionTime = end - begin;
         updateHookStats(hookName, executionTime);
     }
 
@@ -103,16 +91,9 @@ public class PerformanceMonitor extends Logger {
     }
 
     private void scheduleDelayedWrite() {
-        new Thread(() -> {
-            try {
-                Thread.sleep(WRITE_DELAY);
-                flushPendingUpdates();
-            } catch (InterruptedException e) {
-                error("延迟写入性能数据被中断", e);
-            } catch (Exception e) {
-                error("延迟写入性能数据失败", e);
-            }
-        }, "PerformanceDataWriteThread").start();
+        ThreadPoolManager.schedule(() -> {
+            flushPendingUpdates();
+        }, WRITE_DELAY, java.util.concurrent.TimeUnit.MILLISECONDS);
     }
     
     private void flushPendingUpdates() {
@@ -272,19 +253,16 @@ public class PerformanceMonitor extends Logger {
     }
 
     public void clearStats() {
-        new Thread(() -> {
+        ThreadPoolManager.schedule(() -> {
             try {
-                Thread.sleep(WRITE_DELAY);
                 JSONObject data = new JSONObject();
                 data.put("enabled", enabled);
                 data.put("hooks", new JSONArray());
                 DataBridge.writePerformanceData(data);
-            } catch (InterruptedException e) {
-                error("清除统计数据被中断", e);
             } catch (JSONException e) {
                 error("清除统计数据失败", e);
             }
-        }, "ClearStatsThread").start();
+        }, WRITE_DELAY, java.util.concurrent.TimeUnit.MILLISECONDS);
     }
 
     public boolean isEnabled() {
@@ -342,16 +320,9 @@ public class PerformanceMonitor extends Logger {
     }
 
     private void scheduleConfigSave() {
-        new Thread(() -> {
-            try {
-                Thread.sleep(WRITE_DELAY);
-                saveConfig();
-            } catch (InterruptedException e) {
-                error("延迟保存配置被中断", e);
-            } catch (Exception e) {
-                error("延迟保存配置失败", e);
-            }
-        }, "ConfigSaveThread").start();
+        ThreadPoolManager.schedule(() -> {
+            saveConfig();
+        }, WRITE_DELAY, java.util.concurrent.TimeUnit.MILLISECONDS);
     }
 
     private void saveConfig() {

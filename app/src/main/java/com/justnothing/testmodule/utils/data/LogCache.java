@@ -2,6 +2,8 @@ package com.justnothing.testmodule.utils.data;
 
 import android.util.Log;
 
+import com.justnothing.testmodule.utils.io.IOManager;
+
 import java.io.File;
 import java.io.RandomAccessFile;
 import java.text.SimpleDateFormat;
@@ -103,7 +105,6 @@ public class LogCache {
         }
     }
 
-    private static final int MAX_CACHED_LOGS = 1000;
     private static final int MAX_MEMORY_LOGS = 200;
     private static final long MAX_LOG_FILE_SIZE = 10 * 1024 * 1024;
     private static final long MAX_MEMORY_SIZE = 5 * 1024 * 1024;
@@ -151,7 +152,7 @@ public class LogCache {
                 }
                 
                 // 如果日志数量超过限制，清理最旧的日志
-                while (cachedLogs.size() >= MAX_MEMORY_LOGS && !cachedLogs.isEmpty()) {
+                while (cachedLogs.size() >= MAX_MEMORY_LOGS) {
                     LogEntry oldest = cachedLogs.remove(0);
                     totalMemoryUsage -= estimateEntrySize(oldest);
                 }
@@ -178,31 +179,28 @@ public class LogCache {
             if (logFile != null && logFile.exists()) {
                 long fileSize = logFile.length();
                 if (fileSize > MAX_LOG_FILE_SIZE) {
+                    long targetSize = (long) (MAX_LOG_FILE_SIZE * 0.8);
+                    
                     try (RandomAccessFile raf = new RandomAccessFile(logFile, "rw")) {
-
-                        long targetSize = (long) (MAX_LOG_FILE_SIZE * 0.8);
-                        long bytesToRemove = fileSize - targetSize;
-
-                        long writePos = 0;
-                        long readPos = 0;
+                        raf.seek(targetSize);
+                        
                         byte[] buffer = new byte[8192];
-
-                        raf.seek(0);
+                        long readPos = targetSize;
+                        long writePos = 0;
+                        
                         while (readPos < fileSize) {
                             int bytesToRead = (int) Math.min(buffer.length, fileSize - readPos);
                             int bytesRead = raf.read(buffer, 0, bytesToRead);
-
+                            
                             if (bytesRead == -1) break;
-
-                            if (readPos >= bytesToRemove) {
-                                raf.seek(writePos);
-                                raf.write(buffer, 0, bytesRead);
-                                writePos += bytesRead;
-                            }
-
+                            
+                            raf.seek(writePos);
+                            raf.write(buffer, 0, bytesRead);
+                            
+                            writePos += bytesRead;
                             readPos += bytesRead;
                         }
-
+                        
                         raf.setLength(writePos);
                     }
                 }

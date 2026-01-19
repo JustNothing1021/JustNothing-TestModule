@@ -11,6 +11,7 @@ import static com.justnothing.testmodule.service.handler.TransactionHandler.TRAN
 import com.justnothing.methodsclient.StreamClient;
 import com.justnothing.methodsclient.executor.FileCommandExecutor;
 import com.justnothing.testmodule.utils.functions.CmdUtils;
+import com.justnothing.testmodule.utils.io.IOManager;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -32,11 +33,7 @@ public class ClientPortManager {
         try {
             File portFile = new File(PORT_FILE);
             if (portFile.exists()) {
-                BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(new FileInputStream(portFile), StandardCharsets.UTF_8));
-                String portStr = reader.readLine();
-                reader.close();
-
+                String portStr = IOManager.readFile(portFile.getAbsolutePath());
                 if (portStr != null) {
                     return Integer.parseInt(portStr.trim());
                 }
@@ -51,11 +48,7 @@ public class ClientPortManager {
         try {
             File portFile = new File(PORT_FILE);
             if (portFile.exists()) {
-                BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(new FileInputStream(portFile), StandardCharsets.UTF_8));
-                String portStr = reader.readLine();
-                reader.close();
-
+                String portStr = IOManager.readFile(portFile.getAbsolutePath());
                 if (portStr != null) {
                     int port = Integer.parseInt(portStr.trim());
                     return tryConnect(port);
@@ -128,12 +121,9 @@ public class ClientPortManager {
                 }
 
                 if (fileFound) {
-                    try (BufferedReader fileReader = new BufferedReader(
-                            new InputStreamReader(new FileInputStream(tempOutputFile), StandardCharsets.UTF_8))) {
-                        String fileLine;
-                        while ((fileLine = fileReader.readLine()) != null) {
-                            System.out.println(fileLine);
-                        }
+                    String fileContent = IOManager.readFile(tempOutputFile.getAbsolutePath());
+                    if (fileContent != null) {
+                        System.out.println(fileContent);
                     }
                     success = true;
                     logger.info("端口更新成功: " + newPort);
@@ -193,10 +183,7 @@ public class ClientPortManager {
                 }
             }
 
-            try (PrintWriter writer = new PrintWriter(portFile)) {
-                writer.println(port);
-                writer.flush();
-            }
+            IOManager.writeFile(portFile.getAbsolutePath(), String.valueOf(port));
 
             logger.info("客户端端口文件已更新: " + port);
 

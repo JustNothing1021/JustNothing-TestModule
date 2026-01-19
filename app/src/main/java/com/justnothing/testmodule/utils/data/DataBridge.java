@@ -7,6 +7,8 @@ import com.justnothing.testmodule.constants.AppEnvironment;
 import com.justnothing.testmodule.constants.FileDirectory;
 import com.justnothing.testmodule.hooks.HookEntry;
 import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
+import com.justnothing.testmodule.utils.io.IOManager;
 
 import org.json.JSONObject;
 
@@ -69,11 +71,11 @@ public class DataBridge {
 
     private static JSONObject cachedModuleStatus = null;
     private static long moduleStatusCacheTime = 0;
-    private static final long MODULE_STATUS_CACHE_TTL = 5000;
+    private static final long MODULE_STATUS_CACHE_TTL = 30000;
     
     private static JSONObject cachedPerformanceData = null;
     private static long performanceDataCacheTime = 0;
-    private static final long PERFORMANCE_DATA_CACHE_TTL = 5000;
+    private static final long PERFORMANCE_DATA_CACHE_TTL = 30000;
     private static JSONObject clientHookConfig = null;
     private static JSONObject serverHookConfig = null;
 
@@ -153,30 +155,20 @@ public class DataBridge {
 
     public static void writeServerHookStatus(JSONObject status) {
         lock.lock();
-        FileLock fileLock = null;
-        RandomAccessFile raf = null;
-        FileOutputStream fos = null;
         try {
             File file = getModuleStatusFile();
             
-            // 使用统一的方法确保文件存在并具有正确权限
             if (!DataDirectoryManager.ensureFileExistsWithPermissions(file, "Hook状态文件")) {
                 logWithCooldown("warn", "无法确保Hook状态文件存在，跳过写入");
                 return;
             }
             
-            raf = new RandomAccessFile(file, "rw");
-            fileLock = raf.getChannel().lock();
-            
             JSONObject mergedStatus = new JSONObject();
             
-            if (file.length() > 0) {
+            if (file.exists() && file.length() > 0) {
                 try {
-                    byte[] existingData = new byte[(int) file.length()];
-                    raf.seek(0);
-                    raf.readFully(existingData);
-                    String existingJson = new String(existingData);
-                    if (!existingJson.trim().isEmpty()) {
+                    String existingJson = IOManager.readFile(file.getAbsolutePath());
+                    if (existingJson != null && !existingJson.trim().isEmpty()) {
                         try {
                             JSONObject existingStatus = new JSONObject(existingJson);
                             java.util.Iterator<String> keys = existingStatus.keys();
@@ -199,32 +191,14 @@ public class DataBridge {
                 mergedStatus.put(key, status.get(key));
             }
             
-            fos = new FileOutputStream(file);
-            fos.write(mergedStatus.toString().getBytes());
+            IOManager.writeFile(file.getAbsolutePath(), mergedStatus.toString());
             
             cachedModuleStatus = mergedStatus;
             moduleStatusCacheTime = System.currentTimeMillis();
-            logger.info("模块状态已写入文件");
+            logger.debug("模块状态已写入文件");
         } catch (Exception e) {
             reportLogError("写入模块状态失败: " + e.getMessage(), e);
         } finally {
-            try {
-                if (fos != null) {
-                    fos.close();
-                }
-            } catch (IOException e) {
-                reportLogError("关闭文件输出流失败: " + e.getMessage(), e);
-            }
-            try {
-                if (fileLock != null) {
-                    fileLock.release();
-                }
-                if (raf != null) {
-                    raf.close();
-                }
-            } catch (IOException e) {
-                reportLogError("释放文件锁失败: " + e.getMessage(), e);
-            }
             lock.unlock();
         }
     }
@@ -235,8 +209,6 @@ public class DataBridge {
 
     public static JSONObject readServerHookStatus(boolean forceRefresh) {
         lock.lock();
-        FileInputStream fis = null;
-        BufferedReader reader = null;
         try {
             File file = getModuleStatusFile();
             if (!forceRefresh && isCacheValid(file, moduleStatusCacheTime, MODULE_STATUS_CACHE_TTL) && cachedModuleStatus != null) {
@@ -248,57 +220,44 @@ public class DataBridge {
                 moduleStatusCacheTime = System.currentTimeMillis();
                 return cachedModuleStatus;
             }
-            fis = new FileInputStream(file);
-            reader = new BufferedReader(new InputStreamReader(fis));
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                sb.append(line);
+            
+            String content = IOManager.readFile(file.getAbsolutePath());
+            if (content != null) {
+                cachedModuleStatus = new JSONObject(content);
+                moduleStatusCacheTime = System.currentTimeMillis();
+                return new JSONObject(cachedModuleStatus.toString());
             }
-            cachedModuleStatus = new JSONObject(sb.toString());
-            moduleStatusCacheTime = System.currentTimeMillis();
-            return new JSONObject(cachedModuleStatus.toString());
+            return new JSONObject();
         } catch (Exception e) {
             reportLogError("读取模块状态失败: " + e.getMessage(), e);
             return new JSONObject();
         } finally {
-            try {
-                if (reader != null) {
-                    reader.close();
-                }
-            } catch (IOException e) {
-                reportLogError("读取模块状态时关闭BufferedReader失败: " + e.getMessage(), e);
-            }
-            try {
-                if (fis != null) {
-                    fis.close();
-                }
-            } catch (IOException e) {
-                reportLogError("读取模块状态时关闭FileInputStream失败: " + e.getMessage(), e);
-            }
+            lock.unlock();
+        }
+    }
+
+    public static void forceRefreshServerHookStatus() {
+        lock.lock();
+        try {
+            cachedModuleStatus = null;
+            moduleStatusCacheTime = 0;
+            logger.info("强制刷新Hook状态缓存");
+        } finally {
             lock.unlock();
         }
     }
 
     public static void writePerformanceData(JSONObject data) {
         lock.lock();
-        FileLock fileLock = null;
-        RandomAccessFile raf = null;
-        FileOutputStream fos = null;
         try {
             File file = getPerformanceFile();
             
-            // 使用统一的方法确保文件存在并具有正确权限
             if (!DataDirectoryManager.ensureFileExistsWithPermissions(file, "性能监测数据文件")) {
                 logWithCooldown("warn", "无法确保性能数据文件存在，跳过写入");
                 return;
             }
             
-            raf = new RandomAccessFile(file, "rw");
-            fileLock = raf.getChannel().lock();
-            
-            fos = new FileOutputStream(file);
-            fos.write(data.toString().getBytes());
+            IOManager.writeFile(file.getAbsolutePath(), data.toString());
             
             cachedPerformanceData = data;
             performanceDataCacheTime = System.currentTimeMillis();
@@ -306,31 +265,12 @@ public class DataBridge {
         } catch (Exception e) {
             reportLogError("写入性能数据失败: " + e.getMessage(), e);
         } finally {
-            try {
-                if (fos != null) {
-                    fos.close();
-                }
-            } catch (IOException e) {
-                reportLogError("写入性能数据时关闭文件输出流失败: " + e.getMessage(), e);
-            }
-            try {
-                if (fileLock != null) {
-                    fileLock.release();
-                }
-                if (raf != null) {
-                    raf.close();
-                }
-            } catch (IOException e) {
-                reportLogError("写入性能数据时释放文件锁失败: " + e.getMessage(), e);
-            }
             lock.unlock();
         }
     }
 
     public static JSONObject readPerformanceData() {
         lock.lock();
-        FileInputStream fis = null;
-        BufferedReader reader = null;
         try {
             File file = getPerformanceFile();
             if (isCacheValid(file, performanceDataCacheTime, PERFORMANCE_DATA_CACHE_TTL) && cachedPerformanceData != null) {
@@ -342,34 +282,29 @@ public class DataBridge {
                 performanceDataCacheTime = System.currentTimeMillis();
                 return cachedPerformanceData;
             }
-            fis = new FileInputStream(file);
-            reader = new BufferedReader(new InputStreamReader(fis));
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                sb.append(line);
+            
+            String content = IOManager.readFile(file.getAbsolutePath());
+            if (content != null) {
+                cachedPerformanceData = new JSONObject(content);
+                performanceDataCacheTime = System.currentTimeMillis();
+                return new JSONObject(cachedPerformanceData.toString());
             }
-            cachedPerformanceData = new JSONObject(sb.toString());
-            performanceDataCacheTime = System.currentTimeMillis();
-            return new JSONObject(cachedPerformanceData.toString());
+            return new JSONObject();
         } catch (Exception e) {
             reportLogError("读取性能数据失败: " + e.getMessage(), e);
             return new JSONObject();
         } finally {
-            try {
-                if (reader != null) {
-                    reader.close();
-                }
-            } catch (IOException e) {
-                reportLogError("读取性能数据时关闭BufferedReader失败: " + e.getMessage(), e);
-            }
-            try {
-                if (fis != null) {
-                    fis.close();
-                }
-            } catch (IOException e) {
-                reportLogError("读取性能数据时关闭FileInputStream失败: " + e.getMessage(), e);
-            }
+            lock.unlock();
+        }
+    }
+
+    public static void forceRefreshPerformanceData() {
+        lock.lock();
+        try {
+            cachedPerformanceData = null;
+            performanceDataCacheTime = 0;
+            logger.info("强制刷新性能数据缓存");
+        } finally {
             lock.unlock();
         }
     }
@@ -513,15 +448,12 @@ public class DataBridge {
             return;
         }
         
-        // 在系统启动阶段完全跳过文件写入操作
         if (BootMonitor.isZygotePhase()) {
             logger.warn("系统启动阶段，跳过日志写入操作");
             logBufferCount = 0;
             return;
         }
 
-        FileOutputStream fos = null;
-        PrintWriter pw = null;
         try {
             File file = getLogFile();
 
@@ -540,13 +472,14 @@ public class DataBridge {
                 fileInitialized = true;
             }
 
-            fos = new FileOutputStream(file, true);
-            pw = new PrintWriter(fos);
+            StringBuilder sb = new StringBuilder();
             while (!logBuffer.isEmpty()) {
                 String log = logBuffer.poll();
-                pw.println(log);
+                sb.append(log).append("\n");
             }
-            pw.flush();
+            
+            IOManager.appendFile(file.getAbsolutePath(), sb.toString());
+            
             logBufferCount = 0;
             totalBufferSize = 0;
             lastFlushTime = System.currentTimeMillis();
@@ -560,21 +493,6 @@ public class DataBridge {
             if (e.getMessage() != null && e.getMessage().contains("Permission denied")) {
                 File file = getLogFile();
                 requestLogDirPermissionFix(file);
-            }
-        } finally {
-            try {
-                if (pw != null) {
-                    pw.close();
-                }
-            } catch (Exception e) {
-                reportLogError("刷新日志时关闭PrintWriter失败: " + e.getMessage(), e);
-            }
-            try {
-                if (fos != null) {
-                    fos.close();
-                }
-            } catch (IOException e) {
-                reportLogError("刷新日志时关闭FileOutputStream失败: " + e.getMessage(), e);
             }
         }
     }
@@ -618,8 +536,6 @@ public class DataBridge {
 
     public static String readLogs() {
         lock.lock();
-        FileInputStream fis = null;
-        BufferedReader reader = null;
         try {
             flushLogBuffer();
             
@@ -628,32 +544,13 @@ public class DataBridge {
                 logWithCooldown("warn", "日志文件不存在");
                 return "";
             }
-            fis = new FileInputStream(file);
-            reader = new BufferedReader(new InputStreamReader(fis));
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                sb.append(line).append("\n");
-            }
-            return sb.toString();
+            
+            String content = IOManager.readFile(file.getAbsolutePath());
+            return content != null ? content : "";
         } catch (Exception e) {
             reportLogError("读取日志失败: " + e.getMessage(), e);
             return "";
         } finally {
-            try {
-                if (reader != null) {
-                    reader.close();
-                }
-            } catch (IOException e) {
-                reportLogError("读取日志时关闭BufferedReader失败: " + e.getMessage(), e);
-            }
-            try {
-                if (fis != null) {
-                    fis.close();
-                }
-            } catch (IOException e) {
-                reportLogError("读取日志时关闭FileInputStream失败: " + e.getMessage(), e);
-            }
             lock.unlock();
         }
     }
@@ -692,80 +589,42 @@ public class DataBridge {
             } else {
                 defaultConfig = new JSONObject();
             }
-            fos = new FileOutputStream(configFile);
-            fos.write(defaultConfig.toString().getBytes());
-            fos.flush();
+            IOManager.writeFile(configFile.getAbsolutePath(), defaultConfig.toString());
             logger.info("已创建客户端默认Hook配置文件");
         } catch (Exception e) {
             reportLogError("创建客户端默认Hook配置失败", e);
-        } finally {
-            try {
-                if (fos != null) {
-                    fos.close();
-                }
-            } catch (IOException e) {
-                reportLogError("创建客户端默认Hook配置时关闭FileOutputStream失败", e);
-            }
         }
     }
 
     public static void writeClientHookConfig(JSONObject config) {
         lock.lock();
-        FileLock fileLock = null;
-        RandomAccessFile raf = null;
-        FileOutputStream fos = null;
         try {
             logger.debug("写入新配置: " + config.toString());
 
             File file = getClientHookConfigFile();
             if (!file.exists()) {
-                // 使用统一的方法确保文件存在并具有正确权限
                 if (!DataDirectoryManager.ensureFileExistsWithPermissions(file, "Hook客户端配置文件")) {
                     logWithCooldown("warn", "无法确保Hook配置文件存在，跳过配置写入");
                     return;
                 }
             }
             
-            raf = new RandomAccessFile(file, "rw");
-            fileLock = raf.getChannel().lock();
-            
-            fos = new FileOutputStream(file);
-            fos.write(config.toString().getBytes());
+            IOManager.writeFile(file.getAbsolutePath(), config.toString());
             
             clientHookConfig = config;
             logger.info("Hook客户端配置已写入文件");
         } catch (Exception e) {
             reportLogError("写入Hook客户端配置失败: " + e.getMessage(), e);
         } finally {
-            try {
-                if (fos != null) {
-                    fos.close();
-                }
-            } catch (IOException e) {
-                reportLogError("写入Hook客户端配置时关闭文件输出流失败: " + e.getMessage(), e);
-            }
-            try {
-                if (fileLock != null) {
-                    fileLock.release();
-                }
-                if (raf != null) {
-                    raf.close();
-                }
-            } catch (IOException e) {
-                reportLogError("写入Hook客户端配置时释放文件锁失败: " + e.getMessage(), e);
-            }
             lock.unlock();
         }
     }
 
     public static JSONObject readClientHookConfig() {
         lock.lock();
-        FileInputStream fis = null;
-        BufferedReader reader = null;
         try {
             File file = getClientHookConfigFile();
             if (!file.exists()) {
-                // 使用统一的方法确保文件存在并具有正确权限
                 if (!DataDirectoryManager.ensureFileExistsWithPermissions(file, "Hook配置文件")) {
                     logWithCooldown("warn", "无法确保Hook配置文件存在，使用内存配置");
                     clientHookConfig = new JSONObject();
@@ -775,48 +634,28 @@ public class DataBridge {
                 clientHookConfig = new JSONObject();
                 return clientHookConfig;
             }
-            fis = new FileInputStream(file);
-            reader = new BufferedReader(new InputStreamReader(fis));
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                sb.append(line);
+            
+            String content = IOManager.readFile(file.getAbsolutePath());
+            if (content != null) {
+                clientHookConfig = new JSONObject(content);
+                return new JSONObject(clientHookConfig.toString());
             }
-            clientHookConfig = new JSONObject(sb.toString());
-            return new JSONObject(clientHookConfig.toString());
+            clientHookConfig = new JSONObject();
+            return clientHookConfig;
         } catch (Exception e) {
-            // 减少错误报告，仅在非目录创建失败的情况下报告
             if (!Objects.requireNonNull(e.getMessage())
                     .contains("No such file or directory") && !e.getMessage().contains("mkdirs返回false")) {
                 reportLogError("读取Hook配置失败: " + e.getMessage(), e);
             }
             return new JSONObject();
         } finally {
-            try {
-                if (reader != null) {
-                    reader.close();
-                }
-            } catch (IOException e) {
-                reportLogError("关闭BufferedReader失败: " + e.getMessage(), e);
-            }
-            try {
-                if (fis != null) {
-                    fis.close();
-                }
-            } catch (IOException e) {
-                reportLogError("关闭FileInputStream失败: " + e.getMessage(), e);
-            }
             lock.unlock();
         }
     }
 
     public static void writeServerHookConfig(JSONObject hookList) {
         lock.lock();
-        FileLock fileLock = null;
-        RandomAccessFile raf = null;
-        FileOutputStream fos = null;
         try {
-
             File file = getServerHookListFile();
             if (!file.exists()) {
                 if (!file.createNewFile()) {
@@ -825,75 +664,37 @@ public class DataBridge {
                 DataDirectoryManager.setFilePermissions(file, "777", "服务端Hook配置文件");
             }
 
-            raf = new RandomAccessFile(file, "rw");
-            fileLock = raf.getChannel().lock();
-
-            fos = new FileOutputStream(file);
-            fos.write(hookList.toString().getBytes());
+            IOManager.writeFile(file.getAbsolutePath(), hookList.toString());
 
             serverHookConfig = hookList;
             logger.info("服务端Hook配置已写入文件");
         } catch (Exception e) {
             reportLogError("写入服务端Hook配置失败: " + e.getMessage(), e);
         } finally {
-            try {
-                if (fos != null) {
-                    fos.close();
-                }
-            } catch (IOException e) {
-                reportLogError("写入服务端Hook配置时关闭文件输出流失败: " + e.getMessage(), e);
-            }
-            try {
-                if (fileLock != null) {
-                    fileLock.release();
-                }
-                if (raf != null) {
-                    raf.close();
-                }
-            } catch (IOException e) {
-                reportLogError("写入服务端Hook配置时释放文件锁失败: " + e.getMessage(), e);
-            }
             lock.unlock();
         }
     }
 
     public static JSONObject readServerHookConfig() {
         lock.lock();
-        FileInputStream fis = null;
-        BufferedReader reader = null;
         try {
             File file = getServerHookListFile();
             if (!file.exists()) {
                 serverHookConfig = new JSONObject();
                 return serverHookConfig;
             }
-            fis = new FileInputStream(file);
-            reader = new BufferedReader(new InputStreamReader(fis));
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                sb.append(line);
+            
+            String content = IOManager.readFile(file.getAbsolutePath());
+            if (content != null) {
+                serverHookConfig = new JSONObject(content);
+                return new JSONObject(serverHookConfig.toString());
             }
-            serverHookConfig = new JSONObject(sb.toString());
-            return new JSONObject(serverHookConfig.toString());
+            serverHookConfig = new JSONObject();
+            return serverHookConfig;
         } catch (Exception e) {
             reportLogError("读取服务端Hook配置失败: " + e.getMessage(), e);
             return new JSONObject();
         } finally {
-            try {
-                if (reader != null) {
-                    reader.close();
-                }
-            } catch (IOException e) {
-                reportLogError("读取服务端Hook配置时关闭BufferedReader失败: " + e.getMessage(), e);
-            }
-            try {
-                if (fis != null) {
-                    fis.close();
-                }
-            } catch (IOException e) {
-                reportLogError("读取服务端Hook配置时关闭FileInputStream失败: " + e.getMessage(), e);
-            }
             lock.unlock();
         }
     }

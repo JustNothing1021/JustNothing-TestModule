@@ -7,13 +7,13 @@ import com.justnothing.testmodule.constants.HookConfig;
 import com.justnothing.testmodule.constants.FileDirectory;
 import com.justnothing.testmodule.utils.functions.Logger;
 import com.justnothing.testmodule.utils.hooks.ClientHookConfig;
+import com.justnothing.testmodule.utils.io.IOManager;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -140,9 +140,7 @@ public class DataExporter extends Logger {
         String fullFileName = fileName + "_" + timestamp + ".json";
         File file = new File(exportDir, fullFileName);
 
-        FileWriter writer = new FileWriter(file);
-        writer.write(content);
-        writer.close();
+        IOManager.writeFile(file.getAbsolutePath(), content);
 
         debug("数据已导出到: " + file.getAbsolutePath());
         return file.getAbsolutePath();

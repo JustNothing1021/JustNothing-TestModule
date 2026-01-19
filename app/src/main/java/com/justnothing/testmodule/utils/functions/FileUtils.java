@@ -10,8 +10,10 @@ import android.util.Pair;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import com.justnothing.testmodule.utils.io.IOManager;
+import com.justnothing.testmodule.utils.io.RootProcessPool;
+
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Objects;
 
@@ -52,13 +54,13 @@ public class FileUtils {
                 logger.error("saveObjectToFile: 保存文件时创建目录" + file.getParent() +"失败");
             }
         }
-        try (FileOutputStream fos = new FileOutputStream(file)) {
-            fos.write(data.getBytes());
+        try {
+            IOManager.writeFile(file.getAbsolutePath(), data);
+            return true;
         } catch (Exception e) {
             logger.error("saveObjectToFile: 文件" + dst + "保存失败", e);
             return false;
         }
-        return true;
     }
 
     public static boolean saveObjectToFileByShell(Object obj, String dst) {
@@ -127,9 +129,9 @@ public class FileUtils {
 
     public static Pair<Boolean, CmdUtils.CommandOutput> createFileBySuShell(File dst) {
         try {
-            CmdUtils.CommandOutput res =
-                    CmdUtils.runRootCommand("touch " + CmdUtils.quoted(dst.getPath()));
-            return new Pair<>(res.stat() == 0, res);
+            IOManager.ProcessResult res = RootProcessPool.executeCommand("touch " + CmdUtils.quoted(dst.getPath()));
+            CmdUtils.CommandOutput cmdOutput = new CmdUtils.CommandOutput(res.exitCode, res.stdout, res.stderr, res.stdout + res.stderr);
+            return new Pair<>(res.exitCode == 0, cmdOutput);
         } catch (Exception e) {
             return new Pair<>(false, null);
         }
@@ -137,11 +139,11 @@ public class FileUtils {
 
     public static Pair<Boolean, CmdUtils.CommandOutput> mkdirBySuShell(File dst) {
         try {
-            CmdUtils.CommandOutput res =
-                CmdUtils.runRootCommand("mkdir " + CmdUtils.quoted(dst.getPath()));
-            if (res.stat() == 0) return new Pair<>(true, res);
-            Boolean succeed = res.finalOutput().toLowerCase().contains("file exists") && dst.isDirectory();
-            return new Pair<>(succeed, res);
+            IOManager.ProcessResult res = RootProcessPool.executeCommand("mkdir " + CmdUtils.quoted(dst.getPath()));
+            CmdUtils.CommandOutput cmdOutput = new CmdUtils.CommandOutput(res.exitCode, res.stdout, res.stderr, res.stdout + res.stderr);
+            if (res.exitCode == 0) return new Pair<>(true, cmdOutput);
+            Boolean succeed = res.stdout.toLowerCase().contains("file exists") && dst.isDirectory();
+            return new Pair<>(succeed, cmdOutput);
         } catch (Exception e) {
             return new Pair<>(false, null);
         }

@@ -31,6 +31,8 @@ import com.justnothing.testmodule.utils.data.DataBridge;
 import com.justnothing.testmodule.utils.data.BootMonitor;
 import com.justnothing.testmodule.utils.functions.Logger;
 import com.justnothing.testmodule.utils.data.PerformanceMonitor;
+import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
+import com.justnothing.testmodule.utils.io.IOManager;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -62,16 +64,16 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
             classLoaders = new ConcurrentHashMap<>();
 
     public static final String TAG = "HookEntry";
-    private final PerformanceMonitor performanceMonitor = new PerformanceMonitor();
+    private PerformanceMonitor performanceMonitor = null;
     private static final HookEntryLogger logger = new HookEntryLogger();
     private static final long FILE_OPERATION_DELAY = 500;
     public static class HookEntryLogger extends Logger {
-
         @Override
         public String getTag() {
             return TAG;
         }
     }
+    
 
     static {
         packageHooks.add(new AppInfoProviderHook());
@@ -85,6 +87,11 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
         packageHooks.add(new InputMethodControlHook());
         AppEnvironment.setHookEnv();
         logger.info("HookEntry已加载");
+    }
+
+    private void recordHookLoad(String name, long begin, long end) {
+        if (performanceMonitor == null) performanceMonitor = new PerformanceMonitor();
+        performanceMonitor.markHookLoad(name, begin, end);
     }
 
     private static void setupHooks() {
@@ -148,89 +155,93 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
     }
 
     public static void updateHookStatus() {
-        try {
-            JSONObject existingStatus = DataBridge.readServerHookStatus();
-            
-            JSONObject status = new JSONObject();
-            status.put(KEY_IS_MODULE_ACTIVE, true);
-            status.put(KEY_PACKAGE_HOOK_COUNT, packageHooks.size());
-            status.put(KEY_ZYGOTE_HOOK_COUNT, zygoteHooks.size());
-            
-            JSONArray existingPackages = existingStatus.optJSONArray(KEY_PROCESSED_PACKAGES);
-            if (existingPackages == null) {
-                existingPackages = new JSONArray();
-            }
-            
-            Set<String> existingPackageSet = new HashSet<>();
-            for (int i = 0; i < existingPackages.length(); i++) {
-                existingPackageSet.add(existingPackages.getString(i));
-            }
-            
-            List<String> localPackages = getLocalPackages();
-            for (String pkg : localPackages) {
-                if (!existingPackageSet.contains(pkg)) {
-                    existingPackages.put(pkg);
-                    existingPackageSet.add(pkg);
+        ThreadPoolManager.submitFastRunnable(() -> {
+            try {
+                JSONObject existingStatus = DataBridge.readServerHookStatus();
+                
+                JSONObject status = new JSONObject();
+                status.put(KEY_IS_MODULE_ACTIVE, true);
+                status.put(KEY_PACKAGE_HOOK_COUNT, packageHooks.size());
+                status.put(KEY_ZYGOTE_HOOK_COUNT, zygoteHooks.size());
+                
+                JSONArray existingPackages = existingStatus.optJSONArray(KEY_PROCESSED_PACKAGES);
+                if (existingPackages == null) {
+                    existingPackages = new JSONArray();
                 }
-            }
-            
-            status.put(KEY_PROCESSED_PACKAGES, existingPackages);
-
-            JSONArray existingHookDetails = existingStatus.optJSONArray(KEY_HOOK_DETAILS);
-            Map<String, Integer> existingProcessedCounts = new HashMap<>();
-            if (existingHookDetails != null) {
-                for (int i = 0; i < existingHookDetails.length(); i++) {
-                    JSONObject hookJson = existingHookDetails.getJSONObject(i);
-                    String name = hookJson.optString(KEY_NAME, "");
-                    int count = hookJson.optInt(KEY_PROCESSED_PACKAGE_COUNT, 0);
-                    existingProcessedCounts.put(name, count);
+                
+                Set<String> existingPackageSet = new HashSet<>();
+                for (int i = 0; i < existingPackages.length(); i++) {
+                    existingPackageSet.add(existingPackages.getString(i));
                 }
-            }
+                
+                List<String> localPackages = getLocalPackages();
+                for (String pkg : localPackages) {
+                    if (!existingPackageSet.contains(pkg)) {
+                        existingPackages.put(pkg);
+                        existingPackageSet.add(pkg);
+                    }
+                }
+                
+                status.put(KEY_PROCESSED_PACKAGES, existingPackages);
 
-            JSONArray hookDetails = new JSONArray();
-            for (PackageHook hook : packageHooks) {
-                JSONObject detail = new JSONObject();
-                detail.put(KEY_NAME, hook.getHookName());
-                detail.put(KEY_DISPLAY_NAME, hook.getHookDisplayName());
-                detail.put(KEY_DESCRIPTION, hook.getHookDescription());
-                detail.put(KEY_TYPE, "PackageHook");
-                detail.put(KEY_IS_INITIALIZED, hook.isInitialized());
-                detail.put(KEY_HOOK_COUNT, hook.getHookCount());
-                String hookName = hook.getHookName();
-                int currentProcessed = hook.hookSucceedPackages + hook.hookFailurePackages;
-                int existingProcessed = existingProcessedCounts.getOrDefault(hookName, 0);
-                detail.put(KEY_PROCESSED_PACKAGE_COUNT, existingProcessed + currentProcessed);
-                hookDetails.put(detail);
-            }
+                JSONArray existingHookDetails = existingStatus.optJSONArray(KEY_HOOK_DETAILS);
+                Map<String, Integer> existingProcessedCounts = new HashMap<>();
+                if (existingHookDetails != null) {
+                    for (int i = 0; i < existingHookDetails.length(); i++) {
+                        JSONObject hookJson = existingHookDetails.getJSONObject(i);
+                        String name = hookJson.optString(KEY_NAME, "");
+                        int count = hookJson.optInt(KEY_PROCESSED_PACKAGE_COUNT, 0);
+                        existingProcessedCounts.put(name, count);
+                    }
+                }
 
-            for (ZygoteHook hook : zygoteHooks) {
-                JSONObject detail = new JSONObject();
-                detail.put(KEY_NAME, hook.getHookName());
-                detail.put(KEY_DISPLAY_NAME, hook.getHookDisplayName());
-                detail.put(KEY_DESCRIPTION, hook.getHookDescription());
-                detail.put(KEY_TYPE, "ZygoteHook");
-                detail.put(KEY_IS_INITIALIZED, hook.isInitialized());
-                detail.put(KEY_HOOK_COUNT, hook.getHookCount());
-                detail.put(KEY_PROCESSED_PACKAGE_COUNT, 0);
-                hookDetails.put(detail);
-            }
-            status.put(KEY_HOOK_DETAILS, hookDetails);
-            DataBridge.writeServerHookStatus(status);
+                JSONArray hookDetails = new JSONArray();
+                for (PackageHook hook : packageHooks) {
+                    JSONObject detail = new JSONObject();
+                    detail.put(KEY_NAME, hook.getHookName());
+                    detail.put(KEY_DISPLAY_NAME, hook.getHookDisplayName());
+                    detail.put(KEY_DESCRIPTION, hook.getHookDescription());
+                    detail.put(KEY_TYPE, "PackageHook");
+                    detail.put(KEY_IS_INITIALIZED, hook.isInitialized());
+                    detail.put(KEY_HOOK_COUNT, hook.getHookCount());
+                    String hookName = hook.getHookName();
+                    int currentProcessed = hook.hookSucceedPackages + hook.hookFailurePackages;
+                    int existingProcessed = existingProcessedCounts.getOrDefault(hookName, 0);
+                    detail.put(KEY_PROCESSED_PACKAGE_COUNT, existingProcessed + currentProcessed);
+                    hookDetails.put(detail);
+                }
 
-        } catch (JSONException e) {
-            logger.error("更新Hook状态失败", e);
-        }
+                for (ZygoteHook hook : zygoteHooks) {
+                    JSONObject detail = new JSONObject();
+                    detail.put(KEY_NAME, hook.getHookName());
+                    detail.put(KEY_DISPLAY_NAME, hook.getHookDisplayName());
+                    detail.put(KEY_DESCRIPTION, hook.getHookDescription());
+                    detail.put(KEY_TYPE, "ZygoteHook");
+                    detail.put(KEY_IS_INITIALIZED, hook.isInitialized());
+                    detail.put(KEY_HOOK_COUNT, hook.getHookCount());
+                    detail.put(KEY_PROCESSED_PACKAGE_COUNT, 0);
+                    hookDetails.put(detail);
+                }
+                status.put(KEY_HOOK_DETAILS, hookDetails);
+                DataBridge.writeServerHookStatus(status);
+
+            } catch (JSONException e) {
+                logger.error("更新Hook状态失败", e);
+            }
+        });
     }
 
     public static void clearProcessedPackages() {
-        try {
-            JSONObject existingStatus = DataBridge.readServerHookStatus();
-            existingStatus.put(KEY_PROCESSED_PACKAGES, new JSONArray());
-            DataBridge.writeServerHookStatus(existingStatus);
-            logger.info("已清空已处理包列表");
-        } catch (JSONException e) {
-            logger.error("清空已处理包列表失败", e);
-        }
+        ThreadPoolManager.submitFastRunnable(() -> {
+            try {
+                JSONObject existingStatus = DataBridge.readServerHookStatus();
+                existingStatus.put(KEY_PROCESSED_PACKAGES, new JSONArray());
+                DataBridge.writeServerHookStatus(existingStatus);
+                logger.info("已清空已处理包列表");
+            } catch (JSONException e) {
+                logger.error("清空已处理包列表失败", e);
+            }
+        });
     }
 
     public static boolean executeFileOperations() {
@@ -265,17 +276,10 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
     }
 
     private static void scheduleFileOperations() {
-        new Thread(() -> {
-            try {
-                Thread.sleep(FILE_OPERATION_DELAY);
-                logger.info("延迟执行文件操作");
-                executeFileOperations();
-            } catch (InterruptedException e) {
-                logger.error("延迟执行文件操作被中断", e);
-            } catch (Exception e) {
-                logger.error("延迟执行文件操作失败", e);
-            }
-        }, "FileOperationThread").start();
+        ThreadPoolManager.schedule(() -> {
+            logger.info("延迟执行文件操作");
+            executeFileOperations();
+        }, FILE_OPERATION_DELAY, java.util.concurrent.TimeUnit.MILLISECONDS);
     }
 
 
@@ -309,9 +313,8 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
                     continue;
                 }
                 boolean succeed = true;
-                double hookBegin = System.currentTimeMillis() / 1000.0f;
-
-                performanceMonitor.startHook(hookName);
+                long hookBeginLong = System.currentTimeMillis();
+                double hookBegin = hookBeginLong / 1000.0f;
 
                 try {
                     if (hook.shouldLoad(startupParam)) {
@@ -321,8 +324,10 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
                     logger.error("安装Zygote Hook " + hookName + " 时发生异常: " + e.getMessage(), e);
                     succeed = false;
                 }
+                long hookEndLong = System.currentTimeMillis();
+                double hookEnd = hookEndLong / 1000.0f;
 
-                performanceMonitor.endHook(hookName);
+                recordHookLoad(hookName, hookBeginLong, hookEndLong);
 
                 if (succeed) {
                     successCount++;
@@ -332,12 +337,11 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
                     logger.warn("initZygote阶段加载hook " + hook.getTag() + "出现错误");
                 }
 
-                double hookEnd = System.currentTimeMillis() / 1000.0f;
                 logger.debug("initZygote阶段的hook " + hook.getTag() + "处理完成，耗时:" +
                         String.format(Locale.getDefault(), "%.3f", hookEnd - hookBegin));
             }
 
-            logger.info("Zygote Hooks安装完成 - 成功: " + successCount + ", 失败: " + failCount);
+            logger.info("Zygote Hooks安装完成, 成功: " + successCount + ", 失败: " + failCount);
             BootMonitor.markZygoteInitCompleted();
 
         } catch (Throwable e) {
@@ -359,9 +363,12 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
         try {
             classLoaders.put(param.packageName, param.classLoader);
             setupHooks();
-            double begin = System.currentTimeMillis() / 1000.0f;
+            long hookBeginLong = System.currentTimeMillis();
+            double hookBegin = hookBeginLong / 1000.0f;
+
             int successCount = 0;
             int failCount = 0;
+            double hookEnd = 0;
             for (PackageHook hook : packageHooks) {
                 String hookName = hook.getHookName();
                 if (!hook.isHookEnabled()) {
@@ -369,8 +376,6 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
                     continue;
                 }
                 boolean succeed = true;
-                double hookBegin = System.currentTimeMillis() / 1000.0f;
-                performanceMonitor.startHook(hookName);
                 try {
                     if (hook.shouldLoad(param)) {
                         succeed = hook.installHooks(param);
@@ -379,27 +384,29 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
                     logger.error("安装Package Hook " + hookName + " 时发生异常: " + e.getMessage(), e);
                     succeed = false;
                 }
-                performanceMonitor.endHook(hookName);
+                long hookEndLong = System.currentTimeMillis();
+                hookEnd = hookEndLong / 1000.0f;
+                
+                recordHookLoad(hookName, hookBeginLong, hookEndLong);
+
                 if (succeed) {
                     successCount++;
                 } else {
                     failCount++;
                     logger.warn(param.packageName + "加载" + hook.getTag() + "出现错误");
                 }
-                double hookEnd = System.currentTimeMillis() / 1000.0f;
                 if (hookEnd - hookBegin > 0.1)
                     logger.warn(param.packageName
                             + "加载" + hook.getTag() + "时间过长，可能出现了未知错误"
                             + String.format(Locale.getDefault(), "(%.3f秒)", hookEnd - hookBegin));
             }
-            double end = System.currentTimeMillis() / 1000.0f;
             logger.info(param.packageName + "处理完成，耗时:" +
-                    String.format(Locale.getDefault(), "%.3f", end - begin) +
+                    String.format(Locale.getDefault(), "%.3f", hookEnd - hookBegin) + "秒，" +
                     ", 成功: " + successCount + ", 失败: " + failCount);
             if (failCount > 0) {
                 packageLoadSuccess = false;
             }
-            
+
             scheduleFileOperations();
 
         } catch (Throwable e) {

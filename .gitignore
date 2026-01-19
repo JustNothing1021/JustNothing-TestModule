@@ -24,4 +24,7 @@ gradle/wrapper/dists/
 # 签名文件，防止爆破掉
 testmodule-keystore.jks
 
+# VSCode 生成的bin文件
+/app/bin
+
 
