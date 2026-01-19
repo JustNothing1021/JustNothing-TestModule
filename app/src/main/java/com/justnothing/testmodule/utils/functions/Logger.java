@@ -23,15 +23,9 @@ public abstract class Logger {
     private Context context;
     private boolean bUseXPosedLog = false;
 
-
-    protected LogCache getSharedLogCache() {
-        return sharedLogCache;
-    }
-
     public void useXposedLog(boolean use) {
         bUseXPosedLog = use;
     }
-
 
     public abstract String getTag();
 

@@ -6,6 +6,7 @@ import static com.justnothing.testmodule.constants.FileDirectory.PORT_FILE;
 import com.justnothing.testmodule.utils.data.DataDirectoryManager;
 import com.justnothing.testmodule.utils.functions.Logger;
 import com.justnothing.testmodule.utils.functions.CmdUtils;
+import com.justnothing.testmodule.utils.io.IOManager;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -92,10 +93,8 @@ public class ServerPortManager {
     }
 
     public void writePortToFile() {
-        File portFile;
-        PrintWriter writer = null;
         try {
-            portFile = new File(PORT_FILE);
+            File portFile = new File(PORT_FILE);
 
             File parentDir = portFile.getParentFile();
             if (parentDir != null && !parentDir.exists()) {
@@ -116,9 +115,7 @@ public class ServerPortManager {
                 }
             }
 
-            writer = new PrintWriter(portFile);
-            writer.println(currentSocketPort);
-            writer.flush();
+            IOManager.writeFile(portFile.getAbsolutePath(), String.valueOf(currentSocketPort));
 
             logger.info("端口文件已写入: " + PORT_FILE + ", 端口: " + currentSocketPort);
 
@@ -128,12 +125,8 @@ public class ServerPortManager {
                 logger.warn("设置端口文件权限异常: " + PORT_FILE + ", " + e.getMessage());
             }
 
-        } catch (IOException e) {
+        } catch (Exception e) {
             logger.error("写入端口文件失败: " + e.getMessage());
-        } finally {
-            if (writer != null) {
-                writer.close();
-            }
         }
     }
 
@@ -144,12 +137,10 @@ public class ServerPortManager {
 
                 File portFile = new File(PORT_FILE);
                 if (portFile.exists()) {
-                    try (BufferedReader reader = new BufferedReader(new FileReader(portFile))) {
-                        String line = reader.readLine();
-                        if (line != null && Integer.parseInt(line.trim()) == currentSocketPort) {
-                            logger.debug("端口文件验证成功，尝试 " + (i + 1) + "/" + maxRetries);
-                            return true;
-                        }
+                    String portStr = IOManager.readFile(portFile.getAbsolutePath());
+                    if (portStr != null && Integer.parseInt(portStr.trim()) == currentSocketPort) {
+                        logger.debug("端口文件验证成功，尝试 " + (i + 1) + "/" + maxRetries);
+                        return true;
                     }
                 }
 
@@ -179,29 +170,25 @@ public class ServerPortManager {
                 return false;
             }
 
-            try (BufferedReader reader = new BufferedReader(new FileReader(portFile))) {
-                String portStr = reader.readLine();
-                if (portStr == null || portStr.trim().isEmpty()) {
-                    logger.warn("端口文件为空");
-                    return false;
-                }
-
-                int port = Integer.parseInt(portStr.trim());
-
-                if (!isValidPort(port)) {
-                    logger.warn("端口文件中的端口号无效: " + port + "，有效范围: 1024-65535");
-                    return false;
-                }
-
-                currentSocketPort = port;
-                logger.info("从端口文件读取端口: " + currentSocketPort);
-                return true;
+            String portStr = IOManager.readFile(portFile.getAbsolutePath());
+            if (portStr == null || portStr.trim().isEmpty()) {
+                logger.warn("端口文件为空");
+                return false;
             }
+
+            int port = Integer.parseInt(portStr.trim());
+
+            if (!isValidPort(port)) {
+                logger.warn("端口文件中的端口号无效: " + port + "，有效范围: 1024-65535");
+                return false;
+            }
+
+            currentSocketPort = port;
+            logger.info("从端口文件读取端口: " + currentSocketPort);
+            return true;
 
         } catch (NumberFormatException e) {
             logger.warn("端口文件中的内容不是有效的数字: " + e.getMessage());
-        } catch (IOException e) {
-            logger.warn("读取端口文件时出错: " + e.getMessage());
         } catch (Exception e) {
             logger.warn("读取端口文件时发生未知错误: " + e.getMessage());
         }
@@ -230,9 +217,7 @@ public class ServerPortManager {
                 return false;
             }
 
-            BufferedReader reader = new BufferedReader(new FileReader(portFile));
-            String portStr = reader.readLine();
-            reader.close();
+            String portStr = IOManager.readFile(portFile.getAbsolutePath());
 
             if (portStr == null) {
                 return false;

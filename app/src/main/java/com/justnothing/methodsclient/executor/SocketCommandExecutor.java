@@ -4,6 +4,7 @@ import com.justnothing.methodsclient.monitor.ClientPortManager;
 import com.justnothing.methodsclient.StreamClient;
 import com.justnothing.methodsclient.monitor.PerformanceMonitor;
 import com.justnothing.testmodule.service.protocol.InteractiveProtocol;
+import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -13,8 +14,6 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -28,8 +27,6 @@ public class SocketCommandExecutor {
     private static final int SOCKET_READ_TIMEOUT = 30000;
 
     private static final StreamClient.ClientLogger logger = new StreamClient.ClientLogger();
-
-    private final ExecutorService executor = Executors.newCachedThreadPool();
 
     public boolean executeInteractiveSocketCommand(String command) {
         long startTime = System.currentTimeMillis();
@@ -60,7 +57,7 @@ public class SocketCommandExecutor {
             Socket finalSocket = socket;
             Callable<Boolean> readTask = () -> SocketStreamReader.readInteractiveSocketStream(input, output, reading, bytesRead, finalSocket);
 
-            Future<Boolean> future = executor.submit(readTask);
+            Future<Boolean> future = ThreadPoolManager.submitSocketCallable(readTask);
 
             try {
                 Boolean success = future.get(EXEC_TIMEOUT, TimeUnit.MILLISECONDS);
@@ -120,16 +117,6 @@ public class SocketCommandExecutor {
             return false;
         } finally {
             closeQuietly(socket);
-
-            executor.shutdown();
-            try {
-                if (!executor.awaitTermination(3, TimeUnit.SECONDS)) {
-                    executor.shutdownNow();
-                }
-            } catch (InterruptedException e) {
-                executor.shutdownNow();
-                Thread.currentThread().interrupt();
-            }
         }
     }
 
@@ -161,7 +148,7 @@ public class SocketCommandExecutor {
             logger.debug("命令长度: " + command.length() + " 字符");
 
             AtomicBoolean reading = new AtomicBoolean(true);
-            var future = executor.submit(() -> SocketStreamReader.readTextProtocolSocketStream(input, reading, bytesRead, charsRead));
+            var future = ThreadPoolManager.submitSocketCallable(() -> SocketStreamReader.readTextProtocolSocketStream(input, reading, bytesRead, charsRead));
 
             try {
                 boolean serverClosedConnection = future.get(EXEC_TIMEOUT, TimeUnit.MILLISECONDS);
@@ -222,16 +209,6 @@ public class SocketCommandExecutor {
             return false;
         } finally {
             closeQuietly(socket);
-
-            executor.shutdown();
-            try {
-                if (!executor.awaitTermination(3, TimeUnit.SECONDS)) {
-                    executor.shutdownNow();
-                }
-            } catch (InterruptedException e) {
-                executor.shutdownNow();
-                Thread.currentThread().interrupt();
-            }
         }
     }
 
@@ -245,15 +222,6 @@ public class SocketCommandExecutor {
     }
 
     public void shutdown() {
-        executor.shutdown();
-        try {
-            if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
-                executor.shutdownNow();
-            }
-        } catch (InterruptedException e) {
-            executor.shutdownNow();
-            Thread.currentThread().interrupt();
-        }
     }
 
     public static class ExecutionResult {
@@ -297,7 +265,7 @@ public class SocketCommandExecutor {
             logger.debug("命令长度: " + command.length() + " 字符");
 
             AtomicBoolean reading = new AtomicBoolean(true);
-            var future = executor.submit(() -> SocketStreamReader.readSocketStreamToString(input, reading, bytesRead, charsRead, outputBuilder));
+            var future = ThreadPoolManager.submitSocketCallable(() -> SocketStreamReader.readSocketStreamToString(input, reading, bytesRead, charsRead, outputBuilder));
 
             try {
                 boolean serverClosedConnection = future.get(EXEC_TIMEOUT, TimeUnit.MILLISECONDS);
@@ -358,16 +326,6 @@ public class SocketCommandExecutor {
             return new ExecutionResult(false, "", "未知错误: " + e.getMessage());
         } finally {
             closeQuietly(socket);
-
-            executor.shutdown();
-            try {
-                if (!executor.awaitTermination(3, TimeUnit.SECONDS)) {
-                    executor.shutdownNow();
-                }
-            } catch (InterruptedException e) {
-                executor.shutdownNow();
-                Thread.currentThread().interrupt();
-            }
         }
     }
 }

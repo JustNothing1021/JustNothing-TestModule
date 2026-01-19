@@ -24,6 +24,7 @@ import com.justnothing.methodsclient.executor.SocketCommandExecutor;
 import com.justnothing.testmodule.R;
 import com.justnothing.testmodule.constants.FileDirectory;
 import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.io.IOManager;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -196,14 +197,7 @@ public class ScriptManagerActivity extends AppCompatActivity {
     }
 
     private String readFile(File file) throws IOException {
-        StringBuilder sb = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file)))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                sb.append(line);
-            }
-        }
-        return sb.toString();
+        return IOManager.readFile(file.getAbsolutePath());
     }
 
     private void writeFile(File file, String content) throws IOException {
@@ -213,9 +207,7 @@ public class ScriptManagerActivity extends AppCompatActivity {
                 throw new IOException("无法创建目录: " + parentDir.getAbsolutePath());
             }
         }
-        try (FileOutputStream fos = new FileOutputStream(file)) {
-            fos.write(content.getBytes());
-        }
+        IOManager.writeFile(file.getAbsolutePath(), content);
     }
 
     private static class Script {
