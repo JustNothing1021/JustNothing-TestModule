@@ -2,8 +2,6 @@ package com.justnothing.testmodule.utils.data;
 
 import com.justnothing.testmodule.utils.functions.Logger;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
-import com.justnothing.testmodule.utils.io.IOManager;
-
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -19,11 +17,11 @@ public class PerformanceMonitor extends Logger {
     private long criticalThreshold;
     private boolean thresholdAlertsEnabled;
     private long lastUpdateTime;
-    private static final long UPDATE_INTERVAL = 1000;
+    private static final long UPDATE_INTERVAL = 2500;
     private final Map<String, HookUpdate> pendingUpdates = new HashMap<>();
-    private static final int MAX_PENDING_UPDATES = 50;
+    private static final int MAX_PENDING_UPDATES = 500;
     private int pendingUpdateCount = 0;
-    private static final long WRITE_DELAY = 300;
+    private static final long WRITE_DELAY = 1000;
 
 
     private boolean configLoaded = false;

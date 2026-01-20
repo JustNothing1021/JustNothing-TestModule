@@ -16,26 +16,38 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-public class LogCache {
+public class LogWriter {
     private static final ThreadLocal<SimpleDateFormat> TIMESTAMP_FORMAT = ThreadLocal.withInitial(() ->
         new SimpleDateFormat("yyyy/MM/dd HH:mm:ss.SSS", Locale.getDefault()));
 
-    private static String formatTimestamp(long timestampMs) {
-        return Objects.requireNonNull(TIMESTAMP_FORMAT.get()).format(new Date(timestampMs));
-    }
+    public static final String TAG = "JustNothing[LogWriter]";
     
-    private static final int LOG_BUFFER_SIZE = 500;
-    private static final long LOG_FLUSH_INTERVAL = 500;
-    private static final long MAX_BUFFER_SIZE = 500 * 1024;
-    private static final List<String> logBuffer = new ArrayList<>();
+    private static final int LOG_BUFFER_SIZE = 1000;
+    private static final long LOG_FLUSH_INTERVAL = 2000;
+    private static final long MAX_BUFFER_SIZE = 1024 * 1024;
+    private static final List<String> logWriteBuffer = new ArrayList<>();
     private static int logBufferCount = 0;
     private static long totalBufferSize = 0;
     private static long lastFlushTime = 0;
-    private static boolean logFileInitialized = false;
     private static File cachedLogFile = null;
     private static final ReentrantReadWriteLock logFileLock = new ReentrantReadWriteLock();
+    private static final int MAX_MEMORY_LOGS = 200;
+    private static final long MAX_LOG_FILE_SIZE = 10 * 1024 * 1024;
+    private static final long MAX_MEMORY_SIZE = 5 * 1024 * 1024;
+    private boolean enabled = true;
+    private boolean saveLogs = false;
+    private boolean cacheDirty = true;
+    private List<LogEntry> readLogs = new ArrayList<>();
+    private final ReentrantReadWriteLock cacheLock = new ReentrantReadWriteLock();
+    private static long lastRefreshTime = 0;
+    private static final long CACHE_REFRESH_INTERVAL = 5000;
+    private static long lastCleanupTime = 0;
+    private static final long CLEANUP_INTERVAL = 30000;
+    private static long totalMemoryUsage = 0;
+
 
     public static class LogEntry {
+
         public final String timestamp;
         public final String level;
         public final String tag;
@@ -93,7 +105,7 @@ public class LogCache {
                             tag = "UnknownTag";
                             message = remaining;
                         }
-                        
+
                         try {
                             SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss.SSS", Locale.getDefault());
                             Date date = sdf.parse(timestamp);
@@ -101,7 +113,7 @@ public class LogCache {
                                 timestampMs = date.getTime();
                             }
                         } catch (Exception e) {
-                            Log.w("LogCache", "解析时间戳失败: " + timestamp, e);
+                            Log.w(TAG, "解析时间戳失败: " + timestamp, e);
                         }
                     } else {
                         tag = "UnknownTag";
@@ -112,66 +124,47 @@ public class LogCache {
 
                 return new LogEntry(timestamp, timestampMs, level, tag, message);
             } catch (Exception e) {
-                Log.e("LogCache", "解析日志失败: " + logLine, e);
+                Log.e(TAG, "解析日志失败: " + logLine, e);
                 return new LogEntry("ERROR", "UnknownTag", logLine);
             }
         }
     }
 
-    private static final int MAX_MEMORY_LOGS = 200;
-    private static final long MAX_LOG_FILE_SIZE = 10 * 1024 * 1024;
-    private static final long MAX_MEMORY_SIZE = 5 * 1024 * 1024;
-    private boolean enabled = true;
-    private boolean saveLogs = false;
-    private boolean cacheDirty = true;
-    private List<LogEntry> cachedLogs = new ArrayList<>();
-    private final ReentrantReadWriteLock cacheLock = new ReentrantReadWriteLock();
-    private static long lastRefreshTime = 0;
-    private static final long CACHE_REFRESH_INTERVAL = 5000;
-    private static long lastCleanupTime = 0;
-    private static final long CLEANUP_INTERVAL = 30000;
-    private static long totalMemoryUsage = 0;
     
-    public LogCache() {
-    }
+    public LogWriter() {}
     
-    public LogCache(boolean doCacheLogs) {
+    public LogWriter(boolean doCacheLogs) {
         this.saveLogs = doCacheLogs;
+    }
+
+    private static String formatTimestamp(long timestampMs) {
+        return Objects.requireNonNull(TIMESTAMP_FORMAT.get()).format(new Date(timestampMs));
     }
 
     public void addLog(String level, String tag, String message, long timestamp) {
         if (!enabled) return;
-        
-        // 检查日志级别，过滤掉过于频繁的调试日志
-        if (shouldFilterLog(level, tag, message)) {
-            return;
-        }
 
         LogEntry entry = new LogEntry(timestamp, level, tag, message);
         String formattedMessage = entry.getFormattedMessage();
         
-        // 直接写入文件日志，避免循环递归
         appendToLogFile(formattedMessage);
         
         if (saveLogs) {
             cacheLock.writeLock().lock();
             try {
-                // 检查内存使用情况
                 long entrySize = estimateEntrySize(entry);
                 
-                // 如果内存使用超过限制，清理最旧的日志
-                while (totalMemoryUsage + entrySize > MAX_MEMORY_SIZE && !cachedLogs.isEmpty()) {
-                    LogEntry oldest = cachedLogs.remove(0);
+                while (totalMemoryUsage + entrySize > MAX_MEMORY_SIZE && !readLogs.isEmpty()) {
+                    LogEntry oldest = readLogs.remove(0);
                     totalMemoryUsage -= estimateEntrySize(oldest);
                 }
                 
-                // 如果日志数量超过限制，清理最旧的日志
-                while (cachedLogs.size() >= MAX_MEMORY_LOGS) {
-                    LogEntry oldest = cachedLogs.remove(0);
+                while (readLogs.size() >= MAX_MEMORY_LOGS) {
+                    LogEntry oldest = readLogs.remove(0);
                     totalMemoryUsage -= estimateEntrySize(oldest);
                 }
                 
-                cachedLogs.add(entry);
+                readLogs.add(entry);
                 totalMemoryUsage += entrySize;
                 
                 cacheDirty = true;
@@ -196,13 +189,13 @@ public class LogCache {
         try {
             long logSize = log != null ? log.length() * 2L : 0;
             
-            while ((logBufferCount >= LOG_BUFFER_SIZE || totalBufferSize + logSize > MAX_BUFFER_SIZE) && !logBuffer.isEmpty()) {
-                String oldest = logBuffer.remove(0);
+            while ((logBufferCount >= LOG_BUFFER_SIZE || totalBufferSize + logSize > MAX_BUFFER_SIZE) && !logWriteBuffer.isEmpty()) {
+                String oldest = logWriteBuffer.remove(0);
                 logBufferCount--;
                 totalBufferSize -= oldest != null ? oldest.length() * 2L : 0;
             }
             
-            logBuffer.add(log);
+            logWriteBuffer.add(log);
             logBufferCount++;
             totalBufferSize += logSize;
             
@@ -212,6 +205,7 @@ public class LogCache {
                                  (currentTime - lastFlushTime) >= LOG_FLUSH_INTERVAL;
             
             if (shouldFlush) {
+                Log.d("JustNothing[LogWriter]", "刷新日志文件，当前缓冲区大小：" + logBufferCount);
                 flushLogFile();
                 lastFlushTime = currentTime;
             }
@@ -221,7 +215,7 @@ public class LogCache {
     }
     
     private static void flushLogFile() {
-        if (logBuffer.isEmpty()) {
+        if (logWriteBuffer.isEmpty()) {
             return;
         }
         
@@ -233,22 +227,23 @@ public class LogCache {
             
             File logDir = logFile.getParentFile();
             if (logDir != null && !logDir.exists()) {
-                Log.d("LogCache", "创建日志目录: " + logDir.getAbsolutePath());
-                logDir.mkdirs();
+                Log.d(TAG, "创建日志目录: " + logDir.getAbsolutePath());
+                if (!logDir.mkdirs()) Log.w(TAG, "创建日志目录失败，mkdirs返回false");
             }
             
             if (!logFile.exists()) {
-                Log.d("LogCache", "创建日志文件: " + logFile.getAbsolutePath());
-                logFile.createNewFile();
+                Log.d(TAG, "创建日志文件: " + logFile.getAbsolutePath());
+                if (!logFile.createNewFile()) Log.w(TAG, "创建日志文件失败，mkdirs返回false");
+
             }
             
-            Log.d("LogCache", "开始写入日志文件: " + logFile.getAbsolutePath() + 
+            Log.d(TAG, "开始写入日志文件: " + logFile.getAbsolutePath() +
                     ", 缓冲区数量: " + logBufferCount + 
                     ", 总大小: " + totalBufferSize + " bytes");
             
             StringBuilder sb = new StringBuilder();
-            while (!logBuffer.isEmpty()) {
-                String log = logBuffer.remove(0);
+            while (!logWriteBuffer.isEmpty()) {
+                String log = logWriteBuffer.remove(0);
                 sb.append(log).append("\n");
             }
             
@@ -256,12 +251,12 @@ public class LogCache {
                 writer.write(sb.toString());
             }
             
-            Log.d("LogCache", "日志文件写入完成");
+            Log.d(TAG, "日志文件写入完成");
             
             logBufferCount = 0;
             totalBufferSize = 0;
         } catch (IOException e) {
-            Log.e("LogCache", "写入日志文件失败", e);
+            Log.e(TAG, "写入日志文件失败", e);
         }
     }
     
@@ -281,7 +276,7 @@ public class LogCache {
                 return cachedLogFile;
             }
         } catch (Exception e) {
-            Log.e("LogCache", "获取日志文件路径失败", e);
+            Log.e(TAG, "获取日志文件路径失败", e);
         }
         
         return null;
@@ -320,7 +315,7 @@ public class LogCache {
                 }
             }
         } catch (Exception e) {
-            Log.e("LogCache", "清理旧日志失败", e);
+            Log.e(TAG, "清理旧日志失败", e);
         }
     }
 
@@ -340,7 +335,7 @@ public class LogCache {
                         LogEntry entry = LogEntry.fromString(line);
                         logs.add(entry);
                     } catch (Exception e) {
-                        Log.e("LogCache", "解析日志失败: " + line, e);
+                        Log.e(TAG, "解析日志失败: " + line, e);
                     }
                 }
             }
@@ -348,7 +343,7 @@ public class LogCache {
         
         cacheLock.writeLock().lock();
         try {
-            cachedLogs = logs;
+            readLogs = logs;
             cacheDirty = false;
             lastRefreshTime = currentTime;
         } finally {
@@ -360,17 +355,16 @@ public class LogCache {
         cacheLock.readLock().lock();
         try {
             if (!cacheDirty) {
-                return new ArrayList<>(cachedLogs);
+                return new ArrayList<>(readLogs);
             }
         } finally {
             cacheLock.readLock().unlock();
         }
-        
+
         refreshCache();
-        
         cacheLock.readLock().lock();
         try {
-            return new ArrayList<>(cachedLogs);
+            return new ArrayList<>(readLogs);
         } finally {
             cacheLock.readLock().unlock();
         }
@@ -378,112 +372,26 @@ public class LogCache {
 
     public void clearLogs() {
         DataBridge.clearLogs();
-        
         cacheLock.writeLock().lock();
         try {
-            cachedLogs.clear();
+            readLogs.clear();
             totalMemoryUsage = 0;
             cacheDirty = false;
         } finally {
             cacheLock.writeLock().unlock();
         }
     }
-    
-    /**
-     * 估算日志条目占用的内存大小
-     */
+
     private long estimateEntrySize(LogEntry entry) {
         if (entry == null) return 0;
-        
-        // 估算字符串占用的内存（UTF-16编码，每个字符2字节）
         long size = 0;
         if (entry.timestamp != null) size += entry.timestamp.length() * 2L;
         if (entry.level != null) size += entry.level.length() * 2L;
         if (entry.tag != null) size += entry.tag.length() * 2L;
         if (entry.message != null) size += entry.message.length() * 2L;
-        
-        // 加上对象头和其他字段的开销（约40字节）
         return size + 40;
     }
     
-    /**
-     * 检查是否应该过滤掉该日志
-     */
-    private boolean shouldFilterLog(String level, String tag, String message) {
-        // 过滤过于频繁的调试日志
-        if ("DEBUG".equals(level)) {
-            // 检查是否是重复的调试日志
-            if (isDuplicateDebugLog(tag, message)) {
-                return true;
-            }
-            
-            // 限制调试日志的频率
-            if (isDebugLogTooFrequent(tag)) {
-                return true;
-            }
-        }
-        
-        // 过滤过长的日志消息
-        if (message != null && message.length() > 1000) {
-            // 截断过长的消息
-            return true;
-        }
-        
-        return false;
-    }
-    
-    /**
-     * 检查是否是重复的调试日志
-     */
-    private boolean isDuplicateDebugLog(String tag, String message) {
-        // 简单的重复检测：检查最近几条日志是否有相同的标签和消息
-        cacheLock.readLock().lock();
-        try {
-            int checkCount = Math.min(10, cachedLogs.size());
-            for (int i = cachedLogs.size() - 1; i >= Math.max(0, cachedLogs.size() - checkCount); i--) {
-                LogEntry recent = cachedLogs.get(i);
-                if (recent.tag.equals(tag) && recent.message.equals(message)) {
-                    return true;
-                }
-            }
-        } finally {
-            cacheLock.readLock().unlock();
-        }
-        return false;
-    }
-    
-    /**
-     * 检查调试日志是否过于频繁
-     */
-    private boolean isDebugLogTooFrequent(String tag) {
-        // 检查最近一段时间内相同标签的日志数量
-        cacheLock.readLock().lock();
-        try {
-            long currentTime = System.currentTimeMillis();
-            int count = 0;
-            
-            for (int i = cachedLogs.size() - 1; i >= 0; i--) {
-                LogEntry entry = cachedLogs.get(i);
-                
-                // 只检查最近5秒内的日志
-                if (currentTime - entry.timestampMs > 5000) {
-                    break;
-                }
-                
-                if (entry.tag.equals(tag) && "DEBUG".equals(entry.level)) {
-                    count++;
-                    
-                    // 如果5秒内相同标签的调试日志超过10条，限制频率
-                    if (count > 10) {
-                        return true;
-                    }
-                }
-            }
-        } finally {
-            cacheLock.readLock().unlock();
-        }
-        return false;
-    }
 
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;

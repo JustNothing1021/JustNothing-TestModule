@@ -10,6 +10,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -20,7 +21,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.justnothing.testmodule.R;
 import com.justnothing.testmodule.utils.data.DataBridge;
-import com.justnothing.testmodule.utils.data.LogCache;
+import com.justnothing.testmodule.utils.data.LogWriter;
 import com.justnothing.testmodule.utils.functions.Logger;
 
 import java.util.ArrayList;
@@ -58,10 +59,11 @@ public class LogViewerActivity extends AppCompatActivity {
 
     private final ViewerLogger logger = new ViewerLogger();
 
-    private LogCache logCache;
+    private LogWriter logWriter;
     private LogAdapter adapter;
     private Handler handler;
     private Runnable updateRunnable;
+    private ProgressBar progressBar;
     private boolean autoScroll = true;
     private String currentFilter = "ALL";
     private String searchText = "";
@@ -70,14 +72,14 @@ public class LogViewerActivity extends AppCompatActivity {
     private static final int REFRESH_INTERVAL = 5000;
     private int currentDisplayLimit = MAX_DISPLAY_LOGS;
     private String lastLogHash = "";
-    private List<LogCache.LogEntry> allCachedLogs = new ArrayList<>();
+    private List<LogWriter.LogEntry> allCachedLogs = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_log_viewer);
 
-        logCache = new LogCache();
+        logWriter = new LogWriter();
         handler = new Handler(Looper.getMainLooper());
 
         initViews();
@@ -90,6 +92,8 @@ public class LogViewerActivity extends AppCompatActivity {
         adapter = new LogAdapter();
         recyclerView.setAdapter(adapter);
 
+        progressBar = findViewById(R.id.progress_loading);
+
         EditText editSearch = findViewById(R.id.edit_search);
         editSearch.addTextChangedListener(new TextWatcher() {
             @Override
@@ -99,7 +103,7 @@ public class LogViewerActivity extends AppCompatActivity {
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 searchText = s.toString();
-                List<LogCache.LogEntry> filteredLogs = filterLogs(allCachedLogs);
+                List<LogWriter.LogEntry> filteredLogs = filterLogs(allCachedLogs);
                 handler.post(() -> adapter.setEntries(filteredLogs));
             }
 
@@ -109,7 +113,7 @@ public class LogViewerActivity extends AppCompatActivity {
         });
 
         findViewById(R.id.btn_clear).setOnClickListener(v -> {
-            logCache.clearLogs();
+            logWriter.clearLogs();
             refreshLogs();
             logger.infoWithoutFile("日志已清除");
         });
@@ -127,7 +131,7 @@ public class LogViewerActivity extends AppCompatActivity {
 
         findViewById(R.id.btn_load_more).setOnClickListener(v -> {
             currentDisplayLimit += LOAD_MORE_INCREMENT;
-            List<LogCache.LogEntry> filteredLogs = filterLogs(allCachedLogs);
+            List<LogWriter.LogEntry> filteredLogs = filterLogs(allCachedLogs);
             handler.post(() -> {
                 adapter.setEntries(filteredLogs);
                 logger.infoWithoutFile("加载更多日志，当前显示限制: " + currentDisplayLimit);
@@ -139,7 +143,7 @@ public class LogViewerActivity extends AppCompatActivity {
 
     private void setFilter(String filter) {
         currentFilter = filter;
-        List<LogCache.LogEntry> filteredLogs = filterLogs(allCachedLogs);
+        List<LogWriter.LogEntry> filteredLogs = filterLogs(allCachedLogs);
         handler.post(() -> {
             adapter.setEntries(filteredLogs);
             logger.infoWithoutFile("切换日志过滤: " + filter);
@@ -158,6 +162,12 @@ public class LogViewerActivity extends AppCompatActivity {
     }
 
     private void refreshLogs() {
+        handler.post(() -> {
+            if (progressBar != null) {
+                progressBar.setVisibility(View.VISIBLE);
+            }
+        });
+
         new Thread(() -> {
             try {
                 String logsText = DataBridge.readLogs();
@@ -166,7 +176,7 @@ public class LogViewerActivity extends AppCompatActivity {
                 if (!currentHash.equals(lastLogHash)) {
                     lastLogHash = currentHash;
                     
-                    List<LogCache.LogEntry> newEntries = new ArrayList<>();
+                    List<LogWriter.LogEntry> newEntries = new ArrayList<>();
                     if (!logsText.isEmpty()) {
                         String[] lines = logsText.split("\n");
                         
@@ -175,11 +185,11 @@ public class LogViewerActivity extends AppCompatActivity {
                         for (String line : lines) {
                             if (!line.trim().isEmpty()) {
                                 try {
-                                    LogCache.LogEntry entry = LogCache.LogEntry.fromString(line);
+                                    LogWriter.LogEntry entry = LogWriter.LogEntry.fromString(line);
                                     newEntries.add(entry);
                                 } catch (Exception e) {
                                     logger.errorWithoutFile("解析日志失败: " + line, e);
-                                    newEntries.add(new LogCache.LogEntry("ERROR", "ParseError", line));
+                                    newEntries.add(new LogWriter.LogEntry("ERROR", "ParseError", line));
                                 }
                             }
                         }
@@ -188,7 +198,7 @@ public class LogViewerActivity extends AppCompatActivity {
                     allCachedLogs = newEntries;
                     sortLogsByTimestamp(allCachedLogs);
                     
-                    List<LogCache.LogEntry> filteredLogs = filterLogs(allCachedLogs);
+                    List<LogWriter.LogEntry> filteredLogs = filterLogs(allCachedLogs);
                     
                     handler.post(() -> {
                         adapter.setEntries(filteredLogs);
@@ -198,18 +208,32 @@ public class LogViewerActivity extends AppCompatActivity {
                                 recyclerView.getLayoutManager().scrollToPosition(filteredLogs.size() - 1);
                             }
                         }
+                        if (progressBar != null) {
+                            progressBar.setVisibility(View.GONE);
+                        }
+                    });
+                } else {
+                    handler.post(() -> {
+                        if (progressBar != null) {
+                            progressBar.setVisibility(View.GONE);
+                        }
                     });
                 }
             } catch (Exception e) {
                 logger.errorWithoutFile("刷新日志失败", e);
+                handler.post(() -> {
+                    if (progressBar != null) {
+                        progressBar.setVisibility(View.GONE);
+                    }
+                });
             }
         }).start();
     }
     
-    private List<LogCache.LogEntry> filterLogs(List<LogCache.LogEntry> logs) {
-        List<LogCache.LogEntry> result = new ArrayList<>();
+    private List<LogWriter.LogEntry> filterLogs(List<LogWriter.LogEntry> logs) {
+        List<LogWriter.LogEntry> result = new ArrayList<>();
         
-        for (LogCache.LogEntry entry : logs) {
+        for (LogWriter.LogEntry entry : logs) {
             if (!shouldShowEntry(entry)) {
                 continue;
             }
@@ -224,11 +248,11 @@ public class LogViewerActivity extends AppCompatActivity {
         return result;
     }
 
-    private void sortLogsByTimestamp(List<LogCache.LogEntry> logs) {
+    private void sortLogsByTimestamp(List<LogWriter.LogEntry> logs) {
         logs.sort(Comparator.comparingLong(a -> a.timestampMs));
     }
 
-    private boolean shouldShowEntry(LogCache.LogEntry entry) {
+    private boolean shouldShowEntry(LogWriter.LogEntry entry) {
         if (!currentFilter.equals("ALL") && !entry.level.equals(currentFilter)) {
             return false;
         }
@@ -249,7 +273,7 @@ public class LogViewerActivity extends AppCompatActivity {
     }
 
     private class LogAdapter extends RecyclerView.Adapter<LogAdapter.ViewHolder> {
-        private List<LogCache.LogEntry> entries = new ArrayList<>();
+        private List<LogWriter.LogEntry> entries = new ArrayList<>();
 
         @NonNull
         @Override
@@ -261,7 +285,7 @@ public class LogViewerActivity extends AppCompatActivity {
 
         @Override
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-            LogCache.LogEntry entry = entries.get(position);
+            LogWriter.LogEntry entry = entries.get(position);
             holder.bind(entry);
         }
 
@@ -270,8 +294,8 @@ public class LogViewerActivity extends AppCompatActivity {
             return entries.size();
         }
 
-        void setEntries(List<LogCache.LogEntry> newEntries) {
-            List<LogCache.LogEntry> oldEntries = new ArrayList<>(entries);
+        void setEntries(List<LogWriter.LogEntry> newEntries) {
+            List<LogWriter.LogEntry> oldEntries = new ArrayList<>(entries);
             entries = new ArrayList<>(newEntries);
             
             DiffUtil.DiffResult diffResult = DiffUtil.calculateDiff(new DiffUtil.Callback() {
@@ -287,8 +311,8 @@ public class LogViewerActivity extends AppCompatActivity {
 
                 @Override
                 public boolean areItemsTheSame(int oldItemPosition, int newItemPosition) {
-                    LogCache.LogEntry oldEntry = oldEntries.get(oldItemPosition);
-                    LogCache.LogEntry newEntry = newEntries.get(newItemPosition);
+                    LogWriter.LogEntry oldEntry = oldEntries.get(oldItemPosition);
+                    LogWriter.LogEntry newEntry = newEntries.get(newItemPosition);
                     return oldEntry.timestampMs == newEntry.timestampMs &&
                            oldEntry.level.equals(newEntry.level) &&
                            oldEntry.tag.equals(newEntry.tag) &&
@@ -297,8 +321,8 @@ public class LogViewerActivity extends AppCompatActivity {
 
                 @Override
                 public boolean areContentsTheSame(int oldItemPosition, int newItemPosition) {
-                    LogCache.LogEntry oldEntry = oldEntries.get(oldItemPosition);
-                    LogCache.LogEntry newEntry = newEntries.get(newItemPosition);
+                    LogWriter.LogEntry oldEntry = oldEntries.get(oldItemPosition);
+                    LogWriter.LogEntry newEntry = newEntries.get(newItemPosition);
                     return oldEntry.timestampMs == newEntry.timestampMs &&
                            Objects.equals(oldEntry.level, newEntry.level) &&
                            Objects.equals(oldEntry.tag, newEntry.tag) &&
@@ -322,7 +346,7 @@ public class LogViewerActivity extends AppCompatActivity {
                 textMessage = itemView.findViewById(R.id.text_message);
             }
 
-            void bind(LogCache.LogEntry entry) {
+            void bind(LogWriter.LogEntry entry) {
                 textTimestamp.setText(entry.timestamp);
                 textLevel.setText(entry.level);
                 textTag.setText(entry.tag);

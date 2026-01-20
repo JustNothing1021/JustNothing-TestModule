@@ -27,4 +27,7 @@ testmodule-keystore.jks
 # VSCode 生成的bin文件
 /app/bin
 
+# 我拿来研究的log
+/tmp.log
+
 
