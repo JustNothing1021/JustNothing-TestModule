@@ -6,7 +6,6 @@ import com.justnothing.testmodule.hooks.ZygoteHook;
 import de.robv.android.xposed.XC_MethodHook;
 
 public class SlogHook extends ZygoteHook {
-    private static final String TARGET_PACKAGE = "android";
     private static final String TARGET_LOG_KEYWORD = "device has no apply for install permission";
     public static final String TAG = "SlogHook";
 

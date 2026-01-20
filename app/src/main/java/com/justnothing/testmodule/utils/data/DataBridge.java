@@ -7,26 +7,26 @@ import com.justnothing.testmodule.constants.AppEnvironment;
 import com.justnothing.testmodule.constants.FileDirectory;
 import com.justnothing.testmodule.hooks.HookEntry;
 import com.justnothing.testmodule.utils.functions.Logger;
-import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 import com.justnothing.testmodule.utils.io.IOManager;
 
 import org.json.JSONObject;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.io.RandomAccessFile;
-import java.nio.channels.FileLock;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class DataBridge {
 
@@ -39,20 +39,23 @@ public class DataBridge {
 
     private static final DataBridgeLogger logger = new DataBridgeLogger();
 
-    private static final ReentrantLock lock = new ReentrantLock();
+    private static final ReadWriteLock lock = new ReentrantReadWriteLock();
 
     private static File cachedDataDir = null;
     private static File cachedLogFile = null;
     private static boolean fileInitialized = false;
     private static boolean logSystemInitialized = false;
 
-    private static final int LOG_BUFFER_SIZE = 200;
+    private static final int LOG_BUFFER_SIZE = 500;
+    private static final int TEMP_BUFFER_SIZE = 100;
     private static final int MAX_LOG_LINE_LENGTH = 65536;
     private static final Queue<String> logBuffer = new LinkedList<>();
+    private static final List<String> tempBuffer = new ArrayList<>(); // 我怎么也喜欢拆东墙补西墙了（
+    private static AtomicBoolean isAppending = new AtomicBoolean(false);
     private static int logBufferCount = 0;
     private static long totalBufferSize = 0;
-    private static final long LOG_FLUSH_INTERVAL = 1000;
-    private static final long MAX_BUFFER_SIZE = 100 * 1024; // 100KB
+    private static final long LOG_FLUSH_INTERVAL = 500;
+    private static final long MAX_BUFFER_SIZE = 500 * 1024; // 100KB
     private static long lastFlushTime = System.currentTimeMillis();
     private static String lastLogError = null;
     private static long lastLogErrorTime = 0;
@@ -66,7 +69,7 @@ public class DataBridge {
     private static long lastPermissionCheckTime = 0;
     private static final long PERMISSION_CHECK_INTERVAL = 30000;
     
-    private static final java.util.Map<String, Long> lastWarningTimes = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final Map<String, Long> lastWarningTimes = new ConcurrentHashMap<>();
     private static final long WARNING_COOLDOWN_INTERVAL = 30000;
 
     private static JSONObject cachedModuleStatus = null;
@@ -154,7 +157,7 @@ public class DataBridge {
     }
 
     public static void writeServerHookStatus(JSONObject status) {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             File file = getModuleStatusFile();
             
@@ -163,26 +166,12 @@ public class DataBridge {
                 return;
             }
             
-            JSONObject mergedStatus = new JSONObject();
+            JSONObject mergedStatus;
             
-            if (file.exists() && file.length() > 0) {
-                try {
-                    String existingJson = IOManager.readFile(file.getAbsolutePath());
-                    if (existingJson != null && !existingJson.trim().isEmpty()) {
-                        try {
-                            JSONObject existingStatus = new JSONObject(existingJson);
-                            java.util.Iterator<String> keys = existingStatus.keys();
-                            while (keys.hasNext()) {
-                                String key = keys.next();
-                                mergedStatus.put(key, existingStatus.get(key));
-                            }
-                        } catch (Exception e) {
-                            logWithCooldown("warn", "解析现有模块状态失败: " + e.getMessage());
-                        }
-                    }
-                } catch (Exception e) {
-                    logWithCooldown("warn", "读取现有模块状态失败: " + e.getMessage());
-                }
+            if (file.exists() && file.length() > 0 && cachedModuleStatus != null) {
+                mergedStatus = cachedModuleStatus;
+            } else {
+                mergedStatus = new JSONObject();
             }
             
             java.util.Iterator<String> keys = status.keys();
@@ -199,7 +188,7 @@ public class DataBridge {
         } catch (Exception e) {
             reportLogError("写入模块状态失败: " + e.getMessage(), e);
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
@@ -208,7 +197,7 @@ public class DataBridge {
     }
 
     public static JSONObject readServerHookStatus(boolean forceRefresh) {
-        lock.lock();
+        lock.readLock().lock();
         try {
             File file = getModuleStatusFile();
             if (!forceRefresh && isCacheValid(file, moduleStatusCacheTime, MODULE_STATUS_CACHE_TTL) && cachedModuleStatus != null) {
@@ -232,23 +221,23 @@ public class DataBridge {
             reportLogError("读取模块状态失败: " + e.getMessage(), e);
             return new JSONObject();
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
     public static void forceRefreshServerHookStatus() {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             cachedModuleStatus = null;
             moduleStatusCacheTime = 0;
             logger.info("强制刷新Hook状态缓存");
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
     public static void writePerformanceData(JSONObject data) {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             File file = getPerformanceFile();
             
@@ -265,12 +254,12 @@ public class DataBridge {
         } catch (Exception e) {
             reportLogError("写入性能数据失败: " + e.getMessage(), e);
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
     public static JSONObject readPerformanceData() {
-        lock.lock();
+        lock.readLock().lock();
         try {
             File file = getPerformanceFile();
             if (isCacheValid(file, performanceDataCacheTime, PERFORMANCE_DATA_CACHE_TTL) && cachedPerformanceData != null) {
@@ -294,18 +283,18 @@ public class DataBridge {
             reportLogError("读取性能数据失败: " + e.getMessage(), e);
             return new JSONObject();
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
     public static void forceRefreshPerformanceData() {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             cachedPerformanceData = null;
             performanceDataCacheTime = 0;
             logger.info("强制刷新性能数据缓存");
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
@@ -330,6 +319,7 @@ public class DataBridge {
         if (logSystemInitialized) {
             logger.error(error, e);
         } else {
+            // 如果日志系统未初始化，则直接打印到控制台
             Log.e("JustNothing[DataBridge]", error);
             if (e != null) {
                 Log.e("JustNothing[DataBridge]", Log.getStackTraceString(e));
@@ -366,9 +356,8 @@ public class DataBridge {
     }
 
     private static boolean ensureLogFileExists(File file) {
-        // 在系统启动阶段完全跳过文件操作，避免系统卡死
         if (BootMonitor.isZygotePhase()) {
-            System.out.println("DataBridge: 系统启动阶段，跳过所有文件操作");
+            logger.debug("系统启动阶段，跳过所有文件操作");
             return false; // 返回false，让调用方知道文件操作被跳过
         }
         
@@ -449,7 +438,7 @@ public class DataBridge {
         }
         
         if (BootMonitor.isZygotePhase()) {
-            logger.warn("系统启动阶段，跳过日志写入操作");
+            logger.debug("系统启动阶段，跳过日志写入操作");
             logBufferCount = 0;
             return;
         }
@@ -459,13 +448,13 @@ public class DataBridge {
 
             if (!fileInitialized) {
                 if (!ensureLogDirectoryExists()) {
-                    logger.warn("日志目录不存在");
+                    logger.debug("日志目录不存在");
                     return;
                 }
 
                 if (!ensureLogFileExists(file)) {
                     requestLogDirPermissionFix(file);
-                    logger.warn("日志目录权限不足, 已经尝试申请修复权限");
+                    logger.debug("日志目录权限不足, 已经尝试申请修复权限");
                     return;
                 }
 
@@ -498,76 +487,108 @@ public class DataBridge {
     }
 
     public static void appendLog(String log) {
-        lock.lock();
+        if (isAppending.get()) {
+            if (tempBuffer.size() >= TEMP_BUFFER_SIZE) {
+                tempBuffer.remove(0);
+            }
+            tempBuffer.add(log);
+            return;
+        }
+        isAppending.set(true);
+        lock.writeLock().lock();
         try {
-            // 截断过长的日志行
             if (log != null && log.length() > MAX_LOG_LINE_LENGTH) {
                 log = log.substring(0, MAX_LOG_LINE_LENGTH) + "... [TRUNCATED]";
             }
-            
-            // 计算日志行的大小
             long logSize = log != null ? log.length() * 2L : 0;
-            
-            // 如果缓冲区大小或数量超过限制，移除最旧的条目
             while ((logBufferCount >= LOG_BUFFER_SIZE || totalBufferSize + logSize > MAX_BUFFER_SIZE) && !logBuffer.isEmpty()) {
                 String oldest = logBuffer.poll();
                 logBufferCount--;
                 totalBufferSize -= oldest != null ? oldest.length() * 2L : 0;
             }
-            
+
+            if (tempBuffer.size() > 0) {
+                logBuffer.addAll(tempBuffer);
+                tempBuffer.clear();
+            }
+
             logBuffer.add(log);
             logBufferCount++;
             totalBufferSize += logSize;
             
             long currentTime = System.currentTimeMillis();
             boolean shouldFlush = logBufferCount >= LOG_BUFFER_SIZE || 
-                                 totalBufferSize >= MAX_BUFFER_SIZE ||
-                                 (currentTime - lastFlushTime) >= LOG_FLUSH_INTERVAL;
-            
+                                totalBufferSize >= MAX_BUFFER_SIZE ||
+                                (currentTime - lastFlushTime) >= LOG_FLUSH_INTERVAL;
             
             if (shouldFlush) {
+                if (logSystemInitialized) {
+                    logger.info("触发日志刷新， 缓冲区数量=" + logBufferCount + "， 大小=" + totalBufferSize + " bytes");
+                }
                 flushLogBuffer();
                 lastFlushTime = currentTime;
             }
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
+            isAppending.set(false);
         }
     }
 
     public static String readLogs() {
-        lock.lock();
+        return readLogs(1000);
+    }
+
+    public static String readLogs(int maxLines) {
+        lock.readLock().lock();
         try {
             flushLogBuffer();
             
             File file = getLogFile();
             if (!file.exists()) {
-                logWithCooldown("warn", "日志文件不存在");
+                logWithCooldown("warn", "日志文件不存在: " + file.getAbsolutePath());
                 return "";
             }
             
-            String content = IOManager.readFile(file.getAbsolutePath());
-            return content != null ? content : "";
+            long fileSize = file.length();
+            logger.info("读取日志文件: " + file.getAbsolutePath() + ", 大小: " + fileSize + " bytes");
+            
+            try {
+                String content = IOManager.readFile(file.getAbsolutePath(), StandardCharsets.UTF_8, -1, maxLines);
+                if (content != null && !content.isEmpty()) {
+                    logger.info("成功读取 " + maxLines + " 行日志，内容长度: " + content.length());
+                } else {
+                    logger.warn("读取日志内容为空");
+                }
+                return content != null ? content : "";
+            } catch (IOException e) {
+                if (e.getMessage() != null && e.getMessage().contains("文件过大")) {
+                    logger.warn("日志文件过大，无法读取完整内容");
+                    return "[日志文件过大，请使用清除日志功能]";
+                }
+                logger.error("读取日志异常: " + e.getMessage(), e);
+                throw e;
+            }
         } catch (Exception e) {
             reportLogError("读取日志失败: " + e.getMessage(), e);
             return "";
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
     public static void clearLogs() {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             flushLogBuffer();
             
             File file = getLogFile();
             if (file.exists()) {
-                if (!file.delete()) logWithCooldown("warn", "清除日志失败, delete返回false");
+                if (!file.delete()) logger.warn("清除日志失败, delete返回false");
             }
         } catch (Exception e) {
             reportLogError("清除日志失败: " + e.getMessage(), e);
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
@@ -597,7 +618,7 @@ public class DataBridge {
     }
 
     public static void writeClientHookConfig(JSONObject config) {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             logger.debug("写入新配置: " + config.toString());
 
@@ -616,12 +637,12 @@ public class DataBridge {
         } catch (Exception e) {
             reportLogError("写入Hook客户端配置失败: " + e.getMessage(), e);
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
     public static JSONObject readClientHookConfig() {
-        lock.lock();
+        lock.readLock().lock();
         try {
             File file = getClientHookConfigFile();
             if (!file.exists()) {
@@ -649,12 +670,12 @@ public class DataBridge {
             }
             return new JSONObject();
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
     public static void writeServerHookConfig(JSONObject hookList) {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             File file = getServerHookListFile();
             if (!file.exists()) {
@@ -671,12 +692,12 @@ public class DataBridge {
         } catch (Exception e) {
             reportLogError("写入服务端Hook配置失败: " + e.getMessage(), e);
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
     public static JSONObject readServerHookConfig() {
-        lock.lock();
+        lock.readLock().lock();
         try {
             File file = getServerHookListFile();
             if (!file.exists()) {
@@ -695,12 +716,12 @@ public class DataBridge {
             reportLogError("读取服务端Hook配置失败: " + e.getMessage(), e);
             return new JSONObject();
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
     public static boolean clearAllData() {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             File dir = getDataDir();
             if (dir.exists()) {
@@ -716,7 +737,7 @@ public class DataBridge {
             reportLogError("清除数据失败: " + e.getMessage(), e);
             return false;
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
