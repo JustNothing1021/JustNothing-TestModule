@@ -3,6 +3,7 @@ package com.justnothing.testmodule.utils.data;
 import static com.justnothing.testmodule.constants.FileDirectory.METHODS_DATA_DIR;
 
 import android.content.Context;
+import android.util.Log;
 
 import com.justnothing.methodsclient.executor.AsyncChmodExecutor;
 import com.justnothing.testmodule.constants.AppEnvironment;
@@ -66,36 +67,36 @@ public class DataDirectoryManager {
     public static File getDataDirectory() {
 
         if (BootMonitor.isZygotePhase()) {
-            logger.info("Zygote阶段，跳过数据目录操作，返回默认目录");
+            Log.i(TAG, "Zygote阶段，跳过数据目录操作，返回默认目录");
             return defaultDataDir;
         }
 
         if (AppEnvironment.isHookEnv()) {
-            logger.info("Hook环境，跳过数据目录操作，返回默认目录");
+            Log.i(TAG, "Hook环境，跳过数据目录操作，返回默认目录");
             return defaultDataDir;
         }
         
-        logger.info("尝试获取数据目录");
+        Log.i(TAG, "尝试获取数据目录");
         
         if (determinedDataDirectory) {
             File cachedDir = new File(dataDirectory);
             if (cachedDir.exists() && cachedDir.canRead() && cachedDir.canWrite() && cachedDir.canExecute()) {
                 return cachedDir;
             } else {
-                logger.warn("缓存的数据目录不可用，重新查找");
+                Log.w(TAG, "缓存的数据目录不可用，重新查找");
                 determinedDataDirectory = false;
                 dataDirectory = null;
             }
         }
 
-        logger.error("无法找到可用的数据目录");
+        Log.e(TAG, "无法找到可用的数据目录");
         if (context != null) {
             try {
                 ErrorDialog.showError(context,
                     "找不到地方存放程序的临时数据了...请激活模块后重试",
                     true);
             } catch (Exception e) {
-                logger.error("显示错误对话框失败", e);
+                Log.e(TAG, "显示错误对话框失败", e);
             }
         }
         return defaultDataDir;

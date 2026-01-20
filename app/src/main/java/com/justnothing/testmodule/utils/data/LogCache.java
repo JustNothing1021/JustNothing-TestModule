@@ -2,9 +2,11 @@ package com.justnothing.testmodule.utils.data;
 
 import android.util.Log;
 
-import com.justnothing.testmodule.utils.io.IOManager;
+import com.justnothing.testmodule.constants.FileDirectory;
 
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -21,6 +23,17 @@ public class LogCache {
     private static String formatTimestamp(long timestampMs) {
         return Objects.requireNonNull(TIMESTAMP_FORMAT.get()).format(new Date(timestampMs));
     }
+    
+    private static final int LOG_BUFFER_SIZE = 500;
+    private static final long LOG_FLUSH_INTERVAL = 500;
+    private static final long MAX_BUFFER_SIZE = 500 * 1024;
+    private static final List<String> logBuffer = new ArrayList<>();
+    private static int logBufferCount = 0;
+    private static long totalBufferSize = 0;
+    private static long lastFlushTime = 0;
+    private static boolean logFileInitialized = false;
+    private static File cachedLogFile = null;
+    private static final ReentrantReadWriteLock logFileLock = new ReentrantReadWriteLock();
 
     public static class LogEntry {
         public final String timestamp;
@@ -135,9 +148,10 @@ public class LogCache {
         }
 
         LogEntry entry = new LogEntry(timestamp, level, tag, message);
+        String formattedMessage = entry.getFormattedMessage();
         
-        // 写入文件日志
-        DataBridge.appendLog(entry.getFormattedMessage());
+        // 直接写入文件日志，避免循环递归
+        appendToLogFile(formattedMessage);
         
         if (saveLogs) {
             cacheLock.writeLock().lock();
@@ -173,9 +187,101 @@ public class LogCache {
         }
     }
     
+    private static void appendToLogFile(String log) {
+        if (BootMonitor.isZygotePhase()) {
+            return;
+        }
+        
+        logFileLock.writeLock().lock();
+        try {
+            long logSize = log != null ? log.length() * 2L : 0;
+            
+            while ((logBufferCount >= LOG_BUFFER_SIZE || totalBufferSize + logSize > MAX_BUFFER_SIZE) && !logBuffer.isEmpty()) {
+                String oldest = logBuffer.remove(0);
+                logBufferCount--;
+                totalBufferSize -= oldest != null ? oldest.length() * 2L : 0;
+            }
+            
+            logBuffer.add(log);
+            logBufferCount++;
+            totalBufferSize += logSize;
+            
+            long currentTime = System.currentTimeMillis();
+            boolean shouldFlush = logBufferCount >= LOG_BUFFER_SIZE || 
+                                 totalBufferSize >= MAX_BUFFER_SIZE ||
+                                 (currentTime - lastFlushTime) >= LOG_FLUSH_INTERVAL;
+            
+            if (shouldFlush) {
+                flushLogFile();
+                lastFlushTime = currentTime;
+            }
+        } finally {
+            logFileLock.writeLock().unlock();
+        }
+    }
+    
+    private static void flushLogFile() {
+        if (logBuffer.isEmpty()) {
+            return;
+        }
+        
+        try {
+            File logFile = getCachedLogFile();
+            if (logFile == null) {
+                return;
+            }
+            
+            File logDir = logFile.getParentFile();
+            if (logDir != null && !logDir.exists()) {
+                logDir.mkdirs();
+            }
+            
+            if (!logFile.exists()) {
+                logFile.createNewFile();
+            }
+            
+            StringBuilder sb = new StringBuilder();
+            while (!logBuffer.isEmpty()) {
+                String log = logBuffer.remove(0);
+                sb.append(log).append("\n");
+            }
+            
+            try (FileWriter writer = new FileWriter(logFile, true)) {
+                writer.write(sb.toString());
+            }
+            
+            logBufferCount = 0;
+            totalBufferSize = 0;
+        } catch (IOException e) {
+            Log.e("LogCache", "写入日志文件失败", e);
+        }
+    }
+    
+    private static File getCachedLogFile() {
+        if (cachedLogFile != null) {
+            return cachedLogFile;
+        }
+        
+        if (BootMonitor.isZygotePhase()) {
+            return null;
+        }
+        
+        try {
+            File dataDir = DataBridge.getDataDir();
+            if (dataDir != null) {
+                cachedLogFile = new File(dataDir, FileDirectory.MODULE_LOG_FILE_NAME);
+                return cachedLogFile;
+            }
+        } catch (Exception e) {
+            Log.e("LogCache", "获取日志文件路径失败", e);
+        }
+        
+        return null;
+    }
+    
     private void cleanupOldLogs() {
         try {
-            File logFile = DataBridge.getLogFile();
+            File logFile = getCachedLogFile();
             if (logFile != null && logFile.exists()) {
                 long fileSize = logFile.length();
                 if (fileSize > MAX_LOG_FILE_SIZE) {

@@ -175,7 +175,6 @@ public class ShellServiceHook extends PackageHook {
         registerThread.start();
     }
 
-    // 添加服务状态日志
     private void logServiceStatus() {
         try {
             CmdUtils.CommandOutput listOutput = CmdUtils.runCommand("service list");
@@ -208,7 +207,7 @@ public class ShellServiceHook extends PackageHook {
                     private boolean hasTriggeredRegistration = false;
 
                     @Override
-                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                    protected void afterHookedMethod(MethodHookParam param) {
                         String serviceName = (String) param.args[0];
 
                         if (!hasTriggeredRegistration && shouldRegisterAfterService(serviceName) && !serviceRegistered) {

@@ -145,38 +145,6 @@ public abstract class PackageHook extends XposedBasicHook<XC_LoadPackage.LoadPac
 
         boolean hasFailures = false;
         
-        java.util.Set<String> loadedClasses = new java.util.HashSet<>();
-        int preloadSuccessCount = 0;
-        int preloadFailCount = 0;
-        
-        for (BaseHook hook : getHooks()) {
-            if (hook.shouldLoad(param)) {
-                if (hook instanceof PackageMethodHook) {
-                    PackageMethodHook methodHook = (PackageMethodHook) hook;
-                    if (!loadedClasses.contains(methodHook.className)) {
-                        try {
-                            Class<?> clazz = ClassFinder.withCl(param.classLoader).find(methodHook.className);
-                            if (clazz == null) {
-                                preloadFailCount++;
-                                loadedClasses.add(methodHook.className);
-                                continue;
-                            }
-                            loadedClasses.add(methodHook.className);
-                            preloadSuccessCount++;
-                        } catch (Throwable e) {
-                            preloadFailCount++;
-                            loadedClasses.add(methodHook.className);
-                            continue;
-                        }
-                    }
-                }
-            }
-        }
-        
-        if (preloadSuccessCount > 0 || preloadFailCount > 0) {
-            info("类预加载完成: 成功" + preloadSuccessCount + "个，失败" + preloadFailCount + "个");
-        }
-        
         for (BaseHook hook : getHooks()) {
             if (hook.shouldLoad(param)) {
                 if (hook.loads(param)) {

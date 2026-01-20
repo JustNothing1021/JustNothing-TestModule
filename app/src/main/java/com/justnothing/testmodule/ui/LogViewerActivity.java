@@ -208,18 +208,13 @@ public class LogViewerActivity extends AppCompatActivity {
     
     private List<LogCache.LogEntry> filterLogs(List<LogCache.LogEntry> logs) {
         List<LogCache.LogEntry> result = new ArrayList<>();
-        List<String> seenLogs = new ArrayList<>();
         
         for (LogCache.LogEntry entry : logs) {
             if (!shouldShowEntry(entry)) {
                 continue;
             }
             
-            String logKey = entry.level + "|" + entry.tag + "|" + entry.message;
-            if (!seenLogs.contains(logKey)) {
-                seenLogs.add(logKey);
-                result.add(entry);
-            }
+            result.add(entry);
         }
         
         if (result.size() > currentDisplayLimit) {

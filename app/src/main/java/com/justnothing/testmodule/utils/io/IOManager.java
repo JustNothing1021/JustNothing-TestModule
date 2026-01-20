@@ -26,7 +26,7 @@ public class IOManager extends Logger {
         }
     };
 
-    private static final IOManager instance = new IOManager();
+    private static volatile IOManager instance = null;
 
     private static final int DEFAULT_BUFFER_SIZE = 8192;
     private static final int LARGE_BUFFER_SIZE = 65536;
@@ -55,6 +55,16 @@ public class IOManager extends Logger {
     }
 
     public static IOManager getInstance() {
+        if (instance == null) {
+            synchronized (IOManager.class) {
+                if (instance == null) {
+                    if (BootMonitor.isZygotePhase()) {
+                        return null;
+                    }
+                    instance = new IOManager();
+                }
+            }
+        }
         return instance;
     }
 
@@ -77,6 +87,14 @@ public class IOManager extends Logger {
     }
 
     public static String readFile(String filePath, java.nio.charset.Charset charset) throws IOException {
+        return readFile(filePath, charset, 10 * 1024 * 1024);
+    }
+
+    public static String readFile(String filePath, java.nio.charset.Charset charset, long maxSize) throws IOException {
+        return readFile(filePath, charset, maxSize, -1);
+    }
+
+    public static String readFile(String filePath, java.nio.charset.Charset charset, long maxSize, int maxLines) throws IOException {
         if (BootMonitor.isZygotePhase()) {
             return null;
         }
@@ -88,18 +106,96 @@ public class IOManager extends Logger {
             throw new FileNotFoundException("文件不存在: " + filePath);
         }
 
-        byte[] bytes = Files.readAllBytes(path);
+        long fileSize = Files.size(path);
+        if (maxSize > 0 && fileSize > maxSize) {
+            throw new IOException("文件过大: " + filePath + " (" + fileSize + " bytes, 最大允许: " + maxSize + " bytes)");
+        }
+
+        byte[] bytes;
+        if (maxLines > 0) {
+            bytes = readLastLines(path, charset, maxLines);
+        } else {
+            bytes = Files.readAllBytes(path);
+        }
+        
         String content = new String(bytes, charset);
 
         long duration = System.currentTimeMillis() - startTime;
-        instance.totalBytesRead.addAndGet(bytes.length);
-        instance.totalReadTime.addAndGet(duration);
+        IOManager mgr = getInstance();
+        if (mgr != null) {
+            mgr.totalBytesRead.addAndGet(bytes.length);
+            mgr.totalReadTime.addAndGet(duration);
 
-        if (duration > 1000) {
-            instance.warn("读取文件耗时过长: " + filePath + " (" + duration + "ms, " + bytes.length + " bytes)");
+            if (duration > 1000) {
+                mgr.warn("读取文件耗时过长: " + filePath + " (" + duration + "ms, " + bytes.length + " bytes)");
+            }
         }
 
         return content;
+    }
+
+    private static byte[] readLastLines(Path path, java.nio.charset.Charset charset, int maxLines) throws IOException {
+        java.io.RandomAccessFile raf = null;
+        try {
+            raf = new java.io.RandomAccessFile(path.toFile(), "r");
+            
+            long fileLength = raf.length();
+            if (fileLength == 0) {
+                logger.debug("日志文件为空");
+                return new byte[0];
+            }
+            
+            long filePointer = fileLength - 1;
+            int lineCount = 0;
+            
+            while (filePointer >= 0 && lineCount < maxLines) {
+                raf.seek(filePointer);
+                byte b = raf.readByte();
+                
+                if (b == '\n') {
+                    lineCount++;
+                    if (lineCount >= maxLines) {
+                        filePointer++;
+                        break;
+                    }
+                }
+                
+                filePointer--;
+            }
+            
+            if (filePointer < 0) {
+                filePointer = 0;
+            }
+            
+            logger.debug("从位置 " + filePointer + " 开始读取，共 " + lineCount + " 行");
+            
+            raf.seek(filePointer);
+            
+            java.io.BufferedReader reader = new java.io.BufferedReader(
+                new java.io.InputStreamReader(new java.io.FileInputStream(raf.getFD()), charset));
+            
+            StringBuilder sb = new StringBuilder();
+            String line;
+            int linesRead = 0;
+            while ((line = reader.readLine()) != null && linesRead < maxLines) {
+                if (linesRead > 0) {
+                    sb.append('\n');
+                }
+                sb.append(line);
+                linesRead++;
+            }
+            
+            reader.close();
+            logger.debug("实际读取 " + linesRead + " 行，总长度: " + sb.length());
+            return sb.toString().getBytes(charset);
+        } finally {
+            if (raf != null) {
+                try {
+                    raf.close();
+                } catch (Exception e) {
+                }
+            }
+        }
     }
 
     public static Future<Void> writeFileAsync(String filePath, String content) {
@@ -143,11 +239,14 @@ public class IOManager extends Logger {
         }
 
         long duration = System.currentTimeMillis() - startTime;
-        instance.totalBytesWritten.addAndGet(bytes.length);
-        instance.totalWriteTime.addAndGet(duration);
+        IOManager mgr = getInstance();
+        if (mgr != null) {
+            mgr.totalBytesWritten.addAndGet(bytes.length);
+            mgr.totalWriteTime.addAndGet(duration);
 
-        if (duration > 1000) {
-            instance.warn("写入文件耗时过长: " + filePath + " (" + duration + "ms, " + bytes.length + " bytes)");
+            if (duration > 1000) {
+                mgr.warn("写入文件耗时过长: " + filePath + " (" + duration + "ms, " + bytes.length + " bytes)");
+            }
         }
     }
 
@@ -183,7 +282,7 @@ public class IOManager extends Logger {
             Path path = Paths.get(filePath);
             return Files.deleteIfExists(path);
         } catch (IOException e) {
-            instance.error("删除文件失败: " + filePath, e);
+            logger.error("删除文件失败: " + filePath, e);
             return false;
         }
     }
@@ -197,7 +296,7 @@ public class IOManager extends Logger {
             Path path = Paths.get(filePath);
             return Files.exists(path);
         } catch (Exception e) {
-            instance.error("检查文件存在失败: " + filePath, e);
+            logger.error("检查文件存在失败: " + filePath, e);
             return false;
         }
     }
@@ -236,7 +335,7 @@ public class IOManager extends Logger {
 
         long duration = System.currentTimeMillis() - startTime;
         if (duration > 500) {
-            instance.warn("截断文件耗时: " + filePath + " (" + duration + "ms)");
+            logger.warn("截断文件耗时: " + filePath + " (" + duration + "ms)");
         }
     }
 
@@ -261,7 +360,7 @@ public class IOManager extends Logger {
 
         long duration = System.currentTimeMillis() - startTime;
         if (duration > 1000) {
-            instance.warn("复制文件耗时: " + sourcePath + " -> " + targetPath + " (" + duration + "ms)");
+            logger.warn("复制文件耗时: " + sourcePath + " -> " + targetPath + " (" + duration + "ms)");
         }
     }
 
@@ -281,7 +380,7 @@ public class IOManager extends Logger {
             }
             return true;
         } catch (IOException e) {
-            instance.error("创建目录失败: " + dirPath, e);
+            logger.error("创建目录失败: " + dirPath, e);
             return false;
         }
     }
@@ -304,13 +403,13 @@ public class IOManager extends Logger {
                             try {
                                 Files.delete(p);
                             } catch (IOException e) {
-                                instance.error("删除失败: " + p, e);
+                                logger.error("删除失败: " + p, e);
                             }
                         });
             }
             return true;
         } catch (IOException e) {
-            instance.error("删除目录失败: " + dirPath, e);
+            logger.error("删除目录失败: " + dirPath, e);
             return false;
         }
     }
@@ -336,7 +435,7 @@ public class IOManager extends Logger {
 
             long duration = System.currentTimeMillis() - startTime;
             if (duration > 5000) {
-                instance.warn("命令执行耗时过长: " + command + " (" + duration + "ms)");
+                logger.warn("命令执行耗时过长: " + command + " (" + duration + "ms)");
             }
 
             return result;
@@ -373,7 +472,7 @@ public class IOManager extends Logger {
 
             long duration = System.currentTimeMillis() - startTime;
             if (duration > 5000) {
-                instance.warn("Root命令执行耗时过长: " + command + " (" + duration + "ms)");
+                logger.warn("Root命令执行耗时过长: " + command + " (" + duration + "ms)");
             }
 
             return result;
@@ -395,7 +494,7 @@ public class IOManager extends Logger {
                     stdout.append(line).append('\n');
                 }
             } catch (IOException e) {
-                instance.error("读取stdout失败", e);
+                logger.error("读取stdout失败", e);
             }
         });
 
@@ -456,12 +555,16 @@ public class IOManager extends Logger {
     }
 
     public static String getStats() {
+        IOManager mgr = getInstance();
+        if (mgr == null) {
+            return "IOManager[未初始化]";
+        }
         return String.format(
                 "IOManager[readBytes=%d, writeBytes=%d, readTime=%dms, writeTime=%dms]",
-                instance.totalBytesRead.get(),
-                instance.totalBytesWritten.get(),
-                instance.totalReadTime.get(),
-                instance.totalWriteTime.get()
+                mgr.totalBytesRead.get(),
+                mgr.totalBytesWritten.get(),
+                mgr.totalReadTime.get(),
+                mgr.totalWriteTime.get()
         );
     }
 

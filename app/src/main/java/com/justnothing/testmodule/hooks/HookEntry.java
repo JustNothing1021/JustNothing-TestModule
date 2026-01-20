@@ -67,6 +67,8 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
     private PerformanceMonitor performanceMonitor = null;
     private static final HookEntryLogger logger = new HookEntryLogger();
     private static final long FILE_OPERATION_DELAY = 500;
+    private static final long FILE_OPERATION_THROTTLE = 2000;
+    private static long lastFileOperationTime = 0;
     public static class HookEntryLogger extends Logger {
         @Override
         public String getTag() {
@@ -369,6 +371,9 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
             int successCount = 0;
             int failCount = 0;
             double hookEnd = 0;
+            long maxHookDuration = 0;
+            String slowestHookName = "";
+            
             for (PackageHook hook : packageHooks) {
                 String hookName = hook.getHookName();
                 if (!hook.isHookEnabled()) {
@@ -376,6 +381,7 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
                     continue;
                 }
                 boolean succeed = true;
+                long hookStartTime = System.currentTimeMillis();
                 try {
                     if (hook.shouldLoad(param)) {
                         succeed = hook.installHooks(param);
@@ -384,10 +390,16 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
                     logger.error("安装Package Hook " + hookName + " 时发生异常: " + e.getMessage(), e);
                     succeed = false;
                 }
-                long hookEndLong = System.currentTimeMillis();
-                hookEnd = hookEndLong / 1000.0f;
+                long hookEndTime = System.currentTimeMillis();
+                long hookDuration = hookEndTime - hookStartTime;
+                hookEnd = hookEndTime / 1000.0f;
                 
-                recordHookLoad(hookName, hookBeginLong, hookEndLong);
+                recordHookLoad(hookName, hookBeginLong, hookEndTime);
+                
+                if (hookDuration > maxHookDuration) {
+                    maxHookDuration = hookDuration;
+                    slowestHookName = hookName;
+                }
 
                 if (succeed) {
                     successCount++;
@@ -395,10 +407,15 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
                     failCount++;
                     logger.warn(param.packageName + "加载" + hook.getTag() + "出现错误");
                 }
-                if (hookEnd - hookBegin > 0.1)
+                if (hookDuration > 100)
                     logger.warn(param.packageName
                             + "加载" + hook.getTag() + "时间过长，可能出现了未知错误"
-                            + String.format(Locale.getDefault(), "(%.3f秒)", hookEnd - hookBegin));
+                            + String.format(Locale.getDefault(), "(%.3f秒)", hookDuration / 1000.0f));
+            }
+            
+            if (maxHookDuration > 50) {
+                logger.info(param.packageName + " 最耗时的Hook: " + slowestHookName + 
+                        String.format(Locale.getDefault(), " (%.3f秒)", maxHookDuration / 1000.0f));
             }
             logger.info(param.packageName + "处理完成，耗时:" +
                     String.format(Locale.getDefault(), "%.3f", hookEnd - hookBegin) + "秒，" +
@@ -407,7 +424,11 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
                 packageLoadSuccess = false;
             }
 
-            scheduleFileOperations();
+            long currentTime = System.currentTimeMillis();
+            if (currentTime - lastFileOperationTime >= FILE_OPERATION_THROTTLE) {
+                scheduleFileOperations();
+                lastFileOperationTime = currentTime;
+            }
 
         } catch (Throwable e) {
             logger.error("加载hook失败，详细信息:\n", e);
