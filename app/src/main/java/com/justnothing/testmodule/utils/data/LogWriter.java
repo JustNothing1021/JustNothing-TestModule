@@ -233,12 +233,18 @@ public class LogCache {
             
             File logDir = logFile.getParentFile();
             if (logDir != null && !logDir.exists()) {
+                Log.d("LogCache", "创建日志目录: " + logDir.getAbsolutePath());
                 logDir.mkdirs();
             }
             
             if (!logFile.exists()) {
+                Log.d("LogCache", "创建日志文件: " + logFile.getAbsolutePath());
                 logFile.createNewFile();
             }
+            
+            Log.d("LogCache", "开始写入日志文件: " + logFile.getAbsolutePath() + 
+                    ", 缓冲区数量: " + logBufferCount + 
+                    ", 总大小: " + totalBufferSize + " bytes");
             
             StringBuilder sb = new StringBuilder();
             while (!logBuffer.isEmpty()) {
@@ -249,6 +255,8 @@ public class LogCache {
             try (FileWriter writer = new FileWriter(logFile, true)) {
                 writer.write(sb.toString());
             }
+            
+            Log.d("LogCache", "日志文件写入完成");
             
             logBufferCount = 0;
             totalBufferSize = 0;
