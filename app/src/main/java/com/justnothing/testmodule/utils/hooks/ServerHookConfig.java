@@ -20,15 +20,28 @@ public class ServerHookConfig {
         }
     }
     private static final ServerHookConfigLogger logger = new ServerHookConfigLogger();
+    
+    private static JSONObject cachedServerHookConfig = null;
+    private static long serverConfigCacheTime = 0;
+    private static final long SERVER_CONFIG_CACHE_TTL = 5000;
 
     public static boolean isHookEnabled(String name) throws JSONException {
-        JSONObject hookData = DataBridge.readServerHookConfig();
-        JSONObject item = hookData.getJSONObject(name);
+        long currentTime = System.currentTimeMillis();
+        if (cachedServerHookConfig == null || (currentTime - serverConfigCacheTime) >= SERVER_CONFIG_CACHE_TTL) {
+            cachedServerHookConfig = DataBridge.readServerHookConfig();
+            serverConfigCacheTime = currentTime;
+        }
+        JSONObject item = cachedServerHookConfig.getJSONObject(name);
         return item.getBoolean(KEY_ENABLED);
     }
 
     public static JSONObject getHookConfig(String name) throws JSONException {
         return DataBridge.readClientHookConfig().getJSONObject(name);
+    }
+    
+    public static void invalidateCache() {
+        cachedServerHookConfig = null;
+        serverConfigCacheTime = 0;
     }
 
 }

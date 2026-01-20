@@ -111,6 +111,8 @@ public class IOManager extends Logger {
             throw new IOException("文件过大: " + filePath + " (" + fileSize + " bytes, 最大允许: " + maxSize + " bytes)");
         }
 
+        logger.debug("开始读取文件: " + filePath + ", 大小: " + fileSize + " bytes, 最大行数: " + maxLines);
+        
         byte[] bytes;
         if (maxLines > 0) {
             bytes = readLastLines(path, charset, maxLines);
@@ -126,6 +128,8 @@ public class IOManager extends Logger {
             mgr.totalBytesRead.addAndGet(bytes.length);
             mgr.totalReadTime.addAndGet(duration);
 
+            logger.debug("文件读取完成: " + filePath + ", 耗时: " + duration + "ms, 字节数: " + bytes.length);
+            
             if (duration > 1000) {
                 mgr.warn("读取文件耗时过长: " + filePath + " (" + duration + "ms, " + bytes.length + " bytes)");
             }
@@ -232,6 +236,8 @@ public class IOManager extends Logger {
 
         ensureParentDirectoryExists(path.getParent());
 
+        logger.debug("开始写入文件: " + filePath + ", 字节数: " + bytes.length + ", 追加模式: " + append);
+        
         if (append) {
             Files.write(path, bytes, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
         } else {
@@ -244,6 +250,8 @@ public class IOManager extends Logger {
             mgr.totalBytesWritten.addAndGet(bytes.length);
             mgr.totalWriteTime.addAndGet(duration);
 
+            logger.debug("文件写入完成: " + filePath + ", 耗时: " + duration + "ms");
+            
             if (duration > 1000) {
                 mgr.warn("写入文件耗时过长: " + filePath + " (" + duration + "ms, " + bytes.length + " bytes)");
             }

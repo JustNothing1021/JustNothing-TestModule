@@ -17,6 +17,8 @@ public class ClientHookConfig {
     private static final ReentrantLock lock = new ReentrantLock();
     private static final Map<String, Boolean> hookData = new HashMap<>();
     private static boolean isRefreshing = false;
+    private static long lastRefreshTime = 0;
+    private static final long REFRESH_INTERVAL = 5000;
 
     private static final class HookConfigLogger extends Logger {
         @Override
@@ -27,17 +29,19 @@ public class ClientHookConfig {
     private static final HookConfigLogger logger = new HookConfigLogger();
 
     private static void refreshData() {
-        if (isRefreshing) {
+        long currentTime = System.currentTimeMillis();
+        if (isRefreshing || (currentTime - lastRefreshTime) < REFRESH_INTERVAL) {
             return;
         }
         
         lock.lock();
         try {
-            if (isRefreshing) {
+            if (isRefreshing || (currentTime - lastRefreshTime) < REFRESH_INTERVAL) {
                 return;
             }
             
             isRefreshing = true;
+            lastRefreshTime = currentTime;
             JSONObject config = DataBridge.readClientHookConfig();
             if (config.length() > 0) {
                 for (Iterator<String> it = config.keys(); it.hasNext(); ) {
@@ -67,6 +71,7 @@ public class ClientHookConfig {
         states.put(name, enabled);
         DataBridge.writeClientHookConfig(new JSONObject(states));
         
+        lastRefreshTime = 0;
         DataBridge.forceRefreshServerHookStatus();
     }
 

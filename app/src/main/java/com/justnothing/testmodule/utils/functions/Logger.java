@@ -5,7 +5,7 @@ import android.util.Log;
 import android.widget.Toast;
 
 import com.justnothing.testmodule.constants.AppEnvironment;
-import com.justnothing.testmodule.utils.data.LogCache;
+import com.justnothing.testmodule.utils.data.LogWriter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,7 +17,7 @@ public abstract class Logger {
     public static final Boolean SILENT_IN_CONST_HOOK = false;
     public static final Boolean USE_ONE_LOGGER_ONLY = true;
     
-    private static final LogCache sharedLogCache = new LogCache(!AppEnvironment.isHookEnv());
+    private static final LogWriter SHARED_LOG_WRITER = new LogWriter(!AppEnvironment.isHookEnv());
     public static final List<Logger> instances = new ArrayList<>();
 
     private Context context;
@@ -85,7 +85,6 @@ public abstract class Logger {
 
     private void logInternal(String level, String message) {
         if (SILENT) return;
-        
         long timestamp = System.currentTimeMillis();
         xposedLog(message);
         if (shouldUseSystemLogger()) {
@@ -104,8 +103,8 @@ public abstract class Logger {
                     break;
             }
         }
-
-        sharedLogCache.addLog(level, getTag(), message, timestamp);
+        Log.d("Test", "向logWriter添加一条日志");
+        SHARED_LOG_WRITER.addLog(level, getTag(), message, timestamp);
     }
 
     private void logThrowable(String level, Throwable th) {

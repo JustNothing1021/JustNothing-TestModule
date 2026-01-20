@@ -19,16 +19,17 @@ public class ThreadPoolManager extends Logger {
     private static volatile ThreadPoolManager instance = null;
 
     private static final int CPU_CORES = Runtime.getRuntime().availableProcessors();
+    private static final boolean IS_LOW_END_DEVICE = CPU_CORES <= 4 || Runtime.getRuntime().maxMemory() < 128 * 1024 * 1024;
 
-    private static final int IO_POOL_SIZE = Math.max(4, CPU_CORES * 2);
-    private static final int CPU_POOL_SIZE = CPU_CORES;
-    private static final int FAST_POOL_SIZE = Math.max(8, CPU_CORES * 3);
-    private static final int SOCKET_POOL_SIZE = Math.max(16, CPU_CORES * 4);
+    private static final int IO_POOL_SIZE = Math.max(1, IS_LOW_END_DEVICE ? 1 : Math.max(2, CPU_CORES));
+    private static final int CPU_POOL_SIZE = Math.max(1, IS_LOW_END_DEVICE ? 1 : Math.max(1, CPU_CORES / 2));
+    private static final int FAST_POOL_SIZE = Math.max(2, IS_LOW_END_DEVICE ? 2 : Math.max(3, CPU_CORES));
+    private static final int SOCKET_POOL_SIZE = Math.max(2, IS_LOW_END_DEVICE ? 2 : Math.max(3, CPU_CORES));
 
-    private static final int IO_QUEUE_CAPACITY = 1000;
-    private static final int CPU_QUEUE_CAPACITY = 100;
-    private static final int FAST_QUEUE_CAPACITY = 500;
-    private static final int SOCKET_QUEUE_CAPACITY = 2000;
+    private static final int IO_QUEUE_CAPACITY = IS_LOW_END_DEVICE ? 50 : 200;
+    private static final int CPU_QUEUE_CAPACITY = IS_LOW_END_DEVICE ? 20 : 50;
+    private static final int FAST_QUEUE_CAPACITY = IS_LOW_END_DEVICE ? 50 : 150;
+    private static final int SOCKET_QUEUE_CAPACITY = IS_LOW_END_DEVICE ? 100 : 500;
 
     private static final long KEEP_ALIVE_TIME = 60L;
 
@@ -98,9 +99,14 @@ public class ThreadPoolManager extends Logger {
         );
 
         initialized = true;
-        info("ThreadPoolManager初始化完成 - CPU核心数: " + CPU_CORES +
-                ", IO池: " + IO_POOL_SIZE + ", CPU池: " + CPU_POOL_SIZE +
-                ", 快速池: " + FAST_POOL_SIZE + ", Socket池: " + SOCKET_POOL_SIZE);
+        info("ThreadPoolManager初始化完成");
+        info("设备信息 - CPU核心数: " + CPU_CORES + 
+                ", 低端设备: " + IS_LOW_END_DEVICE +
+                ", 最大内存: " + (Runtime.getRuntime().maxMemory() / 1024 / 1024) + "MB");
+        info("线程池配置 - IO池: " + IO_POOL_SIZE + "/" + IO_QUEUE_CAPACITY + 
+                ", CPU池: " + CPU_POOL_SIZE + "/" + CPU_QUEUE_CAPACITY +
+                ", 快速池: " + FAST_POOL_SIZE + "/" + FAST_QUEUE_CAPACITY +
+                ", Socket池: " + SOCKET_POOL_SIZE + "/" + SOCKET_QUEUE_CAPACITY);
     }
 
     @Override
@@ -360,13 +366,69 @@ public class ThreadPoolManager extends Logger {
         if (mgr == null) {
             return "ThreadPoolManager[未初始化]";
         }
+        
+        ThreadPoolExecutor ioPool = (ThreadPoolExecutor) mgr.ioExecutor;
+        ThreadPoolExecutor cpuPool = (ThreadPoolExecutor) mgr.cpuExecutor;
+        ThreadPoolExecutor fastPool = (ThreadPoolExecutor) mgr.fastExecutor;
+        ThreadPoolExecutor socketPool = (ThreadPoolExecutor) mgr.socketExecutor;
+        
         return String.format(
-                "ThreadPoolManager[active=%d, completed=%d, rejected=%d, shutdown=%s]",
+                "ThreadPoolManager[active=%d, completed=%d, rejected=%d, shutdown=%s]\n" +
+                "  IO池: active=%d, queued=%d, completed=%d\n" +
+                "  CPU池: active=%d, queued=%d, completed=%d\n" +
+                "  快速池: active=%d, queued=%d, completed=%d\n" +
+                "  Socket池: active=%d, queued=%d, completed=%d",
                 mgr.activeTasks.get(),
                 mgr.completedTasks.get(),
                 mgr.rejectedTasks.get(),
-                mgr.shutdown
+                mgr.shutdown,
+                ioPool.getActiveCount(), ioPool.getQueue().size(), ioPool.getCompletedTaskCount(),
+                cpuPool.getActiveCount(), cpuPool.getQueue().size(), cpuPool.getCompletedTaskCount(),
+                fastPool.getActiveCount(), fastPool.getQueue().size(), fastPool.getCompletedTaskCount(),
+                socketPool.getActiveCount(), socketPool.getQueue().size(), socketPool.getCompletedTaskCount()
         );
+    }
+
+    public static void logDetailedPoolStats() {
+        ThreadPoolManager mgr = getInstance();
+        if (mgr == null) {
+            logger.warn("ThreadPoolManager未初始化，无法获取详细状态");
+            return;
+        }
+        
+        ThreadPoolExecutor ioPool = (ThreadPoolExecutor) mgr.ioExecutor;
+        ThreadPoolExecutor cpuPool = (ThreadPoolExecutor) mgr.cpuExecutor;
+        ThreadPoolExecutor fastPool = (ThreadPoolExecutor) mgr.fastExecutor;
+        ThreadPoolExecutor socketPool = (ThreadPoolExecutor) mgr.socketExecutor;
+        
+        logger.info("=== 线程池详细状态 ===");
+        logger.info("IO池 - 活跃线程: " + ioPool.getActiveCount() + 
+                ", 队列大小: " + ioPool.getQueue().size() + "/" + IO_QUEUE_CAPACITY +
+                ", 已完成任务: " + ioPool.getCompletedTaskCount() +
+                ", 核心线程: " + ioPool.getCorePoolSize() + 
+                ", 最大线程: " + ioPool.getMaximumPoolSize());
+        
+        logger.info("CPU池 - 活跃线程: " + cpuPool.getActiveCount() + 
+                ", 队列大小: " + cpuPool.getQueue().size() + "/" + CPU_QUEUE_CAPACITY +
+                ", 已完成任务: " + cpuPool.getCompletedTaskCount() +
+                ", 核心线程: " + cpuPool.getCorePoolSize() + 
+                ", 最大线程: " + cpuPool.getMaximumPoolSize());
+        
+        logger.info("快速池 - 活跃线程: " + fastPool.getActiveCount() + 
+                ", 队列大小: " + fastPool.getQueue().size() + "/" + FAST_QUEUE_CAPACITY +
+                ", 已完成任务: " + fastPool.getCompletedTaskCount() +
+                ", 核心线程: " + fastPool.getCorePoolSize() + 
+                ", 最大线程: " + fastPool.getMaximumPoolSize());
+        
+        logger.info("Socket池 - 活跃线程: " + socketPool.getActiveCount() + 
+                ", 队列大小: " + socketPool.getQueue().size() + "/" + SOCKET_QUEUE_CAPACITY +
+                ", 已完成任务: " + socketPool.getCompletedTaskCount() +
+                ", 核心线程: " + socketPool.getCorePoolSize() + 
+                ", 最大线程: " + socketPool.getMaximumPoolSize());
+        
+        logger.info("总计 - 活跃任务: " + mgr.activeTasks.get() + 
+                ", 已完成任务: " + mgr.completedTasks.get() + 
+                ", 被拒绝任务: " + mgr.rejectedTasks.get());
     }
 
     private static class NamedThreadFactory implements ThreadFactory {
