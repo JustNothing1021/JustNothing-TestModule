@@ -32,12 +32,6 @@ public interface TipCallback {
     boolean shouldShow();
     
     /**
-     * 是否应该显示（替换副标题）
-     * 这是一个callable方法，可以动态判断是否应该显示
-     */
-    boolean shouldDisplay();
-    
-    /**
      * 显示优先级（数值越大优先级越高）
      */
     int getPriority();

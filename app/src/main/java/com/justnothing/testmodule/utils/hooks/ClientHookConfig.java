@@ -65,14 +65,51 @@ public class ClientHookConfig {
     }
 
     public static void setHookEnabled(String name, boolean enabled) {
-        refreshData();
-        Map<String, Boolean> states = getAllHookStates();
-        logger.info("将" + name + "的状态设置为" + enabled);
-        states.put(name, enabled);
-        DataBridge.writeClientHookConfig(new JSONObject(states));
-        
-        lastRefreshTime = 0;
-        DataBridge.forceRefreshServerHookStatus();
+        lock.lock();
+        try {
+            Map<String, Boolean> states = new HashMap<>(hookData);
+            logger.info("将" + name + "的状态设置为" + enabled);
+            states.put(name, enabled);
+            DataBridge.writeClientHookConfig(new JSONObject(states));
+            hookData.put(name, enabled);
+            lastRefreshTime = System.currentTimeMillis();
+            DataBridge.forceRefreshServerHookStatus();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public static void setHookStatus(Map<String, Boolean> status) {
+        lock.lock();
+        try {
+            hookData.clear();
+            hookData.putAll(status);
+            logger.info("将Hook状态更新为" + status);
+            // 写入配置文件
+            DataBridge.writeClientHookConfig(new JSONObject(status));
+            lastRefreshTime = System.currentTimeMillis();
+            DataBridge.forceRefreshServerHookStatus();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public static void forceRefresh() {
+        lock.lock();
+        try {
+            lastRefreshTime = 0;
+            hookData.clear();
+            JSONObject config = DataBridge.readClientHookConfig(true);
+            if (config.length() > 0) {
+                for (Iterator<String> it = config.keys(); it.hasNext(); ) {
+                    String key = it.next();
+                    hookData.put(key, config.optBoolean(key, true));
+                }
+            }
+            logger.debug("强制刷新Hook配置完成，配置项数量: " + hookData.size());
+        } finally {
+            lock.unlock();
+        }
     }
 
     public static Map<String, Boolean> getAllHookStates() {

@@ -15,10 +15,6 @@ public class SpecialTipCallback extends BaseTipCallback {
         super(content, "", priority);
     }
     
-    @Override
-    public boolean shouldDisplay() {
-        return true;
-    }
     
     @Override
     public String getAuthor() {

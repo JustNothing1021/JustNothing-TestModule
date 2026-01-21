@@ -121,13 +121,12 @@ public class WelcomeActivity extends AppCompatActivity {
         
         TipCallback displayTip = tipSystem.getDisplayTipForWelcome();
         
-        if (displayTip != null && displayTip.shouldDisplay()) {
+        if (displayTip != null) {
             String newContent = displayTip.getContent();
-
-    subtitleView.setText(newContent);
-    logger.info("欢迎页面副标题已替换为 \"" + newContent + "\"");
-    } else {
-        logger.info("本次未加载特殊提示");
-        }
+        subtitleView.setText(newContent);
+        logger.info("欢迎页面副标题已替换为 \"" + newContent + "\"");
+        } else {
+            logger.info("本次未加载特殊提示");
+            }
     }
 }

@@ -46,11 +46,6 @@ public abstract class BaseTipCallback implements TipCallback {
     }
     
     @Override
-    public boolean shouldDisplay() {
-        return false;
-    }
-    
-    @Override
     public int getPriority() {
         return priority;
     }

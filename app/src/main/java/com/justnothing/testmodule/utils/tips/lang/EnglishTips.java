@@ -11,15 +11,32 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Random;
 import java.util.function.Supplier;
 
 import cn.hutool.core.date.ChineseDate;
 
 public class EnglishTips {
+
+    private static final Random random = new Random(System.currentTimeMillis());
     
     public static class SpecialTips {
         public static List<SpecialTipCallback> getSpecialTips() {
             List<SpecialTipCallback> specialTips = new ArrayList<>();
+
+            Supplier<String> t = () -> {
+                List<String> stringList = List.of(
+                    "Kind of charity, isn't it?",
+                    "Good luck!",
+                    "Getting in bootloader doesn't means the system is corrupted \n(I believe you know this, but some people don't)",
+                    "JustNothing's module is just nothing"
+                );
+                return stringList.get(Math.abs(random.nextInt()) % stringList.size());
+            };
+            specialTips.add(new SpecialTipCallback(
+                    t.get(),
+                    0
+            ));
             
             specialTips.add(new SpecialTipCallback(
                 "Happy New Year!",
@@ -178,7 +195,7 @@ public class EnglishTips {
             });
             
             specialTips.add(new SpecialTipCallback(
-                "Today is the founding day of the Communist Party! May the Party lead us to great rejuvenation!",
+                "Today is the founding day of the Communist Party of China! May the Party lead us to great rejuvenation!",
                 80
             ) {
                 @Override
@@ -191,7 +208,7 @@ public class EnglishTips {
             });
             
             specialTips.add(new SpecialTipCallback(
-                "Today is Army Day! Salute to all soldiers!",
+                "Today is Army Day of China! Salute to all soldiers!",
                 80
             ) {
                 @Override
@@ -204,7 +221,7 @@ public class EnglishTips {
             });
             
             specialTips.add(new SpecialTipCallback(
-                "Today is National Day! May our motherland prosper and flourish!",
+                "Today is National Day of China! May our motherland prosper and flourish!",
                 80
             ) {
                 @Override
@@ -332,7 +349,7 @@ public class EnglishTips {
             ));
 
             addDidYouKnowTip(new SimpleTipCallback(
-                    "It turns out, AI is useful (actually the last fantasy before forgetting context, later still need to edit myself)",
+                    "It turns out, AI is useful (actually the last fantasy before AI forgetting context, later still need to edit myself)",
                     NAME_JUSTNOTHING
             ));
 
@@ -668,8 +685,8 @@ public class EnglishTips {
             ));
 
             addDidYouKnowTip(new SimpleTipCallback(
-                    "Why is your body so weak? Not as durable as mine",
-                    "One of JustNothing's extracurricular class teachers"
+                    "I lost 20 marks in a test because of a simple formula sin(2x)=2*sin(x)*cos(x) (I forgot to multiply 2...)",
+                    NAME_JUSTNOTHING
             ));
 
             addDidYouKnowTip(new SimpleTipCallback(
@@ -679,7 +696,7 @@ public class EnglishTips {
             ));
 
             addDidYouKnowTip(new SimpleTipCallback(
-                    "It's been",
+                    "It has been",
                     NAME_JUSTNOTHING
             ) {
                 @Override
@@ -693,8 +710,8 @@ public class EnglishTips {
                         if (diff < 0) {
                             diff = Math.abs(diff);
                             sb.append(" before my first project started");
-                            if (diff >= 12) sb.append(diff / 12).append(" years");
-                            if (diff >= 12 && diff % 12L != 0) sb.append(" and");
+                            if (diff >= 12) sb.append(diff / 12).append(" years ");
+                            if (diff >= 12 && diff % 12L != 0) sb.append(" and ");
                             if (diff % 12L != 0) sb.append(diff % 12).append(" months");
                             sb.append("???");
                             return sb.toString();
@@ -704,10 +721,10 @@ public class EnglishTips {
                         }
                     } else {
                         StringBuilder sb = new StringBuilder(content);
-                        if (diff >= 12) sb.append(diff / 12).append(" years");
-                        if (diff >= 12 && diff % 12L != 0) sb.append(" and");
-                        if (diff % 12L != 0) sb.append(diff % 12).append(" months");
-                        sb.append(" since I started writing projects related to XTC");
+                        if (diff >= 12) sb.append(diff / 12).append(" years ");
+                        if (diff >= 12 && diff % 12L != 0) sb.append("and ");
+                        if (diff % 12L != 0) sb.append(diff % 12).append(" months ");
+                        sb.append("since I started writing projects related to XTC");
                         return sb.toString();
                     }
                 }

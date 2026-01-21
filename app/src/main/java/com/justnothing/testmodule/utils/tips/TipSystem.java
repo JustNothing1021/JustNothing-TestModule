@@ -96,24 +96,22 @@ public class TipSystem {
 
 
     public TipCallback getDisplayTipForWelcome() {
+        logger.info("内存中没有特殊提示");
         List<TipCallback> specialTips = tipMap.get(TipType.SPECIAL_TIP);
-        if (specialTips == null || specialTips.isEmpty()) return null;
-
+        if (specialTips == null) return null;
+        logger.info("尝试从" + specialTips.size() + "个特殊提示中获取用于显示的内容");
+        if (specialTips.isEmpty()) return null;
         List<TipCallback> displayTips = new ArrayList<>();
         for (TipCallback tip : specialTips) {
-            if (tip.shouldShow() && tip.shouldDisplay()) {
+            if (tip.shouldShow()) {
                 displayTips.add(tip);
             }
         }
-        
         if (displayTips.isEmpty()) return null;
-
         displayTips.sort((t1, t2) ->
                 Integer.compare(t2.getPriority(), t1.getPriority()));
-        
         TipCallback result = displayTips.get(0);
         logger.info("显示提示: " + result.getContent() + ", priority = " + result.getPriority());
-        
         return result;
     }
     
