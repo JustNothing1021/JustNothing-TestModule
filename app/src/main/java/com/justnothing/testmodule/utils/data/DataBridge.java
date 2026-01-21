@@ -133,6 +133,7 @@ public class DataBridge {
             return false;
         }
         long fileModified = getFileLastModified(file);
+        // 如果文件在缓存时间之后被修改，缓存无效
         return fileModified <= 0 || fileModified <= cacheTime;
     }
 
@@ -599,10 +600,17 @@ public class DataBridge {
             logger.debug("开始读取Hook配置文件: " + file.getAbsolutePath());
             String content = IOManager.readFile(file.getAbsolutePath());
             logger.debug("Hook配置文件读取完成");
-            if (content != null) {
-                clientHookConfig = new JSONObject(content);
-                clientHookConfigCacheTime = System.currentTimeMillis();
-                return new JSONObject(clientHookConfig.toString());
+            if (content != null && !content.trim().isEmpty()) {
+                try {
+                    clientHookConfig = new JSONObject(content);
+                    clientHookConfigCacheTime = System.currentTimeMillis();
+                    return new JSONObject(clientHookConfig.toString());
+                } catch (Exception jsonException) {
+                    logger.warn("Hook配置文件JSON解析失败，使用默认配置: " + jsonException.getMessage());
+                    clientHookConfig = new JSONObject();
+                    clientHookConfigCacheTime = System.currentTimeMillis();
+                    return clientHookConfig;
+                }
             }
             clientHookConfig = new JSONObject();
             clientHookConfigCacheTime = System.currentTimeMillis();

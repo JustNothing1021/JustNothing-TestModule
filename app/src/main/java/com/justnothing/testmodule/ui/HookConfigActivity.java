@@ -1,6 +1,8 @@
 package com.justnothing.testmodule.ui;
 
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -21,6 +23,7 @@ import com.justnothing.testmodule.utils.hooks.ClientHookConfig;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -118,13 +121,18 @@ public class HookConfigActivity extends AppCompatActivity {
 
 
     private void enableAll(boolean enabled) {
+        Map<String, Boolean> map = new HashMap<>();
         for (HookItem item : hookItems) {
-            ClientHookConfig.setHookEnabled(item.displayName, enabled);
+            map.put(item.name, enabled);
             item.enabled = enabled;
         }
-        adapter.notifyDataSetChanged();
-        updateEmptyHint();
+        ClientHookConfig.setHookStatus(map);
         logger.info((enabled ? "启用" : "禁用") + "所有Hook");
+        
+        // 延迟重新加载Hook列表，显示服务端状态差异
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+            loadHooks();
+        }, 300);
     }
 
     private static class HookItem {
@@ -176,13 +184,15 @@ public class HookConfigActivity extends AppCompatActivity {
             void bind(HookItem item) {
                 textName.setText(item.displayName);
                 textDescription.setText(item.description);
-                
                 switchEnabled.setOnCheckedChangeListener(null);
                 switchEnabled.setChecked(item.enabled);
                 switchEnabled.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                    if (item.enabled == isChecked) return;
                     item.enabled = isChecked;
                     ClientHookConfig.setHookEnabled(item.name, isChecked);
-                    logger.info(item.name+ "的状态更改为" + (isChecked ? "启用" : "禁用"));
+                    logger.info(item.name + "的状态更改为" + (isChecked ? "启用" : "禁用"));
+                    new Handler(Looper.getMainLooper()) // 防止循环
+                            .postDelayed(HookConfigActivity.this::loadHooks, 300);
                 });
             }
         }

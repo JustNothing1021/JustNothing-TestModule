@@ -10,15 +10,39 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Random;
 import java.util.function.Supplier;
 
 import cn.hutool.core.date.ChineseDate;
 
 public class ChineseTips {
-    
+
+    private static final Random random = new Random(System.currentTimeMillis());
+
     public static class SpecialTips {
         public static List<SpecialTipCallback> getSpecialTips() {
             List<SpecialTipCallback> specialTips = new ArrayList<>();
+
+            Supplier<String> t = () -> {
+                List<String> stringList = List.of(
+                        "其实点击按钮可以打开功能（好吧是人都知道）",
+                        "事实证明, 不写bat可以让人心情舒畅",
+                        "祝你破解顺利！",
+                        "其实进bootloader不一定是变砖了",
+                        "你曾经历过900E的恐惧吗？",
+                        "我完全听不懂，所以，这应该是艺术",
+                        "AI太好用了你知道吗",
+                        "有的时候不一定要找别人问问题，可以上网搜索",
+                        "手表无法开机时可以用超级恢复救砖",
+                        "怎么不算是一种公益呢？"
+                );
+                // Random.nextInt(int, int) -> int 在设备上找不到。。。
+                return stringList.get(Math.abs(random.nextInt()) % stringList.size());
+            };
+            specialTips.add(new SpecialTipCallback(
+                    t.get(),
+                    0
+            ));
             
             specialTips.add(new SpecialTipCallback(
                 "今天是元旦节！元旦节快乐！",
@@ -820,8 +844,8 @@ public class ChineseTips {
             ));
 
             addDidYouKnowTip(new SimpleTipCallback(
-                    "小伙子身体怎么这么虚啊，还没我的抗造",
-                    "JustNothing的某位课外班老师"
+                    "我将会因为sin(2x)=2*sin(x)*cos(x)红温很久（忘记*2了，吃我20分）",
+                    NAME_JUSTNOTHING
             ));
 
             addDidYouKnowTip(new SimpleTipCallback(
