@@ -5,7 +5,6 @@ import static com.justnothing.testmodule.utils.functions.Logger.MAIN_TAG;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.content.Intent;
 import android.os.Bundle;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -22,8 +21,6 @@ import com.justnothing.testmodule.utils.functions.FileUtils;
 import com.justnothing.testmodule.utils.functions.Logger;
 
 import android.util.Log;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.widget.Toast;
 
 import java.io.File;
@@ -37,8 +34,8 @@ import com.justnothing.testmodule.constants.FileDirectory;
 public class HttpConfigActivity extends AppCompatActivity {
 
 
-    public static class MainLogger extends Logger {
-        MainLogger() {
+    public static class HttpLogger extends Logger {
+        HttpLogger() {
         }
 
         @Override
@@ -47,7 +44,7 @@ public class HttpConfigActivity extends AppCompatActivity {
         }
     }
 
-    public static MainLogger logger = new MainLogger();
+    public static HttpLogger logger = new HttpLogger();
 
     public static HttpConfigActivity instance;
 

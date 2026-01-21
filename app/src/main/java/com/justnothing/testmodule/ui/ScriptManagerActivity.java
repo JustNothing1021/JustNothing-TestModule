@@ -105,7 +105,21 @@ public class ScriptManagerActivity extends AppCompatActivity {
                     getString(R.string.script_example_script_command),
                     getString(R.string.script_example_script_category)
             );
+            Script defaultScript2 = new Script(
+                    getString(R.string.script_example_script_name),
+                    getString(R.string.script_example_script_desc),
+                    getString(R.string.script_example_script_command),
+                    getString(R.string.script_example_script_category)
+            );
+            Script defaultScript3 = new Script(
+                    getString(R.string.script_example_script_name),
+                    getString(R.string.script_example_script_desc),
+                    getString(R.string.script_example_script_command),
+                    getString(R.string.script_example_script_category)
+            );
             scripts.add(defaultScript);
+            scripts.add(defaultScript2);
+            scripts.add(defaultScript3);
         }
         adapter.notifyDataSetChanged();
     }

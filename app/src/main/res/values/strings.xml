@@ -18,7 +18,7 @@
     <string name="about_author">作者</string>
     <string name="about_author_info">JustNothing1021 (后端和极少的前端)\nNoneColdWind (\"你知道吗？\"和拓展包)\nNAN (\"你知道吗？\"和ADB教程)</string>
     <string name="about_assistant_development">协助开发</string>
-    <string name="about_assistant_info">GLM-4.7 AI Assistant (前端)\nDeepSeek (后端)\nDYD (吉祥物, 基本不写代码)\n云沫 (也是吉祥物, 完全不写代码) </string>
+    <string name="about_assistant_info">DYD (吉祥物, 基本不写代码)\n 云沫 (也是吉祥物, 完全不写代码) \n GLM-4.7 AI Assistant (前端)\nDeepSeek (后端)</string>
     <string name="about_version">版本</string>
     <string name="general_back">返回</string>
     <string name="settings_title">界面设置</string>
@@ -124,9 +124,14 @@
     <string name="script_command">脚本命令</string>
     <string name="script_command_with_hint">命令 (会执行methods终端)</string>
     <string name="script_example_script_name">示例脚本</string>
+    <string name="script_example_script_2_name">列出ActivityManagerService的方法</string>
+    <string name="script_example_script_3_name">执行代码</string>
     <string name="script_example_script_desc">这个脚本是一个示例，点开执行一下试试吧！</string>
+    <string name="script_example_script_2_desc">通过执行methods list来列出类方法。</string>
+    <string name="script_example_script_3_desc">执行一段简单的Java代码。</string>
     <string name="script_example_script_category">测试类</string>
-    <string name="script_example_script_command">help</string>
+    <string name="script_example_script_command" translatable="false">help</string>
+    <string name="script_example_script_2_command" translatable="false">-cl android list com.android.server.am.ActivityManagerService</string>
     <string name="status_hook_count" formatted="false">可用hook总数: %d (Zygote hook: %d, 应用hook: %d)</string>
     <string name="status_module_status_tip">模块状态: %s</string>
     <string name="status_module_status_activated">已激活</string>
@@ -138,13 +143,25 @@
     <string name="http_config_content_label">获取到的内容</string>
     <string name="http_config_content_empty">(空)</string>
     <string name="version_not_loaded"><![CDATA[Version <未加载>]]></string>
-    <string name="log_viewer_search_hint">搜索日志...</string>
-    <string name="did_you_know_click_hint">点我加载下一条提示...</string>
-    <string name="general_empty" />
+    <string name="log_viewer_search_hint">搜索日志…</string>
+    <string name="did_you_know_click_hint">点我加载下一条提示…</string>
+    <string name="general_empty" >" "</string>
     <string name="did_you_know_unknown_index">第 ? 条 / 共计 ? 条</string>
     <string name="did_you_know_author_format">-- %s</string>
     <string name="did_you_know_no_tip_available">暂时没有可用的提示...</string>
     <string name="did_you_known_index_format">第 %d 条 / 共计 %d 条</string>
     <string name="did_you_know_title">你知道吗?</string>
     <string name="welcome_subtitle_description">一个啥也不是的Xposed模块</string>
+    <string name="data_export_permission_warn">没有获取到写入文件权限，可能无法保存文件</string>
+    <string name="data_export_all_data_exported_to">数据文件保存到了 %s</string>
+    <string name="data_export_exception_info">文件保存失败，错误信息: %s</string>
+    <string name="data_export_hook_conf_exported_to">Hook配置信息保存到了 %s</string>
+    <string name="data_export_module_stat_exported_to">模块状态信息保存到了 %s</string>
+    <string name="data_export_perf_data_exported_to">性能信息保存到了 %s</string>
+    <string name="data_export_all_data_cleared">已清除保存的所有数据</string>
+    <string name="data_export_clear_all_data_failed">删除文件失败</string>
+    <string name="data_export_file_cleared">已删除文件 %s</string>
+    <string name="data_export_file_clear_failed">删除文件 %s 失败</string>
+    <string name="general_exit_app">退出应用</string>
+    <string name="script_example_script_3_command" translatable="false"><![CDATA[script \' for (int i = 0; i < 114; i++) println(i); \']]></string>
 </resources>
