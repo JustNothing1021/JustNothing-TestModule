@@ -342,9 +342,15 @@ public class ScriptManagerActivity extends AppCompatActivity {
                         Toast.makeText(this, getString(R.string.script_result_toast_execution_failure, script.name) , Toast.LENGTH_SHORT).show();
                     }
                     
-                    new AlertDialog.Builder(this)
-                            .setTitle(getString(R.string.script_result_info_result_of, script.name))
-                            .setMessage(finalOutput)
+                    View dialogView = LayoutInflater.from(ScriptManagerActivity.this).inflate(R.layout.dialog_script_result, null);
+                    TextView textTitle = dialogView.findViewById(R.id.text_title);
+                    TextView textResult = dialogView.findViewById(R.id.text_result);
+                    
+                    textTitle.setText(getString(R.string.script_result_info_result_of, script.name));
+                    textResult.setText(finalOutput);
+                    
+                    new AlertDialog.Builder(ScriptManagerActivity.this)
+                            .setView(dialogView)
                             .setPositiveButton(getString(R.string.general_confirm), null)
                             .show();
                 });

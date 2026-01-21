@@ -163,5 +163,5 @@
     <string name="data_export_file_cleared">已删除文件 %s</string>
     <string name="data_export_file_clear_failed">删除文件 %s 失败</string>
     <string name="general_exit_app">退出应用</string>
-    <string name="script_example_script_3_command" translatable="false"><![CDATA[script \' for (int i = 0; i < 114; i++) println(i); \']]></string>
+    <string name="script_example_script_3_command" translatable="false"><![CDATA[script for (int i = 0; i < 114; i++) println(i); ]]></string>
 </resources>
