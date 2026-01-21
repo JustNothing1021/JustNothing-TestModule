@@ -95,7 +95,7 @@ public class DataExportActivity extends AppCompatActivity {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 refreshFileList();
             } else {
-                Toast.makeText(this, "需要存储权限才能导出数据", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, getString(R.string.data_export_permission_warn), Toast.LENGTH_LONG).show();
             }
         }
     }
@@ -103,11 +103,13 @@ public class DataExportActivity extends AppCompatActivity {
     private void exportAllData() {
         try {
             String path = exporter.exportAllData();
-            Toast.makeText(this, "全部数据已导出到: " + path, Toast.LENGTH_LONG).show();
+            Toast.makeText(this, getString(R.string.data_export_all_data_exported_to, path),
+                    Toast.LENGTH_LONG).show();
             logger.info("全部数据导出成功: " + path);
             refreshFileList();
         } catch (Exception e) {
-            Toast.makeText(this, "导出失败: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            Toast.makeText(this, getString(R.string.data_export_exception_info, e.getMessage()),
+                    Toast.LENGTH_LONG).show();
             logger.error("导出失败", e);
         }
     }
@@ -115,11 +117,13 @@ public class DataExportActivity extends AppCompatActivity {
     private void exportConfig() {
         try {
             String path = exporter.saveToFile("hook_config", exporter.exportHookConfig());
-            Toast.makeText(this, "Hook配置已导出到: " + path, Toast.LENGTH_LONG).show();
+            Toast.makeText(this, getString(R.string.data_export_hook_conf_exported_to, path),
+                    Toast.LENGTH_LONG).show();
             logger.info("Hook配置导出成功: " + path);
             refreshFileList();
         } catch (Exception e) {
-            Toast.makeText(this, "导出失败: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            Toast.makeText(this, getString(R.string.data_export_exception_info, e.getMessage()),
+                    Toast.LENGTH_LONG).show();
             logger.error("导出失败", e);
         }
     }
@@ -127,11 +131,13 @@ public class DataExportActivity extends AppCompatActivity {
     private void exportStatus() {
         try {
             String path = exporter.saveToFile("module_status", exporter.exportModuleStatus());
-            Toast.makeText(this, "模块状态已导出到: " + path, Toast.LENGTH_LONG).show();
+            Toast.makeText(this, getString(R.string.data_export_module_stat_exported_to, path),
+                    Toast.LENGTH_LONG).show();
             logger.info("模块状态导出成功: " + path);
             refreshFileList();
         } catch (Exception e) {
-            Toast.makeText(this, "导出失败: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            Toast.makeText(this, getString(R.string.data_export_exception_info, e.getMessage()),
+                    Toast.LENGTH_LONG).show();
             logger.error("导出失败", e);
         }
     }
@@ -139,11 +145,13 @@ public class DataExportActivity extends AppCompatActivity {
     private void exportPerformance() {
         try {
             String path = exporter.saveToFile("performance_data", exporter.exportPerformanceData());
-            Toast.makeText(this, "性能数据已导出到: " + path, Toast.LENGTH_LONG).show();
+            Toast.makeText(this, getString(R.string.data_export_perf_data_exported_to, path),
+                    Toast.LENGTH_LONG).show();
             logger.info("性能数据导出成功: " + path);
             refreshFileList();
         } catch (Exception e) {
-            Toast.makeText(this, "导出失败: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            Toast.makeText(this, getString(R.string.data_export_exception_info, e.getMessage()),
+                    Toast.LENGTH_LONG).show();
             logger.error("导出失败", e);
         }
     }
@@ -152,20 +160,20 @@ public class DataExportActivity extends AppCompatActivity {
         exportedFiles.clear();
         exportedFiles.addAll(exporter.getExportedFiles());
         adapter.notifyDataSetChanged();
-
         TextView textFileCount = findViewById(R.id.text_file_count);
         textFileCount.setText(getString(R.string.exported_file_count, exportedFiles.size()));
-
         logger.info("刷新文件列表完成，共 " + exportedFiles.size() + " 个文件");
     }
 
     private void clearAllExports() {
         if (exporter.clearAllExports()) {
-            Toast.makeText(this, "所有导出文件已清除", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, getString(R.string.data_export_all_data_cleared),
+                    Toast.LENGTH_SHORT).show();
             logger.info("清除所有导出文件成功");
             refreshFileList();
         } else {
-            Toast.makeText(this, "清除失败", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, getString(R.string.data_export_clear_all_data_failed),
+                    Toast.LENGTH_SHORT).show();
             logger.error("清除导出文件失败");
         }
     }
@@ -212,12 +220,12 @@ public class DataExportActivity extends AppCompatActivity {
                 btnDelete.setOnClickListener(v -> {
                     if (exporter.deleteExportedFile(file)) {
                         Toast.makeText(DataExportActivity.this, 
-                                "文件已删除: " + file.getName(), Toast.LENGTH_SHORT).show();
+                                getString(R.string.data_export_file_cleared, file.getName()), Toast.LENGTH_SHORT).show();
                         logger.info("删除文件成功: " + file.getName());
                         refreshFileList();
                     } else {
                         Toast.makeText(DataExportActivity.this, 
-                                "删除失败", Toast.LENGTH_SHORT).show();
+                                getString(R.string.data_export_file_clear_failed, file.getName()), Toast.LENGTH_SHORT).show();
                         logger.error("删除文件失败: " + file.getName());
                     }
                 });
