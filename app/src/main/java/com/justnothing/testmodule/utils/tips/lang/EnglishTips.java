@@ -607,7 +607,7 @@ public class EnglishTips {
                         I would always get mad for a long time, now don't worry, \
                         we have Undefined Behavior and NullPointerException (dies)
                         
-                        (AndroidStudio: Hey girl, Replace with Object.requireNonNull(...))
+                        (AndroidStudio: Replace with Object.requireNonNull(...))
                         """,
                     NAME_JUSTNOTHING
             ));

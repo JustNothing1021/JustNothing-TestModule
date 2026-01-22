@@ -148,7 +148,7 @@
     <string name="general_empty" >" "</string>
     <string name="did_you_know_unknown_index">第 ? 条 / 共计 ? 条</string>
     <string name="did_you_know_author_format">-- %s</string>
-    <string name="did_you_know_no_tip_available">暂时没有可用的提示...</string>
+    <string name="did_you_know_no_tip_available">暂时没有可用的提示…</string>
     <string name="did_you_known_index_format">第 %d 条 / 共计 %d 条</string>
     <string name="did_you_know_title">你知道吗?</string>
     <string name="welcome_subtitle_description">一个啥也不是的Xposed模块</string>
