@@ -13,6 +13,7 @@ import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -28,7 +29,7 @@ public class SocketCommandExecutor {
 
     private static final StreamClient.ClientLogger logger = new StreamClient.ClientLogger();
 
-    public boolean executeInteractiveSocketCommand(String command) {
+    public boolean executeInteractiveSocket(String command) {
         long startTime = System.currentTimeMillis();
         int port = ClientPortManager.getSocketPort();
         AtomicLong bytesRead = new AtomicLong(0);
@@ -47,7 +48,7 @@ public class SocketCommandExecutor {
             final OutputStream output = socket.getOutputStream();
 
             InteractiveProtocol.writeMessage(output, InteractiveProtocol.TYPE_CLIENT_COMMAND,
-                    command.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                    command.getBytes(StandardCharsets.UTF_8));
 
             logger.info("命令已发送，开始读取响应...");
             logger.debug("命令长度: " + command.length() + " 字符");
@@ -120,7 +121,7 @@ public class SocketCommandExecutor {
         }
     }
 
-    public boolean executeSocketCommand(String command) {
+    public boolean executeTextSocket(String command) {
         long startTime = System.currentTimeMillis();
         int port = ClientPortManager.getSocketPort();
         AtomicLong bytesRead = new AtomicLong(0);
@@ -161,7 +162,7 @@ public class SocketCommandExecutor {
                     success = false;
                 }
 
-            } catch (java.util.concurrent.TimeoutException e) {
+            } catch (TimeoutException e) {
                 System.err.println("命令执行超时");
                 logger.error("命令执行超时（" + EXEC_TIMEOUT + "ms）");
                 reading.set(false);
@@ -236,7 +237,7 @@ public class SocketCommandExecutor {
         }
     }
 
-    public ExecutionResult executeSocketCommandWithOutput(String command) {
+    public ExecutionResult executeTextSocketWithOutput(String command) {
         long startTime = System.currentTimeMillis();
         int port = ClientPortManager.getSocketPort();
         AtomicLong bytesRead = new AtomicLong(0);
@@ -278,7 +279,7 @@ public class SocketCommandExecutor {
                     success = false;
                 }
 
-            } catch (java.util.concurrent.TimeoutException e) {
+            } catch (TimeoutException e) {
                 System.err.println("命令执行超时");
                 logger.error("命令执行超时（" + EXEC_TIMEOUT + "ms）");
                 reading.set(false);

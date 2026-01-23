@@ -28,6 +28,7 @@ public class TransactionHandler {
     public static final int TRANSACTION_EXECUTE_STREAM = IBinder.FIRST_CALL_TRANSACTION + 2;
     public static final int TRANSACTION_WRITE_PORT_FILE = IBinder.FIRST_CALL_TRANSACTION + 3;
     public static final int TRANSACTION_UPDATE_PORT = IBinder.FIRST_CALL_TRANSACTION + 4;
+    public static final int TRANSACTION_EXPORT_CONTEXT = IBinder.FIRST_CALL_TRANSACTION + 5;
     public static final int TRANSACTION_WRITE_HOOK_DATA = IBinder.FIRST_CALL_TRANSACTION + 6;
 
     private final CommandHandler commandHandler;
@@ -76,6 +77,10 @@ public class TransactionHandler {
                 case TRANSACTION_UPDATE_PORT -> {
                     logger.debug("处理更新端口事务");
                     yield handleUpdatePort(data, reply);
+                }
+                case TRANSACTION_EXPORT_CONTEXT -> {
+                    logger.debug("处理导出上下文事务");
+                    yield handleExportContext(data, reply);
                 }
                 case TRANSACTION_WRITE_HOOK_DATA -> {
                     logger.debug("处理写入Hook数据命令");
@@ -221,6 +226,70 @@ public class TransactionHandler {
 
     private boolean handleExecuteStream(Parcel data, Parcel reply) {
         return commandHandler.handleExecuteStream(data, reply);
+    }
+
+    private boolean handleExportContext(Parcel data, Parcel reply) {
+        File outputFile = null;
+        PrintWriter writer = null;
+
+        try {
+            logger.info("开始处理导出上下文事务");
+
+            String outputFilePath = data.readString();
+            if (outputFilePath == null || outputFilePath.isEmpty()) {
+                logger.error("输出文件路径为空");
+                reply.writeNoException();
+                reply.writeInt(-3);
+                return true;
+            }
+
+            logger.info("输出文件: " + outputFilePath);
+            outputFile = new File(outputFilePath);
+
+            File parentDir = outputFile.getParentFile();
+            if (parentDir != null && !parentDir.exists()) {
+                boolean mkdirSuccess = parentDir.mkdirs();
+                if (!mkdirSuccess) {
+                    logger.warn("无法创建输出文件目录: " + parentDir.getAbsolutePath());
+                }
+                try {
+                    DataDirectoryManager.setFilePermissions(parentDir, "777", "输出文件目录");
+                } catch (Exception e) {
+                    logger.warn("设置输出文件目录权限异常: " + parentDir.getAbsolutePath() + ", " + e.getMessage());
+                }
+            }
+
+            String result = commandHandler.executeCommand("export-context");
+            
+            writer = new PrintWriter(outputFile);
+            writer.println(result);
+            writer.flush();
+
+            logger.info("上下文导出成功");
+            reply.writeNoException();
+            reply.writeInt(0);
+            return true;
+
+        } catch (Exception e) {
+            logger.error("处理导出上下文事务失败", e);
+
+            if (writer == null && outputFile != null) {
+                try {
+                    writer = new PrintWriter(outputFile);
+                    writer.println("处理导出上下文时发生错误: " + e.getMessage());
+                    writer.flush();
+                } catch (Exception e2) {
+                    logger.error("写入错误信息到输出文件失败", e2);
+                }
+            }
+
+            reply.writeException(e);
+            return false;
+        } finally {
+            if (writer != null) {
+                writer.close();
+            }
+        }
     }
 
     public String getInterfaceDescriptor() {

@@ -5,6 +5,8 @@ apiVersion = "82"
 bsh = "2.0b5"
 constraintlayoutVersion = "2.2.1"
 espressoCoreVersion = "3.7.0"
+hutoolAll = "5.8.43"
+gson = "2.13.2"
 junit = "4.13.2"
 junitVersion = "1.1.5"
 espressoCore = "3.5.1"
@@ -26,6 +28,8 @@ androidx-junit-v130 = { module = "androidx.test.ext:junit", version.ref = "andro
 androidx-navigation-fragment-v277 = { module = "androidx.navigation:navigation-fragment", version.ref = "navigationFragmentVersion" }
 androidx-navigation-ui-v277 = { module = "androidx.navigation:navigation-ui", version.ref = "navigationUiVersion" }
 bsh = { module = "org.beanshell:bsh", version.ref = "bsh" }
+gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
+hutool-all = { module = "cn.hutool:hutool-all", version.ref = "hutoolAll" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }

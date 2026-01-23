@@ -1,13 +1,17 @@
 package com.justnothing.testmodule.command;
 
 import static com.justnothing.testmodule.constants.CommandServer.MAIN_MODULE_VER;
-
+import com.justnothing.testmodule.command.functions.analyze.AnalyzeMain;
 import com.justnothing.testmodule.command.functions.beanshell.BeanShellExecutorMain;
+import com.justnothing.testmodule.command.functions.classcmd.ClassMain;
+import com.justnothing.testmodule.command.functions.exportcontext.ExportContextMain;
+import com.justnothing.testmodule.command.functions.fieldcmd.FieldMain;
 import com.justnothing.testmodule.command.functions.interactive.InteractiveExampleMain;
 import com.justnothing.testmodule.command.functions.invoke.InvokeMethodMain;
 import com.justnothing.testmodule.command.functions.list.ListMethodsMain;
 import com.justnothing.testmodule.command.functions.output.OutputExampleMain;
 import com.justnothing.testmodule.command.functions.script.ScriptExecutorMain;
+import com.justnothing.testmodule.command.functions.watch.WatchMain;
 import com.justnothing.testmodule.command.output.StringBuilderCollector;
 import com.justnothing.testmodule.command.output.IOutputHandler;
 import com.justnothing.testmodule.command.output.SystemOutputRedirector;
@@ -37,7 +41,7 @@ public class CommandExecutor {
         this.classLoaderManager = new ClassLoaderManager();
     }
 
-    private void initializeIfNot() {
+    private void initializeIfNeeded() {
         if (!initialized) {
             synchronized (this) {
                 if (!initialized) {
@@ -80,7 +84,7 @@ public class CommandExecutor {
             throw new IllegalArgumentException("输出处理器不能为null");
         }
 
-        initializeIfNot();
+        initializeIfNeeded();
         logger.info("开始执行命令: " + fullCommand);
         try {
             SystemOutputRedirector redirector = new SystemOutputRedirector(output);
@@ -165,6 +169,21 @@ public class CommandExecutor {
                 case "list":
                     listMethods(context);
                     break;
+                case "analyze":
+                    analyzeClass(context);
+                    break;
+                case "class":
+                    showClass(context);
+                    break;
+                case "field":
+                    showField(context);
+                    break;
+                case "watch":
+                    watch(context);
+                    break;
+                case "export-context":
+                    exportContext(context);
+                    break;
                 case "packages":
                     listPackages(context);
                     break;
@@ -193,7 +212,7 @@ public class CommandExecutor {
                     executeInteractiveExample(context);
                     break;
                 default:
-                    output.println("未知的命令: " + command + ", 输入help可以获得帮助");
+                    output.println("Unknown command: " + command + ", type help for help");
                     break;
             }
         } catch (Exception e) {
@@ -246,6 +265,26 @@ public class CommandExecutor {
         context.output().println(ListMethodsMain.runMain(context));
     }
 
+    public void analyzeClass(CmdExecContext context) {
+        context.output().println(AnalyzeMain.runMain(context));
+    }
+
+    public void showClass(CmdExecContext context) {
+        context.output().println(ClassMain.runMain(context));
+    }
+
+    public void showField(CmdExecContext context) {
+        context.output().println(FieldMain.runMain(context));
+    }
+
+    public void watch(CmdExecContext context) {
+        context.output().println(WatchMain.runMain(context));
+    }
+
+    public void exportContext(CmdExecContext context) {
+        context.output().println(ExportContextMain.runMain(context));
+    }
+
     private void executeBeanShell(CmdExecContext context) {
         context.output().println(BeanShellExecutorMain.runMain(context));
     }
@@ -291,18 +330,42 @@ public class CommandExecutor {
     private String[] parseCommandLine(String commandLine) {
         List<String> args = new ArrayList<>();
         StringBuilder currentArg = new StringBuilder();
+        boolean inQuotes = false;
+        boolean escapeNext = false;
+        
         for (int i = 0; i < commandLine.length(); i++) {
             char c = commandLine.charAt(i);
-            if (c == ' ') {
-                args.add(currentArg.toString());
-                currentArg = new StringBuilder();
+            
+            if (escapeNext) {
+                currentArg.append(c);
+                escapeNext = false;
+                continue;
+            }
+            
+            if (c == '\\') {
+                escapeNext = true;
+                continue;
+            }
+            
+            if (c == '"') {
+                inQuotes = !inQuotes;
+                continue;
+            }
+            
+            if (c == ' ' && !inQuotes) {
+                if (currentArg.length() > 0) {
+                    args.add(currentArg.toString());
+                    currentArg = new StringBuilder();
+                }
             } else {
                 currentArg.append(c);
             }
         }
 
-        if (currentArg.length() > 0)
+        if (currentArg.length() > 0) {
             args.add(currentArg.toString());
+        }
+        
         return args.toArray(new String[0]);
     }
 
@@ -332,7 +395,13 @@ public class CommandExecutor {
             命令语法: methods [options] <command> [args...]
             
             可用命令:
+
               list                              - 列出类的方法
+              analyze                           - 分析类的详细信息
+              class                             - 查看类的继承关系和构造函数
+              field                             - 查看类的字段信息
+              watch                             - 监控字段或方法的变化
+              export-context                    - 导出设备xtchttp上下文信息
               invoke                            - 调用类的方法
               bsh                               - 通过BeanShell执行代码
               bvars                             - 显示BeanShell执行器的变量
@@ -351,7 +420,12 @@ public class CommandExecutor {
             示例:
               methods invoke java.lang.System currentTimeMillis
               methods -cl android list com.android.server.am.ActivityManagerService
-              methods script ' for (int i = 0; i < 114; i++) println(i); '
+              methods script for (int i = 0; i < 114; i++) println(i); // 命令行记得加引号
+              methods analyze -f java.lang.String
+              methods class -i java.util.ArrayList
+              methods field -g java.lang.System out
+              methods watch add field java.lang.System out 1000
+
             
             (MainModule: 增加了套接字执行命令的功能, 让输出实时显现, 当然也可以选择不使用)
             """, MAIN_MODULE_VER);

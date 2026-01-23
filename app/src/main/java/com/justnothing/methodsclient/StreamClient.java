@@ -8,7 +8,6 @@ import com.justnothing.methodsclient.monitor.ClientPortManager;
 import com.justnothing.methodsclient.monitor.PerformanceMonitor;
 import com.justnothing.testmodule.utils.functions.Logger;
 
-import java.io.File;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.concurrent.ExecutorService;
@@ -16,8 +15,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public class StreamClient {
-
-
 
     public static final PrintStream origOut;
     public static final PrintStream origErr;
@@ -31,7 +28,6 @@ public class StreamClient {
         @Override
         public void write(int b) { }
     });
-
 
 
     public static class ClientLogger extends Logger {
@@ -49,7 +45,7 @@ public class StreamClient {
         return ClientPortManager.checkSocketServer();
     }
 
-    private static boolean tryConnect(int port) {
+    private static boolean tryConnect() {
         return ClientPortManager.checkSocketServer();
     }
 
@@ -57,62 +53,36 @@ public class StreamClient {
         return ClientPortManager.getSocketPort();
     }
 
-    public boolean executeInteractiveSocketCommandB(String command) {
+
+
+    public boolean executeInteractiveSocketCommand(String command) {
         SocketCommandExecutor executor = new SocketCommandExecutor();
-        return executor.executeInteractiveSocketCommand(command);
+        return executor.executeInteractiveSocket(command);
     }
 
-    public boolean executeSocketCommand(String command) {
-        SocketCommandExecutor socketExecutor = new SocketCommandExecutor();
-        return socketExecutor.executeSocketCommand(command);
+    public boolean executeTextSocketCommand(String command) {
+        SocketCommandExecutor executor = new SocketCommandExecutor();
+        return executor.executeTextSocket(command);
     }
 
     public static boolean executeFile(String command) {
         return FileCommandExecutor.executeFile(command);
     }
 
-    public static boolean executeSocketOnly(String command) {
-        StreamClient client = new StreamClient();
-        boolean success = client.executeSocketCommand(command);
 
-        client.executor.shutdown();
-        try {
-            if (!client.executor.awaitTermination(5, TimeUnit.SECONDS)) {
-                client.executor.shutdownNow();
-            }
-        } catch (InterruptedException e) {
-            client.executor.shutdownNow();
-            Thread.currentThread().interrupt();
-        }
-
-        return success;
-    }
-
-    public static boolean executeSocketCommandStatic(String command) {
-        if (!checkSocketServer()) {
-            logger.warn("Socket服务不可用");
-            return false;
-        }
-        return executeSocketOnly(command);
-    }
-
-    public static SocketCommandExecutor.ExecutionResult executeSocketWithOutput(String command) {
+    public static SocketCommandExecutor.ExecutionResult executeTextSocketWithOutput(String command) {
         if (!checkSocketServer()) {
             logger.warn("Socket服务不可用");
             return new SocketCommandExecutor.ExecutionResult(false, "", "Socket服务不可用");
         }
         SocketCommandExecutor executor = new SocketCommandExecutor();
-        return executor.executeSocketCommandWithOutput(command);
-    }
-
-    public static FileCommandExecutor.ExecutionResult executeFileWithOutput(String command) {
-        return FileCommandExecutor.executeFileWithOutput(command);
+        return executor.executeTextSocketWithOutput(command);
     }
 
     public boolean executeAutoCommand(String command) {
         if (checkSocketServer()) {
-            logger.info("使用Socket模式");
-            boolean result = executeSocketCommand(command);
+            logger.info("使用交互Socket模式");
+            boolean result = executeInteractiveSocketCommand(command);
             if (!result) {
                 logger.warn("Socket模式失败，回退到文件模式");
                 executeFile(command);
@@ -124,9 +94,13 @@ public class StreamClient {
         return true;
     }
 
-    public static void executeSocket(String command) {
+
+
+    // 静态方法
+
+    public static void executeTextSocket(String command) {
         StreamClient client = new StreamClient();
-        boolean success = client.executeSocketCommand(command);
+        boolean success = client.executeTextSocketCommand(command);
 
         client.executor.shutdown();
         try {
@@ -162,13 +136,8 @@ public class StreamClient {
         }
     }
 
-
     public static boolean updateSocketPort(int newPort) {
         return ClientPortManager.updateSocketPort(newPort);
-    }
-
-    public static String readOutputFile(File src) {
-        return FileCommandExecutor.readOutputFile(src.getAbsolutePath());
     }
 
     public static boolean requestChmod(String targetPath, String permissions, boolean recursive) {
@@ -213,12 +182,17 @@ public class StreamClient {
                 """, CLIENT_VER);
     }
 
+    public static void onExit() {
+
+    }
+
     static {
         origOut = System.out;
         origErr = System.err;
         System.setOut(disabledOut);
         System.setErr(disabledErr);
     }
+
 
     /**
      * 主方法，通过app_process执行。
@@ -241,7 +215,7 @@ public class StreamClient {
         }
 
         if (args.length > 0 && args[0].equals("--quick-test")) {
-            boolean result = tryConnect(getSocketPort());
+            boolean result = tryConnect();
             System.exit(result ? 0 : 1);
             return;
         }
@@ -282,7 +256,7 @@ public class StreamClient {
                     System.exit(1);
                 }
                 String command = joinArgs(args, 1);
-                executeSocket(command);
+                executeTextSocket(command);
             }
             case "--binary", "-b" -> {
                 if (args.length < 2) {
@@ -290,7 +264,7 @@ public class StreamClient {
                     System.exit(1);
                 }
                 String command = joinArgs(args, 1);
-                boolean success = new StreamClient().executeInteractiveSocketCommandB(command);
+                boolean success = new StreamClient().executeInteractiveSocketCommand(command);
                 System.exit(success ? 0 : 1);
             }
             case "--auto" -> {

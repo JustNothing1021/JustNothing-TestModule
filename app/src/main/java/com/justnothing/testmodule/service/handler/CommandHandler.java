@@ -115,9 +115,6 @@ public class CommandHandler {
     }
 
     public String executeCommand(String commandLine) {
-        if (commandLine == null || commandLine.trim().isEmpty()) {
-            return "未知的命令 (可以通过 'methods help' 获得帮助)";
-        }
         try {
             logger.debug("执行命令: " + commandLine);
             String result = commandExecutor.executeShellCommand(commandLine);

@@ -321,7 +321,7 @@ public class ScriptManagerActivity extends AppCompatActivity {
                     logger.info("执行命令: " + trimmedCmd);
 
                     SocketCommandExecutor.ExecutionResult result =
-                        StreamClient.executeSocketWithOutput(trimmedCmd);
+                        StreamClient.executeTextSocketWithOutput(trimmedCmd);
 
                     allOutput.append(getString(R.string.script_result_info_command, trimmedCmd)).append("\n");
                     if (result.success) {

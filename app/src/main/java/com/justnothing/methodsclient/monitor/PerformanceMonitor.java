@@ -265,6 +265,7 @@ public class PerformanceMonitor {
     }
 
     public static void printStats() {
+        ensureStatsLoaded();
         long commands = totalCommands.get();
         if (commands > 0) {
             logger.info("\n============ 性能统计 ============");
@@ -344,6 +345,9 @@ public class PerformanceMonitor {
                 System.err.println("   最慢耗时: " + slowestFileTime.get() + "ms");
             }
             System.err.println("=========================\n");
+        } else {
+            System.err.println("暂无性能统计数据");
+            System.err.println("提示: 请先执行一些命令后再查看统计信息");
         }
     }
 }
