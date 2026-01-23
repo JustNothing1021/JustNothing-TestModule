@@ -43,6 +43,7 @@ public class ScriptExecutorMain {
                     range(int begin, int end)
                     range(int begin, int end, int step)  - 都能写Java了, 相信你也会用Python的range(真的吗...?)
                 
+                    analyze(Object obj)   -> null             - 分析一个对象, 打印出一些它的相关信息
                     getContext()          -> Context          - 获取上下文, DeepSeek神力
                     getApplicationInfo()  -> ApplicationInfo  - 也是DeepSeek写的
                     getPackageName()      -> String           - 和上面一样
@@ -76,7 +77,7 @@ public class ScriptExecutorMain {
                 
                     (3) 模板类目前还没有很好的支持, 类型信息会在运行的时候被擦除(逝情不大, 能用)
                         e.g.
-                         List<int> list = new ArrayList(); list.add(1); list.add("wtf"); // 甚至能跑还不会报错...
+                         List<Integer> list = new ArrayList(); list.add(1); list.add("wtf"); // 甚至能跑还不会报错...
                 
                     (4) 由于Object的限制, 原始类(比如int, char之类的)会被解析成封装类
                         e.g.
@@ -93,8 +94,19 @@ public class ScriptExecutorMain {
                         addImport("android.util.*");
                         addImport("android.os.*");
                         (甚至懒得把多余的抠掉)
+
+                    (7) 可以用delete把变量删掉
+                        e.g.
+                         int a = 114514; 
+                         delete a; // a没了
+
+                    (8) 可以直接调用lambda表达式
+                        e.g.
+                         auto a = () -> { return 1145; }; // a -> TestInterpreter$LambdaNode$$Lambda$14
+                         a.call(); // 1145
+                         a(); // 1145
                 
-                    (7) 不能很好地解析分号分割, 建议写代码的时候小心点, 谨防爆炸
+                    (9) 不能很好地解析分号分割, 建议写代码的时候小心点, 谨防爆炸
                 
                 
                 示例:
@@ -113,7 +125,7 @@ public class ScriptExecutorMain {
         String[] args = context.args();
         ClassLoader classLoader = context.classLoader();
         if (args.length < 1) {
-          return getHelpText();
+            return getHelpText();
         }
 
         try {

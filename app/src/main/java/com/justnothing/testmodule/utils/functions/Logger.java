@@ -23,6 +23,25 @@ public abstract class Logger {
     private Context context;
     private boolean bUseXPosedLog = false;
 
+    public static class LoggerWrapper extends Logger {
+
+        private final String tag;
+
+        LoggerWrapper(String tag) {
+            this.tag = tag;
+        }
+
+        @Override
+        public String getTag() {
+            return tag;
+        }
+        
+    }
+
+    public static Logger getLoggerForName(String name) {
+        return new LoggerWrapper(name);
+    }
+
     public void useXposedLog(boolean use) {
         bUseXPosedLog = use;
     }
@@ -72,7 +91,7 @@ public abstract class Logger {
         return !USE_ONE_LOGGER_ONLY || !bUseXPosedLog;
     }
 
-    public final void xposedLog(String str) {
+    public void xposedLog(String str) {
         if (!bUseXPosedLog) return;
         try {
             Class<?> xposedBridge = Class.forName("de.robv.android.xposed.XposedBridge");
@@ -112,59 +131,59 @@ public abstract class Logger {
         logInternal(level, stackTrace);
     }
 
-    public final void debug(String str) {
+    public void debug(String str) {
         logInternal("DEBUG", str);
     }
 
-    public final void debug(Throwable th) {
+    public void debug(Throwable th) {
         logThrowable("DEBUG", th);
     }
 
-    public final void debug(String str, Throwable th) {
+    public void debug(String str, Throwable th) {
         logInternal("DEBUG", str);
         logThrowable("DEBUG", th);
     }
 
-    public final void info(String str) {
+    public void info(String str) {
         logInternal("INFO", str);
     }
 
-    public final void info(Throwable th) {
+    public void info(Throwable th) {
         logThrowable("INFO", th);
     }
 
-    public final void info(String str, Throwable th) {
+    public void info(String str, Throwable th) {
         logInternal("INFO", str);
         logThrowable("INFO", th);
     }
 
-    public final void warn(String str) {
+    public void warn(String str) {
         handleWarn(str);
         logInternal("WARN", str);
     }
 
-    public final void warn(Throwable th) {
+    public void warn(Throwable th) {
         handleWarn(th);
         logThrowable("WARN", th);
     }
 
-    public final void warn(String str, Throwable th) {
+    public void warn(String str, Throwable th) {
         handleWarn(str, th);
         logInternal("WARN", str);
         logThrowable("WARN", th);
     }
 
-    public final void error(String str) {
+    public void error(String str) {
         handleError(str);
         logInternal("ERROR", str);
     }
 
-    public final void error(Throwable th) {
+    public void error(Throwable th) {
         handleError(th);
         logThrowable("ERROR", th);
     }
 
-    public final void error(String str, Throwable th) {
+    public void error(String str, Throwable th) {
         handleError(str, th);
         logInternal("ERROR", str);
         logThrowable("ERROR", th);
