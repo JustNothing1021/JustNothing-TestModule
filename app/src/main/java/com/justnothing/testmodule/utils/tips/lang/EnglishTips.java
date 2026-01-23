@@ -2,19 +2,15 @@ package com.justnothing.testmodule.utils.tips.lang;
 
 import com.justnothing.testmodule.utils.tips.SimpleTipCallback;
 import com.justnothing.testmodule.utils.tips.SpecialTipCallback;
-import com.justnothing.testmodule.utils.tips.TipSystem;
 
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.function.Supplier;
-
-import cn.hutool.core.date.ChineseDate;
 
 public class EnglishTips {
 
@@ -267,8 +263,7 @@ public class EnglishTips {
             String NAME_NONECOLDWIND = "NoneColdWind";
             String NAME_NAN = "NAN";
             String NAME_BARINFXXK = "BRAINFXXK";
-            String NAME_DYD = "DYD";
-            String NAME_YUNMO = "Yunmo";
+
             clearDidYouKnowTips();
 
             addDidYouKnowTip(new SimpleTipCallback(
@@ -403,7 +398,7 @@ public class EnglishTips {
                             Recommended cost-effective configuration (800 yuan): Intel_E3-1231v3+Jingyue H97M-VH-PLUS\
                             +AMD_RX580-8G+DDR3-1600MHz-8G*2+500WS power supply+four copper tube cooler
                             
-                            (At least for someone with \"sufficient budget\" like me)
+                            (At least for someone with "sufficient budget" like me)
                             """,
                     NAME_NONECOLDWIND
             ));
@@ -534,8 +529,11 @@ public class EnglishTips {
             ));
 
             addDidYouKnowTip(new SimpleTipCallback(
-                    "Actually there's no 42nd tip, don't believe me go check the source code " + 
-                    "\n\n(JustNothing: It's already compiled into apk... Will you still check?)",
+                    """
+                            Actually there's no 42nd tip, don't believe me go check the source code
+                            
+                            (JustNothing: It's already compiled into apk... Will you still check?)
+                            """,
                     NAME_NAN
             ));
 
@@ -603,7 +601,7 @@ public class EnglishTips {
             addDidYouKnowTip(new SimpleTipCallback(
                     """
                         Back when I used Notepad and ancient craftsmanship (kidding) to handcraft Windows batch files, \
-                        when I saw \"ECHO is off.\" or \"The syntax of the command is incorrect.\"\
+                        when I saw "ECHO is off." or "The syntax of the command is incorrect."\
                         I would always get mad for a long time, now don't worry, \
                         we have Undefined Behavior and NullPointerException (dies)
                         
@@ -705,8 +703,9 @@ public class EnglishTips {
                     long begin = 2023L * 12L + 10L - 1L;
                     long now = calendar.get(Calendar.YEAR) * 12L - calendar.get(Calendar.MONTH);
                     long diff = now - begin;
+                    StringBuilder sb;
                     if (diff <= 0) {
-                        StringBuilder sb = new StringBuilder("What the hell, did I traveled back to the month");
+                        sb = new StringBuilder("What the hell, did I traveled back to the month");
                         if (diff < 0) {
                             diff = Math.abs(diff);
                             sb.append(" before my first project started");
@@ -714,19 +713,17 @@ public class EnglishTips {
                             if (diff >= 12 && diff % 12L != 0) sb.append(" and ");
                             if (diff % 12L != 0) sb.append(diff % 12).append(" months");
                             sb.append("???");
-                            return sb.toString();
                         } else {
                             sb.append(" that my first project started ???");
-                            return sb.toString();
                         }
                     } else {
-                        StringBuilder sb = new StringBuilder(content);
+                        sb = new StringBuilder(content);
                         if (diff >= 12) sb.append(diff / 12).append(" years ");
                         if (diff >= 12 && diff % 12L != 0) sb.append("and ");
                         if (diff % 12L != 0) sb.append(diff % 12).append(" months ");
                         sb.append("since I started writing projects related to XTC");
-                        return sb.toString();
                     }
+                    return sb.toString();
                 }
             });
 
@@ -773,12 +770,6 @@ public class EnglishTips {
         private static int getDidTipCount() {
             return count;
         }
-        
-        public static void addTips(TipSystem tipSystem) {
-            Map<Integer, SimpleTipCallback> tips = getDidYouKnowTips();
-            for (SimpleTipCallback tip : tips.values()) {
-                tipSystem.addDidYouKnowTip(tip);
-            }
-        }
+
     }
 }

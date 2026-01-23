@@ -1,17 +1,14 @@
 package com.justnothing.testmodule.command.functions.script;
 
-
-
 import androidx.annotation.NonNull;
 
 import com.justnothing.testmodule.command.output.IOutputHandler;
-import com.justnothing.testmodule.command.output.StringBuilderCollector;
+import com.justnothing.testmodule.command.output.SystemOutputCollector;
 import com.justnothing.testmodule.hooks.XposedBasicHook;
 import com.justnothing.testmodule.utils.functions.Logger;
 
-import java.io.ByteArrayOutputStream;
-import java.io.OutputStream;
-import java.io.PrintStream;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -29,7 +26,6 @@ import java.util.Set;
 import java.util.Stack;
 import java.util.stream.Collectors;
 
-
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
@@ -37,19 +33,16 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-
 public class TestInterpreter {
-
 
     @FunctionalInterface
     public interface Lambda {
         Object apply(Object... args);
     }
 
-
-
     public interface BuiltInFunction {
         Object call(List<Object> args);
+
     }
 
     private static final class InterpreterLogger extends Logger {
@@ -59,11 +52,105 @@ public class TestInterpreter {
         }
     }
 
-    private static Class<?> findClassThroughApi(String className, ClassLoader classLoader) {
-        return XposedBasicHook.ClassFinder.withClassLoader(classLoader).find(className);
+    private static final class StandaloneLogger extends Logger {
+        @Override
+        public String getTag() {
+            return "TestInterpreter";
+        }
+
+        @Override
+        public void debug(String str) {
+            System.out.println("[DEBUG] " + str);
+        }
+
+        @Override
+        public void debug(Throwable th) {
+            System.out.println("[DEBUG] " + th.getMessage());
+            th.printStackTrace(System.out);
+        }
+
+        @Override
+        public void debug(String str, Throwable th) {
+            System.out.println("[DEBUG] " + str);
+            th.printStackTrace(System.out);
+        }
+
+        @Override
+        public void info(String str) {
+            System.out.println("[INFO] " + str);
+        }
+
+        @Override
+        public void info(Throwable th) {
+            System.out.println("[INFO] " + th.getMessage());
+            th.printStackTrace(System.out);
+        }
+
+        @Override
+        public void info(String str, Throwable th) {
+            System.out.println("[INFO] " + str);
+            th.printStackTrace(System.out);
+        }
+
+        @Override
+        public void warn(String str) {
+            System.out.println("[WARN] " + str);
+        }
+
+        @Override
+        public void warn(Throwable th) {
+            System.out.println("[WARN] " + th.getMessage());
+            th.printStackTrace(System.out);
+        }
+
+        @Override
+        public void warn(String str, Throwable th) {
+            System.out.println("[WARN] " + str);
+            th.printStackTrace(System.out);
+        }
+
+        @Override
+        public void error(String str) {
+            System.err.println("[ERROR] " + str);
+        }
+
+        @Override
+        public void error(Throwable th) {
+            System.err.println("[ERROR] " + th.getMessage());
+            th.printStackTrace(System.err);
+        }
+
+        @Override
+        public void error(String str, Throwable th) {
+            System.err.println("[ERROR] " + str);
+            th.printStackTrace(System.err);
+        }
     }
 
-    private static final InterpreterLogger logger = new InterpreterLogger();
+    private static Class<?> findClassThroughApi(String className, ClassLoader classLoader) {
+        try {
+            return XposedBasicHook.ClassFinder.withClassLoader(classLoader).find(className);
+        } catch (Exception e) {
+            try {
+                return Class.forName(className, false, classLoader);
+            } catch (ClassNotFoundException ex) {
+                return null;
+            }
+        }
+    }
+
+    private static boolean isStandaloneMode() {
+        try {
+            Class<?> clazz = Class.forName("android.util.Log");
+            Method method = clazz.getMethod("i", String.class, String.class);
+            method.invoke(null, "TestInterpreter", "这个日志是用来测试现在是不是在安卓环境里的");
+            return false;
+        } catch (Exception e) {
+            return true;
+        }
+    }
+
+    private static final Logger logger = isStandaloneMode() ? new StandaloneLogger() : new InterpreterLogger();
 
     public static boolean isApplicableArgs(Class<?>[] methodArgsTypes, List<Class<?>> usingArgTypes) {
         if (methodArgsTypes.length != usingArgTypes.size())
@@ -169,7 +256,7 @@ public class TestInterpreter {
     private static final Set<String> KEYWORDS = Set.of(
             "public", "private", "protected", "static", "final", "abstract",
             "class", "interface", "enum", "void", "int", "long", "short",
-            "byte", "char", "float", "double", "boolean",  "true", "false",
+            "byte", "char", "float", "double", "boolean", "true", "false",
             "if", "else", "for", "while", "do", "switch", "case", "default",
             "break", "continue", "return", "new", "this", "super",
             "null", "try", "catch", "finally", "throw", "throws",
@@ -177,13 +264,10 @@ public class TestInterpreter {
     );
 
     private static final Set<String> ACCESS_MODIFIERS = Set.of(
-            "public", "private", "protected"
-    );
+            "public", "private", "protected");
 
     private static final Set<String> TYPES = Set.of(
-            "void", "int", "long", "short", "byte", "char", "float", "double", "boolean"
-    );
-
+            "void", "int", "long", "short", "byte", "char", "float", "double", "boolean");
 
     private static boolean isAccessModifier(String word) {
         return word != null && ACCESS_MODIFIERS.contains(word);
@@ -200,7 +284,6 @@ public class TestInterpreter {
             return true;
         return Character.isUpperCase(word.charAt(0));
     }
-
 
     public static class ExecutionContext {
 
@@ -222,8 +305,8 @@ public class TestInterpreter {
         public ExecutionContext(ClassLoader classLoader) {
             logger.debug("创建ExecutionContext，类加载器: " + classLoader);
             this.classLoader = classLoader;
-            this.outputBuffer = new StringBuilderCollector();
-            this.warnMsgBuffer = new StringBuilderCollector();
+            this.outputBuffer = new SystemOutputCollector(System.out, System.in);
+            this.warnMsgBuffer = new SystemOutputCollector(System.err, System.in);
             this.variables = new ConcurrentHashMap<>();
             this.builtIns = new ConcurrentHashMap<>();
             this.imports = new ArrayList<>();
@@ -235,8 +318,8 @@ public class TestInterpreter {
         }
 
         public ExecutionContext(ClassLoader classLoader,
-                                IOutputHandler builtInOutStream,
-                                IOutputHandler builtInErrStream) {
+                IOutputHandler builtInOutStream,
+                IOutputHandler builtInErrStream) {
             logger.debug("创建ExecutionContext，类加载器: " + classLoader + ", 自定义输出流");
             this.classLoader = classLoader;
             this.outputBuffer = builtInOutStream;
@@ -259,8 +342,20 @@ public class TestInterpreter {
             outputBuffer.clear();
         }
 
-        public void appendOutput(String text) {
+        public void print(String text) {
             outputBuffer.print(text);
+        }
+
+        public void printf(String format, Object... args) {
+            outputBuffer.printf(format, args);
+        }
+
+        public void println(String text) {
+            outputBuffer.println(text);
+        }
+
+        public void printStackTrace(Throwable th) {
+            outputBuffer.printStackTrace(th);
         }
 
         public String getWarnMessages() {
@@ -271,9 +366,20 @@ public class TestInterpreter {
             warnMsgBuffer.clear();
         }
 
-        public void putWarnMessage(String text) {
-            outputBuffer.print(text);
+        public void printWarn(String text) {
+            warnMsgBuffer.print(text);
+        }
 
+        public void printfWarn(String format, Object... args) {
+            warnMsgBuffer.printf(format, args);
+        }
+
+        public void printlnWarn(String text) {
+            warnMsgBuffer.println(text);
+        }
+
+        public void printStackTraceWarn(Throwable th) {
+            warnMsgBuffer.printStackTrace(th);
         }
 
         public void setVariable(String name, Object value) {
@@ -310,6 +416,10 @@ public class TestInterpreter {
 
         public boolean hasVariable(String name) {
             return variables.containsKey(name);
+        }
+
+        public void deleteVariable(String name) {
+            variables.remove(name);
         }
 
         public void addBuiltIn(String name, BuiltInFunction function) {
@@ -518,7 +628,7 @@ public class TestInterpreter {
                     return clazz;
                 }
             }
-            
+
             for (String importStmt : imports) {
                 String fullClassName;
                 if (importStmt.endsWith(".*")) {
@@ -547,7 +657,7 @@ public class TestInterpreter {
                     sb.append(arg);
                 }
                 String output = sb.toString();
-                appendOutput(output + "\n");
+                println(output);
                 return null;
             });
 
@@ -557,7 +667,18 @@ public class TestInterpreter {
                     sb.append(arg);
                 }
                 String output = sb.toString();
-                appendOutput(output);
+                print(output);
+                return null;
+            });
+
+            addBuiltIn("printf", args -> {
+                if (args.isEmpty()) {
+                    logger.error("printf() 至少需要一个参数");
+                    throw new RuntimeException("printf() requires at least one argument");
+                }
+                String format = (String) args.get(0);
+                Object[] params = args.subList(1, args.size()).toArray();
+                printf(format, params);
                 return null;
             });
 
@@ -577,6 +698,83 @@ public class TestInterpreter {
                 }
                 logger.error("range需要1-3个参数，实际上提供了" + args.size() + "个");
                 throw new RuntimeException("range() takes 1-3 arguments");
+            });
+
+            addBuiltIn("analyze", args -> {
+                if (args.size() != 1) {
+                    logger.error("analyze requires exactly 1 argument, but got " + args.size());
+                    throw new RuntimeException("analyze() requires exactly 1 argument");
+                }
+
+                Object target = args.get(0);
+                StringBuilder result = new StringBuilder();
+                
+                if (target == null) {
+                    result.append("Target object is null\n");
+                    println(result.toString());
+                    return null;
+                }
+
+                Class<?> clazz = target.getClass();
+                result.append("=== Object Analysis ===\n");
+                result.append("Class Name: ").append(clazz.getName()).append("\n");
+                result.append("Simple Name: ").append(clazz.getSimpleName()).append("\n");
+                result.append("Package: ").append(clazz.getPackage() != null ? clazz.getPackage().getName() : "None").append("\n");
+                result.append("Is Array: ").append(clazz.isArray()).append("\n");
+                result.append("Is Interface: ").append(clazz.isInterface()).append("\n");
+                result.append("Is Annotation: ").append(clazz.isAnnotation()).append("\n");
+                result.append("Is Enum: ").append(clazz.isEnum()).append("\n");
+                result.append("Is Primitive: ").append(clazz.isPrimitive()).append("\n\n");
+
+                result.append("=== Fields ===\n");
+                Field[] fields = clazz.getDeclaredFields();
+                if (fields.length == 0) {
+                    result.append("No fields\n");
+                } else {
+                    for (Field field : fields) {
+                        result.append("  ").append(field.toString()).append("\n");
+                    }
+                }
+                if (fields.length > 0)
+                    result.append("Total Fields: ")
+                        .append(fields.length).append("\n\n");
+
+                result.append("=== Methods ===\n");
+                Method[] methods = clazz.getDeclaredMethods();
+                if (methods.length == 0) {
+                    result.append("No methods\n");
+                } else {
+                    for (Method method : methods) {
+                        result.append("  ").append(method.toString()).append("\n");
+                    }
+                }
+                if (methods.length > 0)
+                    result.append("Total Methods: ")
+                        .append(methods.length).append("\n\n");
+
+                result.append("=== Superclass ===\n");
+                Class<?> superClass = clazz.getSuperclass();
+                if (superClass != null) {
+                    result.append(superClass.getName());
+                } else {
+                    result.append("No superclass");
+                }
+                result.append("\n\n");
+
+                result.append("=== Implemented Interfaces ===\n");
+                Class<?>[] interfaces = clazz.getInterfaces();
+                if (interfaces.length == 0) {
+                    result.append("No interfaces\n");
+                } else {
+                    for (Class<?> iface : interfaces) {
+                        result.append("  ").append(iface.getName()).append("\n");
+                    }
+                }
+                if (interfaces.length > 0) 
+                    result.append("Total Interfaces: ")
+                        .append(interfaces.length).append("\n");
+                println(result.toString());
+                return null;
             });
 
             addBuiltIn("getContext", args -> {
@@ -672,7 +870,8 @@ public class TestInterpreter {
                 // 创建一个 Handler
                 private Object createHandler(Object looper) throws Exception {
                     Class<?> handlerClass = findClass("android.os.Handler");
-                    Constructor<?> constructor = handlerClass.getConstructor(findClassThroughApi("android.os.Looper", classLoader));
+                    Constructor<?> constructor = handlerClass
+                            .getConstructor(findClassThroughApi("android.os.Looper", classLoader));
                     return constructor.newInstance(looper);
                 }
 
@@ -947,11 +1146,9 @@ public class TestInterpreter {
             return list;
         }
 
-
         public Object callMethod(Object object, String methodName, List<Object> args) throws Exception {
-            if (methodName == null) {
+            if (methodName == null)
                 methodName = "call";
-            }
 
             Class<?> clazz;
             Object targetObj;
@@ -960,7 +1157,7 @@ public class TestInterpreter {
                 clazz = (Class<?>) object;
                 targetObj = null;
             } else if (object == null) {
-                throw new NullPointerException("Attempt to invoke method" + methodName + " on a null object");
+                throw new NullPointerException("Attempt to invoke method" + methodName + " on a null object reference");
             } else {
                 clazz = object.getClass();
                 targetObj = object;
@@ -998,9 +1195,9 @@ public class TestInterpreter {
                 }
             }
             if (applicable != null) {
-//                logger.warn("使用了参数不完全匹配的类方法" + clazz.getName() + "." + name);
-//                logger.warn("要求的参数: " + Arrays.toString(argTypes.toArray()));
-//                logger.warn("实际参数: " + Arrays.toString(applicable.getParameterTypes()));
+                // logger.warn("使用了参数不完全匹配的类方法" + clazz.getName() + "." + name);
+                // logger.warn("要求的参数: " + Arrays.toString(argTypes.toArray()));
+                // logger.warn("实际参数: " + Arrays.toString(applicable.getParameterTypes()));
                 return applicable;
             }
             logger.error("找不到类" + clazz.getName() + "的方法" + name + "，参数为" + Arrays.toString(argTypes.toArray()));
@@ -1081,7 +1278,7 @@ public class TestInterpreter {
         }
 
         public ConstructorDefinition getConstructor(List<Class<?>> paramTypes, ExecutionContext context)
-            throws ClassNotFoundException {
+                throws ClassNotFoundException {
             for (ConstructorDefinition constructor : constructors.values()) {
                 if (constructor.matchesParameters(paramTypes, context)) {
                     return constructor;
@@ -1183,7 +1380,8 @@ public class TestInterpreter {
             return sb.toString();
         }
 
-        public boolean matchesParameters(List<Class<?>> paramTypes, ExecutionContext context) throws ClassNotFoundException {
+        public boolean matchesParameters(List<Class<?>> paramTypes, ExecutionContext context)
+                throws ClassNotFoundException {
             if (parameters.size() != paramTypes.size()) {
                 return false;
             }
@@ -2119,9 +2317,8 @@ public class TestInterpreter {
 
     }
 
-
     public static MethodDefinition findMethodInHierarchy(ClassDefinition classDef, String methodName,
-                                                         ExecutionContext context) {
+            ExecutionContext context) {
         // 首先在当前类中查找方法
         MethodDefinition methodDef = classDef.getMethod(methodName);
         if (methodDef != null) {
@@ -2142,7 +2339,7 @@ public class TestInterpreter {
     }
 
     public static FieldDefinition findFieldInHierarchy(ClassDefinition classDef, String fieldName,
-                                                       ExecutionContext context) {
+            ExecutionContext context) {
 
         // 同上
         FieldDefinition fieldDef = classDef.getField(fieldName);
@@ -2218,7 +2415,8 @@ public class TestInterpreter {
                             argTypes[i] = arguments.get(i).getType(context);
                         }
 
-                        ConstructorDefinition constructorDef = classDef.getConstructor(Arrays.asList(argTypes), context);
+                        ConstructorDefinition constructorDef = classDef.getConstructor(Arrays.asList(argTypes),
+                                context);
                         if (constructorDef != null) {
                             ExecutionContext constructorContext = new ExecutionContext(context.getClassLoader());
 
@@ -2237,7 +2435,7 @@ public class TestInterpreter {
 
                                 String constructorOutput = constructorContext.getOutput();
                                 if (!constructorOutput.isEmpty()) {
-                                    context.appendOutput(constructorOutput);
+                                    context.print(constructorOutput);
                                 }
                             }
                         }
@@ -2312,7 +2510,7 @@ public class TestInterpreter {
         }
 
         private Object createArray(ExecutionContext context, String elementType,
-                                   List<Integer> dimensions, ASTNode arrInitial) throws Exception {
+                List<Integer> dimensions, ASTNode arrInitial) throws Exception {
             Class<?> elementClass = context.findClass(elementType);
             if (elementClass.isInterface() || Modifier.isAbstract(elementClass.getModifiers())) {
                 logger.error("尝试实例化一个抽象类或接口" + className);
@@ -2415,7 +2613,8 @@ public class TestInterpreter {
                 Object current = arr;
                 while (true) {
                     assert current != null;
-                    if (!current.getClass().isArray()) break;
+                    if (!current.getClass().isArray())
+                        break;
                     dimensions.add(Array.getLength(current));
                     current = Array.get(current, 0);
                 }
@@ -2558,7 +2757,7 @@ public class TestInterpreter {
          * 在类的继承层次结构中递归查找字段
          */
         private FieldDefinition findFieldInHierarchy(ClassDefinition classDef, String fieldName,
-                                                     ExecutionContext context) {
+                ExecutionContext context) {
             // 首先在当前类中查找字段
             FieldDefinition fieldDef = classDef.getField(fieldName);
             if (fieldDef != null) {
@@ -2613,7 +2812,8 @@ public class TestInterpreter {
 
             if (idx < 0 || idx >= length) {
                 logger.error("数组索引越界: " + idx + ", 数组长度: " + length);
-                throw new ArrayIndexOutOfBoundsException("Array index out of bounds: " + idx + ", array length: " + length);
+                throw new ArrayIndexOutOfBoundsException(
+                        "Array index out of bounds: " + idx + ", array length: " + length);
             }
 
             return Array.get(targetObj, idx);
@@ -2690,7 +2890,7 @@ public class TestInterpreter {
             Object targetObj = target.evaluate(context);
             Object val = value.evaluate(context);
 
-            if (targetObj instanceof CustomClassInstance customInstance)  {
+            if (targetObj instanceof CustomClassInstance customInstance) {
                 ClassDefinition classDef = customInstance.getClassDefinition();
                 FieldDefinition fieldDef = findFieldInHierarchy(classDef, fieldName, context);
                 if (fieldDef == null) {
@@ -2714,7 +2914,7 @@ public class TestInterpreter {
          * 在类的继承层次结构中递归查找字段
          */
         private FieldDefinition findFieldInHierarchy(ClassDefinition classDef, String fieldName,
-                                                     ExecutionContext context) {
+                ExecutionContext context) {
             // 首先在当前类中查找字段
             FieldDefinition fieldDef = classDef.getField(fieldName);
             if (fieldDef != null) {
@@ -2772,7 +2972,8 @@ public class TestInterpreter {
 
             if (idx < 0 || idx >= length) {
                 logger.error("数组索引越界: " + idx + ", 数组长度: " + length);
-                throw new ArrayIndexOutOfBoundsException("Array index out of bounds: " + idx + ", array length: " + length);
+                throw new ArrayIndexOutOfBoundsException(
+                        "Array index out of bounds: " + idx + ", array length: " + length);
             }
 
             Array.set(targetObj, idx, val);
@@ -3060,7 +3261,7 @@ public class TestInterpreter {
 
                     if (loopCount >= MAX_LOOPS) {
                         logger.warn("警告: while循环达到最大限制 (" + MAX_LOOPS + ")，自动退出");
-                        context.putWarnMessage("While loop reached its limit(" + MAX_LOOPS + "), force quited" + "\n");
+                        context.printWarn("While loop reached its limit(" + MAX_LOOPS + "), force quited" + "\n");
                         break;
                     }
                 }
@@ -3139,7 +3340,7 @@ public class TestInterpreter {
 
                 if (loopCount >= MAX_LOOPS) {
                     logger.warn("For循环达到最大限制 (" + MAX_LOOPS + ")，可能陷入无限循环，已经强制退出");
-                    context.putWarnMessage("For loop reached its limit (" + MAX_LOOPS + "), force quited" + "\n");
+                    context.printWarn("For loop reached its limit (" + MAX_LOOPS + "), force quited" + "\n");
                 }
                 return lastResult;
 
@@ -3268,7 +3469,7 @@ public class TestInterpreter {
 
                 if (loopCount >= MAX_LOOPS) {
                     logger.warn("For-each循环达到最大限制 (" + MAX_LOOPS + ")");
-                    context.putWarnMessage("For-each loop reached its limit (" + MAX_LOOPS + "), force quited" + "\n");
+                    context.printWarn("For-each loop reached its limit (" + MAX_LOOPS + "), force quited" + "\n");
                 }
 
                 return lastResult;
@@ -3312,7 +3513,7 @@ public class TestInterpreter {
                 do {
                     if (loopCount >= MAX_LOOPS) {
                         logger.warn("警告: do-while循环达到最大限制 (" + MAX_LOOPS + ")，自动退出");
-                        context.putWarnMessage("Do-while loop reached its limit(" + MAX_LOOPS + "), force quited" + "\n");
+                        context.printWarn("Do-while loop reached its limit(" + MAX_LOOPS + "), force quited" + "\n");
                         break;
                     }
 
@@ -3462,7 +3663,8 @@ public class TestInterpreter {
                     if (expectedReturnType != null && !isReturnTypeMatch(expectedReturnType, returnValue, context)) {
                         String actualType = returnValue != null ? returnValue.getClass().getSimpleName() : "null";
                         logger.error("返回值类型不匹配: 期望 '" + expectedReturnType + "', 实际 '" + actualType + "'");
-                        throw new RuntimeException("Return value type mismatch: expected " + expectedReturnType + ", got " + actualType);
+                        throw new RuntimeException(
+                                "Return value type mismatch: expected " + expectedReturnType + ", got " + actualType);
                     }
 
                     return returnValue;
@@ -3471,7 +3673,8 @@ public class TestInterpreter {
 
                     String expectedReturnType = context.getCurrentMethodReturnType();
                     if (expectedReturnType != null && !"void".equals(expectedReturnType)) {
-                        throw new RuntimeException("Return value type mismatch: expected " + expectedReturnType + ", got void");
+                        throw new RuntimeException(
+                                "Return value type mismatch: expected " + expectedReturnType + ", got void");
                     }
 
                     return null;
@@ -3620,7 +3823,7 @@ public class TestInterpreter {
 
                     if (!(oldValue instanceof Number)) {
                         logger.error("字段" + fieldName + "的类型是" +
-                                (oldValue == null ? "null": oldValue.getClass().getName()) + "，不能进行自加或者自减运算");
+                                (oldValue == null ? "null" : oldValue.getClass().getName()) + "，不能进行自加或者自减运算");
                         throw new RuntimeException("Cannot increment/decrement non-numeric field: " + fieldName);
                     }
 
@@ -3652,7 +3855,8 @@ public class TestInterpreter {
                     return isPre ? newValue : oldValue;
                 } catch (NoSuchFieldException e) {
                     logger.error("字段" + fieldName + "在对象" + targetObj.getClass().getName() + "中未找到");
-                    throw new RuntimeException("Field " + fieldName + " not found in " + targetObj.getClass().getName(), e);
+                    throw new RuntimeException("Field " + fieldName + " not found in " + targetObj.getClass().getName(),
+                            e);
                 } catch (IllegalAccessException e) {
                     logger.error("无法访问字段" + fieldName + "：" + e.getMessage());
                     throw new RuntimeException("Cannot access field " + fieldName, e);
@@ -3681,7 +3885,8 @@ public class TestInterpreter {
                     Field field = targetObj.getClass().getField(fieldName);
                     return field.getType();
                 } catch (NoSuchFieldException e) {
-                    throw new RuntimeException("Field " + fieldName + " not found in " + targetObj.getClass().getName(), e);
+                    throw new RuntimeException("Field " + fieldName + " not found in " + targetObj.getClass().getName(),
+                            e);
                 }
             }
         }
@@ -3821,101 +4026,33 @@ public class TestInterpreter {
 
         @Override
         public Object evaluate(ExecutionContext context) throws Exception {
-            // 检查是否在方法上下文中调用方法（递归调用）
+            String methodName = ((VariableNode) function).name;
+
             if (function instanceof VariableNode) {
-                String methodName = ((VariableNode) function).name;
-
-                // 检查当前上下文是否有"this"引用（在类方法内部）
-                Variable thisObj = context.getVariable("this");
-
-                Object thisValue = thisObj;
-                if (thisObj != null) {
-                    thisValue = thisObj.value;
-                }
-
-                if (thisValue instanceof CustomClassInstance thisInstance) {
-                    ClassDefinition classDef = thisInstance.getClassDefinition();
-
-                    MethodDefinition methodDef = findMethodInHierarchy(classDef, methodName, context);
-                    if (methodDef != null) {
-                        return new MethodCallNode(new VariableNode("this"), methodName, arguments)
-                                .evaluate(context);
-                    }
-                }
-            }
-
-            // 在尝试求值函数之前，先检查是否是递归调用
-            if (function instanceof VariableNode) {
-                String methodName = ((VariableNode) function).name;
-
-                // 检查当前上下文是否有"this"引用（表示在类方法）
-                Variable thisObj = context.getVariable("this");
-
-                // 如果thisObj是Variable包装对象，提取其value
-                Object thisValue = thisObj;
-                if (thisObj != null) {
-                    thisValue = thisObj.value;
-                }
-
-                if (thisValue instanceof CustomClassInstance thisInstance) {
-                    ClassDefinition classDef = thisInstance.getClassDefinition();
-
-                    // 查找当前类及其父类中是否有匹配的方法
-                    MethodDefinition methodDef = findMethodInHierarchy(classDef, methodName, context);
-                    if (methodDef != null) {
-                        // 如果找到匹配的方法，直接创建MethodCallNode并执行
-                        return new MethodCallNode(new VariableNode("this"), methodName, arguments)
-                                .evaluate(context);
-                    }
-                }
-            }
-
-            // 尝试直接求值函数名作为变量
-            try {
-                Object funcObj = function.evaluate(context);
-                List<Object> args = new ArrayList<>();
-                for (ASTNode arg : arguments) {
-                    args.add(arg.evaluate(context));
-                }
-
-                // 统一使用Lambda接口处理所有函数式接口调用
-                if (funcObj instanceof Lambda) {
-                    return ((Lambda) funcObj).apply(args.toArray());
-                } else {
-                    // 如果不是函数式接口，尝试作为普通方法调用
-                    return context.callMethod(funcObj, "call", args);
-                }
-            } catch (Exception e) {
-                // 捕获所有异常，检查是否是变量未定义错误
-
-                // 检查是否是变量未定义错误
-                if (e.getMessage() != null && e.getMessage().contains("Undefined variable")) {
-                    // 检查当前上下文是否有"this"引用
-                    Variable thisObj = context.getVariable("this");
-
-                    // 如果thisObj是Variable包装对象，提取其value
-                    Object thisValue = thisObj;
-                    if (thisObj != null) {
-                        thisValue = thisObj.value;
-                    }
-
+                if (context.hasVariable("this")) {
+                    Object thisValue = context.getVariable("this").value;
                     if (thisValue instanceof CustomClassInstance thisInstance) {
                         ClassDefinition classDef = thisInstance.getClassDefinition();
 
-                        // 查找当前类及其父类中是否有匹配的方法
-                        assert function instanceof VariableNode;
-                        MethodDefinition methodDef = findMethodInHierarchy(classDef, ((VariableNode) function).name,
-                                context);
+                        MethodDefinition methodDef = findMethodInHierarchy(classDef, methodName, context);
                         if (methodDef != null) {
-                            // 如果找到匹配的方法，直接创建MethodCallNode并执行
-                            return new MethodCallNode(new VariableNode("this"), ((VariableNode) function).name,
-                                    arguments)
+                            return new MethodCallNode(new VariableNode("this"), methodName, arguments)
                                     .evaluate(context);
                         }
                     }
                 }
-                // 重新抛出异常
-                throw new RuntimeException(e);
+            }
+
+            Object funcObj = function.evaluate(context);
+            List<Object> args = new ArrayList<>();
+            for (ASTNode arg : arguments) {
+                args.add(arg.evaluate(context));
+            }
+
+            if (funcObj instanceof Lambda) {
+                return ((Lambda) funcObj).apply(args.toArray());
+            } else {
+                return context.callMethod(funcObj, "call", args);
             }
         }
 
@@ -3934,6 +4071,33 @@ public class TestInterpreter {
                 return Void.class;
             }
         }
+    }
+
+    public static class DeleteNode extends ASTNode {
+        private final String variableName;
+
+        public DeleteNode(String variableName) {
+            this.variableName = variableName;
+        }
+
+        public Object evaluate(ExecutionContext context) throws Exception {
+            Variable val = context.getVariable(variableName);
+            // 如果有析构函数(finalize)就调用
+            try {
+                if (val.value.getClass().getMethod("finalize") != null) {
+                    context.callMethod(val.value, "finalize", new ArrayList<>());
+                }
+            } catch (NoSuchMethodException e) {
+            }
+
+            context.deleteVariable(variableName);
+            return null;
+        }
+
+        public Class<?> getType(ExecutionContext context) throws Exception {
+            return Void.class;
+        }
+
     }
 
     /**
@@ -4120,7 +4284,6 @@ public class TestInterpreter {
             }
             return false;
         }
-
 
         private boolean matchExact(char expected) {
             return matchExact(expected, "");
@@ -4377,7 +4540,7 @@ public class TestInterpreter {
                                 case '\\' -> '\\';
                                 default -> {
                                     logger.warn("未知的转义序列: \\" + escaped);
-                                    context.putWarnMessage("Invalid escape sequence \\" + escaped + "\n");
+                                    context.printWarn("Invalid escape sequence \\" + escaped + "\n");
                                     yield "" + '\\' + escaped;
                                 }
                             });
@@ -4497,7 +4660,8 @@ public class TestInterpreter {
             while (peek() != '}' && peek() != ']') {
                 char currentChar = peek();
                 if (currentChar == ',' || currentChar == '}' || currentChar == ']') {
-                    throw new RuntimeException("Array element cannot be empty, position: " + position + ", current character: '" + currentChar + "'");
+                    throw new RuntimeException("Array element cannot be empty, position: " + position
+                            + ", current character: '" + currentChar + "'");
                 }
 
                 elements.add(parseLiteral());
@@ -4520,7 +4684,8 @@ public class TestInterpreter {
 
             while (peek() != '}') {
                 if (peek() != '"' && peek() != '\'') {
-                    throw new RuntimeException("Map key must be a string, position: " + position + ", current character: '" + peek() + "'");
+                    throw new RuntimeException("Map key must be a string, position: " + position
+                            + ", current character: '" + peek() + "'");
                 }
 
                 String key = (String) ((LiteralNode) parseString()).value;
@@ -4797,7 +4962,8 @@ public class TestInterpreter {
                             } else {
                                 char currentChar = peek();
                                 if (currentChar != '}' && !Character.isWhitespace(currentChar)) {
-                                    throw new RuntimeException("Unparseable case statement, position: " + position + ", current character: '" + currentChar + "'");
+                                    throw new RuntimeException("Unparseable case statement, position: " + position
+                                            + ", current character: '" + currentChar + "'");
                                 }
                                 advance();
                             }
@@ -4817,7 +4983,8 @@ public class TestInterpreter {
                             } else {
                                 char currentChar = peek();
                                 if (currentChar != '}' && !Character.isWhitespace(currentChar)) {
-                                    throw new RuntimeException("Cannot parse default statement, position: " + position + ", current character: '" + currentChar + "'");
+                                    throw new RuntimeException("Cannot parse default statement, position: " + position
+                                            + ", current character: '" + currentChar + "'");
                                 }
                                 advance();
                             }
@@ -4827,7 +4994,8 @@ public class TestInterpreter {
                     } else {
                         char currentChar = peek();
                         if (currentChar != '}' && !Character.isWhitespace(currentChar)) {
-                            throw new RuntimeException("Cannot parse switch statement, position: " + position + ", current character: '" + currentChar + "'");
+                            throw new RuntimeException("Cannot parse switch statement, position: " + position
+                                    + ", current character: '" + currentChar + "'");
                         }
                         advance();
                         skipWhitespace();
@@ -4881,6 +5049,27 @@ public class TestInterpreter {
             }
         }
 
+        private ASTNode parseDeleteStatement() {
+            savePosition();
+            skipWhitespace();
+            boolean failure = false;
+            try {
+                expectWordToMove("delete");
+                skipWhitespace();
+                String varName = parseIdentifier();
+                return new DeleteNode(varName);
+            } catch (RuntimeException e) {
+                failure = true;
+                logger.error("解析delete失败: " + e.getMessage());
+                throw new RuntimeException("Error parsing delete statement: " + e.getMessage());
+            } finally {
+                if (failure)
+                    restorePosition();
+                else
+                    releasePosition();
+            }
+        }
+
         private ASTNode parseBlock() {
             savePosition();
             skipWhitespace();
@@ -4897,7 +5086,8 @@ public class TestInterpreter {
                     } else {
                         char currentChar = peek();
                         if (currentChar != '}' && !Character.isWhitespace(currentChar)) {
-                            throw new RuntimeException("Unparseable code block statement, position: " + position + ", current character: '" + currentChar + "'");
+                            throw new RuntimeException("Unparseable code block statement, position: " + position
+                                    + ", current character: '" + currentChar + "'");
                         }
                         advance();
                     }
@@ -5136,6 +5326,10 @@ public class TestInterpreter {
                 result = parseImportStatement();
                 clearLastUncompletedStmt();
                 return result;
+            } else if (isTargetWord("delete")) {
+                result = parseDeleteStatement();
+                clearLastUncompletedStmt();
+                return result;
             } else if (isTargetWord("if")) {
                 result = parseIfStatement();
                 clearLastUncompletedStmt();
@@ -5205,6 +5399,9 @@ public class TestInterpreter {
 
         public ASTNode parseCompletedStatement() {
             ASTNode result = parseStatement();
+
+            if (isAtEnd())
+                return result;
 
             while (!(getLastUncompletedStmt() == null) && !(peek() == ';')) {
                 result = parseStatement();
@@ -5302,7 +5499,8 @@ public class TestInterpreter {
                 } else if (c == '>') {
                     angleBracketDepth--;
                     if (angleBracketDepth < 0) {
-                        throw new RuntimeException("Invalid class name: unmatched closing angle bracket '>' in " + className);
+                        throw new RuntimeException(
+                                "Invalid class name: unmatched closing angle bracket '>' in " + className);
                     }
                 }
             }
@@ -5359,7 +5557,8 @@ public class TestInterpreter {
             }
 
             if (className.contains("<") || className.contains(">")) {
-                throw new RuntimeException("Invalid import: generic types not allowed in import statement: " + className);
+                throw new RuntimeException(
+                        "Invalid import: generic types not allowed in import statement: " + className);
             }
 
             if (className.contains("[") || className.contains("]")) {
@@ -5514,7 +5713,8 @@ public class TestInterpreter {
                             position = afterModifierPos;
                         }
                     }
-                } else if (!parsed && (isTypeOrVoid(firstWord) || firstWord.equals("static") || firstWord.equals("final"))) {
+                } else if (!parsed
+                        && (isTypeOrVoid(firstWord) || firstWord.equals("static") || firstWord.equals("final"))) {
                     if (firstWord.equals("static") || firstWord.equals("final")) {
                         String nextWord = peekWordAfterWhitespace();
                         if (isTypeOrVoid(nextWord)) {
@@ -5591,7 +5791,8 @@ public class TestInterpreter {
                 if (position == lastPosition) {
                     stagnantCount++;
                     if (stagnantCount > 100) {
-                        throw new RuntimeException("Class body parsing stuck in infinite loop, position stuck at: " + position);
+                        throw new RuntimeException(
+                                "Class body parsing stuck in infinite loop, position stuck at: " + position);
                     }
                 } else {
                     stagnantCount = 0;
@@ -5718,8 +5919,6 @@ public class TestInterpreter {
             }
         }
 
-
-
         private ASTNode parseExpression() {
             ASTNode expr = parseAssignment();
 
@@ -5763,7 +5962,8 @@ public class TestInterpreter {
                         ASTNode right = parseAssignment(); // 递归解析右侧表达式
                         return new ArrayAssignmentNode(arrayAccess.target, arrayAccess.index, right);
                     } else {
-                        throw new RuntimeException("Left side of assignment must be a variable, field access, or array access");
+                        throw new RuntimeException(
+                                "Left side of assignment must be a variable, field access, or array access");
                     }
                 } else {
                     String assignmentOp = null;
@@ -6154,7 +6354,8 @@ public class TestInterpreter {
                         return new FieldIncrementNode(fieldAccess.target, fieldAccess.fieldName, false, true);
                     }
                     logger.error("后置++不能用在括号表达式上");
-                    throw new RuntimeException("++ can only be applied to variables or field access, not parenthesized expressions");
+                    throw new RuntimeException(
+                            "++ can only be applied to variables or field access, not parenthesized expressions");
                 } else if (result instanceof VariableNode) {
                     return new IncrementNode(((VariableNode) result).name, false, true);
                 } else if (result instanceof FieldAccessNode fieldAccess) {
@@ -6171,7 +6372,8 @@ public class TestInterpreter {
                         return new FieldIncrementNode(fieldAccess.target, fieldAccess.fieldName, false, false);
                     }
                     logger.error("后置--不能用在括号表达式上");
-                    throw new RuntimeException("-- can only be applied to variables or field access, not parenthesized expressions");
+                    throw new RuntimeException(
+                            "-- can only be applied to variables or field access, not parenthesized expressions");
                 } else if (result instanceof VariableNode) {
                     return new IncrementNode(((VariableNode) result).name, false, false);
                 } else if (result instanceof FieldAccessNode fieldAccess) {
@@ -6266,7 +6468,8 @@ public class TestInterpreter {
                 while (peek() != ')') {
                     char currentChar = peek();
                     if (currentChar == ',' || currentChar == ')') {
-                        throw new RuntimeException("Method parameter cannot be empty, position: " + position + ", current character: '" + currentChar + "'");
+                        throw new RuntimeException("Method parameter cannot be empty, position: " + position
+                                + ", current character: '" + currentChar + "'");
                     }
 
                     String paramType = peekWord();
@@ -6303,7 +6506,8 @@ public class TestInterpreter {
                         skipWhitespace();
                         if (position == stmtStart) {
                             logger.error("解释器在解析方法时开始原地踏步");
-                            throw new RuntimeException("Cannot parse statement in method definition; are there any syntax error?");
+                            throw new RuntimeException(
+                                    "Cannot parse statement in method definition; are there any syntax error?");
                         }
                     } else {
                         logger.error("解析器在解析方法时parseCompletedStatement返回null");
@@ -6343,7 +6547,8 @@ public class TestInterpreter {
                 while (peek() != ')') {
                     char currentChar = peek();
                     if (currentChar == ',' || currentChar == ')') {
-                        throw new RuntimeException("Method parameter cannot be empty, position: " + position + ", current character: '" + currentChar + "'");
+                        throw new RuntimeException("Method parameter cannot be empty, position: " + position
+                                + ", current character: '" + currentChar + "'");
                     }
 
                     String paramType = peekWord();
@@ -6456,7 +6661,8 @@ public class TestInterpreter {
                 while (peek() != ')') {
                     char currentChar = peek();
                     if (currentChar == ',' || currentChar == ')') {
-                        throw new RuntimeException("Constructor parameter cannot be empty, position: " + position + ", current character: '" + currentChar + "'");
+                        throw new RuntimeException("Constructor parameter cannot be empty, position: " + position
+                                + ", current character: '" + currentChar + "'");
                     }
 
                     // 解析参数类型和名称 - 使用peekWord而不是parseClassIdentifier以支持原始类型
@@ -6543,8 +6749,8 @@ public class TestInterpreter {
         }
 
         public Object executeWithResult(String code) {
-            context.clearVariables();
             context.clearOutput();
+            context.clearWarnMessages();
             Parser parser = new Parser(code, context);
             ASTNode node;
             Object lastResult = null;
@@ -6552,56 +6758,43 @@ public class TestInterpreter {
             try {
                 while ((node = parser.parseCompletedStatement()) != null)
                     lastResult = node.evaluate(context);
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                e.printStackTrace(System.err);
             }
             return lastResult;
         }
 
-        public String execute(String code) {
-            StringBuilder result = new StringBuilder();
-            context.clearVariables();
+        public void execute(String code) {
             context.clearOutput();
             context.clearWarnMessages();
             Parser parser = new Parser(code, context);
             ASTNode node;
-            String errorMsg = "";
             try {
                 while ((node = parser.parseCompletedStatement()) != null) {
                     node.evaluate(context);
                 }
             } catch (Exception e) {
-                OutputStream os = new ByteArrayOutputStream();
-                e.printStackTrace(new PrintStream(os));
-                errorMsg = os.toString();
+                e.printStackTrace(System.err);
             }
-            String output = context.getOutput();
-            result.append(output).append(errorMsg);
-            return result.toString();
         }
 
         public void execute(String code,
-                            IOutputHandler builtInOutStream,
-                            IOutputHandler builtInErrStream) {
+                IOutputHandler builtInOutStream,
+                IOutputHandler builtInErrStream) {
             context.setBuiltInOutputBuffer(builtInOutStream);
             context.setBuiltInErrorBuffer(builtInErrStream);
-            StringBuilder result = new StringBuilder();
-            context.clearVariables();
+            // context.clearVariables();
             context.clearOutput();
             context.clearWarnMessages();
             Parser parser = new Parser(code, context);
             ASTNode node;
-            String errorMsg = "";
             try {
                 while ((node = parser.parseCompletedStatement()) != null) {
                     node.evaluate(context);
                 }
             } catch (Exception e) {
-                OutputStream os = new ByteArrayOutputStream();
-                e.printStackTrace(new PrintStream(os));
-                errorMsg = os.toString();
+                e.printStackTrace(System.err);
             }
-            String output = context.getOutput();
-            result.append(output).append(errorMsg);
         }
 
         public Map<String, Object> getVariables() {
@@ -6610,6 +6803,28 @@ public class TestInterpreter {
 
         public void clearVariables() {
             context.clearVariables();
+        }
+    }
+
+    public static void main(String[] args) {
+        TestInterpreter.ScriptRunner runner = new ScriptRunner(Thread.currentThread().getContextClassLoader());
+        while (true) {
+            String code;
+            try {
+                System.out.print(">>> ");
+                BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+                code = reader.readLine();
+                if (code == null || code.trim().equals("exit")) {
+                    break;
+                }
+                Object result = runner.executeWithResult(code);
+                if (result != null) {
+                    System.out.println(result);
+                }
+            } catch (Exception e) {
+                System.err.println("执行出错: " + e.getMessage());
+                e.printStackTrace(System.err);
+            }
         }
     }
 

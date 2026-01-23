@@ -435,8 +435,7 @@ public class ChineseTips {
             String NAME_NONECOLDWIND = "十三怀旧 (NoneColdWind)";
             String NAME_NAN = "SB1.0 (NAN)";
             String NAME_BARINFXXK = "你哪个省的";
-            String NAME_DYD = "DYD";
-            String NAME_YUNMO = "云沫";
+
             clearDidYouKnowTips();
 
             addDidYouKnowTip(new SimpleTipCallback(
@@ -864,8 +863,9 @@ public class ChineseTips {
                     long begin = 2023L * 12L + 10L - 1L;
                     long now = calendar.get(Calendar.YEAR) * 12L - calendar.get(Calendar.MONTH);
                     long diff = now - begin;
+                    StringBuilder sb;
                     if (diff <= 0) {
-                        StringBuilder sb = new StringBuilder("什么鬼，我怎么穿越回我开发工具箱");
+                        sb = new StringBuilder("什么鬼，我怎么穿越回我开发工具箱");
                         if (diff < 0) {
                             diff = Math.abs(diff);
                             sb.append("前");
@@ -873,19 +873,17 @@ public class ChineseTips {
                             if (diff >= 12 && diff % 12L != 0) sb.append("零");
                             if (diff % 12L != 0) sb.append(diff % 12).append("个月");
                             sb.append("了？？？");
-                            return sb.toString();
                         } else {
                             sb.append("的那个月了？？？");
-                            return sb.toString();
                         }
                     } else {
-                        StringBuilder sb = new StringBuilder(content);
+                        sb = new StringBuilder(content);
                         if (diff >= 12) sb.append(diff / 12).append("年");
                         if (diff >= 12 && diff % 12L != 0) sb.append("零");
                         if (diff % 12L != 0) sb.append(diff % 12).append("个月");
                         sb.append("了");
-                        return sb.toString();
                     }
+                    return sb.toString();
                 }
             });
 
