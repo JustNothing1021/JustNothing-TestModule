@@ -5,25 +5,21 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_FIELD_VER;
 import android.util.Log;
 
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.command.functions.CommandBase;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 
 import de.robv.android.xposed.XposedHelpers;
 
-public class FieldMain {
+public class FieldMain extends CommandBase {
 
-    public static class FieldLogger extends Logger {
-        @Override
-        public String getTag() {
-            return "FieldExecutor";
-        }
+    public FieldMain() {
+        super("FieldExecutor");
     }
 
-    public static final FieldLogger logger = new FieldLogger();
-
-    public static String getHelpText() {
+    @Override
+    public String getHelpText() {
         return String.format("""
                 语法: field [选项] <类名> [字段名]
                 
@@ -47,16 +43,17 @@ public class FieldMain {
                 """, CMD_FIELD_VER);
     }
 
-    public static String runMain(CommandExecutor.CmdExecContext context) {
+    @Override
+    public String runMain(CommandExecutor.CmdExecContext context) {
         String[] args = context.args();
         ClassLoader classLoader = context.classLoader();
         String targetPackage = context.targetPackage();
         
-        logger.debug("执行field命令，参数: " + java.util.Arrays.toString(args));
-        logger.debug("目标包: " + targetPackage + ", 类加载器: " + classLoader);
+        getLogger().debug("执行field命令，参数: " + java.util.Arrays.toString(args));
+        getLogger().debug("目标包: " + targetPackage + ", 类加载器: " + classLoader);
         
         if (args.length < 1) {
-            logger.warn("参数不足，需要至少1个参数");
+            getLogger().warn("参数不足，需要至少1个参数");
             return getHelpText();
         }
 
@@ -87,7 +84,7 @@ public class FieldMain {
                 showValue = true;
                 showAll = false;
             } else if (arg.equals("-t") || arg.equals("--type")) {
-                showType = true;
+                showType = true;   
                 showAll = false;
             } else if (arg.equals("-m") || arg.equals("--modifiers")) {
                 showModifiers = true;
@@ -108,23 +105,23 @@ public class FieldMain {
             }
         }
         
-        logger.debug("目标类: " + className + ", 字段名: " + fieldName + ", 显示全部: " + showAll);
+        getLogger().debug("目标类: " + className + ", 字段名: " + fieldName + ", 显示全部: " + showAll);
 
         try {
             Class<?> targetClass;
             try {
-                logger.debug("尝试加载类: " + className);
+                getLogger().debug("尝试加载类: " + className);
                 if (classLoader == null) {
-                    logger.debug("使用默认类加载器");
+                    getLogger().debug("使用默认类加载器");
                     targetClass = XposedHelpers.findClass(className, null);
                 } else {
-                    logger.debug("使用提供的类加载器: " + classLoader);
+                    getLogger().debug("使用提供的类加载器: " + classLoader);
                     targetClass = XposedHelpers.findClass(className, classLoader);
                 }
-                logger.info("成功加载类: " + targetClass.getName());
+                getLogger().info("成功加载类: " + targetClass.getName());
             } catch (Throwable e) {
-                logger.error("加载类失败: " + className, e);
-                logger.warn("类加载器为: " + targetPackage);
+                getLogger().error("加载类失败: " + className, e);
+                getLogger().warn("类加载器为: " + targetPackage);
                 return "找不到类: " + className +
                         "\n使用的包: " + (targetPackage != null ? targetPackage : "default") +
                         "\n类加载器: " + (classLoader != null ? classLoader : "无") +
@@ -155,6 +152,10 @@ public class FieldMain {
                     sb.append("=== 字段信息 ===\n");
                     sb.append("字段名: ").append(field.getName()).append("\n");
                     sb.append("类型: ").append(field.getType().getName()).append("\n");
+
+                    if (showAll || showType) {
+                        sb.append("类型: ").append(field.getType().getName()).append("\n");
+                    }
                     
                     if (showAll || showModifiers) {
                         sb.append("修饰符: ").append(getModifiers(field.getModifiers())).append("\n");
@@ -205,13 +206,13 @@ public class FieldMain {
             }
 
         } catch (Exception e) {
-            logger.error("执行field命令失败", e);
+            getLogger().error("执行field命令失败", e);
             return "错误: " + e.getMessage() +
                     "\n堆栈追踪: \n" + Log.getStackTraceString(e);
         }
     }
 
-    private static Object parseValue(String value, Class<?> type) {
+    private Object parseValue(String value, Class<?> type) {
         if (value == null) return null;
         
         if (type == int.class || type == Integer.class) {
@@ -235,7 +236,7 @@ public class FieldMain {
         }
     }
 
-    private static String getModifiers(int modifiers) {
+    private String getModifiers(int modifiers) {
         StringBuilder sb = new StringBuilder();
         if (Modifier.isPublic(modifiers)) sb.append("public ");
         else if (Modifier.isPrivate(modifiers)) sb.append("private ");
@@ -254,7 +255,7 @@ public class FieldMain {
         return sb.toString().trim();
     }
 
-    private static String getFieldDescriptor(Field field) {
+    private String getFieldDescriptor(Field field) {
         StringBuilder sb = new StringBuilder();
         int modifiers = field.getModifiers();
 

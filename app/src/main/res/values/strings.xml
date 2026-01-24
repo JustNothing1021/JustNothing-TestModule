@@ -149,7 +149,7 @@
     <string name="did_you_know_unknown_index">第 ? 条 / 共计 ? 条</string>
     <string name="did_you_know_author_format">-- %s</string>
     <string name="did_you_know_no_tip_available">暂时没有可用的提示…</string>
-    <string name="did_you_known_index_format">第 %d 条 / 共计 %d 条</string>
+    <string name="did_you_known_index_format" formatted="false">第 %d 条 / 共计 %d 条</string>
     <string name="did_you_know_title">你知道吗?</string>
     <string name="welcome_subtitle_description">一个啥也不是的Xposed模块</string>
     <string name="data_export_permission_warn">没有获取到写入文件权限，可能无法保存文件</string>
@@ -163,5 +163,16 @@
     <string name="data_export_file_cleared">已删除文件 %s</string>
     <string name="data_export_file_clear_failed">删除文件 %s 失败</string>
     <string name="general_exit_app">退出应用</string>
+    <string name="ai_art_gallery">AI的艺术作品</string>
+    <string name="ai_art_title">AI的艺术作品</string>
+    <string name="ai_art_description">由AI助手创作的SVG艺术作品</string>
+    <string name="ai_art_work_title">风景画</string>
+    <string name="ai_art_work_description">宁静的风景画，包含太阳、云朵、山脉、树木、花朵、河流和草地</string>
+    <string name="ai_art_work_night_title">夜空</string>
+    <string name="ai_art_work_night_description">宁静的夜空，包含闪烁的星星、流星、月亮和山脉倒影</string>
+    <string name="ai_art_work_sunrise_title">日出</string>
+    <string name="ai_art_work_sunrise_description">壮丽的日出景象，太阳从山后缓缓升起，天空渐变为金黄色</string>
+    <string name="ai_art_work_sunset_title">日落</string>
+    <string name="ai_art_work_sunset_description">从山丘俯瞰城市日落，天空渐变为深橙，城市灯光渐次亮起</string>
     <string name="script_example_script_3_command" translatable="false"><![CDATA[script for (int i = 0; i < 114; i++) println(i); ]]></string>
 </resources>

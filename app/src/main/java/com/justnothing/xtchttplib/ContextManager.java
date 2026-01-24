@@ -255,7 +255,6 @@ public class ContextManager {
     }
 
 
-
     public void setGrey(String grey) {
         this.grey = grey;
     }

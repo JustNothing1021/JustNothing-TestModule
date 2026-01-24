@@ -9,7 +9,7 @@ import android.text.TextUtils;
 import android.util.Log;
 
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.command.functions.CommandBase;
 import com.justnothing.xtchttplib.ContextManager;
 import com.xtc.sync.elt;
 import com.xtc.sync.byw;
@@ -18,21 +18,17 @@ import java.lang.reflect.Method;
 import java.net.NetworkInterface;
 import java.util.Locale;
 
-public class ExportContextMain {
+public class ExportContextMain extends CommandBase {
 
-    public static class ExportContextLogger extends Logger {
-        @Override
-        public String getTag() {
-            return "ExportContextExecutor";
-        }
+    public ExportContextMain() {
+        super("ExportContextExecutor");
     }
-
-    public static final ExportContextLogger logger = new ExportContextLogger();
 
     private static final String CONTENT_URI = "content://com.xtc.initservice/item";
     private static final String WATCH_ID_URI = "content://com.xtc.provider/BaseDataProvider/watchId/1";
 
-    public static String getHelpText() {
+    @Override
+    public String getHelpText() {
         return """
                 语法: export-context
                 
@@ -47,19 +43,20 @@ public class ExportContextMain {
                 """;
     }
 
-    public static String runMain(CommandExecutor.CmdExecContext context) {
-        logger.debug("执行export-context命令");
+    @Override
+    public String runMain(CommandExecutor.CmdExecContext context) {
+        getLogger().debug("执行export-context命令");
         
         Context appContext = getApplicationContext();
         if (appContext == null) {
-            logger.error("无法获取应用上下文");
+            getLogger().error("无法获取应用上下文");
             return "错误: 无法获取应用上下文";
         }
 
         try {
             ContextManager ctx = new ContextManager();
             
-            logger.info("开始收集设备上下文信息");
+            getLogger().info("开始收集设备上下文信息");
             
             Cursor cursor = null;
             try {
@@ -77,12 +74,12 @@ public class ExportContextMain {
                     ctx.setHttpHeadParam(getCursorStringValue(cursor, "httpHeadParam"));
                     ctx.setEncSwitch(getCursorStringValue(cursor, "encSwitch"));
                     
-                    logger.debug("HTTP配置信息收集完成");
+                    getLogger().debug("HTTP配置信息收集完成");
                 } else {
-                    logger.warn("无法从ContentProvider读取HTTP配置");
+                    getLogger().warn("无法从ContentProvider读取HTTP配置");
                 }
             } catch (Exception e) {
-                logger.error("收集HTTP配置信息失败", e);
+                getLogger().error("收集HTTP配置信息失败", e);
             } finally {
                 if (cursor != null) {
                     cursor.close();
@@ -95,10 +92,10 @@ public class ExportContextMain {
                 String watchId = resolver.getType(uri);
                 if (!TextUtils.isEmpty(watchId)) {
                     ctx.setWatchId(watchId);
-                    logger.debug("watchId: " + watchId);
+                    getLogger().debug("watchId: " + watchId);
                 }
             } catch (Exception e) {
-                logger.error("收集watchId失败", e);
+                getLogger().error("收集watchId失败", e);
             }
             
             ctx.setMacAddr(getMacAddress());
@@ -131,19 +128,19 @@ public class ExportContextMain {
             
             String json = ctx.toJson();
             
-            logger.info("成功导出设备上下文信息");
-            logger.debug("导出的JSON:\n" + json);
+            getLogger().info("成功导出设备上下文信息");
+            getLogger().debug("导出的JSON:\n" + json);
             
             return json;
             
         } catch (Exception e) {
-            logger.error("导出设备上下文信息失败", e);
+            getLogger().error("导出设备上下文信息失败", e);
             return "错误: " + e.getMessage() +
                     "\n堆栈追踪: \n" + Log.getStackTraceString(e);
         }
     }
 
-    private static Context getApplicationContext() {
+    private Context getApplicationContext() {
         try {
             Class<?> activityThreadClass = Class.forName("android.app.ActivityThread");
             Method currentActivityThreadMethod = activityThreadClass.getMethod("currentActivityThread");
@@ -152,27 +149,27 @@ public class ExportContextMain {
             Method getApplicationMethod = activityThreadClass.getMethod("getApplication");
             return (Context) getApplicationMethod.invoke(activityThread);
         } catch (Exception e) {
-            logger.error("获取Application Context失败", e);
+            getLogger().error("获取Application Context失败", e);
             return null;
         }
     }
 
-    private static String getSystemProperty(String key) {
+    private String getSystemProperty(String key) {
         return getSystemProperty(key, null);
     }
 
-    private static String getSystemProperty(String key, String defaultValue) {
+    private String getSystemProperty(String key, String defaultValue) {
         try {
             Class<?> c = Class.forName("android.os.SystemProperties");
             Method get = c.getMethod("get", String.class, String.class);
             return (String) get.invoke(c, key, defaultValue);
         } catch (Exception e) {
-            logger.error("读取系统属性失败: " + key, e);
+            getLogger().error("读取系统属性失败: " + key, e);
             return defaultValue;
         }
     }
 
-    private static String getCursorStringValue(Cursor cursor, String columnName) {
+    private String getCursorStringValue(Cursor cursor, String columnName) {
         if (cursor == null || TextUtils.isEmpty(columnName)) {
             return null;
         }
@@ -184,12 +181,12 @@ public class ExportContextMain {
             }
             return cursor.getString(columnIndex);
         } catch (Exception e) {
-            logger.error("getCursorStringValue error: " + columnName, e);
+            getLogger().error("getCursorStringValue error: " + columnName, e);
             return null;
         }
     }
 
-    private static int getCursorIntValue(Cursor cursor, String columnName) {
+    private int getCursorIntValue(Cursor cursor, String columnName) {
         if (cursor == null || TextUtils.isEmpty(columnName)) {
             return 0;
         }
@@ -201,12 +198,12 @@ public class ExportContextMain {
             }
             return cursor.getInt(columnIndex);
         } catch (Exception e) {
-            logger.error("getCursorIntValue error: " + columnName, e);
+            getLogger().error("getCursorIntValue error: " + columnName, e);
             return 0;
         }
     }
 
-    private static String getMacAddress() {
+    private String getMacAddress() {
         try {
             NetworkInterface networkInterface = NetworkInterface.getByName("wlan0");
             if (networkInterface == null) {
@@ -226,7 +223,7 @@ public class ExportContextMain {
                 }
             }
         } catch (Exception e) {
-            logger.error("获取MAC地址失败", e);
+            getLogger().error("获取MAC地址失败", e);
         }
         return null;
     }

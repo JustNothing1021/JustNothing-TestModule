@@ -162,4 +162,15 @@
     <string name="data_export_file_cleared">Deleted file %s</string>
     <string name="data_export_file_clear_failed">Failed to delete file %s</string>
     <string name="general_exit_app">Exit App</string>
+    <string name="ai_art_gallery">AI Art Gallery</string>
+    <string name="ai_art_title">AI Art Gallery</string>
+    <string name="ai_art_description">SVG artworks created by AI assistant</string>
+    <string name="ai_art_work_title">Landscape</string>
+    <string name="ai_art_work_description">A serene landscape featuring sun, clouds, mountains, trees, flowers, river, and grass</string>
+    <string name="ai_art_work_night_title">Night Sky</string>
+    <string name="ai_art_work_night_description">A serene night sky featuring twinkling stars, shooting stars, moon, and mountain reflections</string>
+    <string name="ai_art_work_sunrise_title">Sunrise</string>
+    <string name="ai_art_work_sunrise_description">A magnificent sunrise where the sun rises from behind mountains, sky turns golden</string>
+    <string name="ai_art_work_sunset_title">Sunset</string>
+    <string name="ai_art_work_sunset_description">City sunset from hilltop, sky turns deep orange, city lights gradually illuminate</string>
 </resources>

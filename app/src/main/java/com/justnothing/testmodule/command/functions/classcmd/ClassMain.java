@@ -5,7 +5,7 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_CLASS_VER;
 import android.util.Log;
 
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.command.functions.CommandBase;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -14,18 +14,14 @@ import java.lang.reflect.Modifier;
 
 import de.robv.android.xposed.XposedHelpers;
 
-public class ClassMain {
+public class ClassMain extends CommandBase {
 
-    public static class ClassLogger extends Logger {
-        @Override
-        public String getTag() {
-            return "ClassExecutor";
-        }
+    public ClassMain() {
+        super("ClassExecutor");
     }
 
-    public static final ClassLogger logger = new ClassLogger();
-
-    public static String getHelpText() {
+    @Override
+    public String getHelpText() {
         return String.format("""
                 语法: class [选项] <类名>
                 
@@ -47,16 +43,17 @@ public class ClassMain {
                 """, CMD_CLASS_VER);
     }
 
-    public static String runMain(CommandExecutor.CmdExecContext context) {
+    @Override
+    public String runMain(CommandExecutor.CmdExecContext context) {
         String[] args = context.args();
         ClassLoader classLoader = context.classLoader();
         String targetPackage = context.targetPackage();
         
-        logger.debug("执行class命令，参数: " + java.util.Arrays.toString(args));
-        logger.debug("目标包: " + targetPackage + ", 类加载器: " + classLoader);
+        getLogger().debug("执行class命令，参数: " + java.util.Arrays.toString(args));
+        getLogger().debug("目标包: " + targetPackage + ", 类加载器: " + classLoader);
         
         if (args.length < 1) {
-            logger.warn("参数不足，需要至少1个参数");
+            getLogger().warn("参数不足，需要至少1个参数");
             return getHelpText();
         }
 
@@ -86,23 +83,23 @@ public class ClassMain {
             }
         }
         
-        logger.debug("目标类: " + className + ", 显示全部: " + showAll);
+        getLogger().debug("目标类: " + className + ", 显示全部: " + showAll);
 
         try {
             Class<?> targetClass;
             try {
-                logger.debug("尝试加载类: " + className);
+                getLogger().debug("尝试加载类: " + className);
                 if (classLoader == null) {
-                    logger.debug("使用默认类加载器");
+                    getLogger().debug("使用默认类加载器");
                     targetClass = XposedHelpers.findClass(className, null);
                 } else {
-                    logger.debug("使用提供的类加载器: " + classLoader);
+                    getLogger().debug("使用提供的类加载器: " + classLoader);
                     targetClass = XposedHelpers.findClass(className, classLoader);
                 }
-                logger.info("成功加载类: " + targetClass.getName());
+                getLogger().info("成功加载类: " + targetClass.getName());
             } catch (Throwable e) {
-                logger.error("加载类失败: " + className, e);
-                logger.warn("类加载器为: " + targetPackage);
+                getLogger().error("加载类失败: " + className, e);
+                getLogger().warn("类加载器为: " + targetPackage);
                 return "找不到类: " + className +
                         "\n使用的包: " + (targetPackage != null ? targetPackage : "default") +
                         "\n类加载器: " + (classLoader != null ? classLoader : "无") +
@@ -216,18 +213,18 @@ public class ClassMain {
                 sb.append("类加载器: ").append(classLoader != null ? classLoader.toString() : "无").append("\n");
             }
             
-            logger.info("执行成功");
-            logger.debug("执行结果:\n" + sb.toString());
+            getLogger().info("执行成功");
+            getLogger().debug("执行结果:\n" + sb.toString());
             return sb.toString();
 
         } catch (Exception e) {
-            logger.error("执行class命令失败", e);
+            getLogger().error("执行class命令失败", e);
             return "错误: " + e.getMessage() +
                     "\n堆栈追踪: \n" + Log.getStackTraceString(e);
         }
     }
 
-    private static String getModifiers(int modifiers) {
+    private String getModifiers(int modifiers) {
         StringBuilder sb = new StringBuilder();
         if (Modifier.isPublic(modifiers)) sb.append("public ");
         else if (Modifier.isPrivate(modifiers)) sb.append("private ");
@@ -246,7 +243,7 @@ public class ClassMain {
         return sb.toString().trim();
     }
 
-    private static String getConstructorDescriptor(Constructor<?> constructor) {
+    private String getConstructorDescriptor(Constructor<?> constructor) {
         StringBuilder sb = new StringBuilder();
         int modifiers = constructor.getModifiers();
 

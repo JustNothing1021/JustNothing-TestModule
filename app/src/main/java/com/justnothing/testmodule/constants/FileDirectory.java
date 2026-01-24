@@ -4,7 +4,7 @@ import java.io.File;
 import java.util.List;
 
 public class FileDirectory {
-    public static final String APPLICATION_VERSION = "0.4.1";
+    public static final String APPLICATION_VERSION = "0.4.2";
     public static final String SDCARD = "/sdcard";
     public static final String EXTERNAL_PATH = "/data/user_de/0/com.justnothing.testmodule/JustNothing";
     public static final String SDCARD_PATH = SDCARD + "/JustNothing";

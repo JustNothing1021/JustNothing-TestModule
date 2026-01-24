@@ -51,6 +51,7 @@ public class WelcomeActivity extends AppCompatActivity {
         Button btnDataExport = findViewById(R.id.btn_data_export);
         Button btnSettings = findViewById(R.id.btn_settings);
         Button btnDidYouKnow = findViewById(R.id.btn_did_you_know);
+        Button btnAiArtGallery = findViewById(R.id.btn_ai_art_gallery);
         Button btnAbout = findViewById(R.id.btn_about);
 
         btnGetHttpConf.setOnClickListener(v -> {
@@ -95,6 +96,11 @@ public class WelcomeActivity extends AppCompatActivity {
 
         btnDidYouKnow.setOnClickListener(v -> {
             Intent intent = new Intent(this, DidYouKnowActivity.class);
+            startActivity(intent);
+        });
+
+        btnAiArtGallery.setOnClickListener(v -> {
+            Intent intent = new Intent(this, AiArtGalleryActivity.class);
             startActivity(intent);
         });
 

@@ -1,0 +1,198 @@
+<svg width="800" height="600" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+  <!-- 天空渐变 -->
+  <defs>
+    <linearGradient id="skyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#87CEEB;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#E0F6FF;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="mountainGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#6B8E23;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#556B2F;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="sunGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFD700;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FFA500;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- 天空背景 -->
+  <rect width="800" height="600" fill="url(#skyGradient)" />
+
+  <!-- 太阳 -->
+  <circle cx="650" cy="100" r="60" fill="url(#sunGradient)">
+    <animate attributeName="r" values="60;65;60" dur="3s" repeatCount="indefinite" />
+  </circle>
+  <circle cx="650" cy="100" r="50" fill="#FFFF00" opacity="0.3" />
+
+  <!-- 太阳光芒 -->
+  <g stroke="#FFD700" stroke-width="3" opacity="0.6">
+    <line x1="650" y1="20" x2="650" y2="0" />
+    <line x1="650" y1="180" x2="650" y2="200" />
+    <line x1="570" y1="100" x2="550" y2="100" />
+    <line x1="730" y1="100" x2="750" y2="100" />
+    <line x1="593" y1="43" x2="578" y2="28" />
+    <line x1="707" y1="157" x2="722" y2="172" />
+    <line x1="593" y1="157" x2="578" y2="172" />
+    <line x1="707" y1="43" x2="722" y2="28" />
+  </g>
+
+  <!-- 云朵 - 带缓慢飘动动画（往返运动） -->
+  <g fill="#FFFFFF" opacity="0.9">
+    <!-- 云朵1 -->
+    <g>
+      <ellipse cx="150" cy="80" rx="50" ry="30" />
+      <ellipse cx="180" cy="70" rx="40" ry="25" />
+      <ellipse cx="120" cy="75" rx="35" ry="20" />
+      <animateTransform attributeName="transform" type="translate" values="0 0; 100 0; 0 0" dur="30s" repeatCount="indefinite" />
+    </g>
+    
+    <!-- 云朵2 -->
+    <g>
+      <ellipse cx="400" cy="120" rx="60" ry="35" />
+      <ellipse cx="440" cy="110" rx="45" ry="28" />
+      <ellipse cx="370" cy="115" rx="40" ry="22" />
+      <animateTransform attributeName="transform" type="translate" values="0 0; 80 0; 0 0" dur="35s" repeatCount="indefinite" />
+    </g>
+    
+    <!-- 云朵3 -->
+    <g>
+      <ellipse cx="700" cy="180" rx="55" ry="32" />
+      <ellipse cx="735" cy="170" rx="42" ry="26" />
+      <ellipse cx="670" cy="175" rx="38" ry="21" />
+      <animateTransform attributeName="transform" type="translate" values="0 0; -60 0; 0 0" dur="40s" repeatCount="indefinite" />
+    </g>
+  </g>
+
+  <!-- 远处的山脉 -->
+  <polygon points="0,450 200,250 400,450" fill="#8B7355" opacity="0.7" />
+  <polygon points="300,450 550,200 800,450" fill="#8B7355" opacity="0.7" />
+  
+  <!-- 近处的山脉 -->
+  <polygon points="100,450 300,300 500,450" fill="url(#mountainGradient)" />
+  <polygon points="400,450 650,280 800,450" fill="url(#mountainGradient)" />
+  
+  <!-- 山顶雪帽 -->
+  <polygon points="280,300 300,300 300,320" fill="#FFFFFF" opacity="0.8" />
+  <polygon points="630,280 650,280 650,300" fill="#FFFFFF" opacity="0.8" />
+
+  <!-- 草地 -->
+  <rect x="0" y="450" width="800" height="150" fill="#7CFC00" />
+  
+  <!-- 草地纹理 - 三根一簇 -->
+  <g stroke="#32CD32" stroke-width="2" opacity="0.5" stroke-linecap="round">
+    <!-- 第一簇 -->
+    <line x1="50" y1="500" x2="50" y2="480" />
+    <line x1="50" y1="500" x2="40" y2="485" />
+    <line x1="50" y1="500" x2="60" y2="485" />
+    
+    <!-- 第四簇 -->
+    <line x1="200" y1="505" x2="200" y2="485" />
+    <line x1="200" y1="505" x2="190" y2="490" />
+    <line x1="200" y1="505" x2="210" y2="490" />
+    
+    <!-- 第七簇 -->
+    <line x1="350" y1="495" x2="350" y2="475" />
+    <line x1="350" y1="495" x2="340" y2="480" />
+    <line x1="350" y1="495" x2="360" y2="480" />
+    
+    <!-- 第十簇 -->
+    <line x1="500" y1="510" x2="500" y2="490" />
+    <line x1="500" y1="510" x2="490" y2="495" />
+    <line x1="500" y1="510" x2="510" y2="495" />
+    
+    <!-- 第十三簇 -->
+    <line x1="650" y1="500" x2="650" y2="480" />
+    <line x1="650" y1="500" x2="640" y2="485" />
+    <line x1="650" y1="500" x2="660" y2="485" />
+  </g>
+
+  <!-- 树木 -->
+  <g>
+    <!-- 树干 -->
+    <rect x="95" y="400" width="10" height="80" fill="#8B4513" />
+    <!-- 树冠 -->
+    <polygon points="100,350 60,420 140,420" fill="#228B22" />
+    <polygon points="100,380 70,430 130,430" fill="#228B22" />
+    <polygon points="100,400 80,440 120,440" fill="#228B22" />
+  </g>
+
+  <g>
+    <rect x="295" y="380" width="12" height="100" fill="#8B4513" />
+    <polygon points="301,320 250,400 352,400" fill="#228B22" />
+    <polygon points="301,360 260,410 342,410" fill="#228B22" />
+    <polygon points="301,390 270,420 332,420" fill="#228B22" />
+  </g>
+
+  <g>
+    <rect x="645" y="390" width="10" height="90" fill="#8B4513" />
+    <polygon points="650,340 610,410 690,410" fill="#228B22" />
+    <polygon points="650,370 615,420 685,420" fill="#228B22" />
+    <polygon points="650,400 620,430 680,430" fill="#228B22" />
+  </g>
+
+  <!-- 小花 -->
+  <g>
+    <!-- 花朵1 - 粉色 - 往上移 -->
+    <g transform="translate(200, 490)">
+      <!-- 花茎 -->
+      <line x1="0" y1="0" x2="0" y2="20" stroke="#228B22" stroke-width="2" />
+      <!-- 花瓣 -->
+      <circle cx="0" cy="-8" r="5" fill="#FF69B4" />
+      <circle cx="6" cy="-2" r="5" fill="#FF69B4" />
+      <circle cx="4" cy="6" r="5" fill="#FF69B4" />
+      <circle cx="-4" cy="6" r="5" fill="#FF69B4" />
+      <circle cx="-6" cy="-2" r="5" fill="#FF69B4" />
+      <!-- 花蕊 -->
+      <circle cx="0" cy="0" r="3.5" fill="#FFFF00" />
+    </g>
+    
+    <!-- 花朵2 - 红色 - 往下移 -->
+    <g transform="translate(350, 570)">
+      <!-- 花茎 -->
+      <line x1="0" y1="0" x2="0" y2="25" stroke="#228B22" stroke-width="2" />
+      <!-- 花瓣 -->
+      <circle cx="0" cy="-10" r="6" fill="#FF1493" />
+      <circle cx="7" cy="-3" r="6" fill="#FF1493" />
+      <circle cx="5" cy="8" r="6" fill="#FF1493" />
+      <circle cx="-5" cy="8" r="6" fill="#FF1493" />
+      <circle cx="-7" cy="-3" r="6" fill="#FF1493" />
+      <!-- 花蕊 -->
+      <circle cx="0" cy="0" r="4" fill="#FFFF00" />
+    </g>
+    
+    <!-- 花朵3 - 粉色 -->
+    <g transform="translate(550, 510)">
+      <!-- 花茎 -->
+      <line x1="0" y1="0" x2="0" y2="18" stroke="#228B22" stroke-width="2" />
+      <!-- 花瓣 -->
+      <circle cx="0" cy="-6" r="4.5" fill="#FF69B4" />
+      <circle cx="5" cy="-1" r="4.5" fill="#FF69B4" />
+      <circle cx="3" cy="5" r="4.5" fill="#FF69B4" />
+      <circle cx="-3" cy="5" r="4.5" fill="#FF69B4" />
+      <circle cx="-5" cy="-1" r="4.5" fill="#FF69B4" />
+      <!-- 花蕊 -->
+      <circle cx="0" cy="0" r="3" fill="#FFFF00" />
+    </g>
+    
+    <!-- 花朵4 - 红色 - 向上移 -->
+    <g transform="translate(700, 522)">
+      <!-- 花茎 -->
+      <line x1="0" y1="0" x2="0" y2="22" stroke="#228B22" stroke-width="2" />
+      <!-- 花瓣 -->
+      <circle cx="0" cy="-9" r="5.5" fill="#FF1493" />
+      <circle cx="6" cy="-2" r="5.5" fill="#FF1493" />
+      <circle cx="4" cy="7" r="5.5" fill="#FF1493" />
+      <circle cx="-4" cy="7" r="5.5" fill="#FF1493" />
+      <circle cx="-6" cy="-2" r="5.5" fill="#FF1493" />
+      <!-- 花蕊 -->
+      <circle cx="0" cy="0" r="3.5" fill="#FFFF00" />
+    </g>
+  </g>
+
+  <!-- 河流 -->
+  <path d="M 0 550 Q 200 530 400 550 Q 600 570 800 550" stroke="#4169E1" stroke-width="15" fill="none" opacity="0.7" />
+  <path d="M 0 555 Q 200 535 400 555 Q 600 575 800 555" stroke="#87CEEB" stroke-width="8" fill="none" opacity="0.5" />
+
+  <!-- 签名 -->
+  <text x="750" y="570" font-family="Arial" font-size="12" fill="#333" opacity="0.5">Created by AI</text>
+</svg>

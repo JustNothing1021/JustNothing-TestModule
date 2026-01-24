@@ -122,7 +122,7 @@ public abstract class Logger {
                     break;
             }
         }
-        Log.d("Test", "向logWriter添加一条日志");
+        // Log.d("Test", "向logWriter添加一条日志");
         SHARED_LOG_WRITER.addLog(level, getTag(), message, timestamp);
     }
 

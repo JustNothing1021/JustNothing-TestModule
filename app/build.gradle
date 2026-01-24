@@ -15,7 +15,7 @@ android {
         minSdk 26
         targetSdk 36
         versionCode 41
-        versionName "0.4.1"
+        versionName "0.4.2"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -54,6 +54,7 @@ dependencies {
     implementation libs.bsh
     implementation libs.hutool.all
     implementation libs.gson
+    implementation libs.androidsvg.aar
 
     compileOnly libs.xposed.api
 

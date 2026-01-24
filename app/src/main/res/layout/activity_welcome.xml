@@ -131,6 +131,16 @@
             android:textSize="16sp" />
 
         <Button
+            android:id="@+id/btn_ai_art_gallery"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:backgroundTint="#FF4081"
+            android:padding="16dp"
+            android:text="@string/ai_art_gallery"
+            android:textSize="16sp" />
+
+        <Button
             android:id="@+id/btn_about"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

@@ -1,0 +1,323 @@
+<svg width="800" height="600" viewBox="-100 -50 1000 700" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- 天空渐变 - 从深夜到黎明，呈现淡黄色，调暗 -->
+    <linearGradient id="skyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#0D1B2A">
+        <animate attributeName="stop-color" values="#0D1B2A;#1B263B;#415A77;#D4A574" dur="15s" fill="freeze"/>
+      </stop>
+      <stop offset="30%" style="stop-color:#1B263B">
+        <animate attributeName="stop-color" values="#1B263B;#415A77;#D4A574;#E8C89A" dur="15s" fill="freeze"/>
+      </stop>
+      <stop offset="60%" style="stop-color:#415A77">
+        <animate attributeName="stop-color" values="#415A77;#D4A574;#E8C89A;#F0D8A8" dur="15s" fill="freeze"/>
+      </stop>
+      <stop offset="100%" style="stop-color:#D4A574">
+        <animate attributeName="stop-color" values="#D4A574;#E8C89A;#F0D8A8;#FFC94D" dur="15s" fill="freeze"/>
+      </stop>
+    </linearGradient>
+    
+    <!-- 太阳渐变 -->
+    <radialGradient id="sunGradient" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#FFF9C4"/>
+      <stop offset="50%" style="stop-color:#FFEB3B"/>
+      <stop offset="100%" style="stop-color:#FFC107"/>
+    </radialGradient>
+    
+    <!-- 水面渐变 - 从中间向两侧渐变为接近山体的颜色，交界处与山体颜色完全一致 -->
+    <linearGradient id="waterGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#05050A">
+        <animate attributeName="stop-color" values="#05050A;#1A1A2A;#2A2A3A;#3A3A4A" dur="15s" fill="freeze"/>
+      </stop>
+      <stop offset="16%" style="stop-color:#05050A">
+        <animate attributeName="stop-color" values="#05050A;#1A1A2A;#2A2A3A;#3A3A4A" dur="15s" fill="freeze"/>
+      </stop>
+      <stop offset="100%" style="stop-color:#2A4A5A">
+        <animate attributeName="stop-color" values="#2A4A5A;#3A5A6A;#4A6A7A;#5A7A8A" dur="15s" fill="freeze"/>
+      </stop>
+    </linearGradient>
+    
+    <!-- 山脉渐变 - 被日出照亮，调暗，从黑暗到暗橙黄色 -->
+    <linearGradient id="mountainGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1A1A2E">
+        <animate attributeName="stop-color" values="#1A1A2E;#2D2D3A;#3D3D4A;#4A4A5A" dur="8s" fill="freeze"/>
+      </stop>
+      <stop offset="50%" style="stop-color:#0F0F1A">
+        <animate attributeName="stop-color" values="#0F0F1A;#1F1F2A;#2F2F3A;#3F3F4A" dur="8s" fill="freeze"/>
+      </stop>
+      <stop offset="100%" style="stop-color:#05050A">
+        <animate attributeName="stop-color" values="#05050A;#1A1A2A;#2A2A3A;#3A3A4A" dur="8s" fill="freeze"/>
+      </stop>
+    </linearGradient>
+    
+    <!-- 山脉顶部渐变 - 暗橙黄色 -->
+    <linearGradient id="mountainTopGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1A1A2E">
+        <animate attributeName="stop-color" values="#1A1A2E;#3D3D4A;#5D4037;#6D4C41" dur="8s" fill="freeze"/>
+      </stop>
+      <stop offset="50%" style="stop-color:#0F0F1A">
+        <animate attributeName="stop-color" values="#0F0F1A;#2D2D3A;#4E342E;#5D4037" dur="8s" fill="freeze"/>
+      </stop>
+      <stop offset="100%" style="stop-color:#05050A">
+        <animate attributeName="stop-color" values="#05050A;#1A1A2A;#2A2A3A;#3A3A4A" dur="8s" fill="freeze"/>
+      </stop>
+    </linearGradient>
+    
+    <!-- 树木渐变 - 被日出照亮，渐渐显现暗绿色 -->
+    <linearGradient id="treeGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#0F1A15">
+        <animate attributeName="stop-color" values="#0F1A15;#1A2F25;#2A4A35;#3A5A45" dur="8s" fill="freeze"/>
+      </stop>
+      <stop offset="40%" style="stop-color:#0A1510">
+        <animate attributeName="stop-color" values="#0A1510;#152520;#253A30;#354A40" dur="8s" fill="freeze"/>
+      </stop>
+      <stop offset="100%" style="stop-color:#05050A"/>
+    </linearGradient>
+    
+    <!-- 树干渐变 - 从黑暗中渐渐显色 -->
+    <linearGradient id="trunkGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1A1A1A">
+        <animate attributeName="stop-color" values="#1A1A1A;#3D3D3D;#5D4037;#795548" dur="8s" fill="freeze"/>
+      </stop>
+      <stop offset="50%" style="stop-color:#0F0F0F">
+        <animate attributeName="stop-color" values="#0F0F0F;#2D2D2D;#4E342E;#6D4C41" dur="8s" fill="freeze"/>
+      </stop>
+      <stop offset="100%" style="stop-color:#050505"/>
+    </linearGradient>
+    
+    <!-- 云朵渐变 -->
+    <linearGradient id="cloudGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF">
+        <animate attributeName="stop-color" values="#FFFFFF;#FFE5B4;#FFB74D;#FF9800" dur="8s" fill="freeze"/>
+      </stop>
+      <stop offset="100%" style="stop-color:#E0E1DD">
+        <animate attributeName="stop-color" values="#E0E1DD;#FFCC80;#FFA726;#F57C00" dur="8s" fill="freeze"/>
+      </stop>
+    </linearGradient>
+    
+    <!-- 光芒渐变 -->
+    <radialGradient id="rayGradient" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#FFEB3B;stop-opacity:0.6"/>
+      <stop offset="100%" style="stop-color:#FFEB3B;stop-opacity:0"/>
+    </radialGradient>
+  </defs>
+  
+  <!-- 天空 -->
+  <rect x="0" y="0" width="800" height="400" fill="url(#skyGradient)"/>
+  
+  <!-- 星星 - 逐渐消失 -->
+  <g fill="#FFFFFF" opacity="1">
+    <circle cx="100" cy="50" r="2">
+      <animate attributeName="opacity" values="1;0.8;0.6;0.4;0.2;0" dur="6s" fill="freeze"/>
+    </circle>
+    <circle cx="300" cy="40" r="2">
+      <animate attributeName="opacity" values="1;0.8;0.6;0.4;0.2;0" dur="7s" fill="freeze"/>
+    </circle>
+    <circle cx="500" cy="30" r="2">
+      <animate attributeName="opacity" values="1;0.8;0.6;0.4;0.2;0" dur="6.5s" fill="freeze"/>
+    </circle>
+    <circle cx="700" cy="45" r="2">
+      <animate attributeName="opacity" values="1;0.8;0.6;0.4;0.2;0" dur="6.2s" fill="freeze"/>
+    </circle>
+    <circle cx="250" cy="120" r="1.5">
+      <animate attributeName="opacity" values="1;0.8;0.6;0.4;0.2;0" dur="6.8s" fill="freeze"/>
+    </circle>
+    <circle cx="550" cy="90" r="1.5">
+      <animate attributeName="opacity" values="1;0.8;0.6;0.4;0.2;0" dur="5.8s" fill="freeze"/>
+    </circle>
+  </g>
+  
+  <!-- 太阳 - 放在山的后层，缓慢升起 -->
+  <g transform="translate(400, 400)">
+    <circle cx="0" cy="0" r="60" fill="url(#sunGradient)">
+      <animate attributeName="cy" values="0;-150" dur="15s" fill="freeze"/>
+      <animate attributeName="r" values="60;70" dur="15s" fill="freeze"/>
+    </circle>
+    
+    <!-- 太阳光芒 -->
+    <g opacity="0.4">
+      <ellipse cx="0" cy="-150" rx="100" ry="200" fill="url(#rayGradient)">
+        <animate attributeName="cy" values="0;-150" dur="15s" fill="freeze"/>
+        <animate attributeName="opacity" values="0;0.4" dur="15s" fill="freeze"/>
+      </ellipse>
+    </g>
+  </g>
+  
+  <!-- 远山 - 不透明，完全遮挡太阳 -->
+  <path d="M 0 350 L 150 250 L 300 320 L 450 230 L 600 300 L 800 200 L 800 400 L 0 400 Z" 
+        fill="url(#mountainGradient)"/>
+  
+  <!-- 远山顶部 - 暗橙黄色 -->
+  <path d="M 0 350 L 150 250 L 300 320 L 450 230 L 600 300 L 800 200 L 800 220 L 600 320 L 450 250 L 300 340 L 150 270 L 0 370 Z" 
+        fill="url(#mountainTopGradient)" opacity="0.3"/>
+  
+  <!-- 近山 - 不透明，完全遮挡太阳 -->
+  <path d="M 0 400 L 100 300 L 200 350 L 350 280 L 500 340 L 650 270 L 800 320 L 800 400 L 0 400 Z" 
+        fill="url(#mountainGradient)"/>
+  
+  <!-- 近山顶部 - 暗橙黄色 -->
+  <path d="M 0 400 L 100 300 L 200 350 L 350 280 L 500 340 L 650 270 L 800 320 L 800 340 L 650 290 L 500 360 L 350 300 L 200 370 L 100 320 L 0 420 Z" 
+        fill="url(#mountainTopGradient)" opacity="0.3"/>
+  
+  <!-- 云朵 - 被日出染成金色，缓慢移动 -->
+  <g fill="url(#cloudGradient)" opacity="0.9">
+    <!-- 云朵1 -->
+    <g transform="translate(150, 150)">
+      <animateTransform attributeName="transform" type="translate"
+                       values="150,150; 170,145; 150,150; 130,155; 150,150"
+                       dur="30s" repeatCount="indefinite"/>
+      <ellipse cx="0" cy="0" rx="50" ry="30">
+        <animate attributeName="rx" values="50;55;50" dur="8s" repeatCount="indefinite"/>
+      </ellipse>
+      <ellipse cx="30" cy="-10" rx="40" ry="25">
+        <animate attributeName="rx" values="40;45;40" dur="8s" repeatCount="indefinite"/>
+      </ellipse>
+      <ellipse cx="-30" cy="5" rx="35" ry="22">
+        <animate attributeName="rx" values="35;40;35" dur="8s" repeatCount="indefinite"/>
+      </ellipse>
+      <ellipse cx="10" cy="15" rx="30" ry="18">
+        <animate attributeName="rx" values="30;35;30" dur="8s" repeatCount="indefinite"/>
+      </ellipse>
+    </g>
+    
+    <!-- 云朵2 -->
+    <g transform="translate(550, 120)">
+      <animateTransform attributeName="transform" type="translate"
+                       values="550,120; 530,115; 550,120; 570,125; 550,120"
+                       dur="35s" repeatCount="indefinite"/>
+      <ellipse cx="0" cy="0" rx="60" ry="35">
+        <animate attributeName="rx" values="60;65;60" dur="9s" repeatCount="indefinite"/>
+      </ellipse>
+      <ellipse cx="35" cy="-12" rx="45" ry="28">
+        <animate attributeName="rx" values="45;50;45" dur="9s" repeatCount="indefinite"/>
+      </ellipse>
+      <ellipse cx="-35" cy="8" rx="40" ry="25">
+        <animate attributeName="rx" values="40;45;40" dur="9s" repeatCount="indefinite"/>
+      </ellipse>
+      <ellipse cx="12" cy="18" rx="35" ry="20">
+        <animate attributeName="rx" values="35;40;35" dur="9s" repeatCount="indefinite"/>
+      </ellipse>
+    </g>
+  </g>
+  
+  <!-- 水面 -->
+  <rect x="0" y="400" width="800" height="200" fill="url(#waterGradient)"/>
+  
+  <!-- 太阳倒影 - 只在太阳越过山头后出现 -->
+  <g transform="translate(400, 400)" opacity="0">
+    <ellipse cx="0" cy="50" rx="80" ry="150" fill="#FFEB3B" opacity="0.3">
+      <animate attributeName="cy" values="50;100" dur="15s" fill="freeze"/>
+      <animate attributeName="opacity" values="0;0.3" begin="7.5s" dur="7.5s" fill="freeze"/>
+    </ellipse>
+    
+    <!-- 水波纹 -->
+    <g stroke="#FFEB3B" stroke-width="2" fill="none" opacity="0.4">
+      <ellipse cx="0" cy="50" rx="60" ry="10">
+        <animate attributeName="cy" values="50;100" dur="15s" fill="freeze"/>
+        <animate attributeName="rx" values="60;80" dur="15s" fill="freeze"/>
+        <animate attributeName="opacity" values="0;0.4" begin="7.5s" dur="7.5s" fill="freeze"/>
+      </ellipse>
+      <ellipse cx="0" cy="70" rx="70" ry="12">
+        <animate attributeName="cy" values="70;120" dur="15s" fill="freeze"/>
+        <animate attributeName="rx" values="70;90" dur="15s" fill="freeze"/>
+        <animate attributeName="opacity" values="0;0.4" begin="7.5s" dur="7.5s" fill="freeze"/>
+      </ellipse>
+      <ellipse cx="0" cy="90" rx="80" ry="14">
+        <animate attributeName="cy" values="90;140" dur="15s" fill="freeze"/>
+        <animate attributeName="rx" values="80;100" dur="15s" fill="freeze"/>
+        <animate attributeName="opacity" values="0;0.4" begin="7.5s" dur="7.5s" fill="freeze"/>
+      </ellipse>
+    </g>
+  </g>
+  
+  <!-- 树木剪影 - 使用渐变，大圆遮住小圆，树干从黑暗中渐渐显色，位置有差异 -->
+  <g>
+    <!-- 左侧大树 - 稍微向下 -->
+    <g transform="translate(50, 405)">
+      <rect x="-8" y="-120" width="16" height="120" fill="url(#trunkGradient)"/>
+      <ellipse cx="-30" cy="-150" rx="35" ry="45" fill="url(#treeGradient)"/>
+      <ellipse cx="30" cy="-145" rx="32" ry="42" fill="url(#treeGradient)"/>
+      <ellipse cx="0" cy="-175" rx="25" ry="35" fill="url(#treeGradient)"/>
+      <ellipse cx="0" cy="-120" rx="60" ry="80" fill="url(#treeGradient)"/>
+    </g>
+    
+    <!-- 右侧大树 - 稍微向上 -->
+    <g transform="translate(750, 395)">
+      <rect x="-6" y="-100" width="12" height="100" fill="url(#trunkGradient)"/>
+      <ellipse cx="-25" cy="-125" rx="28" ry="38" fill="url(#treeGradient)"/>
+      <ellipse cx="25" cy="-120" rx="26" ry="35" fill="url(#treeGradient)"/>
+      <ellipse cx="0" cy="-100" rx="50" ry="65" fill="url(#treeGradient)"/>
+    </g>
+    
+    <!-- 中间小树 - 稍微向下 -->
+    <g transform="translate(150, 402)">
+      <rect x="-4" y="-60" width="8" height="60" fill="url(#trunkGradient)"/>
+      <ellipse cx="0" cy="-60" rx="30" ry="40" fill="url(#treeGradient)"/>
+    </g>
+    
+    <!-- 中间小树 - 稍微向上 -->
+    <g transform="translate(650, 398)">
+      <rect x="-4" y="-55" width="8" height="55" fill="url(#trunkGradient)"/>
+      <ellipse cx="0" cy="-55" rx="28" ry="38" fill="url(#treeGradient)"/>
+    </g>
+  </g>
+  
+  <!-- 飞鸟 - 已移除 -->
+  
+  <!-- 水鸟 - 单向运动，留下水波 -->
+  <g>
+    <!-- 鸭子 -->
+    <g transform="translate(-100, 480)" fill="#1A252F" opacity="0.8">
+      <ellipse cx="0" cy="0" rx="15" ry="8"/>
+      <circle cx="12" cy="-3" r="5"/>
+      <path d="M 17 -3 L 25 -2" stroke="#FF9800" stroke-width="2"/>
+      <ellipse cx="-8" cy="5" rx="6" ry="3"/>
+      <ellipse cx="8" cy="5" rx="6" ry="3"/>
+      
+      <animateTransform attributeName="transform" type="translate"
+                       values="-100,480; 100,480; 200,475; 300,480; 400,475; 500,480; 600,475; 700,480; 800,475; 900,480; 1000,475"
+                       dur="20s" repeatCount="indefinite"/>
+    </g>
+    
+    <!-- 水波 - 跟随鸭子 -->
+    <g stroke="#FFFFFF" stroke-width="1" fill="none" opacity="0.3">
+      <ellipse cx="-100" cy="485" rx="20" ry="5">
+        <animate attributeName="cx" values="-100;100;200;300;400;500;600;700;800;900;1000" dur="20s" repeatCount="indefinite"/>
+        <animate attributeName="rx" values="20;25;30;35;40;45;50;55;60;65" dur="20s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="0.3;0.25;0.2;0.15;0.1;0.05;0;0;0;0" dur="20s" repeatCount="indefinite"/>
+      </ellipse>
+      <ellipse cx="-100" cy="490" rx="18" ry="4">
+        <animate attributeName="cx" values="-100;100;200;300;400;500;600;700;800;900;1000" dur="20s" repeatCount="indefinite"/>
+        <animate attributeName="rx" values="18;23;28;33;38;43;48;53;58;63" dur="20s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="0.3;0.25;0.2;0.15;0.1;0.05;0;0;0;0" dur="20s" repeatCount="indefinite"/>
+      </ellipse>
+    </g>
+  </g>
+  
+  <!-- 芦苇 - 微微摆动，渐渐显现暗绿色 -->
+  <g stroke="#1A3A2A" stroke-width="2" fill="none">
+    <path d="M 50 450 Q 55 400 50 380">
+      <animate attributeName="d" values="M 50 450 Q 55 400 50 380; M 50 450 Q 53 400 50 380; M 50 450 Q 57 400 50 380; M 50 450 Q 55 400 50 380" dur="4s" repeatCount="indefinite"/>
+      <animate attributeName="stroke" values="#0A1A10;#1A2A20;#2A3A30;#3A4A40" dur="8s" fill="freeze"/>
+    </path>
+    <path d="M 70 460 Q 75 410 70 390">
+      <animate attributeName="d" values="M 70 460 Q 75 410 70 390; M 70 460 Q 73 410 70 390; M 70 460 Q 77 410 70 390; M 70 460 Q 75 410 70 390" dur="4.5s" repeatCount="indefinite"/>
+      <animate attributeName="stroke" values="#0A1A10;#1A2A20;#2A3A30;#3A4A40" dur="8s" fill="freeze"/>
+    </path>
+    <path d="M 90 455 Q 95 405 90 385">
+      <animate attributeName="d" values="M 90 455 Q 95 405 90 385; M 90 455 Q 93 405 90 385; M 90 455 Q 97 405 90 385; M 90 455 Q 95 405 90 385" dur="3.8s" repeatCount="indefinite"/>
+      <animate attributeName="stroke" values="#0A1A10;#1A2A20;#2A3A30;#3A4A40" dur="8s" fill="freeze"/>
+    </path>
+    <path d="M 710 455 Q 715 405 710 385">
+      <animate attributeName="d" values="M 710 455 Q 715 405 710 385; M 710 455 Q 713 405 710 385; M 710 455 Q 717 405 710 385; M 710 455 Q 715 405 710 385" dur="4.2s" repeatCount="indefinite"/>
+      <animate attributeName="stroke" values="#0A1A10;#1A2A20;#2A3A30;#3A4A40" dur="8s" fill="freeze"/>
+    </path>
+    <path d="M 730 460 Q 735 410 730 390">
+      <animate attributeName="d" values="M 730 460 Q 735 410 730 390; M 730 460 Q 733 410 730 390; M 730 460 Q 737 410 730 390; M 730 460 Q 735 410 730 390" dur="4.7s" repeatCount="indefinite"/>
+      <animate attributeName="stroke" values="#0A1A10;#1A2A20;#2A3A30;#3A4A40" dur="8s" fill="freeze"/>
+    </path>
+    <path d="M 750 458 Q 755 408 750 388">
+      <animate attributeName="d" values="M 750 458 Q 755 408 750 388; M 750 458 Q 753 408 750 388; M 750 458 Q 757 408 750 388; M 750 458 Q 755 408 750 388" dur="4.3s" repeatCount="indefinite"/>
+      <animate attributeName="stroke" values="#0A1A10;#1A2A20;#2A3A30;#3A4A40" dur="8s" fill="freeze"/>
+    </path>
+  </g>
+</svg>

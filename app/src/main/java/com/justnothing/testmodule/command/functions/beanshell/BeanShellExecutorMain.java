@@ -5,13 +5,13 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_BEAN_SHELL_
 import android.util.Log;
 
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.command.functions.CommandBase;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class BeanShellExecutorMain {
+public class BeanShellExecutorMain extends CommandBase {
 
     private static final ConcurrentHashMap<ClassLoader, BeanShellExecutor>
             beanShellExecutors = new ConcurrentHashMap<>();
@@ -20,60 +20,95 @@ public class BeanShellExecutorMain {
 
     private static final Map<String, Object> beanShellExecutionContext = new HashMap<>();
 
+    private final String commandName;
 
-    public static class BeanShellLogger extends Logger {
-        @Override
-        public String getTag() {
-            return "BeanShellExecutor";
+    public BeanShellExecutorMain() {
+        this("bsh");
+    }
+
+    public BeanShellExecutorMain(String commandName) {
+        super("BeanShellExecutor");
+        this.commandName = commandName;
+    }
+
+    @Override
+    public String getHelpText() {
+        if (commandName.equals("bvars")) {
+            return String.format("""
+                    语法: bvars
+                    
+                    显示BeanShell执行器的变量列表.
+                    
+                    示例:
+                        bvars
+                    
+                    (Submodule bsh %s)
+                    """, CMD_BEAN_SHELL_VER);
+        } else if (commandName.equals("bclear")) {
+            return String.format("""
+                    语法: bclear
+                    
+                    清空BeanShell执行器的所有变量.
+                    
+                    示例:
+                        bclear
+                    
+                    (Submodule bsh %s)
+                    """, CMD_BEAN_SHELL_VER);
+        } else {
+            return String.format("""
+                    语法: bsh <beanShell code>
+                    
+                    用BeanShell解释器执行代码.
+                    (说实话这个我也不会用, AI推荐给我的, 其实能算是废稿, 但留着好玩)
+                    
+                    示例:
+                      bsh 'a = "114514";'
+                      bsh 'println("Hello, World!");'
+                      bsh 'for (i = 0; i < 5; i++) { println("i = " + i); }'
+                    
+                    提示: BeanShell不需要也不能指定类型
+                        a = "114514";
+                        String a = "114514"; // 爆炸
+                    
+                    (Submodule bsh %s)
+                    """, CMD_BEAN_SHELL_VER);
         }
     }
-
-    public static final BeanShellLogger logger = new BeanShellLogger();
-
-    public static String getHelpText() {
-        return String.format("""
-                语法: bsh <beanShell code>
-                
-                用BeanShell解释器执行代码.
-                (说实话这个我也不会用, AI推荐给我的, 其实能算是废稿, 但留着好玩)
-                
-                示例:
-                  bsh 'a = "114514";'
-                  bsh 'println("Hello, World!");'
-                  bsh 'for (i = 0; i < 5; i++) { println("i = " + i); }'
-                
-                提示: BeanShell不需要也不能指定类型
-                    a = "114514";
-                    String a = "114514"; // 爆炸
-                
-                (Submodule bsh %s)
-                """, CMD_BEAN_SHELL_VER);
-    }
-    public static String runMain(CommandExecutor.CmdExecContext context) {
+    @Override
+    public String runMain(CommandExecutor.CmdExecContext context) {
+        String cmdName = context.cmdName();
         String[] args = context.args();
         ClassLoader classLoader = context.classLoader();
-        if (args.length < 1) {
-            return getHelpText();
-        }
-
-        try {
-            StringBuilder code = new StringBuilder();
-            for (int i = 0; i < args.length; i++) {
-                code.append(args[i]);
-                if (i < args.length - 1) {
-                    code.append(" ");
-                }
+        
+        if (cmdName.equals("bvars")) {
+            return listVariables(context);
+        } else if (cmdName.equals("bclear")) {
+            return clearVariables(context);
+        } else {
+            if (args.length < 1) {
+                return getHelpText();
             }
-            logger.info("执行BeanShell代码: " + code);
-            String result = getBeanShellExecutor(classLoader).execute(code.toString(), beanShellExecutionContext);
-            return "BeanShell执行器结果:\n\n" + result;
 
-        } catch (Exception e) {
-            return "BeanShell执行出错: " + e.getMessage() + "\n堆栈追踪: \n" + Log.getStackTraceString(e);
+            try {
+                StringBuilder code = new StringBuilder();
+                for (int i = 0; i < args.length; i++) {
+                    code.append(args[i]);
+                    if (i < args.length - 1) {
+                        code.append(" ");
+                    }
+                }
+                getLogger().info("执行BeanShell代码: " + code);
+                String result = getBeanShellExecutor(classLoader).execute(code.toString(), beanShellExecutionContext);
+                return "BeanShell执行器结果:\n\n" + result;
+
+            } catch (Exception e) {
+                return "BeanShell执行出错: " + e.getMessage() + "\n堆栈追踪: \n" + Log.getStackTraceString(e);
+            }
         }
     }
 
-    public static String listVariables(CommandExecutor.CmdExecContext context) {
+    public String listVariables(CommandExecutor.CmdExecContext context) {
         ClassLoader classLoader = context.classLoader();
         String targetPackage = context.targetPackage();
 
@@ -96,7 +131,7 @@ public class BeanShellExecutorMain {
         return sb.toString();
     }
 
-    public static String clearVariables(CommandExecutor.CmdExecContext context) {
+    public String clearVariables(CommandExecutor.CmdExecContext context) {
         ClassLoader classLoader = context.classLoader();
         String targetPackage = context.targetPackage();
         getBeanShellExecutor(classLoader).clearVariables();

@@ -1,10 +1,31 @@
 package com.justnothing.testmodule.command.functions.interactive;
 
 import com.justnothing.testmodule.command.CommandExecutor;
+import com.justnothing.testmodule.command.functions.CommandBase;
 import com.justnothing.testmodule.command.output.IOutputHandler;
 
-public class InteractiveExampleMain {
-    public static String runMain(CommandExecutor.CmdExecContext context) {
+public class InteractiveExampleMain extends CommandBase {
+
+    public InteractiveExampleMain() {
+        super("InteractiveExample");
+    }
+
+    @Override
+    public String getHelpText() {
+        return """
+                语法: interactive_test
+                
+                交互式测试命令，演示如何使用交互式输入。
+                
+                示例:
+                    interactive_test
+                
+                (Submodule interactive_test)
+                """;
+    }
+
+    @Override
+    public String runMain(CommandExecutor.CmdExecContext context) {
         IOutputHandler output = context.output();
 
         output.println("=== 交互式示例 ===");

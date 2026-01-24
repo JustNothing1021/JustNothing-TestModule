@@ -35,6 +35,14 @@
             </intent-filter>
         </activity>
         <activity
+            android:name=".ui.SplashActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.AiArtGalleryActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
             android:name=".ui.HttpConfigActivity"
             android:exported="false"
             android:taskAffinity=""

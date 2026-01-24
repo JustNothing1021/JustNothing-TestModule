@@ -29,5 +29,6 @@ testmodule-keystore.jks
 
 # 我拿来研究的log
 /tmp.log
+/report
 
 

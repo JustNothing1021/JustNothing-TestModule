@@ -5,7 +5,7 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_LIST_VER;
 import android.util.Log;
 
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.command.functions.CommandBase;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -14,19 +14,14 @@ import java.util.Comparator;
 
 import de.robv.android.xposed.XposedHelpers;
 
-public class ListMethodsMain {
+public class ListMethodsMain extends CommandBase {
 
-
-    public static class ListLogger extends Logger {
-        @Override
-        public String getTag() {
-            return "ListExecutor";
-        }
+    public ListMethodsMain() {
+        super("ListExecutor");
     }
 
-    public static final ListLogger logger = new ListLogger();
-
-    public static String getHelpText() {
+    @Override
+    public String getHelpText() {
         return String.format("""
                 语法: list [options] <class>
                 
@@ -44,43 +39,44 @@ public class ListMethodsMain {
     }
 
 
-    public static String runMain(CommandExecutor.CmdExecContext context) {
+    @Override
+    public String runMain(CommandExecutor.CmdExecContext context) {
         String[] args = context.args();
         ClassLoader classLoader = context.classLoader();
         String targetPackage = context.targetPackage();
         
-        logger.debug("开始执行list命令，参数: " + Arrays.toString(args));
-        logger.debug("目标包: " + targetPackage + ", 类加载器: " + classLoader);
+        getLogger().debug("开始执行list命令，参数: " + Arrays.toString(args));
+        getLogger().debug("目标包: " + targetPackage + ", 类加载器: " + classLoader);
         
         if (args.length < 1) {
-            logger.warn("参数不足，需要至少1个参数");
+            getLogger().warn("参数不足，需要至少1个参数");
             return getHelpText();
         }
 
         boolean verbose = args[0].equals("-vb") || args[0].equals("--verbose");
         if (verbose && args.length < 2) {
-            logger.warn("详细模式需要指定类名");
+            getLogger().warn("详细模式需要指定类名");
             return getHelpText();
         }
         String className = args[args.length - 1];
         
-        logger.debug("目标类名: " + className + ", 详细模式: " + verbose);
+        getLogger().debug("目标类名: " + className + ", 详细模式: " + verbose);
 
         try {
             Class<?> targetClass;
             try {
-                logger.debug("尝试加载类: " + className);
+                getLogger().debug("尝试加载类: " + className);
                 if (classLoader == null) {
-                    logger.debug("使用默认类加载器");
+                    getLogger().debug("使用默认类加载器");
                     targetClass = XposedHelpers.findClass(className, null);
                 } else {
-                    logger.debug("使用提供的类加载器: " + classLoader);
+                    getLogger().debug("使用提供的类加载器: " + classLoader);
                     targetClass = XposedHelpers.findClass(className, classLoader);
                 }
-                logger.info("成功加载类: " + targetClass.getName());
+                getLogger().info("成功加载类: " + targetClass.getName());
             } catch (Throwable e) {
-                logger.error("加载类失败: " + className, e);
-                logger.warn("类加载器为: " + targetPackage);
+                getLogger().error("加载类失败: " + className, e);
+                getLogger().warn("类加载器为: " + targetPackage);
                 return "找不到类: " + className +
                         "\n使用的包: " + (targetPackage != null ? targetPackage : "default") +
                         "\n类加载器: " + (classLoader != null ? classLoader : "无") +
@@ -93,9 +89,9 @@ public class ListMethodsMain {
             sb.append("类加载器: ").append(classLoader != null ? classLoader : "无").append("\n");
             sb.append("\n方法列表:\n");
 
-            logger.debug("开始获取类方法");
+            getLogger().debug("开始获取类方法");
             Method[] methods = targetClass.getDeclaredMethods();
-            logger.debug("找到 " + methods.length + " 个方法");
+            getLogger().debug("找到 " + methods.length + " 个方法");
             
             Arrays.sort(methods, Comparator.comparing(Method::getName)
                     .thenComparingInt(Method::getParameterCount));
@@ -122,18 +118,18 @@ public class ListMethodsMain {
             sb.append("  实例方法: ").append(instanceCount).append("\n");
             sb.append("  总计: ").append(methods.length).append("\n");
             
-            logger.info("执行成功，找到 " + methods.length + " 个方法 (静态: " + staticCount + ", 实例: " + instanceCount + ")");
-            logger.debug("执行结果:\n" + sb.toString());
+            getLogger().info("执行成功，找到 " + methods.length + " 个方法 (静态: " + staticCount + ", 实例: " + instanceCount + ")");
+            getLogger().debug("执行结果:\n" + sb.toString());
             return sb.toString();
 
         } catch (Exception e) {
-            logger.error("执行list命令失败", e);
+            getLogger().error("执行list命令失败", e);
             return "错误: " + e.getMessage() +
                     "\n堆栈追踪: \n" + Log.getStackTraceString(e);
         }
     }
 
-    public static String getShortMethodDescriptor(Method method) {
+    private String getShortMethodDescriptor(Method method) {
         StringBuilder sb = new StringBuilder();
         int modifiers = method.getModifiers();
 

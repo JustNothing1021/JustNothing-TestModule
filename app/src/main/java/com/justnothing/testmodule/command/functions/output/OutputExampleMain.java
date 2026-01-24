@@ -1,10 +1,31 @@
 package com.justnothing.testmodule.command.functions.output;
 
 import com.justnothing.testmodule.command.CommandExecutor;
+import com.justnothing.testmodule.command.functions.CommandBase;
 import com.justnothing.testmodule.command.output.IOutputHandler;
 
-public class OutputExampleMain {
-    public static String runMain(CommandExecutor.CmdExecContext context) {
+public class OutputExampleMain extends CommandBase {
+
+    public OutputExampleMain() {
+        super("OutputExample");
+    }
+
+    @Override
+    public String getHelpText() {
+        return """
+                语法: output_test
+                
+                输出测试命令，演示如何使用输出处理器。
+                
+                示例:
+                    output_test
+                
+                (Submodule output_test)
+                """;
+    }
+
+    @Override
+    public String runMain(CommandExecutor.CmdExecContext context) {
         IOutputHandler output = context.output();
 
         try {

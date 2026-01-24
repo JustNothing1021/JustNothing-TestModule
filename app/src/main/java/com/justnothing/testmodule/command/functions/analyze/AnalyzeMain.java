@@ -5,7 +5,7 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_ANALYZE_VER
 import android.util.Log;
 
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.command.functions.CommandBase;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -13,18 +13,14 @@ import java.lang.reflect.Modifier;
 
 import de.robv.android.xposed.XposedHelpers;
 
-public class AnalyzeMain {
+public class AnalyzeMain extends CommandBase {
 
-    public static class AnalyzeLogger extends Logger {
-        @Override
-        public String getTag() {
-            return "AnalyzeExecutor";
-        }
+    public AnalyzeMain() {
+        super("AnalyzeExecutor");
     }
 
-    public static final AnalyzeLogger logger = new AnalyzeLogger();
-
-    public static String getHelpText() {
+    @Override
+    public String getHelpText() {
         return String.format("""
                 语法: analyze [选项] <类名>
                 
@@ -44,16 +40,17 @@ public class AnalyzeMain {
                 """, CMD_ANALYZE_VER);
     }
 
-    public static String runMain(CommandExecutor.CmdExecContext context) {
+    @Override
+    public String runMain(CommandExecutor.CmdExecContext context) {
         String[] args = context.args();
         ClassLoader classLoader = context.classLoader();
         String targetPackage = context.targetPackage();
         
-        logger.debug("执行analyze命令，参数: " + java.util.Arrays.toString(args));
-        logger.debug("目标包: " + targetPackage + ", 类加载器: " + classLoader);
+        getLogger().debug("执行analyze命令，参数: " + java.util.Arrays.toString(args));
+        getLogger().debug("目标包: " + targetPackage + ", 类加载器: " + classLoader);
         
         if (args.length < 1) {
-            logger.warn("参数不足，需要至少1个参数");
+            getLogger().warn("参数不足，需要至少1个参数");
             return getHelpText();
         }
 
@@ -79,23 +76,23 @@ public class AnalyzeMain {
             }
         }
         
-        logger.debug("目标类: " + className + ", 显示字段: " + showFields + ", 显示方法: " + showMethods + ", 显示全部: " + showAll);
+        getLogger().debug("目标类: " + className + ", 显示字段: " + showFields + ", 显示方法: " + showMethods + ", 显示全部: " + showAll);
 
         try {
             Class<?> targetClass;
             try {
-                logger.debug("尝试加载类: " + className);
+                getLogger().debug("尝试加载类: " + className);
                 if (classLoader == null) {
-                    logger.debug("使用默认类加载器");
+                    getLogger().debug("使用默认类加载器");
                     targetClass = XposedHelpers.findClass(className, null);
                 } else {
-                    logger.debug("使用提供的类加载器: " + classLoader);
+                    getLogger().debug("使用提供的类加载器: " + classLoader);
                     targetClass = XposedHelpers.findClass(className, classLoader);
                 }
-                logger.info("成功加载类: " + targetClass.getName());
+                getLogger().info("成功加载类: " + targetClass.getName());
             } catch (Throwable e) {
-                logger.error("加载类失败: " + className, e);
-                logger.warn("类加载器为: " + targetPackage);
+                getLogger().error("加载类失败: " + className, e);
+                getLogger().warn("类加载器为: " + targetPackage);
                 return "找不到类: " + className +
                         "\n使用的包: " + (targetPackage != null ? targetPackage : "default") +
                         "\n类加载器: " + (classLoader != null ? classLoader : "无") +
@@ -167,18 +164,18 @@ public class AnalyzeMain {
                 sb.append("类加载器: ").append(classLoader != null ? classLoader.toString() : "无").append("\n");
             }
             
-            logger.info("执行成功");
-            logger.debug("执行结果:\n" + sb.toString());
+            getLogger().info("执行成功");
+            getLogger().debug("执行结果:\n" + sb.toString());
             return sb.toString();
 
         } catch (Exception e) {
-            logger.error("执行analyze命令失败", e);
+            getLogger().error("执行analyze命令失败", e);
             return "错误: " + e.getMessage() +
                     "\n堆栈追踪: \n" + Log.getStackTraceString(e);
         }
     }
 
-    private static String getFieldDescriptor(Field field) {
+    private String getFieldDescriptor(Field field) {
         StringBuilder sb = new StringBuilder();
         int modifiers = field.getModifiers();
 
@@ -201,7 +198,7 @@ public class AnalyzeMain {
         return sb.toString();
     }
 
-    private static String getMethodDescriptor(Method method) {
+    private String getMethodDescriptor(Method method) {
         StringBuilder sb = new StringBuilder();
         int modifiers = method.getModifiers();
 

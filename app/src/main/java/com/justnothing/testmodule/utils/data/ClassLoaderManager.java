@@ -53,7 +53,7 @@ public class ClassLoaderManager {
         } catch (Exception e) {
             logger.error("读取模块状态失败", e);
         }
-
+        logger.warn("在本地没有找到" + packageName + "的ClassLoader, 将会使用默认的ClassLoader");
         return defaultClassLoader;
     }
 

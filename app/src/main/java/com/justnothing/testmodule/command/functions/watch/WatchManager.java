@@ -45,7 +45,7 @@ public class WatchManager {
         try {
             Class<?> targetClass = XposedHelpers.findClass(className, classLoader);
             int id = nextId.getAndIncrement();
-            WatchTask task = new WatchTask(id, WatchTask.WatchType.FIELD, targetClass, fieldName, null, interval, maxOutputSize);
+            WatchTask task = new WatchTask(id, WatchTask.WatchType.FIELD, targetClass, fieldName, null, interval, maxOutputSize, classLoader);
             watchTasks.put(id, task);
             executor.submit(task);
             logger.info("添加字段watch任务: " + id);
@@ -65,7 +65,7 @@ public class WatchManager {
             int id = nextId.getAndIncrement();
             logger.info("创建方法watch任务: ID=" + id + ", 类=" + className + ", 方法=" + methodName + (signature != null ? ", 签名=" + signature : "") + ", 间隔=" + interval + "ms");
             
-            WatchTask task = new WatchTask(id, WatchTask.WatchType.METHOD, targetClass, methodName, signature, interval, maxOutputSize);
+            WatchTask task = new WatchTask(id, WatchTask.WatchType.METHOD, targetClass, methodName, signature, interval, maxOutputSize, classLoader);
             watchTasks.put(id, task);
             executor.submit(task);
             logger.info("成功添加方法watch任务: " + id);
