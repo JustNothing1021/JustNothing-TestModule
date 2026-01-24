@@ -24,10 +24,6 @@ public abstract class CommandBase {
         logger = new CommandLogger(commandName);
     }
 
-    public CommandLogger getLogger() {
-        return logger;
-    }
-
     public abstract String getHelpText();
 
     public abstract String runMain(CommandExecutor.CmdExecContext context);

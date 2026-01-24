@@ -1,6 +1,5 @@
 package com.justnothing.testmodule.command.functions.trace;
 
-import com.justnothing.testmodule.command.functions.script.TestInterpreter.CustomClassException;
 import com.justnothing.testmodule.hooks.XposedBasicHook;
 import com.justnothing.testmodule.utils.functions.Logger;
 

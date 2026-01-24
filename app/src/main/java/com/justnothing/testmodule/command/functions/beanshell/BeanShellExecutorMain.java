@@ -98,7 +98,7 @@ public class BeanShellExecutorMain extends CommandBase {
                         code.append(" ");
                     }
                 }
-                getLogger().info("执行BeanShell代码: " + code);
+                logger.info("执行BeanShell代码: " + code);
                 String result = getBeanShellExecutor(classLoader).execute(code.toString(), beanShellExecutionContext);
                 return "BeanShell执行器结果:\n\n" + result;
 

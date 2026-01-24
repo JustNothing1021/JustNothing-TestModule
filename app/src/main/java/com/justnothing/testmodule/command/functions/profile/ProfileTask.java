@@ -5,9 +5,6 @@ import com.justnothing.testmodule.utils.functions.Logger;
 import android.annotation.SuppressLint;
 import android.app.ActivityManager;
 import android.content.Context;
-import android.os.Debug;
-import android.os.Process;
-
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;

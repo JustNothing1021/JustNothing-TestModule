@@ -49,11 +49,11 @@ public class ClassMain extends CommandBase {
         ClassLoader classLoader = context.classLoader();
         String targetPackage = context.targetPackage();
         
-        getLogger().debug("执行class命令，参数: " + java.util.Arrays.toString(args));
-        getLogger().debug("目标包: " + targetPackage + ", 类加载器: " + classLoader);
+        logger.debug("执行class命令，参数: " + java.util.Arrays.toString(args));
+        logger.debug("目标包: " + targetPackage + ", 类加载器: " + classLoader);
         
         if (args.length < 1) {
-            getLogger().warn("参数不足，需要至少1个参数");
+            logger.warn("参数不足，需要至少1个参数");
             return getHelpText();
         }
 
@@ -83,23 +83,23 @@ public class ClassMain extends CommandBase {
             }
         }
         
-        getLogger().debug("目标类: " + className + ", 显示全部: " + showAll);
+        logger.debug("目标类: " + className + ", 显示全部: " + showAll);
 
         try {
             Class<?> targetClass;
             try {
-                getLogger().debug("尝试加载类: " + className);
+                logger.debug("尝试加载类: " + className);
                 if (classLoader == null) {
-                    getLogger().debug("使用默认类加载器");
+                    logger.debug("使用默认类加载器");
                     targetClass = XposedHelpers.findClass(className, null);
                 } else {
-                    getLogger().debug("使用提供的类加载器: " + classLoader);
+                    logger.debug("使用提供的类加载器: " + classLoader);
                     targetClass = XposedHelpers.findClass(className, classLoader);
                 }
-                getLogger().info("成功加载类: " + targetClass.getName());
+                logger.info("成功加载类: " + targetClass.getName());
             } catch (Throwable e) {
-                getLogger().error("加载类失败: " + className, e);
-                getLogger().warn("类加载器为: " + targetPackage);
+                logger.error("加载类失败: " + className, e);
+                logger.warn("类加载器为: " + targetPackage);
                 return "找不到类: " + className +
                         "\n使用的包: " + (targetPackage != null ? targetPackage : "default") +
                         "\n类加载器: " + (classLoader != null ? classLoader : "无") +
@@ -213,12 +213,12 @@ public class ClassMain extends CommandBase {
                 sb.append("类加载器: ").append(classLoader != null ? classLoader.toString() : "无").append("\n");
             }
             
-            getLogger().info("执行成功");
-            getLogger().debug("执行结果:\n" + sb.toString());
+            logger.info("执行成功");
+            logger.debug("执行结果:\n" + sb.toString());
             return sb.toString();
 
         } catch (Exception e) {
-            getLogger().error("执行class命令失败", e);
+            logger.error("执行class命令失败", e);
             return "错误: " + e.getMessage() +
                     "\n堆栈追踪: \n" + Log.getStackTraceString(e);
         }

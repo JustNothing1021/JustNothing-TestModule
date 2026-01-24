@@ -154,10 +154,10 @@ public class DeadlockMain extends CommandBase {
                 result.append("当前没有检测到明显的死锁迹象\n");
             }
             
-            getLogger().info("线程状态分析完成，发现 " + blockedCount + " 个BLOCKED线程");
+            logger.info("线程状态分析完成，发现 " + blockedCount + " 个BLOCKED线程");
             
         } catch (Exception e) {
-            getLogger().error("线程状态分析失败", e);
+            logger.error("线程状态分析失败", e);
             return "错误: " + e.getMessage();
         }
         

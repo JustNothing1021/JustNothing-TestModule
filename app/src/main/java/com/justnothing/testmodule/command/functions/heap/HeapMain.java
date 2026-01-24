@@ -46,7 +46,7 @@ public class HeapMain extends CommandBase {
         try {
             Context appContext = getApplicationContext();
             if (appContext == null) {
-                getLogger().warn("无法获取应用上下文");
+                logger.warn("无法获取应用上下文");
                 return "错误: 无法获取应用上下文";
             }
             
@@ -94,10 +94,10 @@ public class HeapMain extends CommandBase {
             result.append("=== 内存详细信息 ===\n\n");
             result.append(readMeminfo());
             
-            getLogger().info("堆内存信息查询完成");
+            logger.info("堆内存信息查询完成");
             
         } catch (Exception e) {
-            getLogger().error("获取堆内存信息失败", e);
+            logger.error("获取堆内存信息失败", e);
             return "错误: " + e.getMessage();
         }
         

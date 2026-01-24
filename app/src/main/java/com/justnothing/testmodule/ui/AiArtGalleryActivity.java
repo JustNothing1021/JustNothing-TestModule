@@ -115,7 +115,7 @@ public class AiArtGalleryActivity extends AppCompatActivity {
             reader.close();
             inputStream.close();
 
-            String htmlContent = "<!DOCTYPE html><html><head><style>body,html{margin:0;padding:0;width:100%;height:100%;overflow:hidden;}svg{width:100%;height:100%;}</style></head><body>" + svgContent.toString() + "</body></html>";
+            String htmlContent = "<!DOCTYPE html><html><head><style>body,html{margin:0;padding:0;width:100%;height:100%;overflow:hidden;}svg{width:100%;height:100%;overflow:hidden;display:block;}</style></head><body>" + svgContent.toString() + "</body></html>";
 
             webView.getSettings().setJavaScriptEnabled(true);
             webView.getSettings().setLoadWithOverviewMode(true);

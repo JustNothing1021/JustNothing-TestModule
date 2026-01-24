@@ -14,7 +14,6 @@ public class BreakpointMain extends CommandBase {
 
     private static final AtomicInteger nextId = new AtomicInteger(1);
     private static final ConcurrentHashMap<Integer, BreakpointInfo> breakpoints = new ConcurrentHashMap<>();
-    private static final CommandLogger staticLogger = new CommandLogger("Breakpoint");
 
     public BreakpointMain() {
         super("Breakpoint");
@@ -89,10 +88,10 @@ public class BreakpointMain extends CommandBase {
         String[] args = context.args();
         ClassLoader classLoader = context.classLoader();
         
-        getLogger().debug("执行breakpoint命令，参数: " + java.util.Arrays.toString(args));
+        logger.debug("执行breakpoint命令，参数: " + java.util.Arrays.toString(args));
         
         if (args.length < 1) {
-            getLogger().warn("参数不足");
+            logger.warn("参数不足");
             return getHelpText();
         }
 
@@ -118,7 +117,7 @@ public class BreakpointMain extends CommandBase {
                     return "未知子命令: " + subCommand + "\n" + getHelpText();
             }
         } catch (Exception e) {
-            getLogger().error("执行breakpoint命令失败", e);
+            logger.error("执行breakpoint命令失败", e);
             return "错误: " + e.getMessage();
         }
     }
@@ -147,7 +146,7 @@ public class BreakpointMain extends CommandBase {
             breakpoints.put(id, info);
             
             String sigText = signature != null ? " (签名: " + signature + ")" : " (所有重载)";
-            getLogger().info("添加断点: " + className + "." + methodName + sigText);
+            logger.info("添加断点: " + className + "." + methodName + sigText);
             
             return "断点已添加 (ID: " + id + ")\n" +
                    "  类: " + className + "\n" +
@@ -158,7 +157,7 @@ public class BreakpointMain extends CommandBase {
                    "注意: 断点已设置，但需要Xposed框架支持才能生效。";
             
         } catch (ClassNotFoundException e) {
-            getLogger().error("类未找到: " + className, e);
+            logger.error("类未找到: " + className, e);
             return "错误: 类未找到: " + className;
         }
     }
@@ -202,7 +201,7 @@ public class BreakpointMain extends CommandBase {
             }
             
             info.enabled = true;
-            getLogger().info("启用断点: " + id);
+            logger.info("启用断点: " + id);
             return "断点已启用 (ID: " + id + ")";
             
         } catch (NumberFormatException e) {
@@ -224,7 +223,7 @@ public class BreakpointMain extends CommandBase {
             }
             
             info.enabled = false;
-            getLogger().info("禁用断点: " + id);
+            logger.info("禁用断点: " + id);
             return "断点已禁用 (ID: " + id + ")";
             
         } catch (NumberFormatException e) {
@@ -245,7 +244,7 @@ public class BreakpointMain extends CommandBase {
                 return "错误: 断点不存在 (ID: " + id + ")";
             }
             
-            getLogger().info("移除断点: " + id);
+            logger.info("移除断点: " + id);
             return "断点已移除 (ID: " + id + ")";
             
         } catch (NumberFormatException e) {
@@ -257,7 +256,7 @@ public class BreakpointMain extends CommandBase {
         int count = breakpoints.size();
         breakpoints.clear();
         nextId.set(1);
-        getLogger().info("清除所有断点");
+        logger.info("清除所有断点");
         return "已清除所有断点 (共 " + count + " 个)";
     }
 
@@ -291,14 +290,11 @@ public class BreakpointMain extends CommandBase {
         if (info != null && info.enabled) {
             info.hitCount++;
             info.lastHitAt = System.currentTimeMillis();
-            
-            staticLogger.info("断点命中: " + info.className + "." + info.methodName + 
-                       " (ID: " + id + ", 第 " + info.hitCount + " 次)");
-            
+            logger.info("断点命中: " + info.className + "." + info.methodName + " (ID: " + id + ")");
             StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
-            staticLogger.info("调用栈:");
+            logger.info("调用栈:");
             for (StackTraceElement element : stackTrace) {
-                staticLogger.info("  " + element.toString());
+                logger.info("  " + element.toString());
             }
         }
     }

@@ -36,7 +36,6 @@ import com.justnothing.testmodule.utils.data.ClassLoaderManager;
 import com.justnothing.testmodule.utils.functions.Logger;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 
@@ -232,10 +231,14 @@ public class CommandExecutor {
         int spaceIndex = fullCommand.indexOf(' ');
         String commandString = (spaceIndex != -1) ? fullCommand.substring(spaceIndex) : "";
 
+        // 去掉命令本身，只保留参数
+        String[] args = new String[commandParams.length - 1];
+        System.arraycopy(commandParams, 1, args, 0, args.length);
+
         // 创建执行上下文
         CmdExecContext context = new CmdExecContext(
             command,
-            commandParams,
+            args,
             commandString,
             targetPackage,
             getClassLoader(),

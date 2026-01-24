@@ -67,10 +67,10 @@ public class WatchMain extends CommandBase {
         String[] args = context.args();
         ClassLoader classLoader = context.classLoader();
         
-        getLogger().debug("执行watch命令，参数: " + java.util.Arrays.toString(args));
+        logger.debug("执行watch命令，参数: " + java.util.Arrays.toString(args));
         
         if (args.length < 1) {
-            getLogger().warn("参数不足");
+            logger.warn("参数不足");
             return getHelpText();
         }
 
@@ -93,7 +93,7 @@ public class WatchMain extends CommandBase {
                     return "未知子命令: " + subCommand + "\n" + getHelpText();
             }
         } catch (Exception e) {
-            getLogger().error("执行watch命令失败", e);
+            logger.error("执行watch命令失败", e);
             return "错误: " + e.getMessage() +
                     "\n堆栈追踪: \n" + Log.getStackTraceString(e);
         }
@@ -156,7 +156,7 @@ public class WatchMain extends CommandBase {
                 return "未知类型: " + type + "，必须是 'field' 或 'method'";
             }
         } catch (Exception e) {
-            getLogger().error("添加watch任务失败", e);
+            logger.error("添加watch任务失败", e);
             StringBuilder sb = new StringBuilder();
             sb.append("添加watch任务失败: ").append(e.getClass().getSimpleName()).append(": ").append(e.getMessage()).append("\n");
             

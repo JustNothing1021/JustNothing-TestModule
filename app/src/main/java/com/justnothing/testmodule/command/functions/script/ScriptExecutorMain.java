@@ -162,13 +162,13 @@ public class ScriptExecutorMain extends CommandBase {
                 return getHelpText();
             }
             try {
-                getLogger().info("执行脚本代码: " + context.origCommand());
+                logger.info("执行脚本代码: " + context.origCommand());
                 TestInterpreter.ScriptRunner runner = getScriptExecutor(classLoader);
                 runner.execute(context.origCommand().toString(), context.output(), context.output());
                 return "";
 
             } catch (Exception e) {
-                getLogger().error("脚本执行失败", e);
+                logger.error("脚本执行失败", e);
                 return "脚本执行失败: " + e.getMessage() + "\n堆栈追踪: \n" + android.util.Log.getStackTraceString(e);
             }
         }

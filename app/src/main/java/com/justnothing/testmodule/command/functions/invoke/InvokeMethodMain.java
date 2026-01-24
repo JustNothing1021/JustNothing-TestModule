@@ -45,7 +45,7 @@ public class InvokeMethodMain extends CommandBase {
         ClassLoader classLoader = context.classLoader();
         String targetPackage = context.targetPackage();
         if (args.length < 2) {
-            getLogger().warn("提供的参数不足");
+            logger.warn("提供的参数不足");
             return getHelpText();
         }
 
@@ -57,7 +57,7 @@ public class InvokeMethodMain extends CommandBase {
             try {
                 targetClass = XposedHelpers.findClass(className, classLoader);
             } catch (Throwable e) {
-                getLogger().warn("没有找到类" + className);
+                logger.warn("没有找到类" + className);
                 return "找不到类: " + className +
                         "\n类加载器: " + (targetPackage != null ? targetPackage : "default") +
                         "\n错误信息: " + e.getMessage() +
@@ -71,7 +71,7 @@ public class InvokeMethodMain extends CommandBase {
                 String paramStr = args[i];
                 int colonIndex = paramStr.indexOf(':');
                 if (colonIndex <= 0) {
-                    getLogger().warn("参数形式不正确，获取到的: " + paramStr);
+                    logger.warn("参数形式不正确，获取到的: " + paramStr);
                     return "参数形式不正确: " + paramStr +
                             "; 应为Type:value" +
                             "\n\n示例: " +
@@ -85,11 +85,11 @@ public class InvokeMethodMain extends CommandBase {
                     Object parsedValue = TypeParser.parse(typeName, valueExpr, classLoader);
                     params.add(parsedValue);
                     paramTypes.add(parsedValue.getClass());
-                    getLogger().info("参数" + (params.size() - 1) +
+                    logger.info("参数" + (params.size() - 1) +
                             ": (" + paramTypes.get(paramTypes.size()-1).getName() +")" +
                             params.get(paramTypes.size()-1).toString());
                 } catch (Exception e) {
-                    getLogger().warn("无法解析参数" + paramStr);
+                    logger.warn("无法解析参数" + paramStr);
                     return "解析参数 " + (i-1) + "失败: " + e.getMessage() +
                             "\n参数: " + paramStr +
                             "\n堆栈追踪: " + Log.getStackTraceString(e);
@@ -104,7 +104,7 @@ public class InvokeMethodMain extends CommandBase {
                         paramTypes.toArray(new Class<?>[0]), false);
 
                 if (method == null) {
-                    getLogger().warn("没有找到类" + className + "的方法" + methodName);
+                    logger.warn("没有找到类" + className + "的方法" + methodName);
                     StringBuilder sb = new StringBuilder();
                     sb.append("没有找到方法: ").append(methodName).append("(");
                     for (int i = 0; i < paramTypes.size(); i++) {
@@ -118,7 +118,7 @@ public class InvokeMethodMain extends CommandBase {
                     for (Method m : targetClass.getDeclaredMethods()) {
                         if (m.getName().contains(methodName)) {
                             sb.append("  ");
-                            getLogger().warn("但是找到了类似的方法" + methodDescriptor(m));
+                            logger.warn("但是找到了类似的方法" + methodDescriptor(m));
                             sb.append(methodDescriptor(m));
                             sb.append("\n");
                             found = true;
@@ -141,7 +141,7 @@ public class InvokeMethodMain extends CommandBase {
                     try {
                         result = targetClass.getDeclaredConstructor().newInstance();
                     } catch (Exception e) {
-                        getLogger().warn("尝试调用非静态方法" + className + "." + methodName + "时创建实例失败", e);
+                        logger.warn("尝试调用非静态方法" + className + "." + methodName + "时创建实例失败", e);
                         return "非静态方法需要一个示例，在创建实例的时候出现错误: " + e.getMessage() +
                                 "\n堆栈追踪: " + Log.getStackTraceString(e);
                     }
@@ -150,10 +150,10 @@ public class InvokeMethodMain extends CommandBase {
             }
 
             if (result == null) {
-                getLogger().info("调用成功，返回: null");
+                logger.info("调用成功，返回: null");
                 return "结果: null";
             } else {
-                getLogger().info("调用成功，返回：(" + result.getClass().getName() + result.toString());
+                logger.info("调用成功，返回：(" + result.getClass().getName() + result.toString());
                 return "结果: " + result.toString() +
                         "\n类型: " + result.getClass().getName() +
                         "\nHash: " + System.identityHashCode(result);
@@ -161,7 +161,7 @@ public class InvokeMethodMain extends CommandBase {
 
         } catch (Throwable e) {
             StringBuilder sb = new StringBuilder();
-            getLogger().info("调用失败", e);
+            logger.info("调用失败", e);
             sb.append("调用失败: ").append(e.getMessage()).append("\n");
             Throwable cause = e.getCause();
             if (cause != null && cause != e) {

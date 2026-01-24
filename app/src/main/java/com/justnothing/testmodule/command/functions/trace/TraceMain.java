@@ -59,10 +59,10 @@ public class TraceMain extends CommandBase {
         String[] args = context.args();
         ClassLoader classLoader = context.classLoader();
         
-        getLogger().debug("执行trace命令，参数: " + java.util.Arrays.toString(args));
+        logger.debug("执行trace命令，参数: " + java.util.Arrays.toString(args));
         
         if (args.length < 1) {
-            getLogger().warn("参数不足");
+            logger.warn("参数不足");
             return getHelpText();
         }
 
@@ -87,7 +87,7 @@ public class TraceMain extends CommandBase {
                     return "未知子命令: " + subCommand + "\n" + getHelpText();
             }
         } catch (Exception e) {
-            getLogger().error("执行trace命令失败", e);
+            logger.error("执行trace命令失败", e);
             return "错误: " + e.getMessage() +
                     "\n堆栈追踪: \n" + Log.getStackTraceString(e);
         }
@@ -117,7 +117,7 @@ public class TraceMain extends CommandBase {
             int id = manager.addTraceTask(className, methodName, signature, classLoader);
             return "添加trace任务成功，ID: " + id;
         } catch (Exception e) {
-            getLogger().error("添加trace任务失败", e);
+            logger.error("添加trace任务失败", e);
             return "添加trace任务失败: " + e.getMessage();
         }
     }

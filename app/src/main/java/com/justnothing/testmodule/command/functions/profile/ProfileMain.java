@@ -51,10 +51,10 @@ public class ProfileMain extends CommandBase {
     public String runMain(CommandExecutor.CmdExecContext context) {
         String[] args = context.args();
         
-        getLogger().debug("执行profile命令，参数: " + java.util.Arrays.toString(args));
+        logger.debug("执行profile命令，参数: " + java.util.Arrays.toString(args));
         
         if (args.length < 1) {
-            getLogger().warn("参数不足");
+            logger.warn("参数不足");
             return getHelpText();
         }
 
@@ -75,7 +75,7 @@ public class ProfileMain extends CommandBase {
                     return "未知子命令: " + subCommand + "\n" + getHelpText();
             }
         } catch (Exception e) {
-            getLogger().error("执行profile命令失败", e);
+            logger.error("执行profile命令失败", e);
             return "错误: " + e.getMessage() +
                     "\n堆栈追踪: \n" + Log.getStackTraceString(e);
         }
@@ -99,7 +99,7 @@ public class ProfileMain extends CommandBase {
             manager.startProfiling(duration);
             return "开始性能分析，持续时间: " + duration + "秒";
         } catch (Exception e) {
-            getLogger().error("开始性能分析失败", e);
+            logger.error("开始性能分析失败", e);
             return "开始性能分析失败: " + e.getMessage();
         }
     }
@@ -109,7 +109,7 @@ public class ProfileMain extends CommandBase {
             manager.stopProfiling();
             return "停止性能分析成功";
         } catch (Exception e) {
-            getLogger().error("停止性能分析失败", e);
+            logger.error("停止性能分析失败", e);
             return "停止性能分析失败: " + e.getMessage();
         }
     }
@@ -118,7 +118,7 @@ public class ProfileMain extends CommandBase {
         try {
             return manager.getProfileReport();
         } catch (Exception e) {
-            getLogger().error("获取分析结果失败", e);
+            logger.error("获取分析结果失败", e);
             return "获取分析结果失败: " + e.getMessage();
         }
     }
@@ -137,7 +137,7 @@ public class ProfileMain extends CommandBase {
                 return "导出分析结果失败";
             }
         } catch (Exception e) {
-            getLogger().error("导出分析结果失败", e);
+            logger.error("导出分析结果失败", e);
             return "导出分析结果失败: " + e.getMessage();
         }
     }

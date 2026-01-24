@@ -50,10 +50,10 @@ public class SearchMain extends CommandBase {
         String[] args = context.args();
         ClassLoader classLoader = context.classLoader();
         
-        getLogger().debug("执行search命令，参数: " + java.util.Arrays.toString(args));
+        logger.debug("执行search命令，参数: " + java.util.Arrays.toString(args));
         
         if (args.length < 2) {
-            getLogger().warn("参数不足");
+            logger.warn("参数不足");
             return getHelpText();
         }
 
@@ -74,7 +74,7 @@ public class SearchMain extends CommandBase {
                     return "未知子命令: " + subCommand + "\n" + getHelpText();
             }
         } catch (Exception e) {
-            getLogger().error("执行search命令失败", e);
+            logger.error("执行search命令失败", e);
             return "错误: " + e.getMessage() +
                     "\n堆栈追踪: \n" + Log.getStackTraceString(e);
         }
@@ -102,7 +102,7 @@ public class SearchMain extends CommandBase {
             }
             
         } catch (Exception e) {
-            getLogger().warn("搜索类失败", e);
+            logger.warn("搜索类失败", e);
         }
         
         if (matchedClasses.isEmpty()) {
@@ -142,7 +142,7 @@ public class SearchMain extends CommandBase {
             }
             
         } catch (Exception e) {
-            getLogger().warn("搜索方法失败", e);
+            logger.warn("搜索方法失败", e);
         }
         
         if (matchedMethods.isEmpty()) {
@@ -187,7 +187,7 @@ public class SearchMain extends CommandBase {
             }
             
         } catch (Exception e) {
-            getLogger().warn("搜索字段失败", e);
+            logger.warn("搜索字段失败", e);
         }
         
         if (matchedFields.isEmpty()) {
@@ -244,7 +244,7 @@ public class SearchMain extends CommandBase {
             }
             
         } catch (Exception e) {
-            getLogger().warn("搜索注解失败", e);
+            logger.warn("搜索注解失败", e);
         }
         
         if (matchedAnnotations.isEmpty()) {

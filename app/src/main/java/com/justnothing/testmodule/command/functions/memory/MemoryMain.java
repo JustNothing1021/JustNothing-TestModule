@@ -49,7 +49,7 @@ public class MemoryMain extends CommandBase {
         try {
             Context appContext = getApplicationContext();
             if (appContext == null) {
-                getLogger().warn("无法获取应用上下文，部分信息可能不可用");
+                logger.warn("无法获取应用上下文，部分信息可能不可用");
             }
             
             result.append("===== 详细内存信息 =====\n\n");
@@ -102,10 +102,10 @@ public class MemoryMain extends CommandBase {
             result.append("===== 进程内存统计 =====\n\n");
             result.append(readProcessMemoryStats());
             
-            getLogger().info("内存信息查询完成");
+            logger.info("内存信息查询完成");
             
         } catch (Exception e) {
-            getLogger().error("获取内存信息失败", e);
+            logger.error("获取内存信息失败", e);
             return "错误: " + e.getMessage();
         }
         

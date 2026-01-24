@@ -45,18 +45,18 @@ public class ExportContextMain extends CommandBase {
 
     @Override
     public String runMain(CommandExecutor.CmdExecContext context) {
-        getLogger().debug("执行export-context命令");
+        logger.debug("执行export-context命令");
         
         Context appContext = getApplicationContext();
         if (appContext == null) {
-            getLogger().error("无法获取应用上下文");
+            logger.error("无法获取应用上下文");
             return "错误: 无法获取应用上下文";
         }
 
         try {
             ContextManager ctx = new ContextManager();
             
-            getLogger().info("开始收集设备上下文信息");
+            logger.info("开始收集设备上下文信息");
             
             Cursor cursor = null;
             try {
@@ -74,12 +74,12 @@ public class ExportContextMain extends CommandBase {
                     ctx.setHttpHeadParam(getCursorStringValue(cursor, "httpHeadParam"));
                     ctx.setEncSwitch(getCursorStringValue(cursor, "encSwitch"));
                     
-                    getLogger().debug("HTTP配置信息收集完成");
+                    logger.debug("HTTP配置信息收集完成");
                 } else {
-                    getLogger().warn("无法从ContentProvider读取HTTP配置");
+                    logger.warn("无法从ContentProvider读取HTTP配置");
                 }
             } catch (Exception e) {
-                getLogger().error("收集HTTP配置信息失败", e);
+                logger.error("收集HTTP配置信息失败", e);
             } finally {
                 if (cursor != null) {
                     cursor.close();
@@ -92,10 +92,10 @@ public class ExportContextMain extends CommandBase {
                 String watchId = resolver.getType(uri);
                 if (!TextUtils.isEmpty(watchId)) {
                     ctx.setWatchId(watchId);
-                    getLogger().debug("watchId: " + watchId);
+                    logger.debug("watchId: " + watchId);
                 }
             } catch (Exception e) {
-                getLogger().error("收集watchId失败", e);
+                logger.error("收集watchId失败", e);
             }
             
             ctx.setMacAddr(getMacAddress());
@@ -128,13 +128,13 @@ public class ExportContextMain extends CommandBase {
             
             String json = ctx.toJson();
             
-            getLogger().info("成功导出设备上下文信息");
-            getLogger().debug("导出的JSON:\n" + json);
+            logger.info("成功导出设备上下文信息");
+            logger.debug("导出的JSON:\n" + json);
             
             return json;
             
         } catch (Exception e) {
-            getLogger().error("导出设备上下文信息失败", e);
+            logger.error("导出设备上下文信息失败", e);
             return "错误: " + e.getMessage() +
                     "\n堆栈追踪: \n" + Log.getStackTraceString(e);
         }
@@ -149,7 +149,7 @@ public class ExportContextMain extends CommandBase {
             Method getApplicationMethod = activityThreadClass.getMethod("getApplication");
             return (Context) getApplicationMethod.invoke(activityThread);
         } catch (Exception e) {
-            getLogger().error("获取Application Context失败", e);
+            logger.error("获取Application Context失败", e);
             return null;
         }
     }
@@ -164,7 +164,7 @@ public class ExportContextMain extends CommandBase {
             Method get = c.getMethod("get", String.class, String.class);
             return (String) get.invoke(c, key, defaultValue);
         } catch (Exception e) {
-            getLogger().error("读取系统属性失败: " + key, e);
+            logger.error("读取系统属性失败: " + key, e);
             return defaultValue;
         }
     }
@@ -181,7 +181,7 @@ public class ExportContextMain extends CommandBase {
             }
             return cursor.getString(columnIndex);
         } catch (Exception e) {
-            getLogger().error("getCursorStringValue error: " + columnName, e);
+            logger.error("getCursorStringValue error: " + columnName, e);
             return null;
         }
     }
@@ -198,7 +198,7 @@ public class ExportContextMain extends CommandBase {
             }
             return cursor.getInt(columnIndex);
         } catch (Exception e) {
-            getLogger().error("getCursorIntValue error: " + columnName, e);
+            logger.error("getCursorIntValue error: " + columnName, e);
             return 0;
         }
     }
@@ -223,7 +223,7 @@ public class ExportContextMain extends CommandBase {
                 }
             }
         } catch (Exception e) {
-            getLogger().error("获取MAC地址失败", e);
+            logger.error("获取MAC地址失败", e);
         }
         return null;
     }

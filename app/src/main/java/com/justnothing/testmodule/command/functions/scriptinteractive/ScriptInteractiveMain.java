@@ -55,7 +55,7 @@ public class ScriptInteractiveMain extends CommandBase {
         ClassLoader classLoader = context.classLoader();
         TestInterpreter.ScriptRunner runner = getScriptExecutor(classLoader);
         
-        getLogger().info("进入交互式脚本执行模式");
+        logger.info("进入交互式脚本执行模式");
         context.output().println("====== 脚本交互执行模式 ===");
         context.output().println("输入 'exit' 或 'quit' 退出");
         context.output().println("");
@@ -86,7 +86,7 @@ public class ScriptInteractiveMain extends CommandBase {
                 }
             } catch (Exception e) {
                 context.output().println("执行出错: " + e.getMessage());
-                getLogger().error("脚本执行失败", e);
+                logger.error("脚本执行失败", e);
             }
         }
         

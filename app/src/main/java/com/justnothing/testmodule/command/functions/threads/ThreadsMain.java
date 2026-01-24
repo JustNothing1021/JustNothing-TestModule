@@ -148,10 +148,10 @@ public class ThreadsMain extends CommandBase {
                 result.append("未找到匹配的线程\n");
             }
             
-            getLogger().info("线程信息查询完成");
+            logger.info("线程信息查询完成");
             
         } catch (Exception e) {
-            getLogger().error("获取线程信息失败", e);
+            logger.error("获取线程信息失败", e);
             return "错误: " + e.getMessage();
         }
         

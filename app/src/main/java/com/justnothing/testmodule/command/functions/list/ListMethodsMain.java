@@ -45,38 +45,38 @@ public class ListMethodsMain extends CommandBase {
         ClassLoader classLoader = context.classLoader();
         String targetPackage = context.targetPackage();
         
-        getLogger().debug("开始执行list命令，参数: " + Arrays.toString(args));
-        getLogger().debug("目标包: " + targetPackage + ", 类加载器: " + classLoader);
+        logger.debug("开始执行list命令，参数: " + Arrays.toString(args));
+        logger.debug("目标包: " + targetPackage + ", 类加载器: " + classLoader);
         
         if (args.length < 1) {
-            getLogger().warn("参数不足，需要至少1个参数");
+            logger.warn("参数不足，需要至少1个参数");
             return getHelpText();
         }
 
         boolean verbose = args[0].equals("-vb") || args[0].equals("--verbose");
         if (verbose && args.length < 2) {
-            getLogger().warn("详细模式需要指定类名");
+            logger.warn("详细模式需要指定类名");
             return getHelpText();
         }
         String className = args[args.length - 1];
         
-        getLogger().debug("目标类名: " + className + ", 详细模式: " + verbose);
+        logger.debug("目标类名: " + className + ", 详细模式: " + verbose);
 
         try {
             Class<?> targetClass;
             try {
-                getLogger().debug("尝试加载类: " + className);
+                logger.debug("尝试加载类: " + className);
                 if (classLoader == null) {
-                    getLogger().debug("使用默认类加载器");
+                    logger.debug("使用默认类加载器");
                     targetClass = XposedHelpers.findClass(className, null);
                 } else {
-                    getLogger().debug("使用提供的类加载器: " + classLoader);
+                    logger.debug("使用提供的类加载器: " + classLoader);
                     targetClass = XposedHelpers.findClass(className, classLoader);
                 }
-                getLogger().info("成功加载类: " + targetClass.getName());
+                logger.info("成功加载类: " + targetClass.getName());
             } catch (Throwable e) {
-                getLogger().error("加载类失败: " + className, e);
-                getLogger().warn("类加载器为: " + targetPackage);
+                logger.error("加载类失败: " + className, e);
+                logger.warn("类加载器为: " + targetPackage);
                 return "找不到类: " + className +
                         "\n使用的包: " + (targetPackage != null ? targetPackage : "default") +
                         "\n类加载器: " + (classLoader != null ? classLoader : "无") +
@@ -89,9 +89,9 @@ public class ListMethodsMain extends CommandBase {
             sb.append("类加载器: ").append(classLoader != null ? classLoader : "无").append("\n");
             sb.append("\n方法列表:\n");
 
-            getLogger().debug("开始获取类方法");
+            logger.debug("开始获取类方法");
             Method[] methods = targetClass.getDeclaredMethods();
-            getLogger().debug("找到 " + methods.length + " 个方法");
+            logger.debug("找到 " + methods.length + " 个方法");
             
             Arrays.sort(methods, Comparator.comparing(Method::getName)
                     .thenComparingInt(Method::getParameterCount));
@@ -118,12 +118,12 @@ public class ListMethodsMain extends CommandBase {
             sb.append("  实例方法: ").append(instanceCount).append("\n");
             sb.append("  总计: ").append(methods.length).append("\n");
             
-            getLogger().info("执行成功，找到 " + methods.length + " 个方法 (静态: " + staticCount + ", 实例: " + instanceCount + ")");
-            getLogger().debug("执行结果:\n" + sb.toString());
+            logger.info("执行成功，找到 " + methods.length + " 个方法 (静态: " + staticCount + ", 实例: " + instanceCount + ")");
+            logger.debug("执行结果:\n" + sb.toString());
             return sb.toString();
 
         } catch (Exception e) {
-            getLogger().error("执行list命令失败", e);
+            logger.error("执行list命令失败", e);
             return "错误: " + e.getMessage() +
                     "\n堆栈追踪: \n" + Log.getStackTraceString(e);
         }

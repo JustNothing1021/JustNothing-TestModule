@@ -143,10 +143,10 @@ public class SystemMain extends CommandBase {
                 result.append(readSystemProperties());
             }
             
-            getLogger().info("系统信息查询完成");
+            logger.info("系统信息查询完成");
             
         } catch (Exception e) {
-            getLogger().error("获取系统信息失败", e);
+            logger.error("获取系统信息失败", e);
             return "错误: " + e.getMessage();
         }
         
@@ -234,7 +234,7 @@ public class SystemMain extends CommandBase {
             Method getApplicationMethod = activityThreadClass.getMethod("getApplication");
             return (Context) getApplicationMethod.invoke(activityThread);
         } catch (Exception e) {
-            getLogger().error("获取应用上下文失败", e);
+            logger.error("获取应用上下文失败", e);
             return null;
         }
     }

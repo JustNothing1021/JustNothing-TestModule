@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -16,11 +15,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import android.app.ActivityManager;
-import android.content.Context;
-import android.os.Debug;
-import android.os.Process;
 
 public class ProfileManager {
     
@@ -114,9 +108,7 @@ public class ProfileManager {
         sb.append("分析时间: ").append(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())).append("\n\n");
         
         sb.append("===== 系统资源概况 =====\n");
-        ProfileSample firstSample = samples.get(0);
         ProfileSample lastSample = samples.get(samples.size() - 1);
-        
         sb.append("CPU使用率: ").append(String.format("%.2f%%", lastSample.cpuUsage * 100)).append("\n");
         sb.append("内存使用: ").append(formatBytes(lastSample.memoryUsage)).append("\n");
         sb.append("线程数: ").append(lastSample.threadCount).append("\n");

@@ -1,4 +1,4 @@
-<svg width="800" height="600" viewBox="-100 -50 1000 700" xmlns="http://www.w3.org/2000/svg">
+<svg width="800" height="600" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <!-- 天空渐变 - 从黄色到暗橙色 -->
     <linearGradient id="skyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
