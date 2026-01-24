@@ -86,7 +86,7 @@
         <meta-data android:name="xposedmodule" android:value="true" />
         <meta-data android:name="xposedminversion" android:value="24" />
         <meta-data android:name="xposeddescription"
-                android:value="这个模块是我写的第一个Xposed模块, 功能上啥也不是" />
+                android:value="这个模块是我写的第一个Xposed模块, 现在感觉更像性能分析工具了 (雾)" />
         <meta-data
             android:name="com.google.android.wearable.standalone"
             android:value="true" />
