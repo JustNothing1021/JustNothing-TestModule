@@ -301,7 +301,7 @@ public class CommandExecutor {
     public static String getHelpText() {
         return String.format("""
             Xposed Method CLI (Command Line Interface) Server端 %s
-            作者: JustNothing1021 和 DeepSeek
+            作者: JustNothing1021, DeepSeek 和 GLM-4.7
             
             一个用来调试安卓开发千奇百怪的诡异问题的Xp模块/命令行工具.
             
@@ -339,6 +339,9 @@ public class CommandExecutor {
               output_test                       - 对命令行输出进行测试
               interactive_test                  - 对命令行交互进行测试
             
+            获取一个子命令的帮助:
+              help <cmd_name>
+            
             可选项:
               -cl, --classloader <package>      - 指定类加载器（软件包名，没找到会是默认的类加载器）
             
@@ -350,6 +353,8 @@ public class CommandExecutor {
               methods class -i java.util.ArrayList
               methods field -g java.lang.System out
               methods watch add field java.lang.System out 1000
+            
+            
 
             
             (MainModule: 让AI给我写了一堆新功能, 再也不用担心自己研究不透系统了)

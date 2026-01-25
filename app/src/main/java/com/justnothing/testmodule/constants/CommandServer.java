@@ -8,10 +8,10 @@ public class CommandServer {
     public static final String CMD_ANALYZE_VER = "v0.1.0";
     public static final String CMD_CLASS_VER = "v0.1.0";
     public static final String CMD_FIELD_VER = "v0.1.0";
-    public static final String CMD_WATCH_VER = "v0.1.0";
+    public static final String CMD_WATCH_VER = "v0.1.1";
     public static final String CMD_TRACE_VER = "v0.1.0";
     public static final String CMD_PROFILE_VER = "v0.1.0";
-    public static final String CMD_GRAPH_VER = "v0.1.0";
+    public static final String CMD_GRAPH_VER = "v0.1.1";
     public static final String CMD_SEARCH_VER = "v0.1.0";
     public static final String CMD_SCRIPT_VER = "v0.1.6";
     public static final String CMD_EXPORT_CONTEXT_VER = "v0.1.0";
@@ -27,6 +27,6 @@ public class CommandServer {
     public static final String CMD_OUTPUT_TEST_VER = "v0.1.0";
     public static final String CMD_INTERACTIVE_TEST_VER = "v0.1.0";
     public static final String CMD_PACKAGES_VER = "v0.1.0";
-    public static final String CMD_HELP_VER = "v0.1.0";
+    public static final String CMD_HELP_VER = "v0.1.1";
     public static final int DEFAULT_SOCKET_PORT = 11451;
 }

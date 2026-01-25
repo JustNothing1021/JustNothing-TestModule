@@ -149,12 +149,12 @@ public class BreakpointMain extends CommandBase {
             logger.info("添加断点: " + className + "." + methodName + sigText);
             
             return "断点已添加 (ID: " + id + ")\n" +
-                   "  类: " + className + "\n" +
-                   "  方法: " + methodName + "\n" +
-                   "  签名: " + (signature != null ? signature : "所有重载") + "\n" +
-                   "  状态: 启用\n" +
-                   "\n" +
-                   "注意: 断点已设置，但需要Xposed框架支持才能生效。";
+                    "  类: " + className + "\n" +
+                    "  方法: " + methodName + "\n" +
+                    "  签名: " + (signature != null ? signature : "所有重载") + "\n" +
+                    "  状态: 启用\n" +
+                    "\n" +
+                    "注意: 断点已设置，但需要Xposed框架支持才能生效。";
             
         } catch (ClassNotFoundException e) {
             logger.error("类未找到: " + className, e);

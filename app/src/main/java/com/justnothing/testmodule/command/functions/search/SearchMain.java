@@ -2,6 +2,16 @@ package com.justnothing.testmodule.command.functions.search;
 
 import static com.justnothing.testmodule.constants.CommandServer.CMD_SEARCH_VER;
 
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Vector;
+
 import android.util.Log;
 
 import com.justnothing.testmodule.command.CommandExecutor;
@@ -50,7 +60,7 @@ public class SearchMain extends CommandBase {
         String[] args = context.args();
         ClassLoader classLoader = context.classLoader();
         
-        logger.debug("执行search命令，参数: " + java.util.Arrays.toString(args));
+        logger.debug("执行search命令，参数: " + Arrays.toString(args));
         
         if (args.length < 2) {
             logger.warn("参数不足");
@@ -85,14 +95,14 @@ public class SearchMain extends CommandBase {
         sb.append("===== 搜索类名 =====\n");
         sb.append("模式: ").append(pattern).append("\n\n");
         
-        java.util.List<Class<?>> matchedClasses = new java.util.ArrayList<>();
+        List<Class<?>> matchedClasses = new ArrayList<>();
         
         try {
-            java.lang.reflect.Field classesField = ClassLoader.class.getDeclaredField("classes");
+            Field classesField = ClassLoader.class.getDeclaredField("classes");
             classesField.setAccessible(true);
             
             @SuppressWarnings("unchecked")
-            java.util.Vector<Class<?>> classes = (java.util.Vector<Class<?>>) classesField.get(classLoader);
+            Vector<Class<?>> classes = (Vector<Class<?>>) classesField.get(classLoader);
             
             for (Class<?> clazz : classes) {
                 String className = clazz.getName();
@@ -122,21 +132,21 @@ public class SearchMain extends CommandBase {
         sb.append("===== 搜索方法名 =====\n");
         sb.append("模式: ").append(pattern).append("\n\n");
         
-        java.util.Map<String, java.util.List<String>> matchedMethods = new java.util.LinkedHashMap<>();
+        Map<String, List<String>> matchedMethods = new LinkedHashMap<>();
         
         try {
-            java.lang.reflect.Field classesField = ClassLoader.class.getDeclaredField("classes");
+            Field classesField = ClassLoader.class.getDeclaredField("classes");
             classesField.setAccessible(true);
             
             @SuppressWarnings("unchecked")
-            java.util.Vector<Class<?>> classes = (java.util.Vector<Class<?>>) classesField.get(classLoader);
+            Vector<Class<?>> classes = (Vector<Class<?>>) classesField.get(classLoader);
             
             for (Class<?> clazz : classes) {
-                for (java.lang.reflect.Method method : clazz.getDeclaredMethods()) {
+                for (Method method : clazz.getDeclaredMethods()) {
                     if (matchesPattern(method.getName(), pattern)) {
                         String className = clazz.getName();
-                        matchedMethods.computeIfAbsent(className, k -> new java.util.ArrayList<>())
-                                      .add(method.toString());
+                        matchedMethods.computeIfAbsent(className, k -> new ArrayList<>())
+                                        .add(method.toString());
                     }
                 }
             }
@@ -151,7 +161,7 @@ public class SearchMain extends CommandBase {
             int totalCount = matchedMethods.values().stream().mapToInt(java.util.List::size).sum();
             sb.append("找到 ").append(totalCount).append(" 个匹配的方法:\n\n");
             
-            for (java.util.Map.Entry<String, java.util.List<String>> entry : matchedMethods.entrySet()) {
+            for (Map.Entry<String, List<String>> entry : matchedMethods.entrySet()) {
                 sb.append("  ").append(entry.getKey()).append(":\n");
                 for (String method : entry.getValue()) {
                     sb.append("    ").append(method).append("\n");
@@ -167,20 +177,20 @@ public class SearchMain extends CommandBase {
         sb.append("===== 搜索字段名 =====\n");
         sb.append("模式: ").append(pattern).append("\n\n");
         
-        java.util.Map<String, java.util.List<String>> matchedFields = new java.util.LinkedHashMap<>();
+        Map<String, List<String>> matchedFields = new LinkedHashMap<>();
         
         try {
-            java.lang.reflect.Field classesField = ClassLoader.class.getDeclaredField("classes");
+            Field classesField = ClassLoader.class.getDeclaredField("classes");
             classesField.setAccessible(true);
             
             @SuppressWarnings("unchecked")
-            java.util.Vector<Class<?>> classes = (java.util.Vector<Class<?>>) classesField.get(classLoader);
+            Vector<Class<?>> classes = (Vector<Class<?>>) classesField.get(classLoader);
             
             for (Class<?> clazz : classes) {
-                for (java.lang.reflect.Field field : clazz.getDeclaredFields()) {
+                for (Field field : clazz.getDeclaredFields()) {
                     if (matchesPattern(field.getName(), pattern)) {
                         String className = clazz.getName();
-                        matchedFields.computeIfAbsent(className, k -> new java.util.ArrayList<>())
+                        matchedFields.computeIfAbsent(className, k -> new ArrayList<>())
                                       .add(field.getType().getName() + " " + field.getName());
                     }
                 }
@@ -193,10 +203,10 @@ public class SearchMain extends CommandBase {
         if (matchedFields.isEmpty()) {
             sb.append("未找到匹配的字段\n");
         } else {
-            int totalCount = matchedFields.values().stream().mapToInt(java.util.List::size).sum();
+            int totalCount = matchedFields.values().stream().mapToInt(List::size).sum();
             sb.append("找到 ").append(totalCount).append(" 个匹配的字段:\n\n");
             
-            for (java.util.Map.Entry<String, java.util.List<String>> entry : matchedFields.entrySet()) {
+            for (Map.Entry<String, List<String>> entry : matchedFields.entrySet()) {
                 sb.append("  ").append(entry.getKey()).append(":\n");
                 for (String field : entry.getValue()) {
                     sb.append("    ").append(field).append("\n");
@@ -212,27 +222,27 @@ public class SearchMain extends CommandBase {
         sb.append("===== 搜索注解 =====\n");
         sb.append("模式: ").append(pattern).append("\n\n");
         
-        java.util.Map<String, java.util.List<String>> matchedAnnotations = new java.util.LinkedHashMap<>();
+        Map<String, List<String>> matchedAnnotations = new LinkedHashMap<>();
         
         try {
-            java.lang.reflect.Field classesField = ClassLoader.class.getDeclaredField("classes");
+            Field classesField = ClassLoader.class.getDeclaredField("classes");
             classesField.setAccessible(true);
             
             @SuppressWarnings("unchecked")
-            java.util.Vector<Class<?>> classes = (java.util.Vector<Class<?>>) classesField.get(classLoader);
+            Vector<Class<?>> classes = (Vector<Class<?>>) classesField.get(classLoader);
             
             for (Class<?> clazz : classes) {
-                for (java.lang.annotation.Annotation annotation : clazz.getAnnotations()) {
+                for (Annotation annotation : clazz.getAnnotations()) {
                     String annotationName = annotation.annotationType().getSimpleName();
                     if (matchesPattern(annotationName, pattern)) {
                         String className = clazz.getName();
-                        matchedAnnotations.computeIfAbsent(className, k -> new java.util.ArrayList<>())
+                        matchedAnnotations.computeIfAbsent(className, k -> new ArrayList<>())
                                       .add(annotationName);
                     }
                 }
                 
-                for (java.lang.reflect.Method method : clazz.getDeclaredMethods()) {
-                    for (java.lang.annotation.Annotation annotation : method.getAnnotations()) {
+                for (Method method : clazz.getDeclaredMethods()) {
+                    for (Annotation annotation : method.getAnnotations()) {
                         String annotationName = annotation.annotationType().getSimpleName();
                         if (matchesPattern(annotationName, pattern)) {
                             String className = clazz.getName();
@@ -253,7 +263,7 @@ public class SearchMain extends CommandBase {
             int totalCount = matchedAnnotations.values().stream().mapToInt(java.util.List::size).sum();
             sb.append("找到 ").append(totalCount).append(" 个匹配的注解:\n\n");
             
-            for (java.util.Map.Entry<String, java.util.List<String>> entry : matchedAnnotations.entrySet()) {
+            for (Map.Entry<String, List<String>> entry : matchedAnnotations.entrySet()) {
                 sb.append("  ").append(entry.getKey()).append(":\n");
                 for (String annotation : entry.getValue()) {
                     sb.append("    @").append(annotation).append("\n");

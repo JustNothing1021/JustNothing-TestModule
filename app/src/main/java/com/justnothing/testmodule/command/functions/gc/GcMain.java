@@ -58,7 +58,7 @@ public class GcMain extends CommandBase {
         try {
             Runtime runtime = Runtime.getRuntime();
             
-            result.append("=== 垃圾回收 ===\n\n");
+            result.append("===== 垃圾回收 =====\n\n");
             
             long beforeUsed = runtime.totalMemory() - runtime.freeMemory();
             long beforeTotal = runtime.totalMemory();
@@ -107,7 +107,7 @@ public class GcMain extends CommandBase {
             if (freed > 0) {
                 result.append("释放内存: ").append(formatBytes(freed)).append("\n");
             } else if (freed < 0) {
-                result.append("内存增加: ").append(formatBytes(-freed)).append(" (?)\n");
+                result.append("内存增加: ").append(formatBytes(-freed)).append(" (?)\n").append("可以试试gc --full\n");
             } else {
                 result.append("内存未变化\n");
             }

@@ -2,7 +2,7 @@
 
 
 # 常量定义
-VERSION="0.3.0"
+VERSION="0.3.1"
 SERVICE_NAME="justnothing_xposed_method_cli"
 METHODS_WORKDIR="/data/local/tmp/methods"
 JAVA_CLIENT_JAR="/system/framework/methods-client.jar"
@@ -641,6 +641,12 @@ show_help() {
     echo "  ${GREEN}--update-port <端口>${NC} 更新Socket服务器端口，会重启Socket服务端"
     echo "  ${GREEN}--export-context${NC}     导出设备的XTChttp上下文，Json格式，搭配xtchttplib使用"
     echo "  ${GREEN}-j, --java-client${NC}    使用Java客户端直接执行命令（传递所有后续参数给Java客户端）"
+    echo "  ${GREEN}--${NC}                   将所有后续参数直接传给服务端（绕过客户端选项解析）"
+    echo ""
+    echo "${YELLOW}参数解析机制:${NC}"
+    echo "  1. 客户端选项（如 -h, -v, -d, -c, -s, -f, -i, -j 等）会被客户端处理"
+    echo "  2. 遇到第一个无法识别的参数时，该参数及后续所有参数会自动传给服务端"
+    echo "  3. 使用 ${GREEN}--${NC} 可以显式指定后续参数都传给服务端"
     echo ""
     echo "${YELLOW}执行模式说明:${NC}"
     echo "  ${GREEN}Java套接字模式${NC}  - 使用Java客户端，实时输出 (通过app_process执行，性能开销较大但体验好)"
@@ -663,9 +669,10 @@ show_help() {
     echo "  ${BLUE}methods script 'for (int i = 0; i < 114; i++) println(i); '${NC}     # 执行脚本 (详情见服务端帮助)"
     echo "  ${BLUE}methods --exec-file /sdcard/command.txt${NC}                         # 执行文件中的命令"
     echo "  ${BLUE}methods --interactive${NC}                                           # 启动交互式终端"
+    echo "  ${BLUE}methods -d -- list -v java.lang.String ${NC}                         # 查看String类的所有方法，同时展示客户端debug信息"
     echo "  ${BLUE}methods -j --help${NC}                                               # 查看Java客户端的帮助"
-    echo "  ${BLUE}methods -j -b output_test${NC}                                       # 使用Java的交互式二进制Socket协议 (详细见Java端帮助)"
     echo "  ${BLUE}methods -j --file packages${NC}                                      # 使用Java客户端的文件模式 (不建议)"
+    echo ""
     echo ""
     echo "${YELLOW}交互式终端命令:${NC}"
     echo "  ${GREEN}help${NC}      - 显示终端帮助"
@@ -795,14 +802,17 @@ main() {
                 export_context=1
                 shift
                 ;;
-            *)
-                # 剩余参数作为命令
-                if [ -z "$command" ]; then
-                    command="$1"
-                else
-                    command="$command $1"
-                fi
+            --)
                 shift
+                command="$*"
+                log "INFO" "遇到 -- 分隔符，将后续所有参数传给服务端: $command"
+                break
+                ;;
+            *)
+                # 遇到第一个无法识别的参数，将其及后续所有参数作为命令传给服务端
+                command="$*"
+                log "INFO" "遇到无法识别的参数，将当前及后续所有参数传给服务端: $command"
+                break
                 ;;
         esac
     done
