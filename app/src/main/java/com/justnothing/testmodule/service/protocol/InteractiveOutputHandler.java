@@ -128,7 +128,6 @@ public class InteractiveOutputHandler implements IOutputHandler {
                     return response;
                 }
 
-                // 每10秒记录一次
                 long elapsed = System.currentTimeMillis() - lastResponseTime.get();
                 if (elapsed > 10000 && elapsed % 10000 < 500) {
                     logger.debug("输入请求 " + requestId +
@@ -153,13 +152,11 @@ public class InteractiveOutputHandler implements IOutputHandler {
         }
     }
 
-    // 改进 close 方法
     @Override
     public void close() {
         if (closed.compareAndSet(false, true)) {
             try {
                 synchronized (writeLock) {
-                    // 发送命令结束标记
                     InteractiveProtocol.writeMessage(outputStream,
                             InteractiveProtocol.TYPE_COMMAND_END,
                             null);
@@ -167,7 +164,6 @@ public class InteractiveOutputHandler implements IOutputHandler {
                     logger.debug("发送命令结束标记");
                 }
             } catch (IOException e) {
-                // 连接可能已关闭，忽略
                 logger.debug("发送命令结束标记失败: " + e.getMessage());
             }
         }
@@ -253,18 +249,6 @@ public class InteractiveOutputHandler implements IOutputHandler {
 
     @Override
     public void flush() {
-        // 发送命令结束标记
-        if (!closed.get()) {
-            try {
-                synchronized (writeLock) {
-                    InteractiveProtocol.writeMessage(outputStream,
-                            InteractiveProtocol.TYPE_COMMAND_END,
-                            null);
-                }
-            } catch (IOException e) {
-                logger.error("发送命令结束标记失败", e);
-            }
-        }
     }
 
 

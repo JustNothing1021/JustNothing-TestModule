@@ -1,0 +1,46 @@
+// View点击监控Hook - Before阶段
+// 使用方法：hook add android.view.View performClick before codebase view_click_monitor.java
+// 脚本默认位于：/data/local/tmp/methods/scripts/
+//
+// 注意：这个脚本会监视所有View的点击事件
+
+auto param = getParam();
+auto phase = getPhase();
+auto hookId = getHookId();
+
+println("[" + hookId + "][" + phase + "] View 被点击");
+
+// 获取被点击的View
+auto thisObject = param.thisObject;
+if (thisObject != null) {
+    auto viewClass = thisObject.getClass();
+    println("  View 类型: " + viewClass.toString());
+
+    // 获取View的ID
+    auto id = thisObject.getId();
+    if (id != 0) {
+        println("  View ID: 0x" + java.lang.Integer.toHexString(id));
+    } else {
+        println("  View ID: 无");
+    }
+
+    // 获取View的描述
+    auto contentDescription = thisObject.getContentDescription();
+    if (contentDescription != null) {
+        println("  内容描述: " + contentDescription);
+    }
+
+    // 尝试获取View的文本
+    auto textView = thisObject;
+    auto text = textView.getText();
+    if (text != null) {
+        println("  文本内容: " + text);
+    }
+}
+
+// 获取调用栈信息
+auto stackTrace = new java.lang.Exception().getStackTrace();
+if (stackTrace != null && stackTrace.length > 2) {
+    auto caller = stackTrace[2];
+    println("  调用位置: " + caller.getClassName() + "." + caller.getMethodName() + " (行 " + caller.getLineNumber() + ")");
+}

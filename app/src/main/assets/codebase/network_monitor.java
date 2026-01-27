@@ -1,0 +1,25 @@
+// 网络请求监控Hook - Before阶段
+// 使用方法：hook add java.net.URL openConnection before codebase network_monitor.java
+// 脚本默认位于：/data/local/tmp/methods/scripts/
+//
+// 注意：这个脚本会监视所有基于java.net.URL的网络请求
+
+auto param = getParam();
+auto phase = getPhase();
+auto hookId = getHookId();
+
+println("[" + hookId + "][" + phase + "] 网络请求被发起");
+
+// 获取 URL
+auto thisObject = param.thisObject;
+if (thisObject != null) {
+    auto urlString = thisObject.toString();
+    println("  URL: " + urlString);
+}
+
+// 获取调用栈信息
+auto stackTrace = new java.lang.Exception().getStackTrace();
+if (stackTrace != null && stackTrace.length > 2) {
+    auto caller = stackTrace[2];
+    println("  调用位置: " + caller.getClassName() + "." + caller.getMethodName() + " (行 " + caller.getLineNumber() + ")");
+}

@@ -75,6 +75,8 @@ public class DataBridge {
     private static long serverHookConfigCacheTime = 0;
     private static final long SERVER_HOOK_CONFIG_CACHE_TTL = 10000;
 
+    private static String modulePath = null;
+
     public static File getDataDir() {
         if (cachedDataDir != null) {
             return cachedDataDir;
@@ -82,6 +84,22 @@ public class DataBridge {
         File dir = DataDirectoryManager.getDataDirectory();
         cachedDataDir = dir;
         return dir;
+    }
+
+    public static File getScriptsDirectory() {
+        return new File(FileDirectory.METHODS_DATA_DIR, FileDirectory.SCRIPTS_DIR_NAME);
+    }
+
+    public static File getCodebaseDirectory() {
+        return getScriptsDirectory();
+    }
+
+    public static void setModulePath(String path) {
+        modulePath = path;
+    }
+
+    public static String getModulePath() {
+        return modulePath;
     }
 
     private static File getModuleStatusFile() {

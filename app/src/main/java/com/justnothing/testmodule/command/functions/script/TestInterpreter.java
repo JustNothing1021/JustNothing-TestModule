@@ -9,12 +9,18 @@ import com.justnothing.testmodule.utils.functions.Logger;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Proxy;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -29,15 +35,17 @@ import java.util.stream.Collectors;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
 
 public class TestInterpreter {
 
     @FunctionalInterface
-    public interface Lambda {
-        Object apply(Object... args);
+    public interface Lambda extends Function<Object[], Object> {
+        Object call(Object... args);
+
+        @Override
+        default Object apply(Object[] args) {
+            return call(args);
+        }
     }
 
     public interface BuiltInFunction {
@@ -125,6 +133,13 @@ public class TestInterpreter {
             System.err.println("[ERROR] " + str);
             th.printStackTrace(System.err);
         }
+    }
+
+    private static final String getStackTraceString(Throwable th) {
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        th.printStackTrace(pw);
+        return sw.toString();
     }
 
     private static Class<?> findClassThroughApi(String className, ClassLoader classLoader) {
@@ -470,10 +485,10 @@ public class TestInterpreter {
             return clazz.cast(object);
         }
 
-        public Map<String, Object> getAllVariables() {
-            Map<String, Object> result = new HashMap<>();
+        public Map<String, Variable> getAllVariables() {
+            Map<String, Variable> result = new HashMap<>();
             for (Map.Entry<String, Variable> entry : variables.entrySet()) {
-                result.put(entry.getKey(), entry.getValue().value);
+                result.put(entry.getKey(), entry.getValue());
             }
             return result;
         }
@@ -620,12 +635,35 @@ public class TestInterpreter {
 
             Class<?> clazz;
             if (className.contains(".")) {
-                logger.debug("尝试完整类名: " + className);
+                // 尝试原始类名
                 clazz = findClassThroughApi(className, classLoader);
 
                 if (clazz != null) {
                     logger.debug("通过完整类名找到类: " + clazz.getName());
                     return clazz;
+                }
+                
+                // 如果失败，尝试把"."替换为"$"
+                // 从后往前逐步替换，找到第一个能成功加载的分割点
+                String[] parts = className.split("\\.");
+                if (parts.length >= 2) { // 至少有两个部分才有可能是嵌套类
+                    // 一个一个替换
+                    for (int i = parts.length - 1; i >= 1; i--) {
+                        StringBuilder nestedClassName = new StringBuilder(parts[0]);
+                        for (int j = 1; j < parts.length; j++) {
+                            if (j < i) {
+                                nestedClassName.append('.').append(parts[j]);
+                            } else {
+                                nestedClassName.append('$').append(parts[j]);
+                            }
+                        }
+                        clazz = findClassThroughApi(nestedClassName.toString(), classLoader);
+                        
+                        if (clazz != null) {
+                            logger.debug("通过嵌套类名找到类: " + clazz.getName());
+                            return clazz;
+                        }
+                    }
                 }
             }
 
@@ -708,7 +746,7 @@ public class TestInterpreter {
 
                 Object target = args.get(0);
                 StringBuilder result = new StringBuilder();
-                
+
                 if (target == null) {
                     result.append("Target object is null\n");
                     println(result.toString());
@@ -717,9 +755,11 @@ public class TestInterpreter {
 
                 Class<?> clazz = target.getClass();
                 result.append("=== Object Analysis ===\n");
+                result.append("String: ").append(target.toString()).append("\n");
                 result.append("Class Name: ").append(clazz.getName()).append("\n");
                 result.append("Simple Name: ").append(clazz.getSimpleName()).append("\n");
-                result.append("Package: ").append(clazz.getPackage() != null ? clazz.getPackage().getName() : "None").append("\n");
+                result.append("Package: ").append(clazz.getPackage() != null ? clazz.getPackage().getName() : "None")
+                        .append("\n");
                 result.append("Is Array: ").append(clazz.isArray()).append("\n");
                 result.append("Is Interface: ").append(clazz.isInterface()).append("\n");
                 result.append("Is Annotation: ").append(clazz.isAnnotation()).append("\n");
@@ -737,7 +777,7 @@ public class TestInterpreter {
                 }
                 if (fields.length > 0)
                     result.append("Total Fields: ")
-                        .append(fields.length).append("\n\n");
+                            .append(fields.length).append("\n\n");
 
                 result.append("=== Methods ===\n");
                 Method[] methods = clazz.getDeclaredMethods();
@@ -750,7 +790,7 @@ public class TestInterpreter {
                 }
                 if (methods.length > 0)
                     result.append("Total Methods: ")
-                        .append(methods.length).append("\n\n");
+                            .append(methods.length).append("\n\n");
 
                 result.append("=== Superclass ===\n");
                 Class<?> superClass = clazz.getSuperclass();
@@ -770,9 +810,9 @@ public class TestInterpreter {
                         result.append("  ").append(iface.getName()).append("\n");
                     }
                 }
-                if (interfaces.length > 0) 
+                if (interfaces.length > 0)
                     result.append("Total Interfaces: ")
-                        .append(interfaces.length).append("\n");
+                            .append(interfaces.length).append("\n");
                 println(result.toString());
                 return null;
             });
@@ -1130,6 +1170,7 @@ public class TestInterpreter {
                     throw new RuntimeException("Failed to run Runnable: " + e.getMessage());
                 }
             });
+
         }
 
         private List<Integer> createRange(int start, int end, int step) {
@@ -1153,10 +1194,7 @@ public class TestInterpreter {
             Class<?> clazz;
             Object targetObj;
 
-            if (object instanceof Class) {
-                clazz = (Class<?>) object;
-                targetObj = null;
-            } else if (object == null) {
+            if (object == null) {
                 throw new NullPointerException("Attempt to invoke method" + methodName + " on a null object reference");
             } else {
                 clazz = object.getClass();
@@ -3063,21 +3101,13 @@ public class TestInterpreter {
                 if (initialValue instanceof LambdaNode lambdaNode) {
                     // 检查变量声明的类型
                     if (!typeName.equals("auto")) {
-                        try {
-                            Class<?> declaredClass = context.findClass(typeName);
-                            if (declaredClass.isAnnotationPresent(FunctionalInterface.class)) {
-                                // 创建新的LambdaNode，使用变量声明的类型名作为函数式接口名
-                                LambdaNode newLambdaNode = new LambdaNode(
+                        if (context.hasClass(typeName)) {
+                            LambdaNode newLambdaNode = new LambdaNode(
                                         lambdaNode.parameters,
                                         lambdaNode.body,
                                         typeName);
-                                value = newLambdaNode.evaluate(context);
-                            } else {
-                                // 不是函数式接口，使用默认的lambda解析
-                                value = initialValue.evaluate(context);
-                            }
-                        } catch (ClassNotFoundException e) {
-                            // 类型不存在，使用默认的lambda解析
+                            value = newLambdaNode.evaluate(context);
+                        } else {
                             value = initialValue.evaluate(context);
                         }
                     } else {
@@ -3108,7 +3138,7 @@ public class TestInterpreter {
 
             try {
                 if (!clazz.equals(Object.class)) {
-                    context.castObject(value, clazz);
+                    value = context.castObject(value, clazz);
                 }
             } catch (ClassCastException e) {
                 String s = value == null ? "null" : value.getClass().getName();
@@ -3386,8 +3416,14 @@ public class TestInterpreter {
             try {
                 context.recordScope();
                 Class<?> clazz = context.findClass(className);
-                if (coll instanceof Iterable) {
-                    for (Object item : (Iterable<?>) coll) {
+                
+                if (coll == null) {
+                    logger.error("for-each 的集合为 null");
+                    throw new NullPointerException("Cannot iterate over null collection");
+                }
+                
+                if (coll instanceof Object[]) {
+                    for (Object item : (Object[]) coll) {
                         if (loopCount >= MAX_LOOPS)
                             break;
 
@@ -3412,15 +3448,15 @@ public class TestInterpreter {
 
                         loopCount++;
                     }
-                } else if (coll instanceof Object[]) {
-                    // 处理数组
-                    for (Object item : (Object[]) coll) {
+                } else if (coll instanceof Iterable) {
+                    for (Object item : (Iterable<?>) coll) {
                         if (loopCount >= MAX_LOOPS)
                             break;
 
                         context.castObject(item, clazz);
 
                         context.setVariable(itemName, item);
+
                         lastResult = body.evaluate(context);
 
                         if (context.shouldBreak) {
@@ -3682,6 +3718,234 @@ public class TestInterpreter {
             } else {
                 logger.error("未知的控制类型: " + type);
                 throw new RuntimeException("Unknown control type: " + type);
+            }
+        }
+
+        @Override
+        public Class<?> getType(ExecutionContext context) {
+            return Void.class;
+        }
+    }
+
+    public static class TryCatchNode extends ASTNode {
+        private final ASTNode tryBlock;
+        private final List<CatchBlock> catchBlocks;
+        private final ASTNode finallyBlock;
+
+        public static class CatchBlock {
+            private final String exceptionType;
+            private final String exceptionName;
+            private final ASTNode catchBlock;
+
+            public CatchBlock(String exceptionType, String exceptionName, ASTNode catchBlock) {
+                this.exceptionType = exceptionType;
+                this.exceptionName = exceptionName;
+                this.catchBlock = catchBlock;
+            }
+
+            public String getExceptionType() {
+                return exceptionType;
+            }
+
+            public String getExceptionName() {
+                return exceptionName;
+            }
+
+            public ASTNode getCatchBlock() {
+                return catchBlock;
+            }
+        }
+
+        public TryCatchNode(ASTNode tryBlock, List<CatchBlock> catchBlocks, ASTNode finallyBlock) {
+            this.tryBlock = tryBlock;
+            this.catchBlocks = catchBlocks;
+            this.finallyBlock = finallyBlock;
+        }
+
+        @Override
+        public Object evaluate(ExecutionContext context) throws Exception {
+            Object result = null;
+            Throwable caughtException = null;
+            boolean shouldExecuteFinally = true;
+            boolean matchedCatch = false;
+
+            context.recordScope();
+
+            try {
+                result = tryBlock.evaluate(context);
+
+                if (context.shouldReturn) {
+                    Object returnValue = context.returnValue;
+                    if (finallyBlock != null) {
+                        context.shouldReturn = false;
+                        finallyBlock.evaluate(context);
+                        context.shouldReturn = true;
+                    }
+                    context.restoreScope();
+                    return returnValue;
+                }
+
+                if (context.shouldBreak || context.shouldContinue) {
+                    if (finallyBlock != null) {
+                        boolean originalShouldBreak = context.shouldBreak;
+                        boolean originalShouldContinue = context.shouldContinue;
+                        context.shouldBreak = false;
+                        context.shouldContinue = false;
+                        finallyBlock.evaluate(context);
+                        context.shouldBreak = originalShouldBreak;
+                        context.shouldContinue = originalShouldContinue;
+                    }
+                    context.restoreScope();
+                    return null;
+                }
+            } catch (Throwable e) {
+                caughtException = e;
+
+                for (CatchBlock catchBlock : catchBlocks) {
+                    try {
+                        Class<?> exceptionClass = context.findClass(catchBlock.getExceptionType());
+                        if (exceptionClass != null && exceptionClass.isAssignableFrom(e.getClass())) {
+                            matchedCatch = true;
+
+                            context.restoreScope();
+                            context.recordScope();
+
+                            context.setVariable(catchBlock.getExceptionName(), e);
+
+                            Object catchResult = catchBlock.getCatchBlock().evaluate(context);
+
+                            if (context.shouldReturn) {
+                                Object returnValue = context.returnValue;
+                                if (finallyBlock != null) {
+                                    context.shouldReturn = false;
+                                    finallyBlock.evaluate(context);
+                                    context.shouldReturn = true;
+                                }
+                                context.restoreScope();
+                                return returnValue;
+                            }
+
+                            if (context.shouldBreak || context.shouldContinue) {
+                                if (finallyBlock != null) {
+                                    boolean originalShouldBreak = context.shouldBreak;
+                                    boolean originalShouldContinue = context.shouldContinue;
+                                    context.shouldBreak = false;
+                                    context.shouldContinue = false;
+                                    finallyBlock.evaluate(context);
+                                    context.shouldBreak = originalShouldBreak;
+                                    context.shouldContinue = originalShouldContinue;
+                                }
+                                context.restoreScope();
+                                return null;
+                            }
+
+                            result = catchResult;
+                            break;
+                        }
+                    } catch (ClassNotFoundException ex) {
+                        logger.error("无法找到异常类: " + catchBlock.getExceptionType());
+                        throw new RuntimeException("Exception class not found: " + catchBlock.getExceptionType(), ex);
+                    }
+                }
+
+                if (!matchedCatch) {
+                    shouldExecuteFinally = false;
+                }
+            }
+
+            if (finallyBlock != null) {
+                if (matchedCatch) {
+                    context.restoreScope();
+                    context.recordScope();
+                }
+
+                finallyBlock.evaluate(context);
+
+                if (context.shouldReturn) {
+                    Object returnValue = context.returnValue;
+                    context.restoreScope();
+
+                    // 如果没有匹配的 catch 块，需要重新抛出异常
+                    if (!matchedCatch && caughtException != null) {
+                        if (caughtException instanceof Exception) {
+                            throw (Exception) caughtException;
+                        } else if (caughtException instanceof Error) {
+                            throw (Error) caughtException;
+                        } else {
+                            throw new RuntimeException(caughtException);
+                        }
+                    }
+
+                    return returnValue;
+                }
+
+                if (context.shouldBreak || context.shouldContinue) {
+                    context.restoreScope();
+
+                    // 如果没有匹配的 catch 块，需要重新抛出异常
+                    if (!matchedCatch && caughtException != null) {
+                        if (caughtException instanceof Exception) {
+                            throw (Exception) caughtException;
+                        } else if (caughtException instanceof Error) {
+                            throw (Error) caughtException;
+                        } else {
+                            throw new RuntimeException(caughtException);
+                        }
+                    }
+
+                    return null;
+                }
+            }
+
+            context.restoreScope();
+
+            if (!matchedCatch && caughtException != null) {
+                if (caughtException instanceof Exception) {
+                    throw (Exception) caughtException;
+                } else if (caughtException instanceof Error) {
+                    throw (Error) caughtException;
+                } else {
+                    throw new RuntimeException(caughtException);
+                }
+            }
+
+            return result;
+        }
+
+        @Override
+        public Class<?> getType(ExecutionContext context) {
+            return Void.class;
+        }
+    }
+
+    public static class ThrowNode extends ASTNode {
+        private final ASTNode exception;
+
+        public ThrowNode(ASTNode exception) {
+            this.exception = exception;
+        }
+
+        @Override
+        public Object evaluate(ExecutionContext context) throws Exception {
+            Object exceptionObj = exception.evaluate(context);
+
+            if (exceptionObj == null) {
+                logger.error("throw 语句不能抛出 null");
+                throw new RuntimeException("Cannot throw null");
+            }
+
+            if (exceptionObj instanceof Throwable) {
+                Throwable t = (Throwable) exceptionObj;
+                if (t instanceof Exception) {
+                    throw (Exception) t;
+                } else if (t instanceof Error) {
+                    throw (Error) t;
+                } else {
+                    throw new RuntimeException(t);
+                }
+            } else {
+                logger.error("throw 语句只能抛出 Throwable 类型，实际类型: " + exceptionObj.getClass().getName());
+                throw new RuntimeException("Can only throw Throwable, got: " + exceptionObj.getClass().getName());
             }
         }
 
@@ -3970,14 +4234,81 @@ public class TestInterpreter {
                 return lambda;
             }
 
-            try {
-                Class<?> functionalInterfaceClass = context.findClass(functionalInterfaceName);
-                return Proxy.newProxyInstance(
-                        functionalInterfaceClass.getClassLoader(),
-                        new Class<?>[] { functionalInterfaceClass },
-                        (proxy, method, args) -> lambda.apply(args));
-            } catch (Exception e) {
-                return lambda;
+            Class<?> functionalInterfaceClass = context.findClass(functionalInterfaceName);
+            return toFunctionalInterface(lambda, functionalInterfaceClass);
+
+        }
+
+        private Object toFunctionalInterface(Lambda lambda, Class<?> functionalInterfaceClass) throws Exception {
+            // 对于常见的函数式接口，提供直接转换
+            if (functionalInterfaceClass == Supplier.class) {
+                checkParameterCount(lambda, 0, Supplier.class.getName(), "get");
+                return (Supplier<Object>) () -> lambda.call();
+            } else if (functionalInterfaceClass == Function.class) {
+                checkParameterCount(lambda, 1, Function.class.getName(), "apply");
+                return (Function<Object, Object>) (arg) -> lambda.call(arg);
+            } else if (functionalInterfaceClass == Consumer.class) {
+                checkParameterCount(lambda, 1, Consumer.class.getName(), "accept");
+                return (Consumer<Object>) (arg) -> lambda.call(arg);
+            } else if (functionalInterfaceClass == Predicate.class) {
+                checkParameterCount(lambda, 1, Predicate.class.getName(), "test");
+                return (Predicate<Object>) (arg) -> (Boolean) lambda.call(arg);
+            }
+            
+            // 对于其他函数式接口用Proxy
+            Method[] methods = functionalInterfaceClass.getMethods();
+            Method functionalMethod = null;
+            
+            for (Method method : methods) {
+                if (method.isDefault() || Modifier.isStatic(method.getModifiers())) {
+                    continue;
+                }
+                if (functionalMethod == null) {
+                    functionalMethod = method;
+                } else {
+                    throw new IllegalArgumentException("不是函数式接口: " + functionalInterfaceClass.getName());
+                }
+            }
+            
+            if (functionalMethod == null) {
+                throw new IllegalArgumentException("没有找到抽象方法: " + functionalInterfaceClass.getName());
+            }
+
+            // 检查参数数量是否匹配
+            int expectedParamCount = functionalMethod.getParameterCount();
+            checkParameterCount(lambda, expectedParamCount, functionalInterfaceClass.getName(), functionalMethod.getName());
+
+            final Method finalFunctionalMethod = functionalMethod;
+            logger.info("当前尝试把Lambda转为" + functionalInterfaceClass.getName() 
+                            + "，将会识别" + functionalMethod.getName() + "为函数执行接口");
+            
+            return Proxy.newProxyInstance(
+                functionalInterfaceClass.getClassLoader(),
+                new Class<?>[] { functionalInterfaceClass },
+                (proxy, method, args) -> {
+                    if (method.equals(finalFunctionalMethod)) {
+                        return lambda.call(args);
+                    } else if (method.getName().equals("toString")) {
+                        return lambda.toString();
+                    } else if (method.getName().equals("equals")) {
+                        return proxy == args[0];
+                    } else if (method.getName().equals("hashCode")) {
+                        return System.identityHashCode(proxy);
+                    } else {
+                        throw new UnsupportedOperationException("方法不支持: " + method.getName());
+                    }
+                }
+            );
+        }
+
+        private void checkParameterCount(Lambda lambda, int expectedCount, String interfaceName, String methodName) {
+            // 通过LambdaNode获取参数数量
+            if (this.parameters.size() != expectedCount) {
+                logger.error("Lambda转换失败，表达式需要" + this.parameters.size() 
+                        + "个参数，但" + interfaceName + "接口的" + methodName + "方法需要" + expectedCount + "个参数");
+                throw new RuntimeException("Cannot cast Lambda, parameter count mismatch (" +
+                        "expected " + expectedCount + "(for " + interfaceName + "." + methodName + "), got " + this.parameters.size() + ")"
+                );
             }
         }
 
@@ -3985,15 +4316,22 @@ public class TestInterpreter {
             return (args) -> {
                 try {
                     context.recordScope();
-                    if (args.length != parameters.size()) {
+                    Object result = null;
+                    if (args == null) {
+                        if (parameters.size() > 0) {
+                            throw new RuntimeException(
+                                    "Lambda需要 " + parameters.size() + " 个参数，但调用提供了 0 个参数");
+                        }
+                    } else if (args.length != parameters.size()) {
                         throw new RuntimeException(
                                 "Lambda需要 " + parameters.size() + " 个参数，但调用提供了 " + args.length + " 个参数");
+                    } else {
+                        for (int i = 0; i < parameters.size(); i++) {
+                            context.setVariable(parameters.get(i), args[i]);
+                        }
+                        result = body.evaluate(context);
+                        context.restoreScope();
                     }
-                    for (int i = 0; i < parameters.size(); i++) {
-                        context.setVariable(parameters.get(i), args[i]);
-                    }
-                    Object result = body.evaluate(context);
-                    context.restoreScope();
                     return result;
                 } catch (Exception e) {
                     throw new RuntimeException("Lambda execution failed: " + e.getMessage(), e);
@@ -4033,7 +4371,6 @@ public class TestInterpreter {
                     Object thisValue = context.getVariable("this").value;
                     if (thisValue instanceof CustomClassInstance thisInstance) {
                         ClassDefinition classDef = thisInstance.getClassDefinition();
-
                         MethodDefinition methodDef = findMethodInHierarchy(classDef, methodName, context);
                         if (methodDef != null) {
                             return new MethodCallNode(new VariableNode("this"), methodName, arguments)
@@ -4050,9 +4387,26 @@ public class TestInterpreter {
             }
 
             if (funcObj instanceof Lambda) {
-                return ((Lambda) funcObj).apply(args.toArray());
+                return ((Lambda) funcObj).call(args.toArray());
+            } else if (funcObj instanceof Function) {
+                return ((Function<Object[], ?>) funcObj).apply(args.toArray());
+            } else if (funcObj instanceof Supplier) {
+                return ((Supplier<?>) funcObj).get();
+            } else if (funcObj instanceof Callable) {
+                return ((Callable<?>) funcObj).call();
+            } else if (funcObj instanceof Runnable) {
+                ((Runnable) funcObj).run();
+                return null;
+            } else if (funcObj instanceof Method) {
+                return ((Method) funcObj).invoke(null, args.toArray());
+            } else if (funcObj instanceof Predicate) {
+                return ((Predicate<Object>) funcObj).test(args.get(0));
+            } else if (funcObj instanceof Consumer) {
+                ((Consumer<Object>) funcObj).accept(args.get(0));
+                return null;
             } else {
-                return context.callMethod(funcObj, "call", args);
+                logger.error("对象" + funcObj + "无法被调用");
+                throw new RuntimeException("Object not callable: " + funcObj);
             }
         }
 
@@ -4081,23 +4435,45 @@ public class TestInterpreter {
         }
 
         public Object evaluate(ExecutionContext context) throws Exception {
-            Variable val = context.getVariable(variableName);
-            // 如果有析构函数(finalize)就调用
-            try {
-                if (val.value.getClass().getMethod("finalize") != null) {
-                    context.callMethod(val.value, "finalize", new ArrayList<>());
+            if (variableName == "*") {
+                for (Map.Entry<String, Variable> entry : context.getAllVariables().entrySet()) {
+                    if (!entry.getKey().equals("this")) {
+                        Variable val = context.getVariable(entry.getKey());
+                        try {
+                            if (val.value.getClass().getMethod("finalize") != null) {
+                                context.callMethod(val.value, "finalize", new ArrayList<>());
+                            }
+                        } catch (NoSuchMethodException e) {
+                        }
+                        context.deleteVariable(entry.getKey());
+                    }
                 }
-            } catch (NoSuchMethodException e) {
-            }
 
-            context.deleteVariable(variableName);
+            } else {
+                if (variableName.equals("this")) {
+                    logger.error("不允许删除this引用");
+                    throw new RuntimeException("Cannot delete 'this' reference");
+                } else if (isKeyword(variableName)) {
+                    logger.error("不允许删除关键字: " + variableName);
+                    throw new RuntimeException("Cannot delete keyword: " + variableName);
+                }
+
+                Variable val = context.getVariable(variableName);
+                // 如果有析构函数(finalize)就调用
+                try {
+                    if (val.value.getClass().getMethod("finalize") != null) {
+                        context.callMethod(val.value, "finalize", new ArrayList<>());
+                    }
+                } catch (NoSuchMethodException e) {
+                }
+                context.deleteVariable(variableName);
+            }
             return null;
         }
 
         public Class<?> getType(ExecutionContext context) throws Exception {
             return Void.class;
         }
-
     }
 
     /**
@@ -4568,8 +4944,8 @@ public class TestInterpreter {
             while (Character.isDigit(peek()) ||
                     peek() == '.' ||
                     (peek() == '+' && sb.length() == 0) ||
-                    (peek() == '-' && sb.length() == 0) ||
-                    peek() == 'l' || peek() == 'L' ||
+                    (peek() == '-' && sb.length() == 0) || peek() == 'o' || peek() == 'O' ||
+                    peek() == 'l' || peek() == 'L' || peek() == 'x' || peek() == 'X' ||
                     (peek() >= 'a' && peek() <= 'f') || (peek() >= 'A' && peek() <= 'F'))
                 sb.append(advance());
             String numberStr = sb.toString();
@@ -4592,6 +4968,13 @@ public class TestInterpreter {
                 } catch (NumberFormatException e) {
                     throw new RuntimeException("Invalid hexadecimal number: " + numberStr);
                 }
+            } else if (numberStr.startsWith("0o")) {
+                try {
+                    return new LiteralNode(Integer.parseInt(numberStr.substring(2), 8), Integer.class);
+                } catch (NumberFormatException e) {
+                    throw new RuntimeException("Invalid octal number: " + numberStr);
+                }
+
             } else if (numberStr.endsWith("f") || numberStr.endsWith("F")) {
                 try {
                     return new LiteralNode(Float.parseFloat(numberStr.substring(0, numberStr.length() - 1)),
@@ -4730,6 +5113,17 @@ public class TestInterpreter {
                             throw new RuntimeException("Built-in function cannot be accessed with dot operator");
                         }
 
+                        // 特殊处理：如果当前表达式是类引用，尝试解析嵌套类
+                        if (expr instanceof ClassReferenceNode) {
+                            ClassReferenceNode classRef = (ClassReferenceNode) expr;
+                            String nestedClassName = classRef.className + "." + member;
+                            if (context.hasClass(nestedClassName)) {
+                                // 是嵌套类，创建新的类引用节点
+                                expr = new ClassReferenceNode(nestedClassName);
+                                continue;
+                            }
+                        }
+
                         if (peek() == '(') {
                             expectToMove('(');
                             List<ASTNode> args = parseArguments();
@@ -4764,7 +5158,7 @@ public class TestInterpreter {
 
         private ASTNode parsePrimary() throws RuntimeException {
             skipWhitespace();
-            savePosition();
+            savePosition(); // 被最外侧try处理过了
             boolean failure = false;
 
             try {
@@ -4796,10 +5190,10 @@ public class TestInterpreter {
                     expectToMove(')');
                     return new ParenthesizedExpressionNode(expr);
                 }
-
                 String identifier;
                 try {
                     identifier = parseIdentifier();
+
                 } catch (RuntimeException e) {
                     throw new RuntimeException(
                             "Expected identifier or literal at position " + position + ", but found '" + peek() + "'");
@@ -4833,9 +5227,44 @@ public class TestInterpreter {
                         throw new ClassNotFoundException("Class not found: " + identifier);
                     return new ClassReferenceNode(identifier);
                 } catch (ClassNotFoundException e) {
+                    // 尝试解析更完整的类名
+                    skipWhitespace();
+                    savePosition();
+                    if (peek() == '.') {
+                        savePosition();
+                        StringBuilder fullName = new StringBuilder(identifier);
+                        String lastValidName = null; // 尽量匹配最长的类名，然后后面解析为字段 （貌似可行？）
+                        boolean parseSucceedOnce = false;
+                        while (peek() == '.') {
+                            savePosition();
+                            expectToMove('.');
+                            String nextPart = parseIdentifier();
+                            fullName.append('.').append(nextPart);
+                            
+                            if (context.hasClass(fullName.toString())) {
+                                lastValidName = fullName.toString();
+                                parseSucceedOnce = true;
+                                releasePosition();
+                            } else {
+                                if (parseSucceedOnce) { // 后面就是类字段引用了
+                                    restorePosition();
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        if (lastValidName != null) {
+                            releasePosition();
+                            // 在这里添加下后面的字段解析 (理论这里已经到.DigitOnes了)
+                            return new ClassReferenceNode(lastValidName);
+                        } else {
+                            // 没有匹配到类，回滚到原始位置
+                            restorePosition();
+                        }
+                    }
+                    
                     ASTNode varNode = new VariableNode(identifier);
 
-                    skipWhitespace();
                     if (peek() == '(') {
                         expectToMove('(');
                         List<ASTNode> args = parseArguments();
@@ -5028,6 +5457,97 @@ public class TestInterpreter {
             }
         }
 
+        private ASTNode parseTryStatement() {
+            skipWhitespace();
+            savePosition();
+            boolean failure = false;
+            try {
+                expectWordToMove("try");
+                skipWhitespace();
+
+                ASTNode tryBlock;
+                if (peek() == '{') {
+                    tryBlock = parseBlock();
+                } else {
+                    throw new RuntimeException("try block must be enclosed in braces");
+                }
+
+                List<TryCatchNode.CatchBlock> catchBlocks = new ArrayList<>();
+
+                skipWhitespace();
+                while (isTargetWord("catch")) {
+                    expectWordToMove("catch");
+                    skipWhitespace();
+                    expectToMove('(');
+
+                    skipWhitespace();
+                    String exceptionType = parseClassIdentifier();
+                    skipWhitespace();
+                    String exceptionName = parseIdentifier();
+                    skipWhitespace();
+                    expectToMove(')');
+
+                    ASTNode catchBlock;
+                    skipWhitespace();
+                    if (peek() == '{') {
+                        catchBlock = parseBlock();
+                    } else {
+                        catchBlock = parseCompletedStatement();
+                    }
+
+                    catchBlocks.add(new TryCatchNode.CatchBlock(exceptionType, exceptionName, catchBlock));
+                    skipWhitespace();
+                }
+
+                ASTNode finallyBlock = null;
+                if (isTargetWord("finally")) {
+                    expectWordToMove("finally");
+                    skipWhitespace();
+                    if (peek() == '{') {
+                        finallyBlock = parseBlock();
+                    } else {
+                        finallyBlock = parseCompletedStatement();
+                    }
+                }
+
+                if (catchBlocks.isEmpty() && finallyBlock == null) {
+                    throw new RuntimeException("try statement must have at least one catch block or a finally block");
+                }
+
+                return new TryCatchNode(tryBlock, catchBlocks, finallyBlock);
+            } catch (RuntimeException e) {
+                failure = true;
+                logger.error("解析try语句失败: " + e.getMessage());
+                throw new RuntimeException("Error parsing try statement: " + e.getMessage());
+            } finally {
+                if (failure)
+                    restorePosition();
+                else
+                    releasePosition();
+            }
+        }
+
+        private ASTNode parseThrowStatement() {
+            skipWhitespace();
+            savePosition();
+            boolean failure = false;
+            try {
+                expectWordToMove("throw");
+                skipWhitespace();
+                ASTNode exception = parseExpression();
+                return new ThrowNode(exception);
+            } catch (RuntimeException e) {
+                failure = true;
+                logger.error("解析throw语句失败: " + e.getMessage());
+                throw new RuntimeException("Error parsing throw statement: " + e.getMessage());
+            } finally {
+                if (failure)
+                    restorePosition();
+                else
+                    releasePosition();
+            }
+        }
+
         private ASTNode parseImportStatement() {
             savePosition();
             skipWhitespace();
@@ -5056,7 +5576,13 @@ public class TestInterpreter {
             try {
                 expectWordToMove("delete");
                 skipWhitespace();
-                String varName = parseIdentifier();
+                String varName;
+                if (peek() == '*') {
+                    advance();
+                    varName = "*";
+                } else {
+                    varName = parseIdentifier();
+                }
                 return new DeleteNode(varName);
             } catch (RuntimeException e) {
                 failure = true;
@@ -5362,6 +5888,14 @@ public class TestInterpreter {
                 return new ControlNode("continue");
             } else if (isTargetWord("return")) {
                 result = parseReturnStatement();
+                clearLastUncompletedStmt();
+                return result;
+            } else if (isTargetWord("try")) {
+                result = parseTryStatement();
+                clearLastUncompletedStmt();
+                return result;
+            } else if (isTargetWord("throw")) {
+                result = parseThrowStatement();
                 clearLastUncompletedStmt();
                 return result;
             }
@@ -6157,7 +6691,7 @@ public class TestInterpreter {
         private ASTNode parseBitwiseOr() {
             ASTNode left = parseBitwiseXor();
             skipWhitespace();
-            while (isTargetWord("|") && !isTargetWord("|=")) {
+            while (isTargetWord("|") && !isTargetWord("|=") && !isTargetWord("||")) {
                 expectToMove('|');
                 skipWhitespace();
                 ASTNode right = parseBitwiseXor();
@@ -6181,7 +6715,7 @@ public class TestInterpreter {
         private ASTNode parseBitwiseAnd() {
             ASTNode left = parseEquality();
             skipWhitespace();
-            while (isTargetWord("&") && !isTargetWord("&=")) {
+            while (isTargetWord("&") && !isTargetWord("&=") && !isTargetWord("&&")) {
                 expectToMove('&');
                 skipWhitespace();
                 ASTNode right = parseEquality();
@@ -6759,7 +7293,7 @@ public class TestInterpreter {
                 while ((node = parser.parseCompletedStatement()) != null)
                     lastResult = node.evaluate(context);
             } catch (Exception e) {
-                e.printStackTrace(System.err);
+                System.err.println(getStackTraceString(e));
             }
             return lastResult;
         }
@@ -6774,7 +7308,7 @@ public class TestInterpreter {
                     node.evaluate(context);
                 }
             } catch (Exception e) {
-                e.printStackTrace(System.err);
+                System.err.println(getStackTraceString(e));
             }
         }
 
@@ -6793,17 +7327,40 @@ public class TestInterpreter {
                     node.evaluate(context);
                 }
             } catch (Exception e) {
-                e.printStackTrace(System.err);
+                System.err.println(getStackTraceString(e));
             }
         }
 
-        public Map<String, Object> getVariables() {
-            return context.getAllVariables();
+        public Map<String, Object> getAllVariablesAsObject() {
+            Map<String, Object> result = new HashMap<>();
+            for (Map.Entry<String, Variable> entry : context.getAllVariables().entrySet()) {
+                result.put(entry.getKey(), entry.getValue().value);
+            }
+            return result;
         }
 
         public void clearVariables() {
             context.clearVariables();
         }
+
+        public List<ASTNode> tryEvaluate(String code) {
+            context.clearOutput();
+            context.clearWarnMessages();
+            Parser parser = new Parser(code, context);
+            List<ASTNode> nodes = new ArrayList<>();
+            ASTNode node;
+
+            try {
+                while ((node = parser.parseCompletedStatement()) != null) {
+                    nodes.add(node);
+                }
+            } catch (Exception e) {
+                logger.warn("解析代码时出错: " + e.getMessage());
+                return nodes;
+            }
+            return nodes;
+        }
+
     }
 
     public static void main(String[] args) {
@@ -6823,7 +7380,7 @@ public class TestInterpreter {
                 }
             } catch (Exception e) {
                 System.err.println("执行出错: " + e.getMessage());
-                e.printStackTrace(System.err);
+                System.err.println(getStackTraceString(e));
             }
         }
     }

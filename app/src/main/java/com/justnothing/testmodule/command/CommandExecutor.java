@@ -13,6 +13,7 @@ import com.justnothing.testmodule.command.functions.fieldcmd.FieldMain;
 import com.justnothing.testmodule.command.functions.gc.GcMain;
 import com.justnothing.testmodule.command.functions.heap.HeapMain;
 import com.justnothing.testmodule.command.functions.help.HelpMain;
+import com.justnothing.testmodule.command.functions.hook.HookMain;
 import com.justnothing.testmodule.command.functions.interactive.InteractiveExampleMain;
 import com.justnothing.testmodule.command.functions.invoke.InvokeMethodMain;
 import com.justnothing.testmodule.command.functions.list.ListMethodsMain;
@@ -20,7 +21,6 @@ import com.justnothing.testmodule.command.functions.memory.MemoryMain;
 import com.justnothing.testmodule.command.functions.output.OutputExampleMain;
 import com.justnothing.testmodule.command.functions.packages.PackagesMain;
 import com.justnothing.testmodule.command.functions.script.ScriptExecutorMain;
-import com.justnothing.testmodule.command.functions.scriptinteractive.ScriptInteractiveMain;
 import com.justnothing.testmodule.command.functions.system.SystemMain;
 import com.justnothing.testmodule.command.functions.threads.ThreadsMain;
 import com.justnothing.testmodule.command.functions.trace.TraceMain;
@@ -80,18 +80,21 @@ public class CommandExecutor {
         registerCommand("breakpoint", new BreakpointMain());
         registerCommand("invoke", new InvokeMethodMain());
         registerCommand("packages", new PackagesMain());
+        registerCommand("hook", new HookMain());
         
         BeanShellExecutorMain beanShellExecutor = new BeanShellExecutorMain("bsh");
         registerCommand("bsh", beanShellExecutor);
         registerCommand("bvars", beanShellExecutor);
         registerCommand("bclear", beanShellExecutor);
+        registerCommand("bscript", beanShellExecutor);
         
         ScriptExecutorMain scriptExecutor = new ScriptExecutorMain("script");
         registerCommand("script", scriptExecutor);
+        registerCommand("srun", scriptExecutor);
         registerCommand("sclear", scriptExecutor);
         registerCommand("svars", scriptExecutor);
+        registerCommand("sinteractive", scriptExecutor);
         
-        registerCommand("script_interactive", new ScriptInteractiveMain());
         registerCommand("output_test", new OutputExampleMain());
         registerCommand("interactive_test", new InteractiveExampleMain());
     }
@@ -157,6 +160,8 @@ public class CommandExecutor {
 
         initializeIfNeeded();
         logger.info("开始执行命令: " + fullCommand);
+        
+        
         try {
             SystemOutputRedirector redirector = new SystemOutputRedirector(output);
             redirector.startRedirect();
@@ -164,6 +169,7 @@ public class CommandExecutor {
                 executeCommandInternal(fullCommand, output);
             } finally {
                 redirector.stopRedirect();
+                logger.info("命令执行完毕");
                 output.close();
             }
         } catch (Exception e) {
@@ -173,6 +179,8 @@ public class CommandExecutor {
             output.println("错误信息:");
             output.printStackTrace(e);
             output.println("===============================================");
+            // 出错时也要关闭output
+            output.close();
         }
         logger.info("命令执行完成");
     }
@@ -314,12 +322,14 @@ public class CommandExecutor {
               class                             - 查看类的继承关系和构造函数
               field                             - 查看类的字段信息
               watch                             - 监控字段或方法的变化
+              trace                             - 跟踪方法调用链
+              profile                           - 性能分析
+              graph                             - 生成类图, 调用图和依赖图
+              search                            - 搜索类, 方法或字段
               export-context                    - 导出设备xtchttp上下文信息
               heap                              - 查看Java堆内存信息
               gc                                - 手动触发垃圾回收
               memory                            - 显示详细内存使用情况
-              graph                             - 生成类图, 调用图和依赖图
-              search                            - 搜索类, 方法或字段
               dump                              - 导出堆信息到文件
               deadlock                          - 检测死锁
               threads                           - 列出所有线程及其状态
@@ -327,13 +337,15 @@ public class CommandExecutor {
               breakpoint                        - 设置和管理断点
               invoke                            - 调用类的方法
               packages                          - 列出已知包名
+              hook                              - 动态Hook注入器
               bsh                               - 通过BeanShell执行代码
               bvars                             - 显示BeanShell执行器的变量
               bclear                            - 清空BeanShell执行器的变量
-              script                            - 通过我做的解释器执行代码
-              script_interactive                - 进入交互式脚本执行模式
-              sclear                            - 清空我做的解释器的变量
-              svars                             - 显示我做的解释器的变量
+              script                            - 脚本管理系统和执行
+              srun                              - 快捷执行脚本代码
+              sinteractive                      - 进入交互式脚本执行模式
+              sclear                            - 清空脚本解释器的变量
+              svars                             - 显示脚本解释器的变量
 
             测试类命令:
               output_test                       - 对命令行输出进行测试
@@ -353,6 +365,7 @@ public class CommandExecutor {
               methods class -i java.util.ArrayList
               methods field -g java.lang.System out
               methods watch add field java.lang.System out 1000
+              methods hook add com.example.MainActivity onCreate before 'println("onCreate called")'
             
             
 

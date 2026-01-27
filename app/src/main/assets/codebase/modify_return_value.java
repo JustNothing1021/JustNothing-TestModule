@@ -1,0 +1,22 @@
+// 方法返回值修改示例 - Replace阶段
+// 使用方法：hook add java.lang.System currentTimeMillis replace codebase modify_return_value.java
+// 脚本默认位于：/data/local/tmp/methods/scripts/
+//
+// 注意：这个脚本会修改currentTimeMillis的返回值，用于测试时间相关的功能
+
+auto param = getParam();
+auto phase = getPhase();
+auto hookId = getHookId();
+
+println("[" + hookId + "][" + phase + "] currentTimeMillis 被调用，修改返回值");
+
+// 获取原始返回值
+auto originalResult = param.getResult();
+println("  原始返回值: " + originalResult);
+
+// 修改返回值为固定值（例如：2025-01-01 00:00:00 的时间戳）
+auto fixedTime = 1735660800000L;
+println("  修改后的返回值: " + fixedTime);
+
+// 设置新的返回值
+setReturnValue(fixedTime);

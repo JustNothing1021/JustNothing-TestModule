@@ -12,6 +12,8 @@ public class FileDirectory {
     public static final String PORT_FILE = METHODS_DATA_DIR + "/methods_port";
     public static String DATA_PATH = EXTERNAL_PATH;
     public static final String EXPORT_DIR_NAME = "TestModuleExports";
+    public static final String SCRIPTS_DIR_NAME = "scripts";
+    public static final String ASSETS_CODEBASE_DIR_NAME = "assets/codebase";
     public static final String SCRIPTS_FILE_NAME = "scripts.json";
     public static final String CONTENTS_DIR_NAME = "contents";
     public static final String CONTENT_FILE_PREFIX = "content_";

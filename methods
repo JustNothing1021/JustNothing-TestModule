@@ -700,7 +700,7 @@ show_version() {
         color_green "✓ 服务状态: 正常"
     else
         log "WARN" "服务状态异常"
-        color_red "✗ 服务状态: 异常"
+        color_red "服务状态: 异常"
     fi
     
     if [ -f "$JAVA_CLIENT_JAR" ]; then

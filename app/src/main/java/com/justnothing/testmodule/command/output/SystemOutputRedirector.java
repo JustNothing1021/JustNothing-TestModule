@@ -4,10 +4,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 
-/**
- * 系统输出重定向器
- * 可以将System.out/System.err重定向到输出器
- */
+
 public class SystemOutputRedirector {
     private final IOutputHandler output;
     private PrintStream originalOut;
@@ -19,9 +16,7 @@ public class SystemOutputRedirector {
         this.output = output;
     }
 
-    /**
-     * 开始重定向系统输出
-     */
+
     public void startRedirect() {
         originalOut = System.out;
         originalErr = System.err;
@@ -44,7 +39,7 @@ public class SystemOutputRedirector {
             }
         }, true);
 
-        redirectedErr = redirectedOut; // 也可以创建单独的err输出器
+        redirectedErr = redirectedOut;
 
         System.setOut(redirectedOut);
         System.setErr(redirectedErr);

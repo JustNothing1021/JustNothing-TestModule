@@ -1,0 +1,34 @@
+// Toast消息监控Hook - Before阶段
+// 使用方法：hook add android.widget.Toast makeText before codebase toast_monitor.java
+// 脚本默认位于：/data/local/tmp/methods/scripts/
+//
+// 注意：这个脚本会监视所有Toast消息的创建
+
+auto param = getParam();
+auto phase = getPhase();
+auto hookId = getHookId();
+
+println("[" + hookId + "][" + phase + "] Toast 消息被创建");
+
+// 打印Toast消息内容
+if (param.args.length > 0) {
+    auto contextClass = param.args[0].getClass();
+    println("  Context: " + contextClass.toString());
+}
+
+if (param.args.length > 1) {
+    auto text = param.args[1];
+    println("  消息内容: " + text);
+}
+
+if (param.args.length > 2) {
+    auto duration = param.args[2];
+    println("  显示时长: " + duration);
+}
+
+// 获取调用栈信息
+auto stackTrace = new java.lang.Exception().getStackTrace();
+if (stackTrace != null && stackTrace.length > 2) {
+    auto caller = stackTrace[2];
+    println("  调用位置: " + caller.getClassName() + "." + caller.getMethodName() + " (行 " + caller.getLineNumber() + ")");
+}

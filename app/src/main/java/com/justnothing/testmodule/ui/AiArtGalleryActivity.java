@@ -1,6 +1,6 @@
 package com.justnothing.testmodule.ui;
 
-import android.content.Context;
+import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.view.MotionEvent;
 import android.view.View;
@@ -14,6 +14,7 @@ import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.justnothing.testmodule.R;
+import com.justnothing.testmodule.utils.functions.Logger;
 import com.justnothing.testmodule.utils.ui.UISettings;
 
 import java.io.BufferedReader;
@@ -24,6 +25,8 @@ import java.util.List;
 
 public class AiArtGalleryActivity extends AppCompatActivity {
     private static final String TAG = "AiArtGalleryActivity";
+
+    private static final Logger logger = Logger.getLoggerForName(TAG);
 
     private static class ArtWork {
         String fileName;
@@ -47,6 +50,7 @@ public class AiArtGalleryActivity extends AppCompatActivity {
     private TextView tvDescription;
     private WebView webView;
 
+    @SuppressLint("ClickableViewAccessibility")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -66,6 +70,7 @@ public class AiArtGalleryActivity extends AppCompatActivity {
         webView.setOnTouchListener(new View.OnTouchListener() {
             private float startX;
             private float startY;
+
 
             @Override
             public boolean onTouch(View v, MotionEvent event) {
@@ -87,6 +92,8 @@ public class AiArtGalleryActivity extends AppCompatActivity {
                 return false;
             }
         });
+
+
     }
 
     private void initArtWorks() {
@@ -117,6 +124,7 @@ public class AiArtGalleryActivity extends AppCompatActivity {
 
             String htmlContent = "<!DOCTYPE html><html><head><style>body,html{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background-color:transparent;}svg{width:100%;height:100%;overflow:hidden;display:block;}</style></head><body>" + svgContent.toString() + "</body></html>";
 
+            webView.setBackgroundColor(0x00000000);
             webView.getSettings().setJavaScriptEnabled(true);
             webView.getSettings().setLoadWithOverviewMode(true);
             webView.getSettings().setUseWideViewPort(true);
@@ -130,7 +138,7 @@ public class AiArtGalleryActivity extends AppCompatActivity {
             webView.setAlpha(0.0f);
             webView.loadDataWithBaseURL(null, htmlContent, "text/html", "UTF-8", null);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("加载Webview时遇到错误", e);
         }
     }
 

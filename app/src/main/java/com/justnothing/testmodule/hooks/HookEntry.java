@@ -298,6 +298,7 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
         }
         zygoteInitCompleted = true;
         
+        DataBridge.setModulePath(startupParam.modulePath);
 
         BootMonitor.markZygoteInitStarted();
         logger.info("启动于initZygote阶段");
@@ -380,11 +381,9 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
             logger.debug("线程池状态: " + ThreadPoolManager.getPoolStats());
             
             long hookBeginLong = System.currentTimeMillis();
-            double hookBegin = hookBeginLong / 1000.0f;
 
             int successCount = 0;
             int failCount = 0;
-            double hookEnd = 0;
             long maxHookDuration = 0;
             String slowestHookName = "";
             int timeoutCount = 0;
@@ -408,8 +407,7 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
                 }
                 long hookEndTime = System.currentTimeMillis();
                 long hookDuration = hookEndTime - hookStartTime;
-                hookEnd = hookEndTime / 1000.0f;
-                
+
                 recordHookLoad(hookName, hookBeginLong, hookEndTime);
                 
                 if (hookDuration > maxHookDuration) {

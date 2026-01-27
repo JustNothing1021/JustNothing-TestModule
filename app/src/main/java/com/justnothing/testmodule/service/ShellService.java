@@ -1,5 +1,6 @@
 package com.justnothing.testmodule.service;
 
+
 import android.os.Binder;
 import android.os.Parcel;
 
@@ -11,12 +12,21 @@ import com.justnothing.testmodule.service.handler.ServerPortManager;
 import com.justnothing.testmodule.service.handler.SocketClientHandler;
 import com.justnothing.testmodule.service.handler.SocketServer;
 import com.justnothing.testmodule.service.handler.TransactionHandler;
+import com.justnothing.testmodule.utils.data.DataBridge;
 import com.justnothing.testmodule.utils.data.DataDirectoryManager;
 import com.justnothing.testmodule.utils.functions.CmdUtils;
 import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.io.IOManager;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.lang.reflect.Method;
+import java.util.Enumeration;
 import java.util.concurrent.Executors;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 public class ShellService extends Binder {
 
@@ -236,6 +246,20 @@ public class ShellService extends Binder {
                 logger.error("启动Socket服务器失败: " + e.getMessage(), e);
             }
         });
+        
+        Executors.newSingleThreadExecutor(r -> {
+            Thread t = new Thread(r, "ShellService-InitThread");
+            t.setDaemon(true);
+            return t;
+        }).submit(() -> {
+            try {
+                logger.info("开始复制Hook示例代码到scripts目录");
+                copyHookExamplesToScripts();
+                logger.info("Hook示例代码复制完成");
+            } catch (Exception e) {
+                logger.error("复制Hook示例代码失败: " + e.getMessage(), e);
+            }
+        });
     }
 
     @Override
@@ -246,6 +270,76 @@ public class ShellService extends Binder {
     @Override
     public String getInterfaceDescriptor() {
         return transactionHandler.getInterfaceDescriptor();
+    }
+
+    private void copyHookExamplesToScripts() {
+        String modulePath = DataBridge.getModulePath();
+        if (modulePath == null) {
+            logger.info("模块路径未初始化，跳过复制Hook示例代码");
+            return;
+        }
+        
+        File scriptsDir = DataBridge.getScriptsDirectory();
+        if (!scriptsDir.exists()) {
+            scriptsDir.mkdirs();
+        }
+        
+        File moduleApk = new File(modulePath);
+        if (!moduleApk.exists()) {
+            logger.info("模块APK文件不存在: " + modulePath);
+            return;
+        }
+        
+        try (ZipFile zipFile = new ZipFile(moduleApk)) {
+            Enumeration<? extends ZipEntry> entries = zipFile.entries();
+            
+            int successCount = 0;
+            int skipCount = 0;
+            int failCount = 0;
+            
+            while (entries.hasMoreElements()) {
+                ZipEntry entry = entries.nextElement();
+                String entryName = entry.getName();
+                
+                if (!entryName.startsWith("assets/codebase/") || entryName.endsWith("/")) {
+                    continue;
+                }
+                
+                if (entryName.equals("assets/codebase/README.md")) {
+                    continue;
+                }
+                
+                String fileName = entryName.substring("assets/codebase/".length());
+                File targetFile = new File(scriptsDir, fileName);
+                
+                if (targetFile.exists()) {
+                    logger.debug("文件已存在，跳过复制: " + fileName);
+                    skipCount++;
+                    continue;
+                }
+                
+                try (InputStream inputStream = zipFile.getInputStream(entry);
+                    FileOutputStream outputStream = new FileOutputStream(targetFile)) {
+                    
+                    byte[] buffer = new byte[8192];
+                    int bytesRead;
+                    while ((bytesRead = inputStream.read(buffer)) != -1) {
+                        outputStream.write(buffer, 0, bytesRead);
+                    }
+                    
+                    logger.debug("成功复制Hook示例文件: " + fileName);
+                    successCount++;
+                } catch (Exception e) {
+                    logger.error("复制Hook示例文件失败: " + fileName, e);
+                    failCount++;
+                }
+            }
+            
+            logger.info("Hook示例代码复制完成 - 成功: " + successCount + 
+                        ", 跳过: " + skipCount + ", 失败: " + failCount);
+        } catch (Exception e) {
+            logger.error("复制Hook示例代码时发生异常", e);
+        }
     }
 
 

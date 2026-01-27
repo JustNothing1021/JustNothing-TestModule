@@ -106,6 +106,14 @@ public class DataDirectoryManager {
         return METHODS_DATA_DIR;
     }
 
+    public static File getScriptsDirectory() {
+        return new File(METHODS_DATA_DIR, FileDirectory.SCRIPTS_DIR_NAME);
+    }
+
+    public static File getCodebaseDirectory() {
+        return getScriptsDirectory();
+    }
+
 
     public static boolean ensureFileDirectoryExists(File file) {
         try {
