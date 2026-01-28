@@ -1,4 +1,4 @@
-package com.justnothing.testmodule.command.functions.invoke;
+package com.justnothing.testmodule.command.functions.classcmd;
 
 import de.robv.android.xposed.XposedHelpers;
 import com.justnothing.testmodule.utils.functions.Logger;

@@ -2,31 +2,20 @@ package com.justnothing.testmodule.command;
 
 import static com.justnothing.testmodule.constants.CommandServer.MAIN_MODULE_VER;
 
-import com.justnothing.testmodule.command.functions.analyze.AnalyzeMain;
 import com.justnothing.testmodule.command.functions.beanshell.BeanShellExecutorMain;
 import com.justnothing.testmodule.command.functions.breakpoint.BreakpointMain;
 import com.justnothing.testmodule.command.functions.classcmd.ClassMain;
-import com.justnothing.testmodule.command.functions.deadlock.DeadlockMain;
-import com.justnothing.testmodule.command.functions.dump.DumpMain;
+import com.justnothing.testmodule.command.functions.examples.InteractiveExampleMain;
+import com.justnothing.testmodule.command.functions.examples.OutputExampleMain;
 import com.justnothing.testmodule.command.functions.exportcontext.ExportContextMain;
-import com.justnothing.testmodule.command.functions.fieldcmd.FieldMain;
-import com.justnothing.testmodule.command.functions.gc.GcMain;
-import com.justnothing.testmodule.command.functions.heap.HeapMain;
 import com.justnothing.testmodule.command.functions.help.HelpMain;
 import com.justnothing.testmodule.command.functions.hook.HookMain;
-import com.justnothing.testmodule.command.functions.interactive.InteractiveExampleMain;
-import com.justnothing.testmodule.command.functions.invoke.InvokeMethodMain;
-import com.justnothing.testmodule.command.functions.list.ListMethodsMain;
 import com.justnothing.testmodule.command.functions.memory.MemoryMain;
-import com.justnothing.testmodule.command.functions.output.OutputExampleMain;
 import com.justnothing.testmodule.command.functions.packages.PackagesMain;
 import com.justnothing.testmodule.command.functions.script.ScriptExecutorMain;
 import com.justnothing.testmodule.command.functions.system.SystemMain;
 import com.justnothing.testmodule.command.functions.threads.ThreadsMain;
 import com.justnothing.testmodule.command.functions.trace.TraceMain;
-import com.justnothing.testmodule.command.functions.profile.ProfileMain;
-import com.justnothing.testmodule.command.functions.graph.GraphMain;
-import com.justnothing.testmodule.command.functions.search.SearchMain;
 import com.justnothing.testmodule.command.functions.watch.WatchMain;
 import com.justnothing.testmodule.command.functions.CommandBase;
 import com.justnothing.testmodule.command.output.StringBuilderCollector;
@@ -60,27 +49,25 @@ public class CommandExecutor {
 
     static {
         registerCommand("help", new HelpMain());
-        registerCommand("list", new ListMethodsMain());
-        registerCommand("analyze", new AnalyzeMain());
         registerCommand("class", new ClassMain());
-        registerCommand("field", new FieldMain());
         registerCommand("watch", new WatchMain());
         registerCommand("trace", new TraceMain());
-        registerCommand("profile", new ProfileMain());
-        registerCommand("graph", new GraphMain());
-        registerCommand("search", new SearchMain());
         registerCommand("export-context", new ExportContextMain());
-        registerCommand("heap", new HeapMain());
-        registerCommand("gc", new GcMain());
         registerCommand("memory", new MemoryMain());
-        registerCommand("dump", new DumpMain());
-        registerCommand("deadlock", new DeadlockMain());
         registerCommand("threads", new ThreadsMain());
         registerCommand("system", new SystemMain());
         registerCommand("breakpoint", new BreakpointMain());
-        registerCommand("invoke", new InvokeMethodMain());
         registerCommand("packages", new PackagesMain());
         registerCommand("hook", new HookMain());
+        
+        ClassMain classExecutor = new ClassMain("class");
+        registerCommand("cinfo", classExecutor);
+        registerCommand("cgraph", classExecutor);
+        registerCommand("canalyze", classExecutor);
+        registerCommand("clist", classExecutor);
+        registerCommand("cinvoke", classExecutor);
+        registerCommand("cfield", classExecutor);
+        registerCommand("csearch", classExecutor);
         
         BeanShellExecutorMain beanShellExecutor = new BeanShellExecutorMain("bsh");
         registerCommand("bsh", beanShellExecutor);
@@ -317,35 +304,36 @@ public class CommandExecutor {
             
             可用命令:
               help                              - 显示所有命令的帮助或特定命令的帮助
-              list                              - 列出类的方法
-              analyze                           - 分析类的详细信息
-              class                             - 查看类的继承关系和构造函数
-              field                             - 查看类的字段信息
               watch                             - 监控字段或方法的变化
               trace                             - 跟踪方法调用链
               profile                           - 性能分析
               graph                             - 生成类图, 调用图和依赖图
-              search                            - 搜索类, 方法或字段
               export-context                    - 导出设备xtchttp上下文信息
-              heap                              - 查看Java堆内存信息
-              gc                                - 手动触发垃圾回收
               memory                            - 显示详细内存使用情况
-              dump                              - 导出堆信息到文件
-              deadlock                          - 检测死锁
               threads                           - 列出所有线程及其状态
               system                            - 显示系统信息
               breakpoint                        - 设置和管理断点
-              invoke                            - 调用类的方法
               packages                          - 列出已知包名
               hook                              - 动态Hook注入器
+
               bsh                               - 通过BeanShell执行代码
-              bvars                             - 显示BeanShell执行器的变量
-              bclear                            - 清空BeanShell执行器的变量
-              script                            - 脚本管理系统和执行
-              srun                              - 快捷执行脚本代码
-              sinteractive                      - 进入交互式脚本执行模式
-              sclear                            - 清空脚本解释器的变量
-              svars                             - 显示脚本解释器的变量
+                bvars                           - 显示BeanShell执行器的变量
+                bclear                          - 清空BeanShell执行器的变量
+
+              class                            - 查看类信息
+                cinfo                          - 查看类的详细信息 (快捷方式)
+                cgraph                         - 生成类继承图 (快捷方式)
+                canalyze                       - 分析类的字段和方法 (快捷方式)
+                clist                          - 列出一个类的所有方法 (快捷方式)
+                cinvoke                        - 调用类中的方法 (快捷方式)
+                cfield                         - 查看或操作字段 (快捷方式)
+                csearch                        - 搜索类、方法、字段或注解 (快捷方式)
+                
+              script                            - 脚本管理系统
+                srun                            - 快捷执行脚本代码
+                sinteractive                    - 进入交互式脚本执行模式
+                sclear                          - 清空脚本解释器的变量
+                svars                           - 显示脚本解释器的变量
 
             测试类命令:
               output_test                       - 对命令行输出进行测试
@@ -358,12 +346,19 @@ public class CommandExecutor {
               -cl, --classloader <package>      - 指定类加载器（软件包名，没找到会是默认的类加载器）
             
             示例:
-              methods invoke java.lang.System currentTimeMillis
+              methods class info java.lang.String
+              methods class graph java.util.ArrayList
+              methods class analyze -f java.lang.String
+              methods class list -vb java.lang.String
+              methods class list com.android.server.am.ActivityManagerService
+              methods class invoke java.lang.System currentTimeMillis
+              methods class field -g java.lang.System out
+              methods class search class *Activity
+              methods class search method onCreate
+              methods class search field m*
+              methods class search annotation Override
               methods -cl android list com.android.server.am.ActivityManagerService
               methods script for (int i = 0; i < 114; i++) println(i); // 命令行记得加引号
-              methods analyze -f java.lang.String
-              methods class -i java.util.ArrayList
-              methods field -g java.lang.System out
               methods watch add field java.lang.System out 1000
               methods hook add com.example.MainActivity onCreate before 'println("onCreate called")'
             

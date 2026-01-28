@@ -7,6 +7,7 @@ import com.justnothing.testmodule.command.functions.CommandBase;
 import com.justnothing.testmodule.utils.data.ClassLoaderManager;
 
 import java.util.List;
+import java.util.Locale;
 
 public class PackagesMain extends CommandBase {
 
@@ -34,7 +35,7 @@ public class PackagesMain extends CommandBase {
     public String runMain(CommandExecutor.CmdExecContext context) {
         List<String> packages = ClassLoaderManager.getAllKnownPackages();
         StringBuilder sb = new StringBuilder();
-        sb.append(String.format("当前进程的ClassLoader (总计%d个):\n", packages.size()));
+        sb.append(String.format(Locale.getDefault(), "当前进程的ClassLoader (总计%d个):\n", packages.size()));
         for (String pkg : packages) {
             sb.append("  ").append(pkg).append("\n");
         }

@@ -2,6 +2,8 @@ package com.justnothing.testmodule.command.functions.watch;
 
 import static com.justnothing.testmodule.constants.CommandServer.CMD_WATCH_VER;
 
+import java.util.Arrays;
+
 import android.util.Log;
 
 import com.justnothing.testmodule.command.CommandExecutor;
@@ -67,7 +69,7 @@ public class WatchMain extends CommandBase {
         String[] args = context.args();
         ClassLoader classLoader = context.classLoader();
         
-        logger.debug("执行watch命令，参数: " + java.util.Arrays.toString(args));
+        logger.debug("执行watch命令，参数: " + Arrays.toString(args));
         
         if (args.length < 1) {
             logger.warn("参数不足");
@@ -78,20 +80,14 @@ public class WatchMain extends CommandBase {
         WatchManager manager = WatchManager.getInstance();
 
         try {
-            switch (subCommand) {
-                case "add":
-                    return handleAdd(args, classLoader, manager);
-                case "list":
-                    return handleList(manager);
-                case "stop":
-                    return handleStop(args, manager);
-                case "clear":
-                    return handleClear(manager);
-                case "output":
-                    return handleOutput(args, manager);
-                default:
-                    return "未知子命令: " + subCommand + "\n" + getHelpText();
-            }
+            return switch (subCommand) {
+                case "add" -> handleAdd(args, classLoader, manager);
+                case "list" -> handleList(manager);
+                case "stop" -> handleStop(args, manager);
+                case "clear" -> handleClear(manager);
+                case "output" -> handleOutput(args, manager);
+                default -> "未知子命令: " + subCommand + "\n" + getHelpText();
+            };
         } catch (Exception e) {
             logger.error("执行watch命令失败", e);
             return "错误: " + e.getMessage() +

@@ -317,7 +317,7 @@ public class HookManager {
             }
             activeHooks.put(hookInfo.getId(), unhook);
             logger.info("替换Hook应用成功: " + hookInfo.getId());
-        } else if (hasBefore || hasAfter) {
+        } else {
             logger.info("创建普通Hook (before: " + hasBefore + ", after: " + hasAfter + ")");
             XC_MethodHook methodHook = new XC_MethodHook() {
                 @Override
@@ -389,8 +389,8 @@ public class HookManager {
         return args;
     }
 
-    private static Object executeHookCode(HookInfo hookInfo, String code, 
-                                         XC_MethodHook.MethodHookParam param, String phase) {
+    private static void executeHookCode(HookInfo hookInfo, String code,
+                                        MethodHookParam param, String phase) {
         try {
             ClassLoader cl = hookInfo.getClassLoader();
             TestInterpreter.ScriptRunner runner = scriptRunners.computeIfAbsent(
@@ -403,10 +403,9 @@ public class HookManager {
             addHookBuiltIn(context, param, getLoadPackageParam(), hookInfo, phase);
             runner.setContext(context);
             runner.execute(code);
-            return runner.getAllVariablesAsObject().get("result");
+            runner.getAllVariablesAsObject().get("result");
         } catch (Exception e) {
             logger.error("Hook 代码执行失败: " + hookInfo.getId(), e);
-            return null;
         }
     }
 

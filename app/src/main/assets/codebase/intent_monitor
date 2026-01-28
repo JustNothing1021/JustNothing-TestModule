@@ -1,5 +1,5 @@
 // Intent监控Hook - Before阶段
-// 使用方法：hook add android.content.Intent <init> before codebase intent_monitor.java
+// 使用方法：hook add android.content.Intent <init> before codebase intent_monitor
 // 脚本默认位于：/data/local/tmp/methods/scripts/
 //
 // 注意：这个脚本会监视所有Intent的创建

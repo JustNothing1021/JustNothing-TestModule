@@ -158,7 +158,8 @@ public class StreamClient {
                 
                 可选项:
                     -s, --socket            通过Socket文本协议执行命令
-                    -b, --binary            通过Socket二进制交互式协议执行命令
+                    -t, --text              通过Socket文本交互式协议执行命令
+                    -i, --interactive       通过Socket二进制交互式协议执行命令
                     -f, --file              通过文件中转命令(原始模式)
                     --update-port <port>    更新Socket服务器端口
                     --auto                  自动选择最佳模式(默认)
@@ -250,7 +251,7 @@ public class StreamClient {
                 System.exit(running ? 0 : 1);
             }
             case "--help" -> System.err.println(getHelpText());
-            case "--socket", "-s" -> {
+            case "--text", "-t" -> {
                 if (args.length < 2) {
                     System.err.println("错误: 需要提供命令");
                     System.exit(1);
@@ -258,7 +259,7 @@ public class StreamClient {
                 String command = joinArgs(args, 1);
                 executeTextSocket(command);
             }
-            case "--binary", "-b" -> {
+            case "--interactive", "-i" -> {
                 if (args.length < 2) {
                     System.err.println("错误: 需要提供命令");
                     System.exit(1);

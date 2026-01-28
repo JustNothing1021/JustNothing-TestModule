@@ -50,12 +50,12 @@ public class BreakpointMain extends CommandBase {
                 
                 子命令:
                     add <class_name> <method_name> [sig/signature <signature>]  - 添加断点
-                    list                                                      - 列出所有断点
-                    enable <id>                                               - 启用断点
-                    disable <id>                                              - 禁用断点
-                    remove <id>                                               - 移除断点
-                    clear                                                     - 清除所有断点
-                    hits                                                      - 显示断点命中统计
+                    list                                                        - 列出所有断点
+                    enable <id>                                                 - 启用断点
+                    disable <id>                                                - 禁用断点
+                    remove <id>                                                 - 移除断点
+                    clear                                                       - 清除所有断点
+                    hits                                                        - 显示断点命中统计
                 
                 选项:
                     sig, signature   - 指定方法签名，如 "String,int" 表示(String, int)参数的方法
@@ -98,24 +98,16 @@ public class BreakpointMain extends CommandBase {
         String subCommand = args[0];
 
         try {
-            switch (subCommand) {
-                case "add":
-                    return handleAdd(args, classLoader);
-                case "list":
-                    return handleList();
-                case "enable":
-                    return handleEnable(args);
-                case "disable":
-                    return handleDisable(args);
-                case "remove":
-                    return handleRemove(args);
-                case "clear":
-                    return handleClear();
-                case "hits":
-                    return handleHits();
-                default:
-                    return "未知子命令: " + subCommand + "\n" + getHelpText();
-            }
+            return switch (subCommand) {
+                case "add" -> handleAdd(args, classLoader);
+                case "list" -> handleList();
+                case "enable" -> handleEnable(args);
+                case "disable" -> handleDisable(args);
+                case "remove" -> handleRemove(args);
+                case "clear" -> handleClear();
+                case "hits" -> handleHits();
+                default -> "未知子命令: " + subCommand + "\n" + getHelpText();
+            };
         } catch (Exception e) {
             logger.error("执行breakpoint命令失败", e);
             return "错误: " + e.getMessage();

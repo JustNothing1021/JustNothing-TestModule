@@ -1,5 +1,7 @@
 package com.justnothing.testmodule.command.functions.trace;
 
+import androidx.annotation.NonNull;
+
 import com.justnothing.testmodule.hooks.XposedBasicHook;
 import com.justnothing.testmodule.utils.functions.Logger;
 
@@ -262,13 +264,13 @@ public class TraceTask implements Runnable {
             }
         }
 
-        String errorMsg = "未找到匹配签名的方法: " + methodName + " (签名: " + signature + ")\n";
-        errorMsg += "候选方法:\n";
+        StringBuilder errorMsg = new StringBuilder("未找到匹配签名的方法: " + methodName + " (签名: " + signature + ")\n");
+        errorMsg.append("候选方法:\n");
         for (Method m : candidates) {
-            errorMsg += "  " + m + "\n";
+            errorMsg.append("  ").append(m).append("\n");
         }
-        logger.error(errorMsg);
-        throw new NoSuchMethodException(errorMsg);
+        logger.error(errorMsg.toString());
+        throw new NoSuchMethodException(errorMsg.toString());
     }
 
     @Override
@@ -295,6 +297,29 @@ public class TraceTask implements Runnable {
         }
     }
 
+    private int calculateCallDepth() {
+        StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+        int depth = 0;
+        boolean foundAppFrame = false;
+        
+        for (StackTraceElement element : stackTrace) {
+            String className = element.getClassName();
+            
+            if (className.startsWith("com.justnothing.testmodule") ||
+                className.startsWith("de.robv.android.xposed")) {
+                continue;
+            }
+            
+            if (!foundAppFrame) {
+                foundAppFrame = true;
+            } else {
+                depth++;
+            }
+        }
+        
+        return depth;
+    }
+
     private void hookMethod() {
         try {
             TraceLogger logger = new TraceLogger();
@@ -302,26 +327,25 @@ public class TraceTask implements Runnable {
 
             for (Method method : targetMethods) {
                 Class<?>[] paramTypes = method.getParameterTypes();
-                XposedHelpers.findAndHookMethod(targetClass, methodName, paramTypes, new XC_MethodHook() {
+                XC_MethodHook.Unhook unhook = XposedHelpers.findAndHookMethod(targetClass, methodName, paramTypes, new XC_MethodHook() {
+                    private long startTime;
+
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                        startTime = System.currentTimeMillis();
                         String timestamp = new SimpleDateFormat("HH:mm:ss.SSS").format(new java.util.Date());
                         
-                        StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
-                        int depth = 0;
-                        for (StackTraceElement element : stackTrace) {
-                            if (!element.getClassName().startsWith("com.justnothing.testmodule") &&
-                                !element.getClassName().startsWith("de.robv.android.xposed")) {
-                                depth++;
-                            }
-                        }
+                        int depth = calculateCallDepth();
                         
                         CallRecord record = new CallRecord(
                             timestamp,
                             targetClass.getName(),
                             methodName,
                             depth,
-                            param.args
+                            param.args,
+                            null,
+                            null,
+                            0
                         );
                         
                         addCallRecord(record);
@@ -329,7 +353,30 @@ public class TraceTask implements Runnable {
                         
                         callCount.incrementAndGet();
                     }
+
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        long endTime = System.currentTimeMillis();
+                        long duration = endTime - startTime;
+                        String timestamp = new SimpleDateFormat("HH:mm:ss.SSS").format(new java.util.Date());
+                        
+                        int depth = calculateCallDepth();
+                        
+                        CallRecord record = new CallRecord(
+                            timestamp,
+                            targetClass.getName(),
+                            methodName,
+                            depth,
+                            param.args,
+                            param.getResult(),
+                            param.getThrowable(),
+                            duration
+                        );
+                        
+                        addCallRecord(record);
+                    }
                 });
+                methodHooks.add(unhook);
                 logger.info("方法hook成功: " + method);
             }
         } catch (Exception e) {
@@ -340,19 +387,17 @@ public class TraceTask implements Runnable {
     }
 
     private void cleanup() {
-        if (methodHooks != null) {
-            try {
-                for (XC_MethodHook.Unhook methodHook : methodHooks) {
-                    methodHook.unhook();
-                    logger.info("取消hook方法" + methodHook.getHookedMethod());
-                }
-                methodHooks.clear();
-                TraceLogger logger = new TraceLogger();
-                logger.info("取消方法hook完成: " + methodName);
-            } catch (Exception e) {
-                TraceLogger logger = new TraceLogger();
-                logger.error("取消方法hook失败", e);
+        try {
+            for (XC_MethodHook.Unhook methodHook : methodHooks) {
+                methodHook.unhook();
+                logger.info("取消hook方法" + methodHook.getHookedMethod());
             }
+            methodHooks.clear();
+            TraceLogger logger = new TraceLogger();
+            logger.info("取消方法hook完成: " + methodName);
+        } catch (Exception e) {
+            TraceLogger logger = new TraceLogger();
+            logger.error("取消方法hook失败", e);
         }
     }
 
@@ -375,6 +420,18 @@ public class TraceTask implements Runnable {
             }
             node.incrementCallCount();
             node.updateMaxDepth(record.depth);
+            
+            if (record.exception != null) {
+                node.incrementExceptionCount();
+            }
+            
+            if (record.duration > 0) {
+                node.updateDuration(record.duration);
+            }
+            
+            if (record.returnValue != null) {
+                node.addReturnValue(record.returnValue);
+            }
         }
     }
 
@@ -459,15 +516,23 @@ public class TraceTask implements Runnable {
         private final String methodName;
         private final int depth;
         private final Object[] args;
+        private final Object returnValue;
+        private final Throwable exception;
+        private final long duration;
 
-        public CallRecord(String timestamp, String className, String methodName, int depth, Object[] args) {
+        public CallRecord(String timestamp, String className, String methodName, int depth, 
+                         Object[] args, Object returnValue, Throwable exception, long duration) {
             this.timestamp = timestamp;
             this.className = className;
             this.methodName = methodName;
             this.depth = depth;
             this.args = args;
+            this.returnValue = returnValue;
+            this.exception = exception;
+            this.duration = duration;
         }
 
+        @NonNull
         @Override
         public String toString() {
             StringBuilder sb = new StringBuilder();
@@ -486,6 +551,17 @@ public class TraceTask implements Runnable {
                 sb.append("]");
             }
             
+            if (exception != null) {
+                sb.append(" 异常: ").append(exception.getClass().getSimpleName())
+                  .append(": ").append(exception.getMessage());
+            } else if (returnValue != null) {
+                sb.append(" 返回值: ").append(returnValue);
+            }
+            
+            if (duration > 0) {
+                sb.append(" 耗时: ").append(duration).append("ms");
+            }
+            
             return sb.toString();
         }
     }
@@ -494,17 +570,41 @@ public class TraceTask implements Runnable {
         private final String className;
         private final String methodName;
         private final AtomicInteger callCount;
+        private final AtomicInteger exceptionCount;
+        private final List<Object> returnValues;
+        private long totalDuration;
+        private long maxDuration;
+        private long minDuration;
         private int maxDepth;
 
         public CallNode(String className, String methodName) {
             this.className = className;
             this.methodName = methodName;
             this.callCount = new AtomicInteger(0);
+            this.exceptionCount = new AtomicInteger(0);
+            this.returnValues = new ArrayList<>();
+            this.totalDuration = 0;
+            this.maxDuration = 0;
+            this.minDuration = Long.MAX_VALUE;
             this.maxDepth = 0;
         }
 
         public void incrementCallCount() {
             callCount.incrementAndGet();
+        }
+
+        public void incrementExceptionCount() {
+            exceptionCount.incrementAndGet();
+        }
+
+        public void updateDuration(long duration) {
+            totalDuration += duration;
+            if (duration > maxDuration) {
+                maxDuration = duration;
+            }
+            if (duration < minDuration) {
+                minDuration = duration;
+            }
         }
 
         public void updateMaxDepth(int depth) {
@@ -513,18 +613,69 @@ public class TraceTask implements Runnable {
             }
         }
 
+        public void addReturnValue(Object value) {
+            if (returnValues.size() < 10) {
+                returnValues.add(value);
+            }
+        }
+
         public int getCallCount() {
             return callCount.get();
+        }
+
+        public int getExceptionCount() {
+            return exceptionCount.get();
         }
 
         public int getMaxDepth() {
             return maxDepth;
         }
 
+        public long getAvgDuration() {
+            int count = callCount.get();
+            return count > 0 ? totalDuration / count : 0;
+        }
+
+        public long getMaxDuration() {
+            return maxDuration;
+        }
+
+        public long getMinDuration() {
+            return minDuration == Long.MAX_VALUE ? 0 : minDuration;
+        }
+
+        @NonNull
         @Override
         public String toString() {
-            return String.format("%s.%s (调用次数: %d, 最大深度: %d)",
-                    className, methodName, callCount.get(), maxDepth);
+            StringBuilder sb = new StringBuilder();
+            sb.append(className).append(".").append(methodName);
+            sb.append(" (调用次数: ").append(callCount.get());
+            
+            if (exceptionCount.get() > 0) {
+                sb.append(", 异常次数: ").append(exceptionCount.get());
+            }
+            
+            sb.append(", 最大深度: ").append(maxDepth);
+            
+            if (totalDuration > 0) {
+                sb.append(", 平均耗时: ").append(getAvgDuration()).append("ms");
+                sb.append(", 最大耗时: ").append(maxDuration).append("ms");
+                sb.append(", 最小耗时: ").append(getMinDuration()).append("ms");
+            }
+            
+            sb.append(")");
+            
+            if (!returnValues.isEmpty()) {
+                sb.append("\n  返回值示例: ");
+                for (int i = 0; i < returnValues.size(); i++) {
+                    sb.append(returnValues.get(i));
+                    if (i < returnValues.size() - 1) {
+                        sb.append(", ");
+                    }
+                }
+            }
+            
+            return sb.toString();
         }
     }
 }

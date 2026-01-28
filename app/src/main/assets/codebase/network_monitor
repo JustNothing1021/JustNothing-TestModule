@@ -1,5 +1,5 @@
 // 网络请求监控Hook - Before阶段
-// 使用方法：hook add java.net.URL openConnection before codebase network_monitor.java
+// 使用方法：hook add java.net.URL openConnection before codebase network_monitor
 // 脚本默认位于：/data/local/tmp/methods/scripts/
 //
 // 注意：这个脚本会监视所有基于java.net.URL的网络请求

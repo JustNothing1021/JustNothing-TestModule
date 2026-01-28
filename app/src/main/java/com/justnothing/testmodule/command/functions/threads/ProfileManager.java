@@ -1,4 +1,4 @@
-package com.justnothing.testmodule.command.functions.profile;
+package com.justnothing.testmodule.command.functions.threads;
 
 import com.justnothing.testmodule.utils.functions.Logger;
 
@@ -9,6 +9,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -117,7 +118,8 @@ public class ProfileManager {
         sb.append("===== 进程资源统计 =====\n");
         for (Map.Entry<String, ProcessStats> entry : processStatsMap.entrySet()) {
             ProcessStats stats = entry.getValue();
-            sb.append(String.format("  %s: CPU=%.2f%%, 内存=%s, 线程=%d\n",
+            sb.append(String.format(Locale.getDefault(),
+                    "  %s: CPU=%.2f%%, 内存=%s, 线程=%d\n",
                     entry.getKey(),
                     stats.cpuUsage * 100,
                     formatBytes(stats.memoryUsage),
@@ -128,7 +130,8 @@ public class ProfileManager {
         sb.append("===== 线程资源统计 =====\n");
         for (Map.Entry<String, ThreadStats> entry : threadStatsMap.entrySet()) {
             ThreadStats stats = entry.getValue();
-            sb.append(String.format("  %s: CPU=%.2f%%, 状态=%s\n",
+            sb.append(String.format(Locale.getDefault(),
+                    "  %s: CPU=%.2f%%, 状态=%s\n",
                     entry.getKey(),
                     stats.cpuUsage * 100,
                     stats.state));
@@ -141,7 +144,8 @@ public class ProfileManager {
         for (int i = 0; i < sampleCount; i++) {
             int index = i * step;
             ProfileSample sample = samples.get(index);
-            sb.append(String.format("  [%s] CPU=%.2f%%, 内存=%s\n",
+            sb.append(String.format(Locale.getDefault(),
+                    "  [%s] CPU=%.2f%%, 内存=%s\n",
                     sample.timestamp,
                     sample.cpuUsage * 100,
                     formatBytes(sample.memoryUsage)));
@@ -160,7 +164,7 @@ public class ProfileManager {
                 writer.write("===== 系统资源概况 =====\n");
                 if (!samples.isEmpty()) {
                     ProfileSample lastSample = samples.get(samples.size() - 1);
-                    writer.write("CPU使用率: " + String.format("%.2f%%", lastSample.cpuUsage * 100) + "\n");
+                    writer.write("CPU使用率: " + String.format(Locale.getDefault(), "%.2f%%", lastSample.cpuUsage * 100) + "\n");
                     writer.write("内存使用: " + formatBytes(lastSample.memoryUsage) + "\n");
                     writer.write("线程数: " + lastSample.threadCount + "\n");
                     writer.write("进程数: " + lastSample.processCount + "\n\n");
@@ -169,7 +173,8 @@ public class ProfileManager {
                 writer.write("===== 进程资源统计 =====\n");
                 for (Map.Entry<String, ProcessStats> entry : processStatsMap.entrySet()) {
                     ProcessStats stats = entry.getValue();
-                    writer.write(String.format("  %s: CPU=%.2f%%, 内存=%s, 线程=%d\n",
+                    writer.write(String.format(Locale.getDefault(),
+                            "  %s: CPU=%.2f%%, 内存=%s, 线程=%d\n",
                             entry.getKey(),
                             stats.cpuUsage * 100,
                             formatBytes(stats.memoryUsage),
@@ -180,7 +185,8 @@ public class ProfileManager {
                 writer.write("===== 线程资源统计 =====\n");
                 for (Map.Entry<String, ThreadStats> entry : threadStatsMap.entrySet()) {
                     ThreadStats stats = entry.getValue();
-                    writer.write(String.format("  %s: CPU=%.2f%%, 状态=%s\n",
+                    writer.write(String.format(Locale.getDefault(),
+                            "  %s: CPU=%.2f%%, 状态=%s\n",
                             entry.getKey(),
                             stats.cpuUsage * 100,
                             stats.state));
@@ -216,11 +222,11 @@ public class ProfileManager {
         if (bytes < 1024) {
             return bytes + " B";
         } else if (bytes < 1024 * 1024) {
-            return String.format("%.2f KB", bytes / 1024.0);
+            return String.format(Locale.getDefault(), "%.2f KB", bytes / 1024.0);
         } else if (bytes < 1024 * 1024 * 1024) {
-            return String.format("%.2f MB", bytes / (1024.0 * 1024.0));
+            return String.format(Locale.getDefault(), "%.2f MB", bytes / (1024.0 * 1024.0));
         } else {
-            return String.format("%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0));
+            return String.format(Locale.getDefault(), "%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0));
         }
     }
     
@@ -241,7 +247,8 @@ public class ProfileManager {
         
         @Override
         public String toString() {
-            return String.format("[%s] CPU=%.2f%%, 内存=%s, 线程=%d, 进程=%d",
+            return String.format(Locale.getDefault(),
+                    "[%s] CPU=%.2f%%, 内存=%s, 线程=%d, 进程=%d",
                     timestamp, cpuUsage * 100, formatBytes(memoryUsage), threadCount, processCount);
         }
         
@@ -249,11 +256,11 @@ public class ProfileManager {
             if (bytes < 1024) {
                 return bytes + " B";
             } else if (bytes < 1024 * 1024) {
-                return String.format("%.2f KB", bytes / 1024.0);
+                return String.format(Locale.getDefault(), "%.2f KB", bytes / 1024.0);
             } else if (bytes < 1024 * 1024 * 1024) {
-                return String.format("%.2f MB", bytes / (1024.0 * 1024.0));
+                return String.format(Locale.getDefault(), "%.2f MB", bytes / (1024.0 * 1024.0));
             } else {
-                return String.format("%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0));
+                return String.format(Locale.getDefault(), "%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0));
             }
         }
     }

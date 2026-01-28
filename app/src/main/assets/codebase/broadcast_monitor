@@ -1,5 +1,5 @@
 // BroadcastReceiver监控Hook - Before阶段
-// 使用方法：hook add android.app.ActivityThread handleReceiver before codebase broadcast_monitor.java
+// 使用方法：hook add android.app.ActivityThread handleReceiver before codebase broadcast_monitor
 // 脚本默认位于：/data/local/tmp/methods/scripts/
 //
 // 注意：这个脚本会监视所有BroadcastReceiver的接收

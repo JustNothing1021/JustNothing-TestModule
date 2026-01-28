@@ -1,5 +1,5 @@
 // Activity创建监控Hook - After阶段
-// 使用方法：hook add android.app.ActivityThread performLaunchActivity after codebase activity_launch_monitor.java
+// 使用方法：hook add android.app.ActivityThread performLaunchActivity after codebase activity_launch_monitor
 // 脚本默认位于：/data/local/tmp/methods/scripts/
 //
 // 注意：这个脚本会监视所有Activity的启动，包括应用内和其他应用的Activity

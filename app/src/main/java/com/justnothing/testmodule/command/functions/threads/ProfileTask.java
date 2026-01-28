@@ -1,4 +1,4 @@
-package com.justnothing.testmodule.command.functions.profile;
+package com.justnothing.testmodule.command.functions.threads;
 
 import com.justnothing.testmodule.utils.functions.Logger;
 

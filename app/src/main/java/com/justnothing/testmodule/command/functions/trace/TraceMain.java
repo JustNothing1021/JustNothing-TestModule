@@ -70,22 +70,15 @@ public class TraceMain extends CommandBase {
         TraceManager manager = TraceManager.getInstance();
 
         try {
-            switch (subCommand) {
-                case "add":
-                    return handleAdd(args, classLoader, manager);
-                case "list":
-                    return handleList(manager);
-                case "show":
-                    return handleShow(args, manager);
-                case "export":
-                    return handleExport(args, manager);
-                case "stop":
-                    return handleStop(args, manager);
-                case "clear":
-                    return handleClear(manager);
-                default:
-                    return "未知子命令: " + subCommand + "\n" + getHelpText();
-            }
+            return switch (subCommand) {
+                case "add" -> handleAdd(args, classLoader, manager);
+                case "list" -> handleList(manager);
+                case "show" -> handleShow(args, manager);
+                case "export" -> handleExport(args, manager);
+                case "stop" -> handleStop(args, manager);
+                case "clear" -> handleClear(manager);
+                default -> "未知子命令: " + subCommand + "\n" + getHelpText();
+            };
         } catch (Exception e) {
             logger.error("执行trace命令失败", e);
             return "错误: " + e.getMessage() +

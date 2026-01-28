@@ -157,7 +157,7 @@ execute_java_client() {
     local java_args=""
     if [ "$mode" = "socket" ]; then
         request_update_port_file
-        java_args="--socket"
+        java_args="--auto"
     elif [ "$mode" = "file" ]; then
         java_args="--file"
     fi

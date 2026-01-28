@@ -1,4 +1,4 @@
-package com.justnothing.testmodule.command.functions.output;
+package com.justnothing.testmodule.command.functions.examples;
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;

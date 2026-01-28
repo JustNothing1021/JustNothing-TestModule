@@ -1,5 +1,5 @@
 // 方法返回值修改示例 - Replace阶段
-// 使用方法：hook add java.lang.System currentTimeMillis replace codebase modify_return_value.java
+// 使用方法：hook add java.lang.System currentTimeMillis replace codebase modify_return_value
 // 脚本默认位于：/data/local/tmp/methods/scripts/
 //
 // 注意：这个脚本会修改currentTimeMillis的返回值，用于测试时间相关的功能

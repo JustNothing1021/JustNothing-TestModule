@@ -1346,6 +1346,7 @@ public class TestInterpreter {
                     + (sb.length() > 0 ? "\nAvailable signatures:\n" + sb + "\n" : ""));
         }
 
+        // 我也不知道是什么东西，反正就莫名其妙能用了
         private boolean canAccessMethod(Method method, Object targetObj) {
             try {
                 Method canAccessMethod = AccessibleObject.class.getMethod("canAccess", Object.class);
