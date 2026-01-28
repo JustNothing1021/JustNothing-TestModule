@@ -11,6 +11,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -310,6 +311,7 @@ public class TestInterpreter {
         private IOutputHandler warnMsgBuffer;
         private final ConcurrentHashMap<String, Class<?>> classCache;
         private final ConcurrentHashMap<String, ClassDefinition> customClasses;
+        private final ConcurrentHashMap<String, Method> methodCache;
         private final Stack<Map<String, Variable>> scopeStack = new Stack<>();
         private boolean shouldBreak;
         private boolean shouldContinue;
@@ -327,6 +329,7 @@ public class TestInterpreter {
             this.imports = new ArrayList<>();
             this.classCache = new ConcurrentHashMap<>();
             this.customClasses = new ConcurrentHashMap<>();
+            this.methodCache = new ConcurrentHashMap<>();
             setupDefaultImports();
             setupBuiltInFunctions();
             logger.debug("ExecutionContext初始化完成");
@@ -344,6 +347,7 @@ public class TestInterpreter {
             this.imports = new ArrayList<>();
             this.classCache = new ConcurrentHashMap<>();
             this.customClasses = new ConcurrentHashMap<>();
+            this.methodCache = new ConcurrentHashMap<>();
             setupDefaultImports();
             setupBuiltInFunctions();
             logger.debug("ExecutionContext初始化完成");
@@ -517,6 +521,8 @@ public class TestInterpreter {
                 addImport("java.lang.*", false);
                 addImport("android.util.*", false);
                 addImport("android.os.*", false);
+                addImport("java.util.function.*", false);
+                addImport("com.justnothing.testmodule.command.functions.script.TestInterpreter$Lambda", false);
                 logger.debug("默认导入设置完成");
             } catch (ClassNotFoundException e) {
                 logger.error("设置默认导入失败", e);
@@ -680,13 +686,35 @@ public class TestInterpreter {
                     }
                 }
                 clazz = findClassThroughApi(fullClassName, classLoader);
+
                 if (clazz != null) {
-                    logger.debug("通过导入找到类: " + clazz.getName());
+                    logger.debug("通过完整类名找到类: " + clazz.getName());
                     return clazz;
+                }
+                
+                String[] parts = fullClassName.split("\\.");
+                if (parts.length >= 2) {
+                    for (int i = parts.length - 1; i >= 1; i--) {
+                        StringBuilder nestedClassName = new StringBuilder(parts[0]);
+                        for (int j = 1; j < parts.length; j++) {
+                            if (j < i) {
+                                nestedClassName.append('.').append(parts[j]);
+                            } else {
+                                nestedClassName.append('$').append(parts[j]);
+                            }
+                        }
+                        clazz = findClassThroughApi(nestedClassName.toString(), classLoader);
+                        
+                        if (clazz != null) {
+                            logger.debug("通过嵌套类名找到类: " + clazz.getName());
+                            return clazz;
+                        }
+                    }
                 }
             }
             throw new ClassNotFoundException("Class not found: " + className);
         }
+
 
         private void setupBuiltInFunctions() {
             addBuiltIn("println", args -> {
@@ -1098,7 +1126,6 @@ public class TestInterpreter {
                                     }
                                 }
                                 if (match) {
-                                    constructor.setAccessible(true);
                                     return constructor.newInstance(args);
                                 }
                             }
@@ -1109,7 +1136,7 @@ public class TestInterpreter {
                 }
             });
 
-            // 添加函数式接口支持
+            // 添加函数接口支持
             addBuiltIn("asRunnable", args -> {
                 if (args.size() != 1) {
                     throw new RuntimeException("asRunnable requires one parameter: lambda expression or function");
@@ -1205,7 +1232,7 @@ public class TestInterpreter {
                     .map(arg -> arg != null ? arg.getClass() : Void.class)
                     .collect(Collectors.toList());
 
-            Method method = findMethod(clazz, methodName, argTypes);
+            Method method = findMethod(clazz, methodName, argTypes, targetObj);
             return method.invoke(targetObj, args.toArray());
         }
 
@@ -1220,12 +1247,49 @@ public class TestInterpreter {
         }
 
         public Method findMethod(Class<?> clazz, String name, List<Class<?>> argTypes) throws Exception {
+            return findMethod(clazz, name, argTypes, null);
+        }
+
+        private String getMethodCacheKey(Class<?> clazz, String name, List<Class<?>> argTypes) {
+            StringBuilder key = new StringBuilder();
+            key.append(clazz.getName()).append(".").append(name).append("(");
+            for (int i = 0; i < argTypes.size(); i++) {
+                if (i > 0) {
+                    key.append(",");
+                }
+                key.append(argTypes.get(i).getName());
+            }
+            key.append(")");
+            return key.toString();
+        }
+
+        public Method findMethod(Class<?> clazz, String name, List<Class<?>> argTypes, Object targetObj) throws Exception {
+            String cacheKey = getMethodCacheKey(clazz, name, argTypes);
+            
+            if (methodCache.containsKey(cacheKey)) {
+                Method cachedMethod = methodCache.get(cacheKey);
+                if (targetObj != null && !canAccessMethod(cachedMethod, targetObj)) {
+                    logger.debug("缓存的方法" + cacheKey + "无法访问，重新查找");
+                } else {
+                    if (cachedMethod != null) return cachedMethod;
+                }
+            }
+            
             Method applicable = null;
             StringBuilder sb = new StringBuilder();
             for (Method method : clazz.getMethods()) {
                 if (method.getName().equals(name)) {
                     sb.append(Arrays.toString(method.getParameterTypes())).append("\n");
                     if (Arrays.equals(method.getParameterTypes(), argTypes.toArray())) {
+                        if (targetObj != null && !canAccessMethod(method, targetObj)) {
+                            logger.warn("方法 " + clazz.getName() + "." + name + " 无法直接访问，尝试通过接口查找");
+                            Method interfaceMethod = findMethodThroughInterfaces(clazz, name, argTypes);
+                            methodCache.put(cacheKey, interfaceMethod);
+                            logger.debug("方法已缓存: " + cacheKey + " -> " + interfaceMethod.getDeclaringClass().getName() + "." + name);
+                            return interfaceMethod;
+                        }
+                        methodCache.put(cacheKey, method);
+                        logger.debug("方法已缓存: " + cacheKey + " -> " + method.getDeclaringClass().getName() + "." + name);
                         return method;
                     } else if (isApplicableArgs(method.getParameterTypes(), argTypes)) {
                         applicable = method;
@@ -1233,9 +1297,15 @@ public class TestInterpreter {
                 }
             }
             if (applicable != null) {
-                // logger.warn("使用了参数不完全匹配的类方法" + clazz.getName() + "." + name);
-                // logger.warn("要求的参数: " + Arrays.toString(argTypes.toArray()));
-                // logger.warn("实际参数: " + Arrays.toString(applicable.getParameterTypes()));
+                if (targetObj != null && !canAccessMethod(applicable, targetObj)) {
+                    logger.warn("方法 " + clazz.getName() + "." + name + " 无法直接访问，尝试通过接口查找");
+                    Method interfaceMethod = findMethodThroughInterfaces(clazz, name, argTypes);
+                    methodCache.put(cacheKey, interfaceMethod);
+                    logger.debug("方法已缓存: " + cacheKey + " -> " + interfaceMethod.getDeclaringClass().getName() + "." + name);
+                    return interfaceMethod;
+                }
+                methodCache.put(cacheKey, applicable);
+                logger.debug("方法已缓存: " + cacheKey + " -> " + applicable.getDeclaringClass().getName() + "." + name);
                 return applicable;
             }
             logger.error("找不到类" + clazz.getName() + "的方法" + name + "，参数为" + Arrays.toString(argTypes.toArray()));
@@ -1245,7 +1315,37 @@ public class TestInterpreter {
             throw new NoSuchMethodException("Method not found: " +
                     clazz.getName() + "." + name + "(" + sigString + ")"
                     + (sb.length() > 0 ? "\nAvailable signatures:\n" + sb + "\n" : ""));
+        }
 
+        private boolean canAccessMethod(Method method, Object targetObj) {
+            try {
+                Method canAccessMethod = AccessibleObject.class.getMethod("canAccess", Object.class);
+                return (boolean) canAccessMethod.invoke(method, targetObj);
+            } catch (Exception e) {
+                return true;
+            }
+        }
+
+        private Method findMethodThroughInterfaces(Class<?> clazz, String name, List<Class<?>> argTypes) throws Exception {
+            Class<?>[] interfaces = clazz.getInterfaces();
+            
+            for (Class<?> iface : interfaces) {
+                try {
+                    return findMethod(iface, name, argTypes);
+                } catch (NoSuchMethodException e) {
+                    continue;
+                }
+            }
+            
+            Class<?> superClass = clazz.getSuperclass();
+            if (superClass != null && superClass != Object.class) {
+                try {
+                    return findMethod(superClass, name, argTypes);
+                } catch (NoSuchMethodException e) {
+                }
+            }
+            
+            throw new NoSuchMethodException("No such method " + name + " in " + clazz.getName() + " or its interfaces");
         }
     }
 
@@ -2495,7 +2595,6 @@ public class TestInterpreter {
                 }
 
                 Constructor<?> constructor = findConstructor(clazz, argTypes);
-                constructor.setAccessible(true);
                 return constructor.newInstance(args);
             }
 
@@ -2735,8 +2834,21 @@ public class TestInterpreter {
                 throw new RuntimeException("Cannot determine target for field access: " + fieldName);
             }
 
+            // 特殊处理数组的length字段
+            if (targetObj != null && targetObj.getClass().isArray() && "length".equals(fieldName)) {
+                return java.lang.reflect.Array.getLength(targetObj);
+            }
+            
+          
+
             Field field = findField(targetClass, fieldName);
-            field.setAccessible(true);
+            if (!Modifier.isPublic(field.getModifiers())) {
+                try {
+                    field.setAccessible(true);
+                } catch (Exception e) {
+                    logger.warn("无法设置字段可访问性: " + field.getName() + ", 将尝试直接访问");
+                }
+            }
 
             // 检查字段是否是静态的
             boolean isStatic = Modifier.isStatic(field.getModifiers());
@@ -3427,7 +3539,7 @@ public class TestInterpreter {
                         if (loopCount >= MAX_LOOPS)
                             break;
 
-                        context.castObject(item, clazz);
+                        item = context.castObject(item, clazz);
 
                         context.setVariable(itemName, item);
 
@@ -3453,10 +3565,8 @@ public class TestInterpreter {
                         if (loopCount >= MAX_LOOPS)
                             break;
 
-                        context.castObject(item, clazz);
-
+                        item = context.castObject(item, clazz);
                         context.setVariable(itemName, item);
-
                         lastResult = body.evaluate(context);
 
                         if (context.shouldBreak) {
@@ -4217,7 +4327,7 @@ public class TestInterpreter {
     public static class LambdaNode extends ASTNode {
         private final List<String> parameters;
         private final ASTNode body;
-        private final String functionalInterfaceName; // 函数式接口名
+        private final String functionalInterfaceName;
 
         public LambdaNode(List<String> parameters, ASTNode body, String functionalInterfaceName) {
             this.parameters = parameters;
@@ -4240,7 +4350,13 @@ public class TestInterpreter {
         }
 
         private Object toFunctionalInterface(Lambda lambda, Class<?> functionalInterfaceClass) throws Exception {
-            // 对于常见的函数式接口，提供直接转换
+            if (!functionalInterfaceClass.isAnnotationPresent(FunctionalInterface.class)) {
+                logger.error("不是函数接口" 
+                        + functionalInterfaceClass.getName());
+                throw new RuntimeException(functionalInterfaceClass + " is not annotated with " + FunctionalInterface.class);
+            }
+            
+            // 对于常见的函数接口，提供直接转换
             if (functionalInterfaceClass == Supplier.class) {
                 checkParameterCount(lambda, 0, Supplier.class.getName(), "get");
                 return (Supplier<Object>) () -> lambda.call();
@@ -4255,7 +4371,7 @@ public class TestInterpreter {
                 return (Predicate<Object>) (arg) -> (Boolean) lambda.call(arg);
             }
             
-            // 对于其他函数式接口用Proxy
+            // 对于其他函数接口用Proxy
             Method[] methods = functionalInterfaceClass.getMethods();
             Method functionalMethod = null;
             
@@ -4266,7 +4382,8 @@ public class TestInterpreter {
                 if (functionalMethod == null) {
                     functionalMethod = method;
                 } else {
-                    throw new IllegalArgumentException("不是函数式接口: " + functionalInterfaceClass.getName());
+                    throw new IllegalArgumentException("不是函数接口（有多个抽象方法）: " 
+                            + functionalInterfaceClass.getName());
                 }
             }
             
@@ -4281,7 +4398,6 @@ public class TestInterpreter {
             final Method finalFunctionalMethod = functionalMethod;
             logger.info("当前尝试把Lambda转为" + functionalInterfaceClass.getName() 
                             + "，将会识别" + functionalMethod.getName() + "为函数执行接口");
-            
             return Proxy.newProxyInstance(
                 functionalInterfaceClass.getClassLoader(),
                 new Class<?>[] { functionalInterfaceClass },
@@ -5981,16 +6097,57 @@ public class TestInterpreter {
         private String parseClassIdentifier() {
             StringBuilder sb = new StringBuilder();
             savePosition();
+            boolean inSquareBrackets = false;
+            int genericDepth = 0; // 当前套了几层模板类
             while (position < input.length()) {
                 char c = input.charAt(position);
                 // 类名可以包含字母, 数字, 下划线, 小数点(完整的类名), 方括号(数组), 大小于号(模板类), 问号(泛型)和美元符号
                 if (Character.isLetterOrDigit(c) || c == '_' || c == '$' || c == '?'
                         || c == '.' || c == '[' || c == ']' || c == '<' || c == '>') {
+                    if (c == ']') {
+                        if (inSquareBrackets) inSquareBrackets = false;
+                        else {
+                            logger.error("类型的方括号不匹配（缺少左方括号）");
+                            unexpectedToken("Missing '['");
+                        }
+                    } else if (c == '[') {
+                        if (inSquareBrackets) {
+                            logger.error("类型的方括号不匹配（缺少左方括号）");
+                            unexpectedToken("Extra '['");
+                        } else inSquareBrackets = true;
+                    } else if (c == '<') {
+                        genericDepth++;
+                    } else if (c == '>') {
+                        if (genericDepth == 0) {
+                            logger.error("类型的尖括号不匹配（缺少小于号）");
+                            unexpectedToken("Missing '<'");
+                        } else genericDepth--;
+                    }
                     sb.append(c);
-                    position++;
                 } else {
-                    break;
+                    if (c == ' ') {
+                        if (inSquareBrackets || genericDepth > 0) {
+                            sb.append(c);
+                        } else {
+                            break;
+                        }
+                    } else if (c == ',') {
+                        if (genericDepth > 0) {
+                            sb.append(c);
+                        }
+                    } else {
+                        break;
+                    }
                 }
+                position++;
+            }
+            if (genericDepth > 0) {
+                logger.error("类型的尖括号不匹配（缺少大于号）");
+                unexpectedToken("Missing '>'");
+            }
+            if (inSquareBrackets) {
+                logger.error("类型的方括号不匹配（缺少右方括号）");
+                unexpectedToken("Missing ']'");
             }
             String result = sb.toString();
             if (result.isEmpty()) {
@@ -7365,6 +7522,7 @@ public class TestInterpreter {
 
     public static void main(String[] args) {
         TestInterpreter.ScriptRunner runner = new ScriptRunner(Thread.currentThread().getContextClassLoader());
+        
         while (true) {
             String code;
             try {
