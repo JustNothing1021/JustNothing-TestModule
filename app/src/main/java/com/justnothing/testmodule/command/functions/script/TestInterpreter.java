@@ -15,6 +15,7 @@ import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Proxy;
@@ -136,7 +137,7 @@ public class TestInterpreter {
         }
     }
 
-    private static final String getStackTraceString(Throwable th) {
+    private static String getStackTraceString(Throwable th) {
         StringWriter sw = new StringWriter();
         PrintWriter pw = new PrintWriter(sw);
         th.printStackTrace(pw);
@@ -486,6 +487,10 @@ public class TestInterpreter {
         }
 
         public <T> T castObject(Object object, Class<T> clazz) {
+            if (object == null) return null;
+            if (clazz.equals(String.class)) {
+                return clazz.cast(object.toString());
+            }
             return clazz.cast(object);
         }
 
@@ -783,7 +788,7 @@ public class TestInterpreter {
 
                 Class<?> clazz = target.getClass();
                 result.append("=== Object Analysis ===\n");
-                result.append("String: ").append(target.toString()).append("\n");
+                result.append("String: ").append(target).append("\n");
                 result.append("Class Name: ").append(clazz.getName()).append("\n");
                 result.append("Simple Name: ").append(clazz.getSimpleName()).append("\n");
                 result.append("Package: ").append(clazz.getPackage() != null ? clazz.getPackage().getName() : "None")
@@ -1233,7 +1238,18 @@ public class TestInterpreter {
                     .collect(Collectors.toList());
 
             Method method = findMethod(clazz, methodName, argTypes, targetObj);
-            return method.invoke(targetObj, args.toArray());
+            try {
+                return method.invoke(targetObj, args.toArray());
+            } catch (InvocationTargetException e) {
+                Throwable cause = e.getCause();
+                if (cause instanceof Exception) {
+                    throw (Exception) cause;
+                } else if (cause instanceof Error) {
+                    throw (Error) cause;
+                } else {
+                    throw new Exception(cause);
+                }
+            }
         }
 
         public Object callStaticMethod(String className, String methodName, List<Object> args) throws Exception {
@@ -1243,7 +1259,20 @@ public class TestInterpreter {
             }
             Method method = findMethod(clazz, methodName,
                     args.stream().map(Object::getClass).collect(Collectors.toList()));
-            return method.invoke(null, args.toArray());
+            try {
+                return method.invoke(null, args.toArray());
+            } catch (java.lang.reflect.InvocationTargetException e) {
+                Throwable cause = e.getCause();
+                if (cause instanceof Exception) {
+                    throw (Exception) cause;
+                } else if (cause instanceof RuntimeException) {
+                    throw (RuntimeException) cause;
+                } else if (cause instanceof Error) {
+                    throw (Error) cause;
+                } else {
+                    throw e;
+                }
+            }
         }
 
         public Method findMethod(Class<?> clazz, String name, List<Class<?>> argTypes) throws Exception {
@@ -1341,7 +1370,7 @@ public class TestInterpreter {
             if (superClass != null && superClass != Object.class) {
                 try {
                     return findMethod(superClass, name, argTypes);
-                } catch (NoSuchMethodException e) {
+                } catch (NoSuchMethodException ignored) {
                 }
             }
             
@@ -1916,9 +1945,10 @@ public class TestInterpreter {
         }
 
         private Object add(Object a, Object b) {
-            if (a == null || b == null) {
+            if (a != null && a instanceof String) { // 特例，String可以加null
+                return a + String.valueOf(b);
+            } else if ((a == null || b == null)) {
                 logger.error("无法在null值上执行运算: a = " + a + ", b = " + b);
-
                 throw new RuntimeException("Cannot apply operations on null values");
             }
             if (a instanceof Number num1 && b instanceof Number num2) {
@@ -1932,8 +1962,6 @@ public class TestInterpreter {
                     return num1.longValue() + num2.longValue();
                 }
                 return num1.intValue() + num2.intValue();
-            } else if (a instanceof String || b instanceof String) {
-                return a + b.toString();
             }
             logger.error("无法在" + a.getClass() + "和" + b.getClass() + "之间进行加法运算");
             throw new RuntimeException("Cannot add: " + a.getClass() + " and " + b.getClass());
@@ -1963,7 +1991,9 @@ public class TestInterpreter {
 
         private Object multiply(Object a, Object b) {
             if (a == null || b == null) {
-                logger.error("无法在null值上执行运算: a = " + a + ", b = " + b);
+                String aStr = (a == null) ? "null" : a.toString();
+                String bStr = (b == null) ? "null" : b.toString();
+                logger.error("无法在null值上执行运算: a = " + aStr + ", b = " + bStr);
                 throw new RuntimeException("Cannot apply operations on null values");
             }
             if (a instanceof Number num1 && b instanceof Number num2) {
@@ -1987,8 +2017,9 @@ public class TestInterpreter {
 
         private Object divide(Object a, Object b) {
             if (a == null || b == null) {
-                logger.error("无法在null值上执行运算: a = " + a + ", b = " + b);
-
+                String aStr = (a == null) ? "null" : a.toString();
+                String bStr = (b == null) ? "null" : b.toString();
+                logger.error("无法在null值上执行运算: a = " + aStr + ", b = " + bStr);
                 throw new RuntimeException("Cannot apply operations on null values");
             }
             if (a instanceof Number num1 && b instanceof Number num2) {
@@ -2009,8 +2040,9 @@ public class TestInterpreter {
 
         private Object modulo(Object a, Object b) {
             if (a == null || b == null) {
-                logger.error("无法在null值上执行运算: a = " + a + ", b = " + b);
-
+                String aStr = (a == null) ? "null" : a.toString();
+                String bStr = (b == null) ? "null" : b.toString();
+                logger.error("无法在null值上执行运算: a = " + aStr + ", b = " + bStr);
                 throw new RuntimeException("Cannot apply operations on null values");
             }
             if (a instanceof Number num1 && b instanceof Number num2) {
@@ -2412,6 +2444,12 @@ public class TestInterpreter {
                     }
                 }
 
+                if (target instanceof ClassReferenceNode) {
+                    ClassReferenceNode classRef = (ClassReferenceNode) target;
+                    String className = classRef.className;
+                    return context.callStaticMethod(className, methodName, argsList);
+                }
+
                 return context.callMethod(targetObj, methodName, argsList);
             }
 
@@ -2429,7 +2467,7 @@ public class TestInterpreter {
             Class<?> targetClass;
 
             if (targetObj instanceof Class) {
-                targetClass = (Class<?>) targetObj;
+                targetClass = Class.class;
             } else if (targetObj != null) {
                 targetClass = targetObj.getClass();
             } else if (target instanceof ClassReferenceNode) {
@@ -4324,6 +4362,48 @@ public class TestInterpreter {
         }
     }
 
+    public static class CastNode extends ASTNode {
+        private final String className;
+        private final ASTNode expression;
+
+        public CastNode(String className, ASTNode expression) {
+            this.className = className;
+            this.expression = expression;
+        }
+
+        @Override
+        public Object evaluate(ExecutionContext context) throws Exception {
+            Object value = expression.evaluate(context);
+            if (value == null) {
+                return null;
+            }
+            try {
+                Class<?> targetType = context.findClass(className);
+                return context.castObject(value, targetType);
+            } catch (ClassNotFoundException e) {
+                Variable var = context.getVariable(className);
+                if (var == null) {
+                    logger.error("尝试转换的类型" + className + "既不是类也不是变量");
+                    throw e;
+                } else {
+                    if (var.type == Class.class) {
+                        return context.castObject(value, (Class<?>) var.value);
+                    } else {
+                        logger.error("尝试用不是Class类的变量" + className + "作为转换目标类");
+                        throw new Exception("Try to cast with " + className + " which was found as a variable but not instanceof Class.class");
+                    }
+                }
+            }
+
+        }
+
+        @Override
+        public Class<?> getType(ExecutionContext context) throws Exception {
+            return context.findClass(className);
+        }
+
+    }
+
     public static class LambdaNode extends ASTNode {
         private final List<String> parameters;
         private final ASTNode body;
@@ -4587,7 +4667,7 @@ public class TestInterpreter {
             return null;
         }
 
-        public Class<?> getType(ExecutionContext context) throws Exception {
+        public Class<?> getType(ExecutionContext context) {
             return Void.class;
         }
     }
@@ -4636,16 +4716,6 @@ public class TestInterpreter {
          */
         private int restorePosition() {
             position = savedPositions.pop();
-            return position;
-        }
-
-        /**
-         * 恢复到上次保存的位置，但是不把位置从记录中消去。
-         *
-         * @return 返回到的位置
-         */
-        private int restoreAndKeepPosition() {
-            position = savedPositions.peek();
             return position;
         }
 
@@ -4847,9 +4917,44 @@ public class TestInterpreter {
          * 跳过接下来的所有空白字符，直到遇到不是空白的字符。
          */
         private void skipWhitespace() {
-            while (Character.isWhitespace(peek())) {
-                advance();
+            while (position < input.length()) {
+                char ch = peek();
+                if (Character.isWhitespace(ch)) {
+                    advance();
+                } else if (isTargetWord("//")) {
+                    skipLineComment();
+                } else if (isTargetWord("/*")) {
+                    skipBlockComment();
+                } else {
+                    break;
+                }
             }
+        }
+
+        private void skipLineComment() {
+            if (!input.substring(position).startsWith("//")) {
+                throw new RuntimeException("Expected '//' at position " + position);
+            }
+            position += 2;
+            while (position < input.length() && peek() != '\n' && peek() != '\r')
+                advance();
+        }
+
+        private void skipBlockComment() {
+            if (!input.substring(position).startsWith("/*")) {
+                throw new RuntimeException("Expected '/*' at position " + position);
+            }
+            position += 2;
+            while (position < input.length() && !isTargetWord("*/"))
+                advance();
+            if (position >= input.length()) {
+                logger.error("多行注释未闭合");
+                throw new RuntimeException("Unterminated multi-line comment");
+            }
+            if (!input.substring(position).startsWith("*/")) {
+                throw new RuntimeException("Expected '*/' at position " + position);
+            }
+            position += 2;
         }
 
         /**
@@ -5163,6 +5268,7 @@ public class TestInterpreter {
                             + ", current character: '" + currentChar + "'");
                 }
 
+                skipWhitespace();
                 elements.add(parseLiteral());
                 skipWhitespace();
                 if (peek() == ',') {
@@ -5182,6 +5288,7 @@ public class TestInterpreter {
             Map<String, ASTNode> entries = new HashMap<>();
 
             while (peek() != '}') {
+                skipWhitespace();
                 if (peek() != '"' && peek() != '\'') {
                     throw new RuntimeException("Map key must be a string, position: " + position
                             + ", current character: '" + peek() + "'");
@@ -5257,9 +5364,7 @@ public class TestInterpreter {
                         break;
                     }
                 }
-
                 return expr;
-
             } catch (RuntimeException e) {
                 failure = true;
                 logger.error("解析表达式失败: " + e.getMessage());
@@ -5285,7 +5390,7 @@ public class TestInterpreter {
                     return parseString();
                 } else if (peek() == '-' || peek() == '+' || Character.isDigit(peek())) {
                     return parseNumber();
-                } else if (peek() == '{') {
+                } else if (peek() == '{' || peek() == '[') {
                     return parseArrayOrMap();
                 }
 
@@ -5922,31 +6027,8 @@ public class TestInterpreter {
             return new ConstructorCallNode(className, args, arrInitial);
         }
 
-        private void skipComment() {
-            expectWordToMove("//");
-            while (position < input.length() && peek() != '\n' && peek() != '\r')
-                advance();
-        }
-
-        private void skipMultipleLineComment() {
-            expectWordToMove("/*");
-            while (position < input.length() && !isTargetWord("*/"))
-                advance();
-            if (position >= input.length()) {
-                logger.error("多行注释未闭合");
-                throw new RuntimeException("Unterminated multi-line comment");
-            }
-            expectWordToMove("*/");
-        }
-
         public ASTNode parseStatement() {
             skipWhitespace();
-            while (isTargetWord("//")) {
-                skipComment();
-            }
-            while (isTargetWord("/*")) {
-                skipMultipleLineComment();
-            }
             if (isAtEnd())
                 return null;
             ASTNode result;
@@ -7002,6 +7084,8 @@ public class TestInterpreter {
 
         private ASTNode parseUnary() {
             skipWhitespace();
+            boolean hasCast = false;
+            String castType = null;
             if (matchKeyword("++")) {
                 ASTNode operand = parseUnary();
                 if (operand instanceof VariableNode) {
@@ -7033,6 +7117,22 @@ public class TestInterpreter {
             } else if (match('~')) {
                 ASTNode operand = parseUnary();
                 return new BinaryOperatorNode("~", operand, null);
+            } else if (peek() == '(') {
+                savePosition();
+                match('(');
+                boolean succeed = true;
+                try {
+                    skipWhitespace();
+                    castType = parseClassIdentifier();
+                    skipWhitespace();
+                    expectToMove(')');
+                    hasCast = true;
+                } catch (RuntimeException e) {
+                    succeed = false;
+                } finally {
+                    if (succeed) releasePosition();
+                    else restorePosition();
+                }
             }
 
             ASTNode result = parseLiteral();
@@ -7074,8 +7174,7 @@ public class TestInterpreter {
                     throw new RuntimeException("-- can only be applied to variables or field access");
                 }
             }
-
-            return result;
+            return hasCast ? new CastNode(castType, result) : result;
         }
 
         /**
@@ -7521,6 +7620,7 @@ public class TestInterpreter {
     }
 
     public static void main(String[] args) {
+
         TestInterpreter.ScriptRunner runner = new ScriptRunner(Thread.currentThread().getContextClassLoader());
         
         while (true) {
@@ -7542,5 +7642,4 @@ public class TestInterpreter {
             }
         }
     }
-
 }
