@@ -195,7 +195,7 @@ public class TestInterpreter {
 
     private static final Logger logger = isStandaloneMode() ? new StandaloneLogger() : new InterpreterLogger();
 
-        private static boolean isPrimitiveWrapperMatch(Class<?> target, Class<?> source) {
+    private static boolean isPrimitiveWrapperMatch(Class<?> target, Class<?> source) {
         if (target == int.class && source == Integer.class)
             return true;
         if (target == Integer.class && source == int.class)
@@ -253,10 +253,7 @@ public class TestInterpreter {
 
             // 可变参数数组类型是最后一个参数
             Class<?> varArgsType = methodArgsTypes[methodArgsTypes.length - 1];
-            if (!varArgsType.isArray()) {
-                // 虽然标记为可变参数，但实际不是数组类型，按普通方法处理
-                isVarArgs = false;
-            } else {
+            if (varArgsType.isArray()) {
                 // 获取可变参数的元素类型
                 Class<?> varArgsComponentType = varArgsType.getComponentType();
 
@@ -570,11 +567,7 @@ public class TestInterpreter {
         }
 
         public Map<String, Variable> getAllVariables() {
-            Map<String, Variable> result = new HashMap<>();
-            for (Map.Entry<String, Variable> entry : variables.entrySet()) {
-                result.put(entry.getKey(), entry.getValue());
-            }
-            return result;
+            return new HashMap<>(variables);
         }
 
         public void clearVariables() {
@@ -1589,7 +1582,7 @@ public class TestInterpreter {
         private boolean canAccessMethod(Method method, Object targetObj) {
             try {
                 Method canAccessMethod = AccessibleObject.class.getMethod("canAccess", Object.class);
-                return (boolean) canAccessMethod.invoke(method, targetObj);
+                return Boolean.TRUE.equals(canAccessMethod.invoke(method, targetObj));
             } catch (Exception e) {
                 return true;
             }
@@ -1599,12 +1592,10 @@ public class TestInterpreter {
                 throws Exception {
             Class<?>[] interfaces = clazz.getInterfaces();
 
-            for (Class<?> iface : interfaces) {
+            for (Class<?> _interface : interfaces) {
                 try {
-                    return findMethod(iface, name, argTypes);
-                } catch (NoSuchMethodException e) {
-                    continue;
-                }
+                    return findMethod(_interface, name, argTypes);
+                } catch (NoSuchMethodException ignored) {}
             }
 
             Class<?> superClass = clazz.getSuperclass();
@@ -5631,31 +5622,25 @@ public class TestInterpreter {
                 } catch (NumberFormatException e) {
                     throw new RuntimeException("Invalid octal number: " + numberStr);
                 }
-            } else if (numberStr.startsWith("0b")) {
+            } else if (numberStr.startsWith("0b") || numberStr.startsWith("0B")) {
                 try {
                     return new LiteralNode(Integer.parseInt(numberStr.substring(2), 2), Integer.class);
                 } catch (NumberFormatException e) {
                     throw new RuntimeException("Invalid binary number: " + numberStr);
                 }
-            } else if (numberStr.startsWith("0x")) {
+            } else if (numberStr.startsWith("0x") || numberStr.startsWith("0X")) {
                 try {
                     return new LiteralNode(Integer.parseInt(numberStr.substring(2), 16), Integer.class);
                 } catch (NumberFormatException e) {
                     throw new RuntimeException("Invalid hexadecimal number: " + numberStr);
                 }
-            } else if (numberStr.startsWith("0o")) {
+            } else if (numberStr.startsWith("0o") || numberStr.startsWith("0O")) {
                 try {
                     return new LiteralNode(Integer.parseInt(numberStr.substring(2), 8), Integer.class);
                 } catch (NumberFormatException e) {
                     throw new RuntimeException("Invalid octal number: " + numberStr);
                 }
-            } else if (numberStr.startsWith("0b")) {
-                try {
-                    return new LiteralNode(Integer.parseInt(numberStr.substring(2), 2), Integer.class);
-                } catch (NumberFormatException e) {
-                    throw new RuntimeException("Invalid binary number: " + numberStr);
-                }
-            }else if (numberStr.endsWith("f") || numberStr.endsWith("F")) {
+            } else if (numberStr.endsWith("f") || numberStr.endsWith("F")) {
                 try {
                     return new LiteralNode(Float.parseFloat(numberStr.substring(0, numberStr.length() - 1)),
                             Float.class);
@@ -5806,7 +5791,7 @@ public class TestInterpreter {
                                 } catch (ClassNotFoundException | NoSuchFieldException ignored) {
                                 }
                             }
-                        } else if (expr.getType(context) instanceof Class && expr instanceof VariableNode) {
+                        } else if (expr.getType(context) != null && expr instanceof VariableNode) {
                             skipWhitespace();
                             if (peek() != '(') { // 不是方法调用
                                 if (context.getFlag("WARN_CLASS_AS_VARIABLE") == null) {
@@ -5980,9 +5965,7 @@ public class TestInterpreter {
                         }
                     }
 
-                    ASTNode varNode = new VariableNode(identifier);
-
-                    return varNode;
+                    return new VariableNode(identifier);
                 }
 
             } catch (RuntimeException e) {
