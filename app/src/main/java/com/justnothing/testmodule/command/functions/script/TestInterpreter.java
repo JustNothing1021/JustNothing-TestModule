@@ -5649,8 +5649,13 @@ public class TestInterpreter {
                 } catch (NumberFormatException e) {
                     throw new RuntimeException("Invalid octal number: " + numberStr);
                 }
-
-            } else if (numberStr.endsWith("f") || numberStr.endsWith("F")) {
+            } else if (numberStr.startsWith("0b")) {
+                try {
+                    return new LiteralNode(Integer.parseInt(numberStr.substring(2), 2), Integer.class);
+                } catch (NumberFormatException e) {
+                    throw new RuntimeException("Invalid binary number: " + numberStr);
+                }
+            }else if (numberStr.endsWith("f") || numberStr.endsWith("F")) {
                 try {
                     return new LiteralNode(Float.parseFloat(numberStr.substring(0, numberStr.length() - 1)),
                             Float.class);
