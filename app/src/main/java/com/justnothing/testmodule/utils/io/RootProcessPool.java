@@ -6,6 +6,7 @@ import com.justnothing.testmodule.utils.functions.Logger;
 
 import java.io.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
@@ -19,6 +20,12 @@ public class RootProcessPool extends Logger {
     private static final long PROCESS_IDLE_TIMEOUT = 30000;
     private static final long COMMAND_TIMEOUT_MS = 30000;
     private static final int MAX_RETRIES = 2;
+
+    private static final ExecutorService IO_THREAD_POOL = Executors.newCachedThreadPool(r -> {
+        Thread t = new Thread(r, "RootProcess-IO");
+        t.setDaemon(true);
+        return t;
+    });
 
     private final BlockingQueue<RootProcess> availableProcesses;
     private final AtomicInteger totalProcesses = new AtomicInteger(0);
@@ -269,6 +276,16 @@ public class RootProcessPool extends Logger {
             poolLock.unlock();
         }
 
+        try {
+            IO_THREAD_POOL.shutdown();
+            if (!IO_THREAD_POOL.awaitTermination(5000, TimeUnit.MILLISECONDS)) {
+                IO_THREAD_POOL.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            IO_THREAD_POOL.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+
         info("RootProcessPool已关闭");
     }
 
@@ -328,45 +345,73 @@ public class RootProcessPool extends Logger {
             outputStream.writeBytes("echo 'COMMAND_EXIT_CODE:'$?\n");
             outputStream.flush();
 
-            Thread stdoutThread = new Thread(() -> {
+            final long commandStartTime = System.currentTimeMillis();
+            final AtomicBoolean ioComplete = new AtomicBoolean(false);
+
+            CompletableFuture<String> stdoutFuture = CompletableFuture.supplyAsync(() -> {
                 try {
+                    StringBuilder localStdout = new StringBuilder();
                     String line;
                     while ((line = stdoutReader.readLine()) != null) {
                         if (line.startsWith("COMMAND_EXIT_CODE:")) {
                             break;
                         }
-                        stdout.append(line).append('\n');
+                        localStdout.append(line).append('\n');
+                        if (System.currentTimeMillis() - commandStartTime > timeoutMs) {
+                            break;
+                        }
                     }
+                    synchronized (ioComplete) {
+                        if (!ioComplete.get()) {
+                            ioComplete.set(true);
+                            stdout.append(localStdout);
+                        }
+                    }
+                    return "stdout_done";
                 } catch (IOException e) {
                     healthy = false;
+                    return "stdout_error";
                 }
-            });
+            }, IO_THREAD_POOL);
 
-            Thread stderrThread = new Thread(() -> {
+            CompletableFuture<String> stderrFuture = CompletableFuture.supplyAsync(() -> {
                 try {
+                    StringBuilder localStderr = new StringBuilder();
                     String line;
                     while ((line = stderrReader.readLine()) != null) {
-                        stderr.append(line).append('\n');
+                        localStderr.append(line).append('\n');
+                        if (System.currentTimeMillis() - commandStartTime > timeoutMs) {
+                            break;
+                        }
                     }
+                    synchronized (ioComplete) {
+                        if (!ioComplete.get()) {
+                            stderr.append(localStderr);
+                        }
+                    }
+                    return "stderr_done";
                 } catch (IOException e) {
                     healthy = false;
+                    return "stderr_error";
                 }
-            });
+            }, IO_THREAD_POOL);
 
-            stdoutThread.setDaemon(true);
-            stderrThread.setDaemon(true);
-            stdoutThread.start();
-            stderrThread.start();
-
-            long remainingTime = timeoutMs - (System.currentTimeMillis() - startTime);
-            stdoutThread.join(Math.max(0, remainingTime));
-            stderrThread.join(Math.max(0, remainingTime));
-
-            if (stdoutThread.isAlive() || stderrThread.isAlive()) {
-                stdoutThread.interrupt();
-                stderrThread.interrupt();
+            try {
+                stdoutFuture.get(timeoutMs, TimeUnit.MILLISECONDS);
+                stderrFuture.get(timeoutMs, TimeUnit.MILLISECONDS);
+            } catch (TimeoutException e) {
                 healthy = false;
+                stdoutFuture.cancel(true);
+                stderrFuture.cancel(true);
                 throw new InterruptedException("Root命令执行超时");
+            } catch (ExecutionException e) {
+                healthy = false;
+                throw new IOException("I/O线程执行失败: " + e.getCause());
+            }
+
+            if (!process.isAlive()) {
+                healthy = false;
+                throw new InterruptedException("Root进程已终止");
             }
 
             int exitCode = 0;

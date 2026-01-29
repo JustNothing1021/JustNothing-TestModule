@@ -24,65 +24,152 @@ import java.util.Map;
 
 public class MemoryMain extends CommandBase {
 
+    private final String commandName;
+
     public MemoryMain() {
         super("Memory");
+        this.commandName = "memory";
+    }
+
+    public MemoryMain(String commandName) {
+        super("Memory");
+        this.commandName = commandName;
     }
 
     @Override
     public String getHelpText() {
-        return String.format("""
-                语法: memory <subcmd> [args...]
-                
-                内存调试和管理工具.
-                
-                子命令:
-                    info [options]                     - 显示详细的内存使用情况
-                    gc [options]                       - 手动触发垃圾回收
-                    dump [options]                     - 导出堆信息和系统状态
-                
-                info 选项:
-                    -h, --heap       只显示堆内存信息
-                    -d, --detailed   显示详细内存信息 (默认)
-                
-                gc 选项:
-                    --full    - 执行完整的GC
-                    --stats   - 显示GC统计信息
-                
-                dump 选项:
-                    --heap            - 只导出堆信息
-                    --threads         - 只导出线程信息
-                    --full            - 导出完整信息 (默认)
-                
-                示例:
-                    memory info
-                    memory info -h
-                    memory gc
-                    memory gc --full
-                    memory gc --stats
-                    memory dump
-                    memory dump /sdcard/heap_dump.txt
-                    memory dump --heap /sdcard/heap_only.txt
-                    memory dump --full /sdcard/full_dump.txt
-                
-                (Submodule memory %s)
-                """, CMD_MEMORY_VER);
+        if (commandName.equals("minfo")) {
+            return String.format("""
+                    语法: minfo [options]
+                    
+                    显示详细的内存使用情况.
+                    
+                    选项:
+                        -h, --heap       只显示堆内存信息
+                        -d, --detailed   显示详细内存信息 (默认)
+                    
+                    示例:
+                        minfo
+                        minfo -h
+                        minfo -d
+                    
+                    (Submodule memory %s)
+                    """, CMD_MEMORY_VER);
+        } else if (commandName.equals("mgc")) {
+            return String.format("""
+                    语法: mgc [options]
+                    
+                    手动触发垃圾回收.
+                    
+                    选项:
+                        --full    - 执行完整的GC
+                        --stats   - 显示GC统计信息
+                    
+                    示例:
+                        mgc
+                        mgc --full
+                        mgc --stats
+                    
+                    (Submodule memory %s)
+                    """, CMD_MEMORY_VER);
+        } else if (commandName.equals("mdump")) {
+            return String.format("""
+                    语法: mdump [options] [file]
+                    
+                    导出堆信息和系统状态.
+                    
+                    选项:
+                        --heap            - 只导出堆信息
+                        --threads         - 只导出线程信息
+                        --full            - 导出完整信息 (默认)
+                    
+                    示例:
+                        mdump
+                        mdump /sdcard/heap_dump.txt
+                        mdump --heap /sdcard/heap_only.txt
+                        mdump --full /sdcard/full_dump.txt
+                    
+                    (Submodule memory %s)
+                    """, CMD_MEMORY_VER);
+        } else {
+            return String.format("""
+                    语法: memory <subcmd> [args...]
+                    
+                    内存调试和管理工具.
+                    
+                    子命令:
+                        info [options]                     - 显示详细的内存使用情况
+                        gc [options]                       - 手动触发垃圾回收
+                        dump [options]                     - 导出堆信息和系统状态
+                    
+                    info 选项:
+                        -h, --heap       只显示堆内存信息
+                        -d, --detailed   显示详细内存信息 (默认)
+                    
+                    gc 选项:
+                        --full    - 执行完整的GC
+                        --stats   - 显示GC统计信息
+                    
+                    dump 选项:
+                        --heap            - 只导出堆信息
+                        --threads         - 只导出线程信息
+                        --full            - 导出完整信息 (默认)
+                    
+                    快捷命令:
+                        minfo    - 等同于 memory info
+                        mgc       - 等同于 memory gc
+                        mdump     - 等同于 memory dump
+                    
+                    示例:
+                        memory info
+                        memory info -h
+                        memory gc
+                        memory gc --full
+                        memory gc --stats
+                        memory dump
+                        memory dump /sdcard/heap_dump.txt
+                        memory dump --heap /sdcard/heap_only.txt
+                        memory dump --full /sdcard/full_dump.txt
+                    
+                    (Submodule memory %s)
+                    """, CMD_MEMORY_VER);
+        }
     }
 
     @Override
     public String runMain(CommandExecutor.CmdExecContext context) {
+        String cmdName = context.cmdName();
         String[] args = context.args();
         
-        if (args.length < 1) {
+        if (args.length < 1 && !cmdName.equals("minfo") && !cmdName.equals("mgc") && !cmdName.equals("mdump")) {
             return getHelpText();
         }
 
-        String subCommand = args[0];
+        String subCommand;
+        String[] subArgs;
+        
+        if (cmdName.equals("minfo")) {
+            subCommand = "info";
+            subArgs = args;
+        } else if (cmdName.equals("mgc")) {
+            subCommand = "gc";
+            subArgs = args;
+        } else if (cmdName.equals("mdump")) {
+            subCommand = "dump";
+            subArgs = args;
+        } else {
+            if (args.length < 1) {
+                return getHelpText();
+            }
+            subCommand = args[0];
+            subArgs = java.util.Arrays.copyOfRange(args, 1, args.length);
+        }
 
         try {
             return switch (subCommand) {
-                case "info" -> handleInfo(java.util.Arrays.copyOfRange(args, 1, args.length));
-                case "gc" -> handleGc(java.util.Arrays.copyOfRange(args, 1, args.length));
-                case "dump" -> handleDump(java.util.Arrays.copyOfRange(args, 1, args.length));
+                case "info" -> handleInfo(subArgs);
+                case "gc" -> handleGc(subArgs);
+                case "dump" -> handleDump(subArgs);
                 default -> "未知子命令: " + subCommand + "\n" + getHelpText();
             };
         } catch (Exception e) {

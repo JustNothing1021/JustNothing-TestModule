@@ -25,6 +25,7 @@ import com.justnothing.testmodule.R;
 import com.justnothing.testmodule.constants.FileDirectory;
 import com.justnothing.testmodule.utils.functions.Logger;
 import com.justnothing.testmodule.utils.io.IOManager;
+import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -310,7 +311,7 @@ public class ScriptManagerActivity extends AppCompatActivity {
     private void executeScript(Script script) {
         logger.info("执行脚本: " + script.name);
 
-        new Thread(() -> {
+        ThreadPoolManager.submitFastRunnable(() -> {
             StringBuilder allOutput = new StringBuilder();
             StringBuilder allErrors = new StringBuilder();
             String cmd = script.command;
@@ -366,7 +367,7 @@ public class ScriptManagerActivity extends AppCompatActivity {
                             .show();
                 });
             }
-        }).start();
+        });
     }
 
     private void editScript(Script script) {

@@ -16,15 +16,13 @@ import com.justnothing.testmodule.utils.data.DataBridge;
 import com.justnothing.testmodule.utils.data.DataDirectoryManager;
 import com.justnothing.testmodule.utils.functions.CmdUtils;
 import com.justnothing.testmodule.utils.functions.Logger;
-import com.justnothing.testmodule.utils.io.IOManager;
+import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.Method;
 import java.util.Enumeration;
-import java.util.concurrent.Executors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -233,11 +231,7 @@ public class ShellService extends Binder {
 
         logger.info("ShellService初始化完成");
         
-        Executors.newSingleThreadExecutor(r -> {
-            Thread t = new Thread(r, "ShellService-StartThread");
-            t.setDaemon(true);
-            return t;
-        }).submit(() -> {
+        ThreadPoolManager.submitFastRunnable(() -> {
             try {
                 logger.info("ShellService构造完成，等待启动Socket服务器");
                 socketServer.start();
@@ -247,11 +241,7 @@ public class ShellService extends Binder {
             }
         });
         
-        Executors.newSingleThreadExecutor(r -> {
-            Thread t = new Thread(r, "ShellService-InitThread");
-            t.setDaemon(true);
-            return t;
-        }).submit(() -> {
+        ThreadPoolManager.submitFastRunnable(() -> {
             try {
                 logger.info("开始复制Hook示例代码到scripts目录");
                 copyHookExamplesToScripts();

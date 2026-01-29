@@ -4,6 +4,7 @@ import static com.justnothing.testmodule.constants.CommandServer.MAIN_MODULE_VER
 
 import com.justnothing.testmodule.command.functions.beanshell.BeanShellExecutorMain;
 import com.justnothing.testmodule.command.functions.breakpoint.BreakpointMain;
+import com.justnothing.testmodule.command.functions.bytecode.BytecodeMain;
 import com.justnothing.testmodule.command.functions.classcmd.ClassMain;
 import com.justnothing.testmodule.command.functions.examples.InteractiveExampleMain;
 import com.justnothing.testmodule.command.functions.examples.OutputExampleMain;
@@ -11,7 +12,9 @@ import com.justnothing.testmodule.command.functions.exportcontext.ExportContextM
 import com.justnothing.testmodule.command.functions.help.HelpMain;
 import com.justnothing.testmodule.command.functions.hook.HookMain;
 import com.justnothing.testmodule.command.functions.memory.MemoryMain;
+import com.justnothing.testmodule.command.functions.nativecmd.NativeMain;
 import com.justnothing.testmodule.command.functions.packages.PackagesMain;
+import com.justnothing.testmodule.command.functions.reflect.ReflectMain;
 import com.justnothing.testmodule.command.functions.script.ScriptExecutorMain;
 import com.justnothing.testmodule.command.functions.system.SystemMain;
 import com.justnothing.testmodule.command.functions.threads.ThreadsMain;
@@ -59,6 +62,19 @@ public class CommandExecutor {
         registerCommand("breakpoint", new BreakpointMain());
         registerCommand("packages", new PackagesMain());
         registerCommand("hook", new HookMain());
+        registerCommand("reflect", new ReflectMain());
+        registerCommand("bytecode", new BytecodeMain());
+        registerCommand("native", new NativeMain());
+        
+        BytecodeMain bytecodeExecutor = new BytecodeMain("bytecode");
+        registerCommand("binfo", bytecodeExecutor);
+        registerCommand("banalyze", bytecodeExecutor);
+        registerCommand("bdecompile", bytecodeExecutor);
+        
+        MemoryMain memoryExecutor = new MemoryMain("memory");
+        registerCommand("minfo", memoryExecutor);
+        registerCommand("mgc", memoryExecutor);
+        registerCommand("mdump", memoryExecutor);
         
         ClassMain classExecutor = new ClassMain("class");
         registerCommand("cinfo", classExecutor);
@@ -310,11 +326,20 @@ public class CommandExecutor {
               graph                             - 生成类图, 调用图和依赖图
               export-context                    - 导出设备xtchttp上下文信息
               memory                            - 显示详细内存使用情况
+                minfo                            - 显示内存信息（快捷方式）
+                mgc                               - 执行垃圾回收（快捷方式）
+                mdump                             - 导出堆信息（快捷方式）
               threads                           - 列出所有线程及其状态
               system                            - 显示系统信息
               breakpoint                        - 设置和管理断点
               packages                          - 列出已知包名
               hook                              - 动态Hook注入器
+              reflect                           - 使用反射访问和操作类的私有成员
+              bytecode                          - 查看和分析Java字节码
+                binfo                            - 查看类的字节码信息 (快捷方式)
+                banalyze                         - 分析类的字节码结构 (快捷方式)
+                bdecompile                       - 反编译为Java代码 (快捷方式)
+              native                            - 查看和调试Native代码
 
               bsh                               - 通过BeanShell执行代码
                 bvars                           - 显示BeanShell执行器的变量
@@ -328,7 +353,7 @@ public class CommandExecutor {
                 cinvoke                        - 调用类中的方法 (快捷方式)
                 cfield                         - 查看或操作字段 (快捷方式)
                 csearch                        - 搜索类、方法、字段或注解 (快捷方式)
-                
+            
               script                            - 脚本管理系统
                 srun                            - 快捷执行脚本代码
                 sinteractive                    - 进入交互式脚本执行模式
@@ -348,22 +373,46 @@ public class CommandExecutor {
             示例:
               methods class info java.lang.String
               methods class graph java.util.ArrayList
-              methods class analyze -f java.lang.String
-              methods class list -vb java.lang.String
-              methods class list com.android.server.am.ActivityManagerService
-              methods class invoke java.lang.System currentTimeMillis
-              methods class field -g java.lang.System out
-              methods class search class *Activity
-              methods class search method onCreate
-              methods class search field m*
               methods class search annotation Override
-              methods -cl android list com.android.server.am.ActivityManagerService
+              methods -cl android clist com.android.server.am.ActivityManagerService
+              methods minfo -h
+              methods mgc --full
+              methods mdump --heap /sdcard/heap_only.txt
               methods script for (int i = 0; i < 114; i++) println(i); // 命令行记得加引号
               methods watch add field java.lang.System out 1000
               methods hook add com.example.MainActivity onCreate before 'println("onCreate called")'
-            
-            
-
+              methods reflect java.lang.System field out
+              methods reflect java.lang.System field -v "test" out
+              methods reflect java.lang.String method valueOf -p String:"123"
+              methods reflect java.lang.String constructor
+              methods reflect -s java.lang.String field value
+              methods reflect -c android java.lang.System field out
+              methods binfo java.lang.String
+              methods binfo -v java.util.ArrayList
+              methods banalyze java.lang.String
+              methods banalyze -v java.util.ArrayList
+              methods bdecompile java.lang.String
+              methods bdecompile com.example.MyClass -o /sdcard/MyClass.java
+              methods bytecode info java.lang.String
+              methods bytecode method java.lang.String valueOf
+              methods bytecode dump java.lang.String -o /sdcard/String.class
+              methods bytecode analyze java.util.ArrayList
+              methods bytecode disasm java.lang.String
+              methods bytecode disasm java.lang.String valueOf
+              methods bytecode constants java.lang.String
+              methods bytecode verify java.lang.String
+              methods bytecode decompile java.lang.String
+              methods bytecode decompile com.example.MyClass -o /sdcard/MyClass.java
+              methods native list libart.so
+              methods native info libc.so
+              methods native functions java.lang.System
+              methods native disasm java.lang.System arraycopy
+              methods native symbols libc.so
+              methods native memory
+              methods native heap
+              methods native stack 1234
+              methods native maps
+              methods native search malloc
             
             (MainModule: 让AI给我写了一堆新功能, 再也不用担心自己研究不透系统了)
             """, MAIN_MODULE_VER);

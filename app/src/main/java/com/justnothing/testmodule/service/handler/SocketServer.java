@@ -42,7 +42,7 @@ public class SocketServer {
         socketExecutor.submit(() -> {
             Thread currentThread = Thread.currentThread();
             String originalThreadName = currentThread.getName();
-            currentThread.setName("ShellService-SocketServer");
+            currentThread.setName("ShellServiceSocketServer");
             
             try {
                 logger.info("正在启动Socket服务器，端口: " + serverPortManager.getCurrentPort());

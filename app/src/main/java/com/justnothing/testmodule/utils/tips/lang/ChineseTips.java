@@ -907,6 +907,28 @@ public class ChineseTips {
                     NAME_JUSTNOTHING
             ));
 
+            addDidYouKnowTip(new SimpleTipCallback(
+                    """
+                    这个软件里面有一个我手搓的解释器，我还在研究为啥我做的解释器里面二义性怎么那么多呢
+                    比如这个:
+                    
+                    // 现实中很难分辨java.lang.System是啥
+                    // 可能是一个类，字段或者方法
+                    auto cls = java.lang.System;
+                    // 这个就更阴了，实际完全不知道怎么解析
+                    cls.out.println(114514);
+                    
+                    后来就加了个解析期间动态检查的逻辑，
+                    然后我在Java里面试了一下才知道，
+                    这两个语法根本就在Java里面没有。。。那没事了。。。
+                    而且Java的Lambda也很神笔，还要推断函数接口
+                    Lambda你没有你自己的类型吗（爆炸）
+
+                    不考虑创造新语言，谢谢
+                    """,
+                    NAME_JUSTNOTHING
+            ));
+
             return map;
         }
 

@@ -63,6 +63,8 @@ public class TestInterpreter {
     }
 
     private static final class StandaloneLogger extends Logger {
+        public static boolean enabled = true;
+
         @Override
         public String getTag() {
             return "TestInterpreter";
@@ -70,68 +72,92 @@ public class TestInterpreter {
 
         @Override
         public void debug(String str) {
+            if (!enabled)
+                return;
             System.out.println("[DEBUG] " + str);
         }
 
         @Override
         public void debug(Throwable th) {
+            if (!enabled)
+                return;
             System.out.println("[DEBUG] " + th.getMessage());
             th.printStackTrace(System.out);
         }
 
         @Override
         public void debug(String str, Throwable th) {
+            if (!enabled)
+                return;
             System.out.println("[DEBUG] " + str);
             th.printStackTrace(System.out);
         }
 
         @Override
         public void info(String str) {
+            if (!enabled)
+                return;
             System.out.println("[INFO] " + str);
         }
 
         @Override
         public void info(Throwable th) {
+            if (!enabled)
+                return;
             System.out.println("[INFO] " + th.getMessage());
             th.printStackTrace(System.out);
         }
 
         @Override
         public void info(String str, Throwable th) {
+            if (!enabled)
+                return;
             System.out.println("[INFO] " + str);
             th.printStackTrace(System.out);
         }
 
         @Override
         public void warn(String str) {
+            if (!enabled)
+                return;
             System.out.println("[WARN] " + str);
         }
 
         @Override
         public void warn(Throwable th) {
+            if (!enabled)
+                return;
             System.out.println("[WARN] " + th.getMessage());
             th.printStackTrace(System.out);
         }
 
         @Override
         public void warn(String str, Throwable th) {
+            if (!enabled)
+                return;
             System.out.println("[WARN] " + str);
             th.printStackTrace(System.out);
         }
 
         @Override
         public void error(String str) {
+            if (!enabled)
+                return;
             System.err.println("[ERROR] " + str);
         }
 
         @Override
         public void error(Throwable th) {
+            if (!enabled)
+                return;
             System.err.println("[ERROR] " + th.getMessage());
             th.printStackTrace(System.err);
         }
 
         @Override
         public void error(String str, Throwable th) {
+            if (!enabled)
+                return;
             System.err.println("[ERROR] " + str);
             th.printStackTrace(System.err);
         }
@@ -169,33 +195,7 @@ public class TestInterpreter {
 
     private static final Logger logger = isStandaloneMode() ? new StandaloneLogger() : new InterpreterLogger();
 
-    public static boolean isApplicableArgs(Class<?>[] methodArgsTypes, List<Class<?>> usingArgTypes) {
-        if (methodArgsTypes.length != usingArgTypes.size())
-            return false;
-        for (int i = 0; i < methodArgsTypes.length; i++)
-            if (!methodArgsTypes[i].isAssignableFrom(usingArgTypes.get(i))
-                    && !isPrimitiveWrapperMatch(methodArgsTypes[i], usingArgTypes.get(i))
-                    && Void.class != usingArgTypes.get(i))
-                return false;
-        return true;
-    }
-
-    // 就很神秘你知道吗
-
-    public static boolean isApplicableArgs(Class<?>[] methodArgsTypes, Class<?>[] usingArgTypes) {
-        return isApplicableArgs(methodArgsTypes, Arrays.asList(usingArgTypes));
-    }
-
-    public static boolean isApplicableArgs(List<Class<?>> methodArgsTypes, List<Class<?>> usingArgTypes) {
-        return isApplicableArgs(methodArgsTypes.toArray(new Class<?>[0]), usingArgTypes);
-    }
-
-    public static boolean isApplicableArgs(List<Class<?>> methodArgsTypes, Class<?>[] usingArgTypes) {
-        return isApplicableArgs(methodArgsTypes.toArray(new Class<?>[0]), usingArgTypes);
-    }
-
-    private static boolean isPrimitiveWrapperMatch(Class<?> target, Class<?> source) {
-        // 是这样的
+        private static boolean isPrimitiveWrapperMatch(Class<?> target, Class<?> source) {
         if (target == int.class && source == Integer.class)
             return true;
         if (target == Integer.class && source == int.class)
@@ -229,29 +229,92 @@ public class TestInterpreter {
         return target == Short.class && source == short.class;
     }
 
-    private static boolean isReturnTypeMatch(String expectedType, Object returnValue, ExecutionContext context) {
-        if ("void".equals(expectedType)) {
-            return returnValue == null;
-        }
-
-        if (returnValue == null) {
+    private static boolean isTypeCompatible(Class<?> expected, Class<?> actual) {
+        if (expected == Void.class && actual == Void.class) 
             return true;
+
+        if (actual == Void.class)
+            return !expected.isPrimitive();
+
+        if (expected.isPrimitive())
+            return isPrimitiveWrapperMatch(expected, actual);
+
+        return expected.isAssignableFrom(actual);
+    }
+
+
+    public static boolean isApplicableArgs(Class<?>[] methodArgsTypes, List<Class<?>> usingArgTypes,
+            boolean isVarArgs) {
+        // 如果是可变参数方法
+        if (isVarArgs) {
+            // 可变参数方法至少要有一个参数（可变参数数组本身）
+            if (methodArgsTypes.length == 0)
+                return false;
+
+            // 可变参数数组类型是最后一个参数
+            Class<?> varArgsType = methodArgsTypes[methodArgsTypes.length - 1];
+            if (!varArgsType.isArray()) {
+                // 虽然标记为可变参数，但实际不是数组类型，按普通方法处理
+                isVarArgs = false;
+            } else {
+                // 获取可变参数的元素类型
+                Class<?> varArgsComponentType = varArgsType.getComponentType();
+
+                // 固定参数的数量（不包括可变参数）
+                int fixedParamCount = methodArgsTypes.length - 1;
+
+                // 如果传入参数少于固定参数数量，不匹配
+                if (usingArgTypes.size() < fixedParamCount) {
+                    return false;
+                }
+
+                // 检查固定参数
+                for (int i = 0; i < fixedParamCount; i++) {
+                    Class<?> methodArgType = methodArgsTypes[i];
+                    Class<?> usingArgType = usingArgTypes.get(i);
+                    if (!isTypeCompatible(methodArgType, usingArgType)) {
+                        return false;
+                    }
+                }
+
+                // 检查可变参数
+                for (int i = fixedParamCount; i < usingArgTypes.size(); i++) {
+                    Class<?> usingArgType = usingArgTypes.get(i);
+
+                    // 每个可变参数都必须可以赋值给可变参数的元素类型
+                    if (!isTypeCompatible(varArgsComponentType, usingArgType)) {
+                        return false;
+                    }
+                }
+                return true;
+            }
         }
 
-        Class<?> expectedClass;
-        try {
-            expectedClass = context.findClassInternal(expectedType);
-        } catch (ClassNotFoundException e) {
+        // 非可变参数方法或处理为普通方法
+        if (methodArgsTypes.length != usingArgTypes.size()) {
             return false;
         }
 
-        Class<?> actualClass = returnValue.getClass();
-
-        if (expectedClass.isAssignableFrom(actualClass)) {
-            return true;
+        for (int i = 0; i < methodArgsTypes.length; i++) {
+            if (!isTypeCompatible(methodArgsTypes[i], usingArgTypes.get(i))) {
+                return false;
+            }
         }
 
-        return isPrimitiveWrapperMatch(expectedClass, actualClass);
+        return true;
+    }
+
+    // 实际上这仨重载就只用了两次
+    public static boolean isApplicableArgs(Class<?>[] methodArgsTypes, Class<?>[] usingArgTypes, boolean isVarArgs) {
+        return isApplicableArgs(methodArgsTypes, Arrays.asList(usingArgTypes), isVarArgs);
+    }
+
+    public static boolean isApplicableArgs(List<Class<?>> methodArgsTypes, List<Class<?>> usingArgTypes, boolean isVarArgs) {
+        return isApplicableArgs(methodArgsTypes.toArray(new Class<?>[0]), usingArgTypes, isVarArgs);
+    }
+
+    public static boolean isApplicableArgs(List<Class<?>> methodArgsTypes, Class<?>[] usingArgTypes, boolean isVarArgs) {
+        return isApplicableArgs(methodArgsTypes.toArray(new Class<?>[0]), usingArgTypes, isVarArgs);
     }
 
     private static String getArrayTypeNameWithoutLength(String typeName) {
@@ -306,6 +369,7 @@ public class TestInterpreter {
 
         private final ConcurrentHashMap<String, Variable> variables;
         private final ConcurrentHashMap<String, BuiltInFunction> builtIns;
+        private final ConcurrentHashMap<String, Object> runtimeFlags;
         private final List<String> imports;
         private final ClassLoader classLoader;
         private IOutputHandler outputBuffer;
@@ -323,6 +387,7 @@ public class TestInterpreter {
         public ExecutionContext(ClassLoader classLoader) {
             logger.debug("创建ExecutionContext，类加载器: " + classLoader);
             this.classLoader = classLoader;
+            this.runtimeFlags = new ConcurrentHashMap<>();
             this.outputBuffer = new SystemOutputCollector(System.out, System.in);
             this.warnMsgBuffer = new SystemOutputCollector(System.err, System.in);
             this.variables = new ConcurrentHashMap<>();
@@ -343,6 +408,7 @@ public class TestInterpreter {
             this.classLoader = classLoader;
             this.outputBuffer = builtInOutStream;
             this.warnMsgBuffer = builtInErrStream;
+            this.runtimeFlags = new ConcurrentHashMap<>();
             this.variables = new ConcurrentHashMap<>();
             this.builtIns = new ConcurrentHashMap<>();
             this.imports = new ArrayList<>();
@@ -400,6 +466,14 @@ public class TestInterpreter {
 
         public void printStackTraceWarn(Throwable th) {
             warnMsgBuffer.printStackTrace(th);
+        }
+
+        public Object getFlag(String key) {
+            return runtimeFlags.get(key);
+        }
+
+        public void setFlag(String key, Object value) {
+            runtimeFlags.put(key, value);
         }
 
         public void setVariable(String name, Object value) {
@@ -487,7 +561,8 @@ public class TestInterpreter {
         }
 
         public <T> T castObject(Object object, Class<T> clazz) {
-            if (object == null) return null;
+            if (object == null)
+                return null;
             if (clazz.equals(String.class)) {
                 return clazz.cast(object.toString());
             }
@@ -653,7 +728,7 @@ public class TestInterpreter {
                     logger.debug("通过完整类名找到类: " + clazz.getName());
                     return clazz;
                 }
-                
+
                 // 如果失败，尝试把"."替换为"$"
                 // 从后往前逐步替换，找到第一个能成功加载的分割点
                 String[] parts = className.split("\\.");
@@ -669,7 +744,7 @@ public class TestInterpreter {
                             }
                         }
                         clazz = findClassThroughApi(nestedClassName.toString(), classLoader);
-                        
+
                         if (clazz != null) {
                             logger.debug("通过嵌套类名找到类: " + clazz.getName());
                             return clazz;
@@ -696,7 +771,7 @@ public class TestInterpreter {
                     logger.debug("通过完整类名找到类: " + clazz.getName());
                     return clazz;
                 }
-                
+
                 String[] parts = fullClassName.split("\\.");
                 if (parts.length >= 2) {
                     for (int i = parts.length - 1; i >= 1; i--) {
@@ -709,7 +784,7 @@ public class TestInterpreter {
                             }
                         }
                         clazz = findClassThroughApi(nestedClassName.toString(), classLoader);
-                        
+
                         if (clazz != null) {
                             logger.debug("通过嵌套类名找到类: " + clazz.getName());
                             return clazz;
@@ -720,8 +795,18 @@ public class TestInterpreter {
             throw new ClassNotFoundException("Class not found: " + className);
         }
 
-
         private void setupBuiltInFunctions() {
+            addBuiltIn("enableLog", args -> {
+                if (!isStandaloneMode())
+                    return null;
+                if (args.isEmpty()) {
+                    logger.error("printf() 至少需要一个参数");
+                    throw new RuntimeException("printf() requires at least one argument");
+                }
+                StandaloneLogger.enabled = Boolean.TRUE.equals(args.get(0));
+                return null;
+            });
+
             addBuiltIn("println", args -> {
                 StringBuilder sb = new StringBuilder();
                 for (Object arg : args) {
@@ -770,6 +855,8 @@ public class TestInterpreter {
                 logger.error("range需要1-3个参数，实际上提供了" + args.size() + "个");
                 throw new RuntimeException("range() takes 1-3 arguments");
             });
+
+            addBuiltIn("getInterpreterClassLoader", args -> classLoader);
 
             addBuiltIn("analyze", args -> {
                 if (args.size() != 1) {
@@ -1195,7 +1282,7 @@ public class TestInterpreter {
                         } catch (Exception e) {
                             logger.error("运行Runnable时出错: " + e);
                         }
-                    });
+                    }, "runLater");
                     thread.start();
                     return thread;
                 } catch (Exception e) {
@@ -1223,23 +1310,24 @@ public class TestInterpreter {
             if (methodName == null)
                 methodName = "call";
 
-            Class<?> clazz;
-            Object targetObj;
-
             if (object == null) {
-                throw new NullPointerException("Attempt to invoke method" + methodName + " on a null object reference");
-            } else {
-                clazz = object.getClass();
-                targetObj = object;
+                throw new NullPointerException(
+                        "Attempt to invoke method " + methodName + " on a null object reference");
             }
 
+            Class<?> clazz = object.getClass();
             List<Class<?>> argTypes = args.stream()
                     .map(arg -> arg != null ? arg.getClass() : Void.class)
                     .collect(Collectors.toList());
 
-            Method method = findMethod(clazz, methodName, argTypes, targetObj);
+            // 查找方法（支持可变参数）
+            Method method = findMethodWithVarArgs(clazz, methodName, argTypes, object);
+
+            // 准备调用参数（处理可变参数）
+            Object[] invokeArgs = prepareInvokeArguments(method, args);
+
             try {
-                return method.invoke(targetObj, args.toArray());
+                return method.invoke(object, invokeArgs);
             } catch (InvocationTargetException e) {
                 Throwable cause = e.getCause();
                 if (cause instanceof Exception) {
@@ -1257,10 +1345,19 @@ public class TestInterpreter {
             if (clazz == null) {
                 throw new ClassNotFoundException("Class not found: " + className);
             }
-            Method method = findMethod(clazz, methodName,
-                    args.stream().map(Object::getClass).collect(Collectors.toList()));
+
+            List<Class<?>> argTypes = args.stream()
+                    .map(arg -> arg != null ? arg.getClass() : Void.class)
+                    .collect(Collectors.toList());
+
+            // 查找方法（支持可变参数）
+            Method method = findMethodWithVarArgs(clazz, methodName, argTypes, null);
+
+            // 准备调用参数（处理可变参数）
+            Object[] invokeArgs = prepareInvokeArguments(method, args);
+
             try {
-                return method.invoke(null, args.toArray());
+                return method.invoke(null, invokeArgs);
             } catch (java.lang.reflect.InvocationTargetException e) {
                 Throwable cause = e.getCause();
                 if (cause instanceof Exception) {
@@ -1273,6 +1370,144 @@ public class TestInterpreter {
                     throw e;
                 }
             }
+        }
+
+        /**
+         * 查找方法（支持可变参数）
+         */
+        private Method findMethodWithVarArgs(Class<?> clazz, String methodName, List<Class<?>> argTypes,
+                Object targetObj)
+                throws NoSuchMethodException {
+
+            Method[] methods = clazz.getMethods();
+            List<Method> candidates = new ArrayList<>();
+
+            // 第一步：收集所有同名方法
+            for (Method method : methods) {
+                if (method.getName().equals(methodName)) {
+                    candidates.add(method);
+                }
+            }
+
+            if (candidates.isEmpty()) {
+                // 如果没有公共方法，尝试查找声明的方法
+                methods = clazz.getDeclaredMethods();
+                for (Method method : methods) {
+                    if (method.getName().equals(methodName)) {
+                        method.setAccessible(true);
+                        candidates.add(method);
+                    }
+                }
+            }
+
+            if (candidates.isEmpty()) {
+                throw new NoSuchMethodException("Method not found: " + methodName + " in class " + clazz.getName());
+            }
+
+            // 第二步：尝试找到匹配的方法（优先非可变参数方法）
+            Method varArgsCandidate = null;
+
+            for (Method method : candidates) {
+                boolean isVarArgs = method.isVarArgs();
+                Class<?>[] paramTypes = method.getParameterTypes();
+
+                if (isApplicableArgs(paramTypes, argTypes, isVarArgs)) {
+                    // 优先选择非可变参数方法（如果参数完全匹配）
+                    if (!isVarArgs && paramTypes.length == argTypes.size()) {
+                        return method;
+                    }
+                    // 记住可变参数方法作为备选
+                    if (isVarArgs) {
+                        varArgsCandidate = method;
+                    }
+                }
+            }
+
+            // 如果找到了可变参数方法，返回它
+            if (varArgsCandidate != null) {
+                return varArgsCandidate;
+            }
+
+            // 没有找到匹配的方法，抛出异常
+            throw new NoSuchMethodException("No applicable method found: " + methodName +
+                    " with arguments " + argTypes);
+        }
+
+        /**
+         * 准备调用参数，处理可变参数的特殊情况
+         */
+        private Object[] prepareInvokeArguments(Method method, List<Object> args) {
+            Class<?>[] paramTypes = method.getParameterTypes();
+
+            // 如果不是可变参数方法，直接转换
+            if (!method.isVarArgs() || paramTypes.length == 0) {
+                return args.toArray();
+            }
+
+            // 可变参数方法处理
+            int fixedParamCount = paramTypes.length - 1; // 固定参数数量
+            Class<?> varArgsType = paramTypes[fixedParamCount]; // 可变参数类型（应该是数组）
+            Class<?> varArgsComponentType = varArgsType.getComponentType(); // 可变参数的元素类型
+
+            // 检查传入参数数量
+            if (args.size() < fixedParamCount) {
+                throw new IllegalArgumentException("Insufficient arguments for method: " + method.getName() +
+                        " expected at least " + fixedParamCount + " arguments, got " + args.size());
+            }
+
+            // 创建最终调用参数数组
+            Object[] invokeArgs = new Object[paramTypes.length];
+
+            // 设置固定参数
+            for (int i = 0; i < fixedParamCount; i++) {
+                invokeArgs[i] = args.get(i);
+                // 如果需要，进行基本类型转换
+                if (paramTypes[i].isPrimitive() && invokeArgs[i] == null) {
+                    throw new IllegalArgumentException("Cannot pass null for primitive parameter at position " + i);
+                }
+            }
+
+            // 处理可变参数部分
+            int varArgCount = args.size() - fixedParamCount;
+
+            if (varArgCount == 0) {
+                // 没有传入可变参数，创建空数组
+                invokeArgs[fixedParamCount] = java.lang.reflect.Array.newInstance(varArgsComponentType, 0);
+            } else if (varArgCount == 1) {
+                // 只有一个参数，检查它是否已经是正确的数组类型
+                Object lastArg = args.get(fixedParamCount);
+                if (lastArg != null && lastArg.getClass().isArray() &&
+                        lastArg.getClass().getComponentType() == varArgsComponentType) {
+                    // 参数已经是正确的数组，直接使用
+                    invokeArgs[fixedParamCount] = lastArg;
+                } else {
+                    // 创建单元素数组
+                    Object varArgArray = java.lang.reflect.Array.newInstance(varArgsComponentType, 1);
+                    java.lang.reflect.Array.set(varArgArray, 0, lastArg);
+                    invokeArgs[fixedParamCount] = varArgArray;
+                }
+            } else {
+                // 多个可变参数，创建数组
+                Object varArgArray = java.lang.reflect.Array.newInstance(varArgsComponentType, varArgCount);
+                for (int i = 0; i < varArgCount; i++) {
+                    Object arg = args.get(fixedParamCount + i);
+                    // 基本类型处理
+                    if (varArgsComponentType.isPrimitive() && arg != null) {
+                        // 将包装类型转换为基本类型（反射会自动处理）
+                        java.lang.reflect.Array.set(varArgArray, i, arg);
+                    } else {
+                        // 引用类型直接设置
+                        java.lang.reflect.Array.set(varArgArray, i, arg);
+                    }
+                }
+                invokeArgs[fixedParamCount] = varArgArray;
+            }
+
+            return invokeArgs;
+        }
+
+        public Object callStaticMethod(Class<?> clazz, String methodName, List<Object> args) throws Exception {
+            return callStaticMethod(clazz.getName(), methodName, args);
         }
 
         public Method findMethod(Class<?> clazz, String name, List<Class<?>> argTypes) throws Exception {
@@ -1292,18 +1527,20 @@ public class TestInterpreter {
             return key.toString();
         }
 
-        public Method findMethod(Class<?> clazz, String name, List<Class<?>> argTypes, Object targetObj) throws Exception {
+        public Method findMethod(Class<?> clazz, String name, List<Class<?>> argTypes, Object targetObj)
+                throws Exception {
             String cacheKey = getMethodCacheKey(clazz, name, argTypes);
-            
+
             if (methodCache.containsKey(cacheKey)) {
                 Method cachedMethod = methodCache.get(cacheKey);
                 if (targetObj != null && !canAccessMethod(cachedMethod, targetObj)) {
                     logger.debug("缓存的方法" + cacheKey + "无法访问，重新查找");
                 } else {
-                    if (cachedMethod != null) return cachedMethod;
+                    if (cachedMethod != null)
+                        return cachedMethod;
                 }
             }
-            
+
             Method applicable = null;
             StringBuilder sb = new StringBuilder();
             for (Method method : clazz.getMethods()) {
@@ -1314,13 +1551,14 @@ public class TestInterpreter {
                             logger.warn("方法 " + clazz.getName() + "." + name + " 无法直接访问，尝试通过接口查找");
                             Method interfaceMethod = findMethodThroughInterfaces(clazz, name, argTypes);
                             methodCache.put(cacheKey, interfaceMethod);
-                            logger.debug("方法已缓存: " + cacheKey + " -> " + interfaceMethod.getDeclaringClass().getName() + "." + name);
+                            logger.debug("方法已缓存: " + cacheKey + " -> " + interfaceMethod.getDeclaringClass().getName()
+                                    + "." + name);
                             return interfaceMethod;
                         }
                         methodCache.put(cacheKey, method);
                         logger.debug("方法已缓存: " + cacheKey + " -> " + method.getDeclaringClass().getName() + "." + name);
                         return method;
-                    } else if (isApplicableArgs(method.getParameterTypes(), argTypes)) {
+                    } else if (isApplicableArgs(method.getParameterTypes(), argTypes, method.isVarArgs())) {
                         applicable = method;
                     }
                 }
@@ -1330,7 +1568,8 @@ public class TestInterpreter {
                     logger.warn("方法 " + clazz.getName() + "." + name + " 无法直接访问，尝试通过接口查找");
                     Method interfaceMethod = findMethodThroughInterfaces(clazz, name, argTypes);
                     methodCache.put(cacheKey, interfaceMethod);
-                    logger.debug("方法已缓存: " + cacheKey + " -> " + interfaceMethod.getDeclaringClass().getName() + "." + name);
+                    logger.debug(
+                            "方法已缓存: " + cacheKey + " -> " + interfaceMethod.getDeclaringClass().getName() + "." + name);
                     return interfaceMethod;
                 }
                 methodCache.put(cacheKey, applicable);
@@ -1356,9 +1595,10 @@ public class TestInterpreter {
             }
         }
 
-        private Method findMethodThroughInterfaces(Class<?> clazz, String name, List<Class<?>> argTypes) throws Exception {
+        private Method findMethodThroughInterfaces(Class<?> clazz, String name, List<Class<?>> argTypes)
+                throws Exception {
             Class<?>[] interfaces = clazz.getInterfaces();
-            
+
             for (Class<?> iface : interfaces) {
                 try {
                     return findMethod(iface, name, argTypes);
@@ -1366,7 +1606,7 @@ public class TestInterpreter {
                     continue;
                 }
             }
-            
+
             Class<?> superClass = clazz.getSuperclass();
             if (superClass != null && superClass != Object.class) {
                 try {
@@ -1374,7 +1614,7 @@ public class TestInterpreter {
                 } catch (NoSuchMethodException ignored) {
                 }
             }
-            
+
             throw new NoSuchMethodException("No such method " + name + " in " + clazz.getName() + " or its interfaces");
         }
     }
@@ -1825,9 +2065,8 @@ public class TestInterpreter {
                     Object value = element.evaluate(context);
                     values.add(value);
                     if (!type.isAssignableFrom(value.getClass())) {
-                        logger.error("数组元素类型不一致: " + type + " != " + value.getClass());
-                        throw new RuntimeException(
-                                "Array element type mismatch: " + type + " != " + value.getClass());
+                        logger.warn("数组元素类型不一致: " + type + " != " + value.getClass() + ", 尝试解析为Object[]");
+                        type = Object.class;
                     }
                 }
                 if (values.isEmpty())
@@ -1948,7 +2187,9 @@ public class TestInterpreter {
         private Object add(Object a, Object b) {
             if (a != null && a instanceof String) { // 特例，String可以加null
                 return a + String.valueOf(b);
-            } else if ((a == null || b == null)) {
+            } else if (b != null && b instanceof String) {
+                return String.valueOf(a) + b;
+            } else if (a == null || b == null) {
                 logger.error("无法在null值上执行运算: a = " + a + ", b = " + b);
                 throw new RuntimeException("Cannot apply operations on null values");
             }
@@ -2302,14 +2543,15 @@ public class TestInterpreter {
         }
 
         @Override
-        public Class<?> getType(ExecutionContext context) throws RuntimeException {
-            // 首先尝试作为变量获取
+        public Class<?> getType(ExecutionContext context) {
+            if (context.hasClass(name))
+                return Class.class;
+
             if (context.hasVariable(name)) {
                 Variable var = context.getVariable(name);
                 return var.type;
             }
 
-            // 检查是否是 BuiltInFunction
             if (context.hasBuiltIn(name)) {
                 BuiltInFunction builtIn = context.getBuiltIn(name);
                 if (builtIn != null) {
@@ -2317,14 +2559,7 @@ public class TestInterpreter {
                 }
             }
 
-            // 如果不是变量，尝试作为类名解析
-            try {
-                context.findClass(name);
-                return Class.class;
-            } catch (Exception e) {
-                logger.error("未定义变量或类" + name);
-                throw new RuntimeException("Undefined variable: " + name);
-            }
+            return Object.class;
         }
     }
 
@@ -2444,12 +2679,16 @@ public class TestInterpreter {
                                 "Method '" + methodName + "' not found in class hierarchy " + classDef.getClassName());
                     }
                 }
-
                 if (target instanceof ClassReferenceNode) {
                     ClassReferenceNode classRef = (ClassReferenceNode) target;
                     String className = classRef.className;
                     return context.callStaticMethod(className, methodName, argsList);
                 }
+                // else if (targetObj instanceof Class) {
+                // Class<?> classDef = (Class<?>) targetObj;
+                // return context.callStaticMethod(classDef, methodName, argsList);
+                // }
+                // 这个还是算了，不然有二义性
 
                 return context.callMethod(targetObj, methodName, argsList);
             }
@@ -2491,7 +2730,6 @@ public class TestInterpreter {
                 throw new RuntimeException("Method not found: " + methodName + " on " + targetClass.getName());
             }
         }
-
     }
 
     public static MethodDefinition findMethodInHierarchy(ClassDefinition classDef, String methodName,
@@ -2660,7 +2898,7 @@ public class TestInterpreter {
             Constructor<?> bestMatch = null;
             StringBuilder sb = new StringBuilder();
             for (Constructor<?> item : clazz.getConstructors()) {
-                if (isApplicableArgs(item.getParameterTypes(), Arrays.asList(argTypes))) {
+                if (isApplicableArgs(item.getParameterTypes(), Arrays.asList(argTypes), item.isVarArgs())) {
                     bestMatch = item;
                 }
                 sb.append(Arrays.toString(item.getParameterTypes())).append("\n");
@@ -2820,6 +3058,196 @@ public class TestInterpreter {
         }
     }
 
+    public static class MemberAccessNode extends ASTNode {
+        private final ASTNode target;
+        private final String memberName;
+
+        public MemberAccessNode(ASTNode target, String memberName) {
+            this.target = target;
+            this.memberName = memberName;
+        }
+
+        @Override
+        public Object evaluate(ExecutionContext context) throws Exception {
+            Object targetObj;
+            try {
+                targetObj = target.evaluate(context);
+            } catch (RuntimeException e) {
+                // 如果target评估失败，尝试将整个表达式解析为类名
+                String className = buildClassName(target, memberName);
+                if (context.hasClass(className)) {
+                    return context.findClass(className);
+                }
+                throw e;
+            }
+
+            // 特殊处理：如果字段名是 "class"，直接返回目标类的Class对象
+            if (memberName.equals("class")) {
+                if (targetObj == null) {
+                    logger.error("无法在null上访问.class字段");
+                    throw new NullPointerException("Cannot access .class on null");
+                }
+                return targetObj instanceof Class ? targetObj : targetObj.getClass();
+            }
+
+            // 处理自定义类实例的字段访问
+            if (targetObj instanceof CustomClassInstance customInstance) {
+                ClassDefinition classDef = customInstance.getClassDefinition();
+                FieldDefinition fieldDef = findFieldInHierarchy(classDef, memberName, context);
+                if (fieldDef != null) {
+                    return customInstance.getField(memberName);
+                } else {
+                    throw new RuntimeException(
+                            "Field '" + memberName + "' not found in class hierarchy " + classDef.getClassName());
+                }
+            }
+
+            if (targetObj instanceof Class) {
+                Class<?> clazz = (Class<?>) targetObj;
+                try {
+                    // 首先尝试作为静态字段访问
+                    Field field = findField(clazz, memberName);
+                    if (field != null && java.lang.reflect.Modifier.isStatic(field.getModifiers())) {
+                        return handleClassMember(clazz, memberName, context);
+                    }
+                } catch (NoSuchFieldException ignored) {
+                }
+
+                try {
+                    // 然后尝试作为嵌套类访问
+                    String nestedClassName = clazz.getName() + "." + memberName;
+                    if (context.hasClass(nestedClassName)) {
+                        return context.findClass(nestedClassName);
+                    }
+                } catch (Exception ignored) {
+                }
+
+                // 如果都不是，视为实例成员访问
+                return handleInstanceMember(targetObj, memberName, context);
+            } else {
+                // 实例成员访问：字段
+                return handleInstanceMember(targetObj, memberName, context);
+            }
+        }
+
+        private String buildClassName(ASTNode node, String memberName) {
+            StringBuilder sb = new StringBuilder();
+            if (node instanceof VariableNode) {
+                sb.append(((VariableNode) node).name);
+            } else if (node instanceof MemberAccessNode) {
+                MemberAccessNode memberNode = (MemberAccessNode) node;
+                sb.append(buildClassName(memberNode.target, memberNode.memberName));
+            } else if (node instanceof ClassReferenceNode) {
+                sb.append(((ClassReferenceNode) node).getClassName());
+            }
+            sb.append('.').append(memberName);
+            return sb.toString();
+        }
+
+        @Override
+        public Class<?> getType(ExecutionContext context) throws Exception {
+            Object targetObj = target != null ? target.evaluate(context) : null;
+            Class<?> targetClass;
+
+            if (targetObj instanceof Class) {
+                targetClass = (Class<?>) targetObj;
+            } else if (targetObj != null) {
+                targetClass = targetObj.getClass();
+            } else if (target instanceof ClassReferenceNode) {
+                targetClass = ((ClassReferenceNode) target).getClass(context);
+            } else {
+                logger.error("无法解析所访问类成员的类型目标: " + memberName);
+                throw new RuntimeException("Cannot determine target for member access: " + memberName);
+            }
+
+            // 特殊处理数组的length字段
+            if (targetObj != null && targetObj.getClass().isArray() && "length".equals(memberName)) {
+                return Integer.class;
+            }
+
+            // 尝试查找字段
+            try {
+                Field field = findField(targetClass, memberName);
+                return field.getType();
+            } catch (NoSuchFieldException e) {
+                // 如果不是字段，可能是嵌套类
+                if (targetObj instanceof Class) {
+                    String nestedClassName = ((Class<?>) targetObj).getName() + "." + memberName;
+                    if (context.hasClass(nestedClassName)) {
+                        return Class.class;
+                    }
+                }
+                throw new RuntimeException("Member '" + memberName + "' not found in " + targetClass.getName());
+            }
+        }
+
+        private Object handleClassMember(Class<?> clazz, String memberName, ExecutionContext context) throws Exception {
+            // 首先检查是否是嵌套类
+            String nestedClassName = clazz.getName() + "." + memberName;
+            if (context.hasClass(nestedClassName)) {
+                return context.findClass(nestedClassName);
+            }
+
+            // 否则作为静态字段处理
+            Field field = findField(clazz, memberName);
+            if (!Modifier.isStatic(field.getModifiers())) {
+                throw new RuntimeException("Field '" + memberName + "' is not static in class " + clazz.getName());
+            }
+
+            if (!Modifier.isPublic(field.getModifiers())) {
+                try {
+                    field.setAccessible(true);
+                } catch (Exception e) {
+                    logger.warn("无法设置字段可访问性: " + field.getName() + ", 将尝试直接访问");
+                }
+            }
+
+            Object result = field.get(null);
+            return result;
+        }
+
+        private Object handleInstanceMember(Object targetObj, String memberName, ExecutionContext context)
+                throws Exception {
+            Class<?> targetClass = targetObj.getClass();
+
+            // 特殊处理数组的length字段
+            if (targetObj.getClass().isArray() && "length".equals(memberName)) {
+                return java.lang.reflect.Array.getLength(targetObj);
+            }
+
+            Field field = findField(targetClass, memberName);
+
+            if (!Modifier.isPublic(field.getModifiers())) {
+                try {
+                    field.setAccessible(true);
+                } catch (Exception e) {
+                    logger.warn("无法设置字段可访问性: " + field.getName() + ", 将尝试直接访问");
+                }
+            }
+
+            return field.get(targetObj);
+        }
+
+        private Field findField(Class<?> clazz, String fieldName) throws NoSuchFieldException {
+            // 首先尝试查找公共字段
+            try {
+                return clazz.getField(fieldName);
+            } catch (NoSuchFieldException e) {
+                // 如果公共字段不存在，查找所有声明的字段
+                try {
+                    return clazz.getDeclaredField(fieldName);
+                } catch (NoSuchFieldException e2) {
+                    // 尝试在父类中查找
+                    Class<?> superClass = clazz.getSuperclass();
+                    if (superClass != null) {
+                        return findField(superClass, fieldName);
+                    }
+                    throw e2;
+                }
+            }
+        }
+    }
+
     public static class FieldAccessNode extends ASTNode {
         private final ASTNode target;
         private final String fieldName;
@@ -2875,10 +3303,8 @@ public class TestInterpreter {
 
             // 特殊处理数组的length字段
             if (targetObj != null && targetObj.getClass().isArray() && "length".equals(fieldName)) {
-                return java.lang.reflect.Array.getLength(targetObj);
+                return Array.getLength(targetObj);
             }
-            
-          
 
             Field field = findField(targetClass, fieldName);
             if (!Modifier.isPublic(field.getModifiers())) {
@@ -3254,9 +3680,9 @@ public class TestInterpreter {
                     if (!typeName.equals("auto")) {
                         if (context.hasClass(typeName)) {
                             LambdaNode newLambdaNode = new LambdaNode(
-                                        lambdaNode.parameters,
-                                        lambdaNode.body,
-                                        typeName);
+                                    lambdaNode.parameters,
+                                    lambdaNode.body,
+                                    typeName);
                             value = newLambdaNode.evaluate(context);
                         } else {
                             value = initialValue.evaluate(context);
@@ -3566,19 +3992,26 @@ public class TestInterpreter {
 
             try {
                 context.recordScope();
-                Class<?> clazz = context.findClass(className);
-                
+                Class<?> clazz = null;
+                if ("auto".equals(className)) {
+                    // 使用auto关键字，不进行类型转换
+                } else {
+                    clazz = context.findClass(className);
+                }
+
                 if (coll == null) {
                     logger.error("for-each 的集合为 null");
                     throw new NullPointerException("Cannot iterate over null collection");
                 }
-                
+
                 if (coll instanceof Object[]) {
                     for (Object item : (Object[]) coll) {
                         if (loopCount >= MAX_LOOPS)
                             break;
 
-                        item = context.castObject(item, clazz);
+                        if (clazz != null) {
+                            item = context.castObject(item, clazz);
+                        }
 
                         context.setVariable(itemName, item);
 
@@ -3845,7 +4278,7 @@ public class TestInterpreter {
                     Object returnValue = value.evaluate(context);
                     context.returnValue = returnValue;
                     String expectedReturnType = context.getCurrentMethodReturnType();
-                    if (expectedReturnType != null && !isReturnTypeMatch(expectedReturnType, returnValue, context)) {
+                    if (!isTypeCompatible(returnValue.getClass(), context.findClass(expectedReturnType))) {
                         String actualType = returnValue != null ? returnValue.getClass().getSimpleName() : "null";
                         logger.error("返回值类型不匹配: 期望 '" + expectedReturnType + "', 实际 '" + actualType + "'");
                         throw new RuntimeException(
@@ -4319,8 +4752,7 @@ public class TestInterpreter {
 
         @Override
         public Object evaluate(ExecutionContext context) throws Exception {
-            if (!isApplicableArgs(new Class[] { thenExpr.getType(context) },
-                    new Class[] { elseExpr.getType(context) })) {
+            if (!isTypeCompatible(thenExpr.getType(context), elseExpr.getType(context))) {
                 logger.error(
                         "三元表达式中的两个表达式类型不匹配，类型分别为：" + thenExpr.getType(context) + " 和 " + elseExpr.getType(context));
                 throw new RuntimeException("Types of two expressions in ternary expression do not match: "
@@ -4391,7 +4823,8 @@ public class TestInterpreter {
                         return context.castObject(value, (Class<?>) var.value);
                     } else {
                         logger.error("尝试用不是Class类的变量" + className + "作为转换目标类");
-                        throw new Exception("Try to cast with " + className + " which was found as a variable but not instanceof Class.class");
+                        throw new Exception("Try to cast with " + className
+                                + " which was found as a variable but not instanceof Class.class");
                     }
                 }
             }
@@ -4432,11 +4865,12 @@ public class TestInterpreter {
 
         private Object toFunctionalInterface(Lambda lambda, Class<?> functionalInterfaceClass) throws Exception {
             if (!functionalInterfaceClass.isAnnotationPresent(FunctionalInterface.class)) {
-                logger.error("不是函数接口" 
+                logger.error("不是函数接口"
                         + functionalInterfaceClass.getName());
-                throw new RuntimeException(functionalInterfaceClass + " is not annotated with " + FunctionalInterface.class);
+                throw new RuntimeException(
+                        functionalInterfaceClass + " is not annotated with " + FunctionalInterface.class);
             }
-            
+
             // 对于常见的函数接口，提供直接转换
             if (functionalInterfaceClass == Supplier.class) {
                 checkParameterCount(lambda, 0, Supplier.class.getName(), "get");
@@ -4451,11 +4885,11 @@ public class TestInterpreter {
                 checkParameterCount(lambda, 1, Predicate.class.getName(), "test");
                 return (Predicate<Object>) (arg) -> (Boolean) lambda.call(arg);
             }
-            
+
             // 对于其他函数接口用Proxy
             Method[] methods = functionalInterfaceClass.getMethods();
             Method functionalMethod = null;
-            
+
             for (Method method : methods) {
                 if (method.isDefault() || Modifier.isStatic(method.getModifiers())) {
                     continue;
@@ -4463,49 +4897,49 @@ public class TestInterpreter {
                 if (functionalMethod == null) {
                     functionalMethod = method;
                 } else {
-                    throw new IllegalArgumentException("不是函数接口（有多个抽象方法）: " 
+                    throw new IllegalArgumentException("不是函数接口（有多个抽象方法）: "
                             + functionalInterfaceClass.getName());
                 }
             }
-            
+
             if (functionalMethod == null) {
                 throw new IllegalArgumentException("没有找到抽象方法: " + functionalInterfaceClass.getName());
             }
 
             // 检查参数数量是否匹配
             int expectedParamCount = functionalMethod.getParameterCount();
-            checkParameterCount(lambda, expectedParamCount, functionalInterfaceClass.getName(), functionalMethod.getName());
+            checkParameterCount(lambda, expectedParamCount, functionalInterfaceClass.getName(),
+                    functionalMethod.getName());
 
             final Method finalFunctionalMethod = functionalMethod;
-            logger.info("当前尝试把Lambda转为" + functionalInterfaceClass.getName() 
-                            + "，将会识别" + functionalMethod.getName() + "为函数执行接口");
+            logger.info("当前尝试把Lambda转为" + functionalInterfaceClass.getName()
+                    + "，将会识别" + functionalMethod.getName() + "为函数执行接口");
             return Proxy.newProxyInstance(
-                functionalInterfaceClass.getClassLoader(),
-                new Class<?>[] { functionalInterfaceClass },
-                (proxy, method, args) -> {
-                    if (method.equals(finalFunctionalMethod)) {
-                        return lambda.call(args);
-                    } else if (method.getName().equals("toString")) {
-                        return lambda.toString();
-                    } else if (method.getName().equals("equals")) {
-                        return proxy == args[0];
-                    } else if (method.getName().equals("hashCode")) {
-                        return System.identityHashCode(proxy);
-                    } else {
-                        throw new UnsupportedOperationException("方法不支持: " + method.getName());
-                    }
-                }
-            );
+                    functionalInterfaceClass.getClassLoader(),
+                    new Class<?>[] { functionalInterfaceClass },
+                    (proxy, method, args) -> {
+                        if (method.equals(finalFunctionalMethod)) {
+                            return lambda.call(args);
+                        } else if (method.getName().equals("toString")) {
+                            return lambda.toString();
+                        } else if (method.getName().equals("equals")) {
+                            return proxy == args[0];
+                        } else if (method.getName().equals("hashCode")) {
+                            return System.identityHashCode(proxy);
+                        } else {
+                            throw new UnsupportedOperationException("方法不支持: " + method.getName());
+                        }
+                    });
         }
 
         private void checkParameterCount(Lambda lambda, int expectedCount, String interfaceName, String methodName) {
             // 通过LambdaNode获取参数数量
             if (this.parameters.size() != expectedCount) {
-                logger.error("Lambda转换失败，表达式需要" + this.parameters.size() 
+                logger.error("Lambda转换失败，表达式需要" + this.parameters.size()
                         + "个参数，但" + interfaceName + "接口的" + methodName + "方法需要" + expectedCount + "个参数");
                 throw new RuntimeException("Cannot cast Lambda, parameter count mismatch (" +
-                        "expected " + expectedCount + "(for " + interfaceName + "." + methodName + "), got " + this.parameters.size() + ")"
-                );
+                        "expected " + expectedCount + "(for " + interfaceName + "." + methodName + "), got "
+                        + this.parameters.size() + ")");
             }
         }
 
@@ -4561,9 +4995,8 @@ public class TestInterpreter {
 
         @Override
         public Object evaluate(ExecutionContext context) throws Exception {
-            String methodName = ((VariableNode) function).name;
-
             if (function instanceof VariableNode) {
+                String methodName = ((VariableNode) function).name;
                 if (context.hasVariable("this")) {
                     Object thisValue = context.getVariable("this").value;
                     if (thisValue instanceof CustomClassInstance thisInstance) {
@@ -4891,7 +5324,7 @@ public class TestInterpreter {
         }
 
         /**
-         * 判断接下来的字符是不是指定的关键字。
+         * 判断接下来的字符是不是指定的字符。
          *
          * @param expected 关键字
          * @return 结果
@@ -4899,6 +5332,26 @@ public class TestInterpreter {
         private boolean isTargetWord(String expected) {
             return input.substring(position).startsWith(expected);
         }
+
+        /**
+         * 判断接下来的字符是不是指定的关键字。
+         * 当关键字后面跟着一个非标识符字符时，才被认为是关键字。
+         * （不然double会被识别成do，别问我怎么知道的，大草）
+         *
+         * @param expected 关键字
+         * @return 结果
+         */
+        private boolean isTargetKeyWord(String expected) {
+            return input.substring(position).startsWith(expected) &&
+                    (position + expected.length() >= input.length()
+                            || (!Character.isJavaIdentifierPart(input.charAt(position + expected.length()))));
+        }
+
+        // Class<?> c = System.class;
+        // java.lang.reflect.Field[] fields = c.getDeclaredFields();
+        // System.out.println("Fields: " + fields.length);
+        // for (java.lang.reflect.Field f : fields) if(f.getName().contains("out"))
+        // System.out.println(f.getName());
 
         /**
          * 判断接下来的字符是不是指定的关键字，如果是，则返回true并且向前移动。
@@ -5314,6 +5767,12 @@ public class TestInterpreter {
 
         // 从下面开始就是需要用到 save/restore/release Position 的地方了
 
+        /**
+         * 解析字面量。
+         * 
+         * @return 节点
+         * @throws RuntimeException 解析出错
+         */
         private ASTNode parseLiteral() throws RuntimeException {
             skipWhitespace();
             savePosition();
@@ -5321,50 +5780,75 @@ public class TestInterpreter {
             try {
                 ASTNode expr = parsePrimary();
 
-                while (true) {
+                while (match('.')) {
                     skipWhitespace();
-                    if (match('.')) {
-                        skipWhitespace();
+                    String member = parseIdentifier();
+                    skipWhitespace();
 
-                        String member = parseIdentifier();
-                        skipWhitespace();
-
-                        // 只有在第一个表达式是变量节点且是内置函数时才检查
-                        // 对于链式调用如System.out.println，println不应该被检查是否为内置函数
-                        if (expr instanceof VariableNode && context.hasBuiltIn(((VariableNode) expr).name)
-                                && context.hasBuiltIn(member)) {
-                            // 内置函数不能通过点操作符调用
-                            throw new RuntimeException("Built-in function cannot be accessed with dot operator");
-                        }
-
-                        // 特殊处理：如果当前表达式是类引用，尝试解析嵌套类
-                        if (expr instanceof ClassReferenceNode) {
-                            ClassReferenceNode classRef = (ClassReferenceNode) expr;
+                    try {
+                        if (expr instanceof ClassReferenceNode classRef) {
                             String nestedClassName = classRef.className + "." + member;
                             if (context.hasClass(nestedClassName)) {
-                                // 是嵌套类，创建新的类引用节点
+                                // 是嵌套类
                                 expr = new ClassReferenceNode(nestedClassName);
+                                continue;
+                            } else if (context.hasClass(classRef.className)) {
+                                try {
+                                    context.findClass(classRef.className).getDeclaredField(member);
+                                    // 是字段
+                                    expr = new FieldAccessNode(expr, member);
+                                    continue;
+                                } catch (ClassNotFoundException | NoSuchFieldException ignored) {
+                                }
+                            }
+                        } else if (expr.getType(context) instanceof Class && expr instanceof VariableNode) {
+                            skipWhitespace();
+                            if (peek() != '(') { // 不是方法调用
+                                if (context.getFlag("WARN_CLASS_AS_VARIABLE") == null) {
+                                    logger.warn("尝试将一个类名作为变量值，将不会允许通过点运算符访问内部类，最好直接用类名，将不会展示此警告");
+                                    context.printlnWarn(
+                                            "Attempt to access a class through a variable, its better using class name directly");
+                                    context.setFlag("WARN_CLASS_AS_VARIABLE", true);
+                                }
+                                expr = new FieldAccessNode(expr, member);
                                 continue;
                             }
                         }
+                    } catch (Exception ignored) {
+                    }
 
-                        if (peek() == '(') {
-                            expectToMove('(');
-                            List<ASTNode> args = parseArguments();
-                            expectToMove(')');
-                            expr = new MethodCallNode(expr, member, args);
-                        } else {
-                            expr = new FieldAccessNode(expr, member);
-                        }
-                    } else if (match('[')) {
+                    // 如果后面有括号，创建方法调用节点
+                    if (peek() == '(') {
+                        expectToMove('(');
+                        skipWhitespace();
+                        List<ASTNode> args = parseArguments();
+                        skipWhitespace();
+                        expectToMove(')');
+                        expr = new MethodCallNode(expr, member, args);
+                    } else {
+                        // 否则创建成员访问节点
+                        expr = new MemberAccessNode(expr, member);
+                    }
+                }
+                skipWhitespace();
+
+                while (peek() == '[' || peek() == '(') {
+                    if (match('[')) { // 数组操作
                         skipWhitespace();
                         ASTNode index = parseAdditive();
                         expectToMove(']');
                         expr = new ArrayAccessNode(expr, index);
-                    } else {
-                        break;
+                        skipWhitespace();
+                    } else if (match('(')) { // 如果还有函数调用 (比如 (() -> 114514)() 这种)
+                        skipWhitespace();
+                        List<ASTNode> args = parseArguments();
+                        skipWhitespace();
+                        expectToMove(')');
+                        expr = new DirectFunctionCallNode(expr, args);
+                        skipWhitespace();
                     }
                 }
+
                 return expr;
             } catch (RuntimeException e) {
                 failure = true;
@@ -5378,9 +5862,15 @@ public class TestInterpreter {
             }
         }
 
+        /**
+         * 处理基本字面量。
+         * 
+         * @return 解析出的节点
+         * @throws RuntimeException 解析失败
+         */
         private ASTNode parsePrimary() throws RuntimeException {
             skipWhitespace();
-            savePosition(); // 被最外侧try处理过了
+            savePosition(); // 0
             boolean failure = false;
 
             try {
@@ -5412,10 +5902,10 @@ public class TestInterpreter {
                     expectToMove(')');
                     return new ParenthesizedExpressionNode(expr);
                 }
+
                 String identifier;
                 try {
                     identifier = parseIdentifier();
-
                 } catch (RuntimeException e) {
                     throw new RuntimeException(
                             "Expected identifier or literal at position " + position + ", but found '" + peek() + "'");
@@ -5436,7 +5926,9 @@ public class TestInterpreter {
                     skipWhitespace();
                     if (peek() == '(') {
                         expectToMove('(');
+                        skipWhitespace();
                         List<ASTNode> args = parseArguments();
+                        skipWhitespace();
                         expectToMove(')');
                         return new MethodCallNode(new VariableNode(identifier), identifier, args);
                     } else {
@@ -5451,48 +5943,39 @@ public class TestInterpreter {
                 } catch (ClassNotFoundException e) {
                     // 尝试解析更完整的类名
                     skipWhitespace();
-                    savePosition();
                     if (peek() == '.') {
-                        savePosition();
                         StringBuilder fullName = new StringBuilder(identifier);
-                        String lastValidName = null; // 尽量匹配最长的类名，然后后面解析为字段 （貌似可行？）
+                        String lastValidName = null; // 尽量匹配最长的类名，然后后面解析为字段（貌似可行？）
                         boolean parseSucceedOnce = false;
+                        int index = -1; // 最后一次成功的位置
+                        int origIndex = position; // 真的不想用那个savePosition了，还是int对我好
                         while (peek() == '.') {
-                            savePosition();
                             expectToMove('.');
                             String nextPart = parseIdentifier();
                             fullName.append('.').append(nextPart);
-                            
                             if (context.hasClass(fullName.toString())) {
                                 lastValidName = fullName.toString();
                                 parseSucceedOnce = true;
-                                releasePosition();
+                                index = position;
                             } else {
                                 if (parseSucceedOnce) { // 后面就是类字段引用了
-                                    restorePosition();
+                                    position = index;
                                     break;
                                 }
+                                // 其他情况继续
                             }
                         }
-                        
+
                         if (lastValidName != null) {
-                            releasePosition();
-                            // 在这里添加下后面的字段解析 (理论这里已经到.DigitOnes了)
+                            logger.debug("当前位置: " + position + ", 大致内容: " + input.substring(position));
                             return new ClassReferenceNode(lastValidName);
                         } else {
                             // 没有匹配到类，回滚到原始位置
-                            restorePosition();
+                            position = origIndex;
                         }
                     }
-                    
-                    ASTNode varNode = new VariableNode(identifier);
 
-                    if (peek() == '(') {
-                        expectToMove('(');
-                        List<ASTNode> args = parseArguments();
-                        expectToMove(')');
-                        return new DirectFunctionCallNode(varNode, args);
-                    }
+                    ASTNode varNode = new VariableNode(identifier);
 
                     return varNode;
                 }
@@ -5503,9 +5986,9 @@ public class TestInterpreter {
                 throw e;
             } finally {
                 if (failure)
-                    restorePosition();
+                    restorePosition(); // 0
                 else
-                    releasePosition();
+                    releasePosition(); // 0
             }
         }
 
@@ -5598,7 +6081,7 @@ public class TestInterpreter {
 
                 skipWhitespace();
                 while (peek() != '}' && position < input.length()) {
-                    if (isTargetWord("case")) {
+                    if (isTargetKeyWord("case")) {
                         expectWordToMove("case");
                         skipWhitespace();
                         ASTNode caseValue = parseExpression();
@@ -5606,7 +6089,7 @@ public class TestInterpreter {
                         skipWhitespace();
 
                         BlockNode caseBody = new BlockNode();
-                        while (peek() != '}' && !isTargetWord("case") && !isTargetWord("default")) {
+                        while (peek() != '}' && !isTargetKeyWord("case") && !isTargetKeyWord("default")) {
                             ASTNode stmt = parseCompletedStatement();
                             if (stmt != null) {
                                 caseBody.addStatement(stmt);
@@ -5621,13 +6104,13 @@ public class TestInterpreter {
                             skipWhitespace();
                         }
                         cases.add(new CaseNode(caseValue, caseBody));
-                    } else if (isTargetWord("default")) {
+                    } else if (isTargetKeyWord("default")) {
                         expectWordToMove("default");
                         expectToMove(':');
                         skipWhitespace();
 
                         BlockNode defaultBody = new BlockNode();
-                        while (peek() != '}' && !isTargetWord("case")) {
+                        while (peek() != '}' && !isTargetKeyWord("case")) {
                             ASTNode stmt = parseCompletedStatement();
                             if (stmt != null) {
                                 defaultBody.addStatement(stmt);
@@ -6035,65 +6518,65 @@ public class TestInterpreter {
             ASTNode result;
             skipWhitespace();
 
-            if (isTargetWord("class")) {
+            if (isTargetKeyWord("class")) {
                 result = parseClassDeclaration();
                 clearLastUncompletedStmt();
                 return result;
-            } else if (isTargetWord("interface")) {
+            } else if (isTargetKeyWord("interface")) {
                 // return parseInterfaceDeclaration();
                 throw new RuntimeException("Interface declarations are not yet supported");
-            } else if (isTargetWord("enum")) {
+            } else if (isTargetKeyWord("enum")) {
                 // return parseEnumDeclaration();
                 throw new RuntimeException("Enum declarations are not yet supported");
             }
 
-            if (isTargetWord("import")) {
+            if (isTargetKeyWord("import")) {
                 result = parseImportStatement();
                 clearLastUncompletedStmt();
                 return result;
-            } else if (isTargetWord("delete")) {
+            } else if (isTargetKeyWord("delete")) {
                 result = parseDeleteStatement();
                 clearLastUncompletedStmt();
                 return result;
-            } else if (isTargetWord("if")) {
+            } else if (isTargetKeyWord("if")) {
                 result = parseIfStatement();
                 clearLastUncompletedStmt();
                 return result;
-            } else if (isTargetWord("while")) {
+            } else if (isTargetKeyWord("while")) {
                 result = parseWhileStatement();
                 clearLastUncompletedStmt();
                 return result;
-            } else if (isTargetWord("do")) {
+            } else if (isTargetKeyWord("do")) {
                 result = parseDoWhileStatement();
                 clearLastUncompletedStmt();
                 return result;
-            } else if (isTargetWord("switch")) {
+            } else if (isTargetKeyWord("switch")) {
                 result = parseSwitchStatement();
                 clearLastUncompletedStmt();
                 return result;
-            } else if (isTargetWord("for")) {
+            } else if (isTargetKeyWord("for")) {
                 result = parseForStatement();
                 clearLastUncompletedStmt();
                 return result;
-            } else if (isTargetWord("break")) {
+            } else if (isTargetKeyWord("break")) {
                 expectWordToMove("break");
                 skipWhitespace();
                 clearLastUncompletedStmt();
                 return new ControlNode("break");
-            } else if (isTargetWord("continue")) {
+            } else if (isTargetKeyWord("continue")) {
                 expectWordToMove("continue");
                 skipWhitespace();
                 clearLastUncompletedStmt();
                 return new ControlNode("continue");
-            } else if (isTargetWord("return")) {
+            } else if (isTargetKeyWord("return")) {
                 result = parseReturnStatement();
                 clearLastUncompletedStmt();
                 return result;
-            } else if (isTargetWord("try")) {
+            } else if (isTargetKeyWord("try")) {
                 result = parseTryStatement();
                 clearLastUncompletedStmt();
                 return result;
-            } else if (isTargetWord("throw")) {
+            } else if (isTargetKeyWord("throw")) {
                 result = parseThrowStatement();
                 clearLastUncompletedStmt();
                 return result;
@@ -6188,23 +6671,23 @@ public class TestInterpreter {
                 if (Character.isLetterOrDigit(c) || c == '_' || c == '$' || c == '?'
                         || c == '.' || c == '[' || c == ']' || c == '<' || c == '>') {
                     if (c == ']') {
-                        if (inSquareBrackets) inSquareBrackets = false;
+                        if (inSquareBrackets)
+                            inSquareBrackets = false;
                         else {
-                            logger.error("类型的方括号不匹配（缺少左方括号）");
                             unexpectedToken("Missing '['");
                         }
                     } else if (c == '[') {
                         if (inSquareBrackets) {
-                            logger.error("类型的方括号不匹配（缺少左方括号）");
-                            unexpectedToken("Extra '['");
-                        } else inSquareBrackets = true;
+                            unexpectedToken("Unexcepted '['");
+                        } else
+                            inSquareBrackets = true;
                     } else if (c == '<') {
                         genericDepth++;
                     } else if (c == '>') {
                         if (genericDepth == 0) {
-                            logger.error("类型的尖括号不匹配（缺少小于号）");
                             unexpectedToken("Missing '<'");
-                        } else genericDepth--;
+                        } else
+                            genericDepth--;
                     }
                     sb.append(c);
                 } else {
@@ -6225,11 +6708,9 @@ public class TestInterpreter {
                 position++;
             }
             if (genericDepth > 0) {
-                logger.error("类型的尖括号不匹配（缺少大于号）");
                 unexpectedToken("Missing '>'");
             }
             if (inSquareBrackets) {
-                logger.error("类型的方括号不匹配（缺少右方括号）");
                 unexpectedToken("Missing ']'");
             }
             String result = sb.toString();
@@ -6701,7 +7182,9 @@ public class TestInterpreter {
             if (peek() == '(') {
                 // 这是一个直接函数调用
                 expectToMove('(');
+                skipWhitespace();
                 List<ASTNode> args = parseArguments();
+                skipWhitespace();
                 expectToMove(')');
 
                 // 根据expr的类型决定如何调用
@@ -6855,12 +7338,16 @@ public class TestInterpreter {
             }
         }
 
+        /**
+         * 解析参数列表。
+         * 从左括号右边一个字符开始解析，直到右括号；不会消费右括号。
+         * 
+         * @return 参数列表
+         */
         private List<ASTNode> parseArguments() {
             List<ASTNode> args = new ArrayList<>();
             skipWhitespace();
 
-            if (peek() == '(')
-                advance();
             if (peek() == ')')
                 return args;
 
@@ -6883,9 +7370,10 @@ public class TestInterpreter {
                     throw new RuntimeException("Expected ',' or ')' in arguments, found '" + next + "'");
                 }
 
-                advance();
+                expectToMove(',');
                 skipWhitespace();
             }
+            skipWhitespace();
 
             return args;
         }
@@ -7131,8 +7619,10 @@ public class TestInterpreter {
                 } catch (RuntimeException e) {
                     succeed = false;
                 } finally {
-                    if (succeed) releasePosition();
-                    else restorePosition();
+                    if (succeed)
+                        releasePosition();
+                    else
+                        restorePosition();
                 }
             }
 
@@ -7555,6 +8045,26 @@ public class TestInterpreter {
             return lastResult;
         }
 
+        public Object executeWithResult(String code,
+                IOutputHandler builtInOutStream,
+                IOutputHandler builtInErrStream) {
+            context.clearOutput();
+            context.clearWarnMessages();
+            context.setBuiltInOutputBuffer(builtInOutStream);
+            context.setBuiltInErrorBuffer(builtInErrStream);
+            Parser parser = new Parser(code, context);
+            ASTNode node;
+            Object lastResult = null;
+
+            try {
+                while ((node = parser.parseCompletedStatement()) != null)
+                    lastResult = node.evaluate(context);
+            } catch (Exception e) {
+                System.err.println(getStackTraceString(e));
+            }
+            return lastResult;
+        }
+
         public void execute(String code) {
             context.clearOutput();
             context.clearWarnMessages();
@@ -7600,7 +8110,7 @@ public class TestInterpreter {
             context.clearVariables();
         }
 
-        public List<ASTNode> tryEvaluate(String code) {
+        public List<ASTNode> tryParse(String code) {
             context.clearOutput();
             context.clearWarnMessages();
             Parser parser = new Parser(code, context);
@@ -7623,7 +8133,7 @@ public class TestInterpreter {
     public static void main(String[] args) {
 
         TestInterpreter.ScriptRunner runner = new ScriptRunner(Thread.currentThread().getContextClassLoader());
-        
+
         while (true) {
             String code;
             try {

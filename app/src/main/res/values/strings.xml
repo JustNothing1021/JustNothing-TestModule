@@ -131,7 +131,7 @@
     <string name="script_example_script_3_desc">执行一段简单的Java代码。</string>
     <string name="script_example_script_category">测试类</string>
     <string name="script_example_script_command" translatable="false">help</string>
-    <string name="script_example_script_2_command" translatable="false">-cl android list com.android.server.am.ActivityManagerService</string>
+    <string name="script_example_script_2_command" translatable="false">-cl android clist com.android.server.am.ActivityManagerService</string>
     <string name="status_hook_count" formatted="false">可用hook总数: %d (Zygote hook: %d, 应用hook: %d)</string>
     <string name="status_module_status_tip">模块状态: %s</string>
     <string name="status_module_status_activated">已激活</string>

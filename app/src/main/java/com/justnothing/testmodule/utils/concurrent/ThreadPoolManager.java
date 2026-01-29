@@ -443,7 +443,7 @@ public class ThreadPoolManager extends Logger {
 
         @Override
         public Thread newThread(Runnable r) {
-            Thread t = new Thread(r, namePrefix + "-" + threadNumber.getAndIncrement());
+            Thread t = new Thread(r, namePrefix + "(id=" + threadNumber.getAndIncrement() + ")");
             t.setPriority(priority);
             t.setDaemon(true);
             return t;

@@ -37,8 +37,8 @@ public class ClassMain extends CommandBase {
 
     @Override
     public String getHelpText() {
-        if (commandName.equals("cinfo")) {
-            return String.format("""
+        return switch (commandName) {
+            case "cinfo" -> String.format("""
                     语法: cinfo [options] <class_name>
                     
                     查看类的详细信息.
@@ -57,8 +57,7 @@ public class ClassMain extends CommandBase {
                     
                     (Submodule class %s)
                     """, CMD_CLASS_VER);
-        } else if (commandName.equals("cgraph")) {
-            return String.format("""
+            case "cgraph" -> String.format("""
                     语法: cgraph <class_name>
                     
                     生成类继承图.
@@ -68,8 +67,7 @@ public class ClassMain extends CommandBase {
                     
                     (Submodule class %s)
                     """, CMD_CLASS_VER);
-        } else if (commandName.equals("canalyze")) {
-            return String.format("""
+            case "canalyze" -> String.format("""
                     语法: canalyze [options] <class_name>
                     
                     分析类的字段和方法.
@@ -86,8 +84,7 @@ public class ClassMain extends CommandBase {
                     
                     (Submodule class %s)
                     """, CMD_CLASS_VER);
-        } else if (commandName.equals("cinvoke")) {
-            return String.format("""
+            case "cinvoke" -> String.format("""
                     语法: cinvoke <class> <method> [params...]
                     
                     调用某个类中的单一方法.
@@ -99,8 +96,7 @@ public class ClassMain extends CommandBase {
                     
                     (Submodule class %s)
                     """, CMD_CLASS_VER);
-        } else if (commandName.equals("cfield")) {
-            return String.format("""
+            case "cfield" -> String.format("""
                     语法: cfield [options] <class_name> [field_name]
                     
                     查看类的字段详细信息或获取/设置字段值.
@@ -121,23 +117,21 @@ public class ClassMain extends CommandBase {
                     
                     (Submodule class %s)
                     """, CMD_CLASS_VER);
-        } else if (commandName.equals("clist")) {
-            return String.format("""
-                    语法: clist [options] <class>
+            case "clist" -> String.format("""
+                        语法: clist [options] <class>
                     
-                    列出一个类的所有方法.
+                        列出一个类的所有方法.
                     
-                    可选项:
-                        -vb, --verbose      详细输出完整类名
-                
-                示例:
-                    clist -vb java.lang.String
-                    clist com.android.server.am.ActivityManagerService
-                
-                    (Submodule class %s)
+                        可选项:
+                            -vb, --verbose      详细输出完整类名
+                    
+                    示例:
+                        clist -vb java.lang.String
+                        clist com.android.server.am.ActivityManagerService
+                    
+                        (Submodule class %s)
                     """, CMD_CLASS_VER);
-        } else if (commandName.equals("csearch")) {
-            return String.format("""
+            case "csearch" -> String.format("""
                     语法: csearch <subcmd> <pattern>
                     
                     搜索类, 方法, 字段或注解.
@@ -164,20 +158,39 @@ public class ClassMain extends CommandBase {
                     
                     (Submodule class %s)
                     """, CMD_CLASS_VER);
-        } else {
-            return String.format("""
+            case "cconstructor" -> String.format("""
+                    语法: cconstructor <class_name> [params...]
+                    
+                    创建类的实例.
+                    提供参数的格式: Type:value (e.g. Integer:114514)
+                    
+                    示例:
+                        cconstructor java.lang.Integer Integer:"123"
+                        cconstructor java.lang.String String:"hello"
+                        cconstructor java.util.ArrayList Integer:"10"
+                    
+                    (Submodule class %s)
+                    """, CMD_CLASS_VER);
+            default -> String.format("""
                     语法: class <subcmd> [args...]
                     
                     查看类的详细信息, 包括继承关系, 接口, 构造函数等.
                     (输入 class <subcmd> 查看子命令帮助)
+                    
+                    注意:
+                        - 所有操作默认支持访问私有成员 (使用 setAccessible(true))
+                        - 使用 --super 选项访问父类成员
+                        - 使用 --interfaces 选项访问接口成员
+                        - 方法参数必须使用 Type:value 格式
                     
                     子命令:
                         info [options] <class_name>                    - 查看类的详细信息
                         graph <class_name>                             - 生成类继承图
                         analyze [options] <class_name>                 - 分析类的字段和方法
                         list [options] <class_name>                    - 列出一个类的所有方法
-                        invoke <class_name> <method_name> [params...]  - 调用类中的方法
+                        invoke [options] <class_name> <method_name> [params...]  - 调用类中的方法
                         field [options] <class_name> [field_name]      - 查看或操作字段
+                        constructor <class_name> [params...]           - 创建类的实例
                         search <subcmd> <pattern>                      - 搜索类, 方法, 字段或注解
                     
                     info 选项:
@@ -195,6 +208,10 @@ public class ClassMain extends CommandBase {
                     list 选项:
                         -vb, --verbose    详细输出完整类名
                     
+                    invoke 选项:
+                        --super           访问父类成员
+                        --interfaces      访问接口成员
+                    
                     invoke所需的参数格式: Type:value (e.g. Integer:114514, 目前只支持简单类型)
                     
                     field 选项:
@@ -204,6 +221,10 @@ public class ClassMain extends CommandBase {
                         -t, --type        显示字段类型
                         -m, --modifiers   显示修饰符
                         -a, --all         显示所有信息 (默认)
+                        --super           访问父类成员
+                        --interfaces      访问接口成员
+                    
+                    constructor 参数格式: Type:value (e.g. Integer:114514, 目前只支持简单类型)
                     
                     search 子命令:
                         class <pattern>                - 搜索类名
@@ -212,13 +233,14 @@ public class ClassMain extends CommandBase {
                         annotation <pattern>           - 搜索注解
                     
                     快捷命令:
-                        cinfo    - 等同于 class info
-                        cgraph   - 等同于 class graph
-                        canalyze - 等同于 class analyze
-                        clist    - 等同于 class list
-                        cinvoke  - 等同于 class invoke
-                        cfield   - 等同于 class field
-                        csearch  - 等同于 class search
+                        cinfo       - 等同于 class info
+                        cgraph      - 等同于 class graph
+                        canalyze    - 等同于 class analyze
+                        clist       - 等同于 class list
+                        cinvoke     - 等同于 class invoke
+                        cfield      - 等同于 class field
+                        cconstructor - 等同于 class constructor
+                        csearch     - 等同于 class search
                     
                     示例:
                         class info java.lang.String
@@ -236,6 +258,9 @@ public class ClassMain extends CommandBase {
                         class field -g java.lang.System out
                         class field -s java.lang.System out "test"
                         class field -v com.example.MyClass myField
+                        class constructor java.lang.Integer Integer:"123"
+                        class constructor java.lang.String String:"hello"
+                        class constructor java.util.ArrayList Integer:"10"
                         class search class *Activity
                         class search method onCreate
                         class search field m*
@@ -243,7 +268,7 @@ public class ClassMain extends CommandBase {
                     
                     (Submodule class %s)
                     """, CMD_CLASS_VER);
-        }
+        };
     }
 
     @Override
@@ -255,44 +280,57 @@ public class ClassMain extends CommandBase {
         
         logger.debug("执行class命令，参数: " + java.util.Arrays.toString(args));
         logger.debug("目标包: " + targetPackage + ", 类加载器: " + classLoader);
-        
-        if (cmdName.equals("cinfo")) {
-            return handleInfo(args, classLoader, targetPackage);
-        } else if (cmdName.equals("cgraph")) {
-            return handleGraph(args, classLoader);
-        } else if (cmdName.equals("canalyze")) {
-            return handleAnalyze(args, classLoader, targetPackage);
-        } else if (cmdName.equals("clist")) {
-            return handleList(args, classLoader, targetPackage);
-        } else if (cmdName.equals("cinvoke")) {
-            return handleInvoke(args, classLoader, targetPackage, context);
-        } else if (cmdName.equals("cfield")) {
-            return handleField(args, classLoader, targetPackage);
-        } else if (cmdName.equals("csearch")) {
-            return handleSearch(args, classLoader);
-        } else if (cmdName.equals("class")) {
-            if (args.length < 1) {
-                logger.warn("参数不足，需要至少1个参数");
-                return getHelpText();
+
+        switch (cmdName) {
+            case "cinfo" -> {
+                return handleInfo(args, classLoader, targetPackage);
             }
+            case "cgraph" -> {
+                return handleGraph(args, classLoader);
+            }
+            case "canalyze" -> {
+                return handleAnalyze(args, classLoader, targetPackage);
+            }
+            case "clist" -> {
+                return handleList(args, classLoader, targetPackage);
+            }
+            case "cinvoke" -> {
+                return handleInvoke(args, classLoader, targetPackage, context);
+            }
+            case "cfield" -> {
+                return handleField(args, classLoader, targetPackage);
+            }
+            case "csearch" -> {
+                return handleSearch(args, classLoader);
+            }
+            case "cconstructor" -> {
+                return handleConstructor(args, classLoader, targetPackage);
+            }
+            case "class" -> {
+                if (args.length < 1) {
+                    logger.warn("参数不足，需要至少1个参数");
+                    return getHelpText();
+                }
 
-            String subCommand = args[0];
+                String subCommand = args[0];
 
-            try {
-                return switch (subCommand) {
-                    case "info" -> handleInfo(args, classLoader, targetPackage);
-                    case "graph" -> handleGraph(args, classLoader);
-                    case "analyze" -> handleAnalyze(args, classLoader, targetPackage);
-                    case "list" -> handleList(args, classLoader, targetPackage);
-                    case "invoke" -> handleInvoke(args, classLoader, targetPackage, context);
-                    case "field" -> handleField(args, classLoader, targetPackage);
-                    case "search" -> handleSearch(args, classLoader);
-                    default -> "未知子命令: " + subCommand + "\n" + getHelpText();
-                };
-            } catch (Exception e) {
-                logger.error("执行class命令失败", e);
-                return "错误: " + e.getMessage() +
-                        "\n堆栈追踪: \n" + Log.getStackTraceString(e);
+                try {
+                    return switch (subCommand) {
+                        case "info" -> handleInfo(args, classLoader, targetPackage);
+                        case "graph" -> handleGraph(args, classLoader);
+                        case "analyze" -> handleAnalyze(args, classLoader, targetPackage);
+                        case "list" -> handleList(args, classLoader, targetPackage);
+                        case "invoke" -> handleInvoke(args, classLoader, targetPackage, context);
+                        case "field" -> handleField(args, classLoader, targetPackage);
+                        case "search" -> handleSearch(args, classLoader);
+                        case "constructor" -> handleConstructor(args, classLoader, targetPackage);
+                        default -> "未知子命令: " + subCommand + "\n" + getHelpText();
+                    };
+                } catch (Exception e) {
+                    logger.error("执行class命令失败", e);
+                    return "错误: " + e.getMessage() +
+                            "\n堆栈追踪: \n" + Log.getStackTraceString(e);
+                }
             }
         }
         
@@ -314,20 +352,24 @@ public class ClassMain extends CommandBase {
 
         for (int i = 1; i < args.length - 1; i++) {
             String arg = args[i];
-            if (arg.equals("-i") || arg.equals("--interfaces")) {
-                showInterfaces = true;
-                showAll = false;
-            } else if (arg.equals("-c") || arg.equals("--constructors")) {
-                showConstructors = true;
-                showAll = false;
-            } else if (arg.equals("-s") || arg.equals("--super")) {
-                showSuper = true;
-                showAll = false;
-            } else if (arg.equals("-m") || arg.equals("--modifiers")) {
-                showModifiers = true;
-                showAll = false;
-            } else if (arg.equals("-a") || arg.equals("--all")) {
-                showAll = true;
+            switch (arg) {
+                case "-i", "--interfaces" -> {
+                    showInterfaces = true;
+                    showAll = false;
+                }
+                case "-c", "--constructors" -> {
+                    showConstructors = true;
+                    showAll = false;
+                }
+                case "-s", "--super" -> {
+                    showSuper = true;
+                    showAll = false;
+                }
+                case "-m", "--modifiers" -> {
+                    showModifiers = true;
+                    showAll = false;
+                }
+                case "-a", "--all" -> showAll = true;
             }
         }
         
@@ -403,8 +445,8 @@ public class ClassMain extends CommandBase {
                 if (interfaces.length == 0) {
                     sb.append("无接口\n");
                 } else {
-                    for (Class<?> iface : interfaces) {
-                        sb.append("  - ").append(iface.getName()).append("\n");
+                    for (Class<?> _interface : interfaces) {
+                        sb.append("  - ").append(_interface.getName()).append("\n");
                     }
                 }
                 sb.append("接口总数: ").append(interfaces.length).append("\n\n");
@@ -586,18 +628,22 @@ public class ClassMain extends CommandBase {
 
         for (int i = 1; i < args.length - 1; i++) {
             String arg = args[i];
-            if (arg.equals("-f") || arg.equals("--fields")) {
-                showFields = true;
-                showMethods = false;
-                showAll = false;
-            } else if (arg.equals("-m") || arg.equals("--methods")) {
-                showMethods = true;
-                showFields = false;
-                showAll = false;
-            } else if (arg.equals("-a") || arg.equals("--all")) {
-                showAll = true;
-                showFields = false;
-                showMethods = false;
+            switch (arg) {
+                case "-f", "--fields" -> {
+                    showFields = true;
+                    showMethods = false;
+                    showAll = false;
+                }
+                case "-m", "--methods" -> {
+                    showMethods = true;
+                    showFields = false;
+                    showAll = false;
+                }
+                case "-a", "--all" -> {
+                    showAll = true;
+                    showFields = false;
+                    showMethods = false;
+                }
             }
         }
         
@@ -678,8 +724,8 @@ public class ClassMain extends CommandBase {
                 if (interfaces.length == 0) {
                     sb.append("无接口\n");
                 } else {
-                    for (Class<?> iface : interfaces) {
-                        sb.append("  - ").append(iface.getName()).append("\n");
+                    for (Class<?> _interface : interfaces) {
+                        sb.append("  - ").append(_interface.getName()).append("\n");
                     }
                 }
                 sb.append("接口总数: ").append(interfaces.length).append("\n\n");
@@ -913,10 +959,36 @@ public class ClassMain extends CommandBase {
             return getHelpText();
         }
 
-        try {
-            String className = args[0];
-            String methodName = args[1];
+        boolean accessSuper = false;
+        boolean accessInterfaces = false;
+        
+        String className;
+        String methodName;
+        
+        int argIndex = 0;
+        while (argIndex < args.length) {
+            String arg = args[argIndex];
+            if (arg.equals("--super")) {
+                accessSuper = true;
+                argIndex++;
+            } else if (arg.equals("--interfaces")) {
+                accessInterfaces = true;
+                argIndex++;
+            } else {
+                break;
+            }
+        }
+        
+        if (argIndex + 2 > args.length) {
+            logger.warn("提供的参数不足");
+            return getHelpText();
+        }
+        
+        className = args[argIndex];
+        methodName = args[argIndex + 1];
+        argIndex += 2;
 
+        try {
             Class<?> targetClass;
             try {
                 targetClass = XposedHelpers.findClass(className, classLoader);
@@ -931,7 +1003,7 @@ public class ClassMain extends CommandBase {
             List<Object> params = new ArrayList<>();
             List<Class<?>> paramTypes = new ArrayList<>();
 
-            for (int i = 2; i < args.length; i++) {
+            for (int i = argIndex; i < args.length; i++) {
                 String paramStr = args[i];
                 int colonIndex = paramStr.indexOf(':');
                 if (colonIndex <= 0) {
@@ -961,11 +1033,11 @@ public class ClassMain extends CommandBase {
             }
 
             Method method = findMethod(targetClass, methodName,
-                    paramTypes.toArray(new Class<?>[0]), true);
+                    paramTypes.toArray(new Class<?>[0]), true, accessSuper, accessInterfaces);
 
             if (method == null) {
                 method = findMethod(targetClass, methodName,
-                        paramTypes.toArray(new Class<?>[0]), false);
+                        paramTypes.toArray(new Class<?>[0]), false, accessSuper, accessInterfaces);
 
                 if (method == null) {
                     logger.warn("没有找到类" + className + "的方法" + methodName);
@@ -1049,6 +1121,8 @@ public class ClassMain extends CommandBase {
         boolean showType = false;
         boolean showModifiers = false;
         boolean showAll = true;
+        boolean accessSuper = false;
+        boolean accessInterfaces = false;
         
         String valueToSet = null;
         String fieldName = null;
@@ -1056,27 +1130,34 @@ public class ClassMain extends CommandBase {
 
         for (int i = 0; i < args.length - 1; i++) {
             String arg = args[i];
-            if (arg.equals("-g") || arg.equals("--get")) {
-                getValue = true;
-                showAll = false;
-            } else if (arg.equals("-s") || arg.equals("--set")) {
-                setValue = true;
-                showAll = false;
-                if (i + 1 < args.length - 1) {
-                    valueToSet = args[i + 1];
-                    i++;
+            switch (arg) {
+                case "-g", "--get" -> {
+                    getValue = true;
+                    showAll = false;
                 }
-            } else if (arg.equals("-v") || arg.equals("--value")) {
-                showValue = true;
-                showAll = false;
-            } else if (arg.equals("-t") || arg.equals("--type")) {
-                showType = true;   
-                showAll = false;
-            } else if (arg.equals("-m") || arg.equals("--modifiers")) {
-                showModifiers = true;
-                showAll = false;
-            } else if (arg.equals("-a") || arg.equals("--all")) {
-                showAll = true;
+                case "-s", "--set" -> {
+                    setValue = true;
+                    showAll = false;
+                    if (i + 1 < args.length - 1) {
+                        valueToSet = args[i + 1];
+                        i++;
+                    }
+                }
+                case "-v", "--value" -> {
+                    showValue = true;
+                    showAll = false;
+                }
+                case "-t", "--type" -> {
+                    showType = true;
+                    showAll = false;
+                }
+                case "-m", "--modifiers" -> {
+                    showModifiers = true;
+                    showAll = false;
+                }
+                case "-a", "--all" -> showAll = true;
+                case "--super" -> accessSuper = true;
+                case "--interfaces" -> accessInterfaces = true;
             }
         }
         
@@ -1115,63 +1196,64 @@ public class ClassMain extends CommandBase {
             }
 
             if (fieldName != null) {
-                try {
-                    Field field = targetClass.getDeclaredField(fieldName);
-                    field.setAccessible(true);
-                    
-                    if (getValue || setValue) {
-                        if (Modifier.isStatic(field.getModifiers())) {
-                            if (getValue) {
-                                Object value = field.get(null);
-                                return "字段值: " + (value != null ? value.toString() : "null");
-                            } else if (setValue) {
-                                Object value = parseValue(valueToSet, field.getType());
-                                field.set(null, value);
-                                return "成功设置字段值: " + valueToSet;
-                            }
-                        } else {
-                            return "错误: 无法获取/设置非静态字段，需要提供实例对象";
-                        }
-                    }
-                    
-                    StringBuilder sb = new StringBuilder();
-                    sb.append("=== 字段信息 ===\n");
-                    sb.append("字段名: ").append(field.getName()).append("\n");
-                    sb.append("类型: ").append(field.getType().getName()).append("\n");
+                Field field = findField(targetClass, fieldName, accessSuper, accessInterfaces);
 
-                    if (showAll || showType) {
-                        sb.append("类型: ").append(field.getType().getName()).append("\n");
-                    }
-                    
-                    if (showAll || showModifiers) {
-                        sb.append("修饰符: ").append(getModifiers(field.getModifiers())).append("\n");
-                    }
-                    
-                    if (showAll || showValue) {
-                        if (Modifier.isStatic(field.getModifiers())) {
-                            try {
-                                Object value = field.get(null);
-                                sb.append("值: ").append(value != null ? value.toString() : "null").append("\n");
-                            } catch (Exception e) {
-                                sb.append("值: 无法获取 (").append(e.getMessage()).append(")\n");
-                            }
-                        } else {
-                            sb.append("值: 非静态字段，需要实例对象\n");
-                        }
-                    }
-                    
-                    if (showAll) {
-                        sb.append("声明类: ").append(field.getDeclaringClass().getName()).append("\n");
-                        sb.append("是否为final: ").append(Modifier.isFinal(field.getModifiers())).append("\n");
-                        sb.append("是否为volatile: ").append(Modifier.isVolatile(field.getModifiers())).append("\n");
-                        sb.append("是否为transient: ").append(Modifier.isTransient(field.getModifiers())).append("\n");
-                    }
-                    
-                    return sb.toString();
-                    
-                } catch (NoSuchFieldException e) {
+                if (field == null) {
                     return "找不到字段: " + fieldName + "\n" + getHelpText();
                 }
+
+                field.setAccessible(true);
+
+                if (getValue || setValue) {
+                    if (Modifier.isStatic(field.getModifiers())) {
+                        if (getValue) {
+                            Object value = field.get(null);
+                            return "字段值: " + (value != null ? value.toString() : "null");
+                        } else if (setValue) {
+                            Object value = parseValue(valueToSet, field.getType());
+                            field.set(null, value);
+                            return "成功设置字段值: " + valueToSet;
+                        }
+                    } else {
+                        return "错误: 无法获取/设置非静态字段，需要提供实例对象";
+                    }
+                }
+
+                StringBuilder sb = new StringBuilder();
+                sb.append("=== 字段信息 ===\n");
+                sb.append("字段名: ").append(field.getName()).append("\n");
+                sb.append("类型: ").append(field.getType().getName()).append("\n");
+
+                if (showAll || showType) {
+                    sb.append("类型: ").append(field.getType().getName()).append("\n");
+                }
+
+                if (showAll || showModifiers) {
+                    sb.append("修饰符: ").append(getModifiers(field.getModifiers())).append("\n");
+                }
+
+                if (showAll || showValue) {
+                    if (Modifier.isStatic(field.getModifiers())) {
+                        try {
+                            Object value = field.get(null);
+                            sb.append("值: ").append(value != null ? value.toString() : "null").append("\n");
+                        } catch (Exception e) {
+                            sb.append("值: 无法获取 (").append(e.getMessage()).append(")\n");
+                        }
+                    } else {
+                        sb.append("值: 非静态字段，需要实例对象\n");
+                    }
+                }
+
+                if (showAll) {
+                    sb.append("声明类: ").append(field.getDeclaringClass().getName()).append("\n");
+                    sb.append("是否为final: ").append(Modifier.isFinal(field.getModifiers())).append("\n");
+                    sb.append("是否为volatile: ").append(Modifier.isVolatile(field.getModifiers())).append("\n");
+                    sb.append("是否为transient: ").append(Modifier.isTransient(field.getModifiers())).append("\n");
+                }
+
+                return sb.toString();
+
             } else {
                 Field[] fields = targetClass.getDeclaredFields();
                 StringBuilder sb = new StringBuilder();
@@ -1198,39 +1280,111 @@ public class ClassMain extends CommandBase {
         }
     }
 
-    private Method findMethod(Class<?> clazz, String methodName, Class<?>[] paramTypes, boolean staticOnly) {
-        try {
-            Method method = clazz.getDeclaredMethod(methodName, paramTypes);
-            if (!staticOnly || Modifier.isStatic(method.getModifiers())) {
-                return method;
+    private Field findField(Class<?> targetClass, String fieldName, boolean accessSuper, boolean accessInterfaces) {
+        Class<?> currentClass = targetClass;
+        
+        while (currentClass != null) {
+            try {
+                return currentClass.getDeclaredField(fieldName);
+            } catch (NoSuchFieldException e) {
+                currentClass = currentClass.getSuperclass();
             }
-            return null;
-        } catch (NoSuchMethodException e) {
-            for (Method method : clazz.getDeclaredMethods()) {
-                if (method.getName().equals(methodName)) {
-                    if (staticOnly && !Modifier.isStatic(method.getModifiers())) {
-                        continue;
-                    }
+        }
+        
+        if (accessInterfaces) {
+            assert targetClass != null;
+            Class<?>[] interfaces = targetClass.getInterfaces();
+            for (Class<?> _interface : interfaces) {
+                try {
+                    return _interface.getDeclaredField(fieldName);
+                } catch (NoSuchFieldException ignored) {
+                }
+            }
+        }
+        
+        return null;
+    }
 
-                    if (method.getParameterCount() == paramTypes.length) {
-                        Class<?>[] methodParams = method.getParameterTypes();
-                        boolean compatible = true;
-
-                        for (int i = 0; i < paramTypes.length; i++) {
-                            if (!methodParams[i].isAssignableFrom(paramTypes[i])) {
-                                compatible = false;
-                                break;
-                            }
+    private Method findMethod(Class<?> clazz, String methodName, Class<?>[] paramTypes, boolean staticOnly, boolean accessSuper, boolean accessInterfaces) {
+        Class<?> currentClass = clazz;
+        
+        while (currentClass != null) {
+            try {
+                Method method = currentClass.getDeclaredMethod(methodName, paramTypes);
+                if (!staticOnly || Modifier.isStatic(method.getModifiers())) {
+                    return method;
+                }
+            } catch (NoSuchMethodException e) {
+                for (Method method : currentClass.getDeclaredMethods()) {
+                    if (method.getName().equals(methodName)) {
+                        if (staticOnly && !Modifier.isStatic(method.getModifiers())) {
+                            continue;
                         }
 
-                        if (compatible) {
-                            return method;
+                        if (method.getParameterCount() == paramTypes.length) {
+                            Class<?>[] methodParams = method.getParameterTypes();
+                            boolean compatible = true;
+
+                            for (int i = 0; i < paramTypes.length; i++) {
+                                if (!methodParams[i].isAssignableFrom(paramTypes[i])) {
+                                    compatible = false;
+                                    break;
+                                }
+                            }
+
+                            if (compatible) {
+                                return method;
+                            }
                         }
                     }
                 }
             }
-            return null;
+            
+            if (accessSuper) {
+                currentClass = currentClass.getSuperclass();
+            } else {
+                break;
+            }
         }
+        
+        if (accessInterfaces) {
+            assert clazz != null;
+            Class<?>[] interfaces = clazz.getInterfaces();
+            for (Class<?> _interface : interfaces) {
+                try {
+                    Method method = _interface.getDeclaredMethod(methodName, paramTypes);
+                    if (!staticOnly || Modifier.isStatic(method.getModifiers())) {
+                        return method;
+                    }
+                } catch (NoSuchMethodException e) {
+                    for (Method method : _interface.getDeclaredMethods()) {
+                        if (method.getName().equals(methodName)) {
+                            if (staticOnly && !Modifier.isStatic(method.getModifiers())) {
+                                continue;
+                            }
+
+                            if (method.getParameterCount() == paramTypes.length) {
+                                Class<?>[] methodParams = method.getParameterTypes();
+                                boolean compatible = true;
+
+                                for (int i = 0; i < paramTypes.length; i++) {
+                                    if (!methodParams[i].isAssignableFrom(paramTypes[i])) {
+                                        compatible = false;
+                                        break;
+                                    }
+                                }
+
+                                if (compatible) {
+                                    return method;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        return null;
     }
 
     private Object findSingletonInstance(Class<?> clazz) {
@@ -1317,7 +1471,8 @@ public class ClassMain extends CommandBase {
             
             @SuppressWarnings("unchecked")
             Vector<Class<?>> classes = (Vector<Class<?>>) classesField.get(classLoader);
-            
+
+            assert classes != null;
             for (Class<?> clazz : classes) {
                 String className = clazz.getName();
                 if (matchesPattern(className, pattern)) {
@@ -1354,7 +1509,8 @@ public class ClassMain extends CommandBase {
             
             @SuppressWarnings("unchecked")
             Vector<Class<?>> classes = (Vector<Class<?>>) classesField.get(classLoader);
-            
+
+            assert classes != null;
             for (Class<?> clazz : classes) {
                 for (Method method : clazz.getDeclaredMethods()) {
                     if (matchesPattern(method.getName(), pattern)) {
@@ -1399,7 +1555,8 @@ public class ClassMain extends CommandBase {
             
             @SuppressWarnings("unchecked")
             Vector<Class<?>> classes = (Vector<Class<?>>) classesField.get(classLoader);
-            
+
+            assert classes != null;
             for (Class<?> clazz : classes) {
                 for (Field field : clazz.getDeclaredFields()) {
                     if (matchesPattern(field.getName(), pattern)) {
@@ -1444,7 +1601,8 @@ public class ClassMain extends CommandBase {
             
             @SuppressWarnings("unchecked")
             Vector<Class<?>> classes = (Vector<Class<?>>) classesField.get(classLoader);
-            
+
+            assert classes != null;
             for (Class<?> clazz : classes) {
                 for (Annotation annotation : clazz.getAnnotations()) {
                     String annotationName = annotation.annotationType().getSimpleName();
@@ -1501,5 +1659,119 @@ public class ClassMain extends CommandBase {
                              .replace("*", ".*");
         
         return text.matches(regex);
+    }
+
+    private String handleConstructor(String[] args, ClassLoader classLoader, String targetPackage) {
+        if (args.length < 2) {
+            logger.warn("参数不足，需要至少2个参数");
+            return getHelpText();
+        }
+
+        String className = args[1];
+        List<Object> params = new ArrayList<>();
+        List<Class<?>> paramTypes = new ArrayList<>();
+
+        for (int i = 2; i < args.length; i++) {
+            String paramStr = args[i];
+            int colonIndex = paramStr.indexOf(':');
+            if (colonIndex <= 0) {
+                logger.warn("参数形式不正确，获取到的: " + paramStr);
+                return "参数形式不正确: " + paramStr +
+                        "; 应为Type:value" +
+                        "\n\n示例: " +
+                        "\n    Integer:123, String:\"hello\", Boolean:true";
+            }
+
+            String typeName = paramStr.substring(0, colonIndex);
+            String valueExpr = paramStr.substring(colonIndex + 1);
+
+            try {
+                Object parsedValue = com.justnothing.testmodule.command.functions.classcmd.TypeParser.parse(typeName, valueExpr, classLoader);
+                params.add(parsedValue);
+                assert parsedValue != null;
+                paramTypes.add(parsedValue.getClass());
+                logger.info("参数" + (params.size() - 1) +
+                        ": (" + paramTypes.get(paramTypes.size()-1).getName() +")" +
+                        params.get(paramTypes.size()-1).toString());
+            } catch (Exception e) {
+                logger.warn("无法解析参数" + paramStr);
+                return "解析参数 " + (i-1) + "失败: " + e.getMessage() +
+                        "\n参数: " + paramStr +
+                        "\n堆栈追踪: " + Log.getStackTraceString(e);
+            }
+        }
+
+        try {
+            Class<?> targetClass;
+            try {
+                targetClass = XposedHelpers.findClass(className, classLoader);
+            } catch (Throwable e) {
+                logger.warn("没有找到类" + className);
+                return "找不到类: " + className +
+                        "\n类加载器: " + (targetPackage != null ? targetPackage : "default") +
+                        "\n错误信息: " + e.getMessage() +
+                        "\n堆栈追踪: " + Log.getStackTraceString(e);
+            }
+
+            Constructor<?> constructor = findConstructor(targetClass, paramTypes.toArray(new Class<?>[0]));
+
+            if (constructor == null) {
+                logger.warn("没有找到类" + className + "的匹配构造函数");
+                StringBuilder sb = new StringBuilder();
+                sb.append("没有找到匹配的构造函数\n");
+                sb.append("参数类型: ");
+                for (int i = 0; i < paramTypes.size(); i++) {
+                    sb.append(paramTypes.get(i).getSimpleName());
+                    if (i < paramTypes.size() - 1) sb.append(", ");
+                }
+                sb.append("\n\n");
+                sb.append("可用的构造函数:\n");
+                for (Constructor<?> c : targetClass.getDeclaredConstructors()) {
+                    sb.append("  ").append(getConstructorDescriptor(c)).append("\n");
+                }
+                return sb.toString();
+            }
+
+            constructor.setAccessible(true);
+            Object instance = constructor.newInstance(params.toArray());
+
+            logger.info("创建实例成功: " + instance);
+            return "创建实例成功: " + instance.toString() +
+                    "\n类型: " + instance.getClass().getName() +
+                    "\nHash: " + System.identityHashCode(instance);
+
+        } catch (Throwable e) {
+            StringBuilder sb = new StringBuilder();
+            logger.info("创建实例失败", e);
+            sb.append("创建实例失败: ").append(e.getMessage()).append("\n");
+            Throwable cause = e.getCause();
+            if (cause != null && cause != e) {
+                sb.append("原因: ").append(cause.getMessage()).append("\n");
+            }
+            sb.append("堆栈追踪:\n");
+            sb.append(Log.getStackTraceString(e));
+            return sb.toString();
+        }
+    }
+
+    private Constructor<?> findConstructor(Class<?> clazz, Class<?>[] paramTypes) {
+        for (Constructor<?> constructor : clazz.getDeclaredConstructors()) {
+            if (constructor.getParameterCount() == paramTypes.length) {
+                Class<?>[] constructorParams = constructor.getParameterTypes();
+                boolean compatible = true;
+
+                for (int i = 0; i < paramTypes.length; i++) {
+                    if (!constructorParams[i].isAssignableFrom(paramTypes[i])) {
+                        compatible = false;
+                        break;
+                    }
+                }
+
+                if (compatible) {
+                    return constructor;
+                }
+            }
+        }
+        return null;
     }
 }

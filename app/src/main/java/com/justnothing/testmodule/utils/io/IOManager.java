@@ -5,7 +5,6 @@ import com.justnothing.testmodule.utils.data.BootMonitor;
 import com.justnothing.testmodule.utils.functions.Logger;
 
 import java.io.*;
-import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -13,8 +12,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Future;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class IOManager extends Logger {
@@ -28,13 +29,6 @@ public class IOManager extends Logger {
 
     private static volatile IOManager instance = null;
 
-    private static final int DEFAULT_BUFFER_SIZE = 8192;
-    private static final int LARGE_BUFFER_SIZE = 65536;
-    private static final int MAX_RETRIES = 3;
-    private static final long RETRY_DELAY_MS = 100;
-
-    private static final long WRITE_BATCH_SIZE = 64 * 1024;
-    private static final long WRITE_BATCH_TIMEOUT_MS = 100;
 
     private final AtomicLong totalBytesRead = new AtomicLong(0);
     private final AtomicLong totalBytesWritten = new AtomicLong(0);
@@ -494,7 +488,7 @@ public class IOManager extends Logger {
         StringBuilder stdout = new StringBuilder();
         StringBuilder stderr = new StringBuilder();
 
-        Thread stdoutThread = new Thread(() -> {
+        Future<String> stdoutFuture = ThreadPoolManager.submitIOCallable(() -> {
             try (BufferedReader reader = new BufferedReader(
                     new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
                 String line;
@@ -504,9 +498,10 @@ public class IOManager extends Logger {
             } catch (IOException e) {
                 logger.error("读取stdout失败", e);
             }
+            return "stdout_done";
         });
 
-        Thread stderrThread = new Thread(() -> {
+        Future<String> stderrFuture = ThreadPoolManager.submitIOCallable(() -> {
             try (BufferedReader reader = new BufferedReader(
                     new InputStreamReader(process.getErrorStream(), StandardCharsets.UTF_8))) {
                 String line;
@@ -516,32 +511,32 @@ public class IOManager extends Logger {
             } catch (IOException e) {
                 instance.error("读取stderr失败", e);
             }
+            return "stderr_done";
         });
-
-        stdoutThread.setDaemon(true);
-        stderrThread.setDaemon(true);
-        stdoutThread.start();
-        stderrThread.start();
 
         int exitCode;
         try {
             if (timeoutMs > 0) {
-                Thread waiter = new Thread(() -> {
+                Future<Integer> exitCodeFuture = ThreadPoolManager.submitIOCallable(() -> {
                     try {
-                        process.waitFor();
+                        return process.waitFor();
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
+                        return -1;
                     }
                 });
-                waiter.start();
-                waiter.join(timeoutMs);
-
-                if (waiter.isAlive()) {
-                    waiter.interrupt();
+                
+                try {
+                    exitCode = exitCodeFuture.get(timeoutMs, TimeUnit.MILLISECONDS);
+                } catch (TimeoutException e) {
+                    exitCodeFuture.cancel(true);
                     process.destroyForcibly();
                     throw new InterruptedException("命令执行超时 (" + timeoutMs + "ms)");
+                } catch (ExecutionException e) {
+                    exitCodeFuture.cancel(true);
+                    process.destroyForcibly();
+                    throw new InterruptedException("命令执行异常: " + e.getMessage());
                 }
-                exitCode = process.exitValue();
             } else {
                 exitCode = process.waitFor();
             }
@@ -550,8 +545,12 @@ public class IOManager extends Logger {
             throw e;
         }
 
-        stdoutThread.join(1000);
-        stderrThread.join(1000);
+        try {
+            stdoutFuture.get(1000, TimeUnit.MILLISECONDS);
+            stderrFuture.get(1000, TimeUnit.MILLISECONDS);
+        } catch (Exception e) {
+            logger.warn("等待I/O线程完成时出错", e);
+        }
 
         return new ProcessResult(exitCode, stdout.toString(), stderr.toString());
     }

@@ -19,6 +19,7 @@ import com.justnothing.testmodule.constants.HookConfig;
 import com.justnothing.testmodule.utils.data.DataBridge;
 import com.justnothing.testmodule.utils.functions.Logger;
 import com.justnothing.testmodule.utils.hooks.ClientHookConfig;
+import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
 import org.json.JSONObject;
 
@@ -72,7 +73,7 @@ public class HookConfigActivity extends AppCompatActivity {
     }
 
     private void loadHooks() {
-        new Thread(() -> {
+        ThreadPoolManager.submitFastRunnable(() -> {
             List<HookItem> loadedItems = new ArrayList<>();
             Map<String, Boolean> hookStates = ClientHookConfig.getAllHookStates();
             try {
@@ -116,7 +117,7 @@ public class HookConfigActivity extends AppCompatActivity {
                 adapter.notifyDataSetChanged();
                 updateEmptyHint();
             });
-        }).start();
+        });
     }
 
 

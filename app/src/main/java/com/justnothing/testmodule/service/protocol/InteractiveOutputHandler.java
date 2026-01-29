@@ -2,6 +2,7 @@ package com.justnothing.testmodule.service.protocol;
 
 import com.justnothing.testmodule.command.output.IOutputHandler;
 import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -88,7 +89,7 @@ public class InteractiveOutputHandler implements IOutputHandler {
             }
 
             // 启动心跳线程
-            Thread pingThread = new Thread(() -> {
+            Future<?> pingThreadFuture = ThreadPoolManager.submitFastRunnable(() -> {
                 while (!Thread.currentThread().isInterrupted() &&
                         !closed.get() &&
                         (System.currentTimeMillis() - lastResponseTime.get()) < PING_PONG_TIMEOUT) {
@@ -111,19 +112,21 @@ public class InteractiveOutputHandler implements IOutputHandler {
                 }
             });
 
-            pingThread.setDaemon(true);
-            pingThread.start();
-
             while (!closed.get() && (System.currentTimeMillis() - lastResponseTime.get()) < PING_PONG_TIMEOUT) {
                 String response = inputQueue.poll(500, TimeUnit.MILLISECONDS);
                 if (response != null) {
                     logger.debug("收到输入响应: " + requestId + " - " + response);
-
-                    pingThread.interrupt();
+                    pingThreadFuture.cancel(true);
                     try {
-                        pingThread.join(1000);
+                        pingThreadFuture.get(1000, TimeUnit.MILLISECONDS);
                     } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
+                        logger.debug("等待心跳线程结束时被中断，忽略，异常信息:" + e.getMessage());
+                    } catch (ExecutionException e) {
+                        logger.debug("心跳线程执行异常，忽略，异常信息:" + e.getMessage());
+                    } catch (CancellationException e) {
+                        logger.debug("心跳线程被取消，忽略");
+                    } catch (TimeoutException e) {
+                        logger.debug("等待心跳线程结束超时，继续等待");
                     }
                     return response;
                 }
@@ -144,7 +147,7 @@ public class InteractiveOutputHandler implements IOutputHandler {
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            logger.warn("输入请求被中断: " + requestId);
+            logger.warn("输入请求被中断: " + requestId, e);
             throw new RuntimeException("输入被中断");
         } catch (IOException e) {
             logger.error("发送输入请求失败", e);
@@ -209,7 +212,7 @@ public class InteractiveOutputHandler implements IOutputHandler {
                         break;
                     }
                 }
-            });
+            }, "InteractiveOutputHandler-pingThread");
 
             pingThread.setDaemon(true);
             pingThread.start();

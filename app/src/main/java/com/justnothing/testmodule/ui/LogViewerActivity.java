@@ -23,6 +23,7 @@ import com.justnothing.testmodule.R;
 import com.justnothing.testmodule.utils.data.DataBridge;
 import com.justnothing.testmodule.utils.data.LogWriter;
 import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -168,7 +169,7 @@ public class LogViewerActivity extends AppCompatActivity {
             }
         });
 
-        new Thread(() -> {
+        ThreadPoolManager.submitFastRunnable(() -> {
             try {
                 String logsText = DataBridge.readLogs();
                 String currentHash = String.valueOf(logsText.hashCode());
@@ -227,7 +228,7 @@ public class LogViewerActivity extends AppCompatActivity {
                     }
                 });
             }
-        }).start();
+        });
     }
     
     private List<LogWriter.LogEntry> filterLogs(List<LogWriter.LogEntry> logs) {

@@ -7,6 +7,7 @@ import com.justnothing.testmodule.service.ShellService;
 import com.justnothing.testmodule.hooks.HookEntry;
 import com.justnothing.testmodule.hooks.PackageHook;
 import com.justnothing.testmodule.utils.functions.CmdUtils;
+import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
 import java.lang.reflect.Method;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -95,7 +96,7 @@ public class ShellServiceHook extends PackageHook {
             isRegistering.set(true);
         }
 
-        Thread registerThread = new Thread(() -> {
+        ThreadPoolManager.submitFastRunnable(() -> {
             try {
                 info("开始注册命令行服务");
 
@@ -169,10 +170,7 @@ public class ShellServiceHook extends PackageHook {
             } finally {
                 isRegistering.set(false);
             }
-        }, "ShellService-Register");
-        registerThread.setDaemon(true);
-        registerThread.setPriority(Thread.NORM_PRIORITY - 1);
-        registerThread.start();
+        });
     }
 
     private void logServiceStatus() {
@@ -214,17 +212,14 @@ public class ShellServiceHook extends PackageHook {
                             hasTriggeredRegistration = true;
                             info("服务已启动，延迟注册ShellService");
                             
-                            Thread registerThread = new Thread(() -> {
+                            ThreadPoolManager.submitFastRunnable(() -> {
                                 try {
                                     Thread.sleep(3000);
                                     registerService();
                                 } catch (Exception e) {
                                     error("延迟注册失败", e);
                                 }
-                            }, "ShellService-Register");
-                            registerThread.setDaemon(true);
-                            registerThread.setPriority(Thread.NORM_PRIORITY - 1);
-                            registerThread.start();
+                            });
                         }
                     }
                 }

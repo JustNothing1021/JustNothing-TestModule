@@ -4,6 +4,7 @@ import androidx.annotation.NonNull;
 
 import com.justnothing.methodsclient.StreamClient;
 import com.justnothing.testmodule.service.protocol.InteractiveProtocol;
+import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -141,7 +142,7 @@ public class SocketStreamReader {
                             break;
 
                         case InteractiveProtocol.TYPE_SERVER_INPUT_REQUEST:
-                            Thread inputHandlerThread = new Thread(() -> { if (data != null) {
+                            ThreadPoolManager.submitFastRunnable(() -> { if (data != null) {
                                 try {
                                     String request = new String(data, StandardCharsets.UTF_8);
                                     String[] parts = request.split(":", 2);
@@ -179,8 +180,6 @@ public class SocketStreamReader {
                                     System.err.println("处理输入请求时出错: " + e);
                                 }
                             }});
-                            inputHandlerThread.setDaemon(true);
-                            inputHandlerThread.start();
                             break;
 
                         case InteractiveProtocol.TYPE_SERVER_PING:
@@ -260,7 +259,7 @@ public class SocketStreamReader {
                     break;
                 }
             }
-        });
+        }, "ClientPingThread");
         pingThread.setDaemon(true);
         return pingThread;
     }
@@ -283,7 +282,7 @@ public class SocketStreamReader {
                 }
             } catch (Exception ignored) {
             }
-        });
+        }, "TerminalInputThread");
         terminalInputThread.setDaemon(true);
         return terminalInputThread;
     }

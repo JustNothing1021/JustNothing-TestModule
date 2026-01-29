@@ -83,17 +83,17 @@ public class ScriptExecutorMain extends CommandBase {
                         range(int end)
                         range(int begin, int end)
                         range(int begin, int end, int step)
-                        analyze(Object obj)   -> null             - 分析一个对象
-                        getContext()          -> Context          - 获取上下文
-                        getApplicationInfo()  -> ApplicationInfo  - 获取应用信息
-                        getPackageName()      -> String           - 获取包名
-                        createSafeExecutor()  -> Object()       - 创建线程安全的执行器
+                        analyze(Object obj)   -> null              - 分析一个对象
+                        getContext()          -> Context           - 获取上下文
+                        getApplicationInfo()  -> ApplicationInfo   - 获取应用信息
+                        getPackageName()      -> String            - 获取包名
+                        createSafeExecutor()  -> Object()          - 创建线程安全的执行器
                         asRunnable(Lambda lambda)                  - 防止Lambda不兼容
                         asFunction(Lambda lambda)                  - 同上
                         runLater(Lambda lambda)                    - 把Lambda放新线程跑
                     
                     退出命令:
-                        exit, quit                         - 退出交互式模式
+                        exit, quit                                 - 退出交互式模式
                     
                     示例:
                         sinteractive
@@ -135,13 +135,13 @@ public class ScriptExecutorMain extends CommandBase {
                             println(String s)                    - 将字符串输出到缓冲区并且换行, 最终会作为结果返回
                             range(int end)
                             range(int begin, int end)
-                            range(int begin, int end, int step)  - 都能写Java了, 相信你也会用Python的range(真的吗...?)
-                        
-                            analyze(Object obj)   -> null             - 分析一个对象, 打印出一些它的相关信息
-                            getContext()          -> Context          - 获取上下文, DeepSeek神力
-                            getApplicationInfo()  -> ApplicationInfo  - 也是DeepSeek写的
-                            getPackageName()      -> String           - 和上面一样
-                            createSafeExecutor()  -> Object() {       - 创建一个Android中线程安全的执行器, 防止出现诡异错误崩掉系统
+                            range(int begin, int end, int step)        - 都能写Java了, 相信你也会用Python的range(真的吗...?)
+                            getInterpreterClassLoader() -> ClassLoader - 获取解释器的类加载器, 可以用来加载类
+                            analyze(Object obj)   -> null              - 分析一个对象, 打印出一些它的相关信息
+                            getContext()          -> Context           - 获取上下文, DeepSeek神力
+                            getApplicationInfo()  -> ApplicationInfo   - 也是DeepSeek写的
+                            getPackageName()      -> String            - 和上面一样
+                            createSafeExecutor()  -> Object() {        - 创建一个Android中线程安全的执行器, 防止出现诡异错误崩掉系统
                                 Object runOnMainThread(Callable<Object> task);                     - 在主线程执行任务
                                 Object runOnLooperThread(Callable<Object> task);                   - 在有Looper的新线程中执行任务
                                 Object runWithLooper(Callable<Object> task);                       - 在当前线程用Lopper执行任务
@@ -191,7 +191,11 @@ public class ScriptExecutorMain extends CommandBase {
                             (7) 可以用delete把变量删掉
                                 e.g.
                                   int a = 114514;
+                                  int b = 1919810;
+                                  int c = 2034324;
                                   delete a; // a没了
+                                  delete *; // 全没了!
+
                             
                             (8) 可以直接调用lambda表达式
                                 e.g.
@@ -203,7 +207,7 @@ public class ScriptExecutorMain extends CommandBase {
                         
                         更多示例:
                             String b = new String("1919810");
-                            String a = "114514"; Log.i("Tag", a + " " + b);
+                            String a = "114514"; Log.i("Tag", /* 其实换成啥都行 */ a + " " + b);
                             int x = (10 + 5) * 2;
                             for (int i = 0; i < 114; i++) println(i);
                             int[][] arr = new int[3][3] {new int[]{1, 2, 3}, new int[]{4, 5, 6}, new int[]{7, 8, 9}}; println(arr);
@@ -682,7 +686,7 @@ public class ScriptExecutorMain extends CommandBase {
             }
             
             try {
-                Object result = runner.executeWithResult(code);
+                Object result = runner.executeWithResult(code, context.output(), context.output());
                 if (result != null) {
                     context.output().println(result.toString());
                 }

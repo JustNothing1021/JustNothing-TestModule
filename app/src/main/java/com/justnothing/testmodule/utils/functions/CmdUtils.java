@@ -2,6 +2,12 @@ package com.justnothing.testmodule.utils.functions;
 
 import androidx.annotation.NonNull;
 import java.io.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
 public class CmdUtils {
 
@@ -145,22 +151,26 @@ public class CmdUtils {
         Process finalProcess = process;
         try {
             if (timeoutMs > 0) {
-                Thread waiter = new Thread(() -> {
+                Future<Integer> exitCodeFuture = ThreadPoolManager.submitIOCallable(() -> {
                     try {
-                        finalProcess.waitFor();
+                        return finalProcess.waitFor();
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
+                        return -1;
                     }
                 });
-                waiter.start();
-                waiter.join(timeoutMs);
                 
-                if (waiter.isAlive()) {
-                    waiter.interrupt();
+                try {
+                    exitCode = exitCodeFuture.get(timeoutMs, TimeUnit.MILLISECONDS);
+                } catch (TimeoutException e) {
+                    exitCodeFuture.cancel(true);
                     process.destroyForcibly();
                     throw new InterruptedException("命令执行超时 (" + timeoutMs + "ms)");
+                } catch (ExecutionException e) {
+                    exitCodeFuture.cancel(true);
+                    process.destroyForcibly();
+                    throw new InterruptedException("命令执行异常: " + e.getMessage());
                 }
-                exitCode = process.exitValue();
             } else {
                 exitCode = process.waitFor();
             }
@@ -206,22 +216,26 @@ public class CmdUtils {
         int exitCode;
         try {
             if (timeoutMs > 0) {
-                Thread waiter = new Thread(() -> {
+                Future<Integer> exitCodeFuture = ThreadPoolManager.submitIOCallable(() -> {
                     try {
-                        process.waitFor();
+                        return process.waitFor();
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
+                        return -1;
                     }
                 });
-                waiter.start();
-                waiter.join(timeoutMs);
                 
-                if (waiter.isAlive()) {
-                    waiter.interrupt();
+                try {
+                    exitCode = exitCodeFuture.get(timeoutMs, TimeUnit.MILLISECONDS);
+                } catch (TimeoutException e) {
+                    exitCodeFuture.cancel(true);
                     process.destroyForcibly();
                     throw new InterruptedException("命令执行超时 (" + timeoutMs + "ms)");
+                } catch (ExecutionException e) {
+                    exitCodeFuture.cancel(true);
+                    process.destroyForcibly();
+                    throw new InterruptedException("命令执行异常: " + e.getMessage());
                 }
-                exitCode = process.exitValue();
             } else {
                 exitCode = process.waitFor();
             }

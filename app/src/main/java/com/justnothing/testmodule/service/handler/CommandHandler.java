@@ -11,6 +11,7 @@ import com.justnothing.testmodule.utils.data.BootMonitor;
 import com.justnothing.testmodule.utils.data.DataDirectoryManager;
 import com.justnothing.testmodule.utils.functions.Logger;
 import com.justnothing.testmodule.utils.functions.CmdUtils;
+import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
 import java.io.File;
 import java.io.IOException;
@@ -83,7 +84,7 @@ public class CommandHandler {
             OutputStream outputStream = new ParcelFileDescriptor.AutoCloseOutputStream(writeFd);
             IOutputHandler outputWriter = new StreamOutputWriter(outputStream);
 
-            new Thread(() -> {
+            ThreadPoolManager.submitFastRunnable(() -> {
                 try {
                     commandExecutor.execute(command, outputWriter);
                 } catch (Exception e) {
@@ -99,7 +100,7 @@ public class CommandHandler {
 
                     try { writeFd.close(); } catch (IOException ignored) {}
                 }
-            }, "ShellService-StreamExecutor").start();
+            });
 
             reply.writeNoException();
             reply.writeFileDescriptor(readFd.getFileDescriptor());

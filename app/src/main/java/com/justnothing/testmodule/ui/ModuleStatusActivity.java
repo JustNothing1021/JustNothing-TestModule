@@ -17,6 +17,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.justnothing.testmodule.R;
 import com.justnothing.testmodule.utils.functions.Logger;
 import com.justnothing.testmodule.utils.data.ModuleStatusMonitor;
+import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 import com.justnothing.methodsclient.StreamClient;
 
 import java.util.ArrayList;
@@ -90,7 +91,7 @@ public class ModuleStatusActivity extends AppCompatActivity {
     }
 
     private void refreshStatus() {
-        new Thread(() -> {
+        ThreadPoolManager.submitFastRunnable(() -> {
             try {
                 StreamClient.writeHookData(false);
             } catch (Exception e) {
@@ -136,7 +137,7 @@ public class ModuleStatusActivity extends AppCompatActivity {
                 logger.info("状态刷新完成, 模块激活: " + status.isModuleActive +
                            ", Hook数量: " + status.hookCount + ", Hook详情数量: " + status.hookDetails.size());
             });
-        }).start();
+        });
     }
 
     class HookDetailAdapter extends RecyclerView.Adapter<HookDetailAdapter.ViewHolder> {
