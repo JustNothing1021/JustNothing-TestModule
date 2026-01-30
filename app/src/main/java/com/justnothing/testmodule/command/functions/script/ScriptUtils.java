@@ -99,6 +99,10 @@ public class ScriptUtils {
         return target == Short.class && source == short.class;
     }
 
+    static boolean isExactTypeMatch(Class<?> expected, Class<?> actual) {
+        return expected == actual;
+    }
+
     static boolean isTypeCompatible(Class<?> expected, Class<?> actual) {
         if (expected == Void.class && actual == Void.class)
             return true;
@@ -236,10 +240,26 @@ public class ScriptUtils {
 
     public static ScriptModels.MethodDefinition findMethodInHierarchy(ScriptModels.ClassDefinition classDef, String methodName,
                                                                       ScriptModels.ExecutionContext context) {
+        return findMethodInHierarchy(classDef, methodName, context, null);
+    }
+
+    public static ScriptModels.MethodDefinition findMethodInHierarchy(ScriptModels.ClassDefinition classDef, String methodName,
+                                                                      ScriptModels.ExecutionContext context,
+                                                                      List<Class<?>> argTypes) {
         // 首先在当前类中查找方法
-        ScriptModels.MethodDefinition methodDef = classDef.getMethod(methodName);
-        if (methodDef != null) {
-            return methodDef;
+        List<ScriptModels.MethodDefinition> methods = classDef.getMethods(methodName);
+        if (methods != null && !methods.isEmpty()) {
+            // 如果提供了参数类型，选择最匹配的方法
+            if (argTypes != null && !argTypes.isEmpty()) {
+                for (ScriptModels.MethodDefinition methodDef : methods) {
+                    if (isMethodApplicable(methodDef, argTypes, context)) {
+                        return methodDef;
+                    }
+                }
+            } else {
+                // 没有提供参数类型，返回第一个方法
+                return methods.get(0);
+            }
         }
 
         // 如果当前类没有找到，检查父类
@@ -247,12 +267,65 @@ public class ScriptUtils {
         if (superClassName != null) {
             ScriptModels.ClassDefinition superClassDef = context.customClasses.get(superClassName);
             if (superClassDef != null) {
-                return findMethodInHierarchy(superClassDef, methodName, context);
+                return findMethodInHierarchy(superClassDef, methodName, context, argTypes);
             }
         }
 
         // 如果没有找到，返回null
         return null;
+    }
+
+    private static boolean isMethodApplicable(ScriptModels.MethodDefinition methodDef, List<Class<?>> argTypes,
+                                              ScriptModels.ExecutionContext context) {
+        List<ScriptModels.Parameter> parameters = methodDef.getParameters();
+        
+        // 如果参数数量不匹配，不适用
+        if (parameters.size() != argTypes.size()) {
+            return false;
+        }
+
+        // 检查每个参数的类型是否匹配
+        for (int i = 0; i < parameters.size(); i++) {
+            ScriptModels.Parameter param = parameters.get(i);
+            Class<?> expectedType = getClassFromTypeName(param.getType(), context);
+            Class<?> actualType = argTypes.get(i);
+
+            if (expectedType != null && actualType != null) {
+                if (!isTypeCompatible(expectedType, actualType)) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private static Class<?> getClassFromTypeName(String typeName, ScriptModels.ExecutionContext context) {
+        try {
+            if (typeName.equals("int")) return int.class;
+            if (typeName.equals("long")) return long.class;
+            if (typeName.equals("float")) return float.class;
+            if (typeName.equals("double")) return double.class;
+            if (typeName.equals("boolean")) return boolean.class;
+            if (typeName.equals("char")) return char.class;
+            if (typeName.equals("byte")) return byte.class;
+            if (typeName.equals("short")) return short.class;
+            if (typeName.equals("void")) return void.class;
+            
+            // 处理数组类型
+            if (typeName.endsWith("[]")) {
+                String componentTypeName = typeName.substring(0, typeName.length() - 2);
+                Class<?> componentType = getClassFromTypeName(componentTypeName, context);
+                if (componentType != null) {
+                    return java.lang.reflect.Array.newInstance(componentType, 0).getClass();
+                }
+            }
+            
+            // 处理对象类型
+            return (Class<?>) context.findClass(typeName);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     public static ScriptModels.FieldDefinition findFieldInHierarchy(ScriptModels.ClassDefinition classDef, String fieldName,

@@ -1636,7 +1636,7 @@ private boolean shouldExpandArrayForVarArgs(Method method, Object arrayArg, Clas
             }
 
             // 第七步：没有找到匹配的方法，构建详细的错误信息
-            logger.error("找不到类" + clazz.getName() + "的方法" + name + "，参数为" + Arrays.toString(argTypes.toArray()));
+            logger.debug("找不到类" + clazz.getName() + "的方法" + name + "，参数为" + Arrays.toString(argTypes.toArray()));
             StringBuilder sb = new StringBuilder();
             for (Method method : clazz.getMethods()) {
                 if (method.getName().equals(name)) {
@@ -1788,7 +1788,7 @@ private boolean shouldExpandArrayForVarArgs(Method method, Object arrayArg, Clas
 
       public static class ClassDefinition {
         private final String className;
-        private final Map<String, MethodDefinition> methods;
+        private final Map<String, List<MethodDefinition>> methods;
         private final Map<String, FieldDefinition> fields;
         private final Map<String, ConstructorDefinition> constructors;
         private String superClassName;
@@ -1808,7 +1808,7 @@ private boolean shouldExpandArrayForVarArgs(Method method, Object arrayArg, Clas
         }
 
         public void addMethod(String methodName, MethodDefinition method) {
-            methods.put(methodName, method);
+            methods.computeIfAbsent(methodName, k -> new ArrayList<>()).add(method);
         }
 
         public void addField(String fieldName, FieldDefinition field) {
@@ -1822,6 +1822,11 @@ private boolean shouldExpandArrayForVarArgs(Method method, Object arrayArg, Clas
         }
 
         public MethodDefinition getMethod(String methodName) {
+            List<MethodDefinition> methodList = methods.get(methodName);
+            return methodList != null && !methodList.isEmpty() ? methodList.get(0) : null;
+        }
+
+        public List<MethodDefinition> getMethods(String methodName) {
             return methods.get(methodName);
         }
 

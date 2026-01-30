@@ -683,6 +683,7 @@ public class ScriptParser {
     private ASTNode parseLiteral() throws RuntimeException {
         skipWhitespace();
         savePosition();
+        logger.debug("parseLiteral 开始于位置" + position + ", 大致内容：" + peek(20));
         boolean failure = false;
         try {
             ASTNode expr = parsePrimary();
@@ -798,15 +799,13 @@ public class ScriptParser {
                 return result;
             }
 
-            if (peek() == '(') {
-                savePosition();
-                try {
-                    ASTNode lambda = parseLambdaExpression();
-                    releasePosition();
-                    return lambda;
-                } catch (RuntimeException e) {
-                    restorePosition();
-                }
+            savePosition();
+            try {
+                ASTNode lambda = parseLambdaExpression();
+                releasePosition();
+                return lambda;
+            } catch (RuntimeException e) {
+                restorePosition();
             }
 
             if (peek() == '(') {
@@ -916,7 +915,7 @@ public class ScriptParser {
             skipWhitespace();
             ASTNode body;
             if (peek() == '{') {
-                body = parseBlock();
+                body = parseBlock(false);
             } else {
                 BlockNode block = new BlockNode();
                 ASTNode stmt = parseStatement();
@@ -945,7 +944,7 @@ public class ScriptParser {
             skipWhitespace();
             ASTNode body;
             if (peek() == '{') {
-                body = parseBlock();
+                body = parseBlock(false);
             } else {
                 BlockNode block = new BlockNode();
                 ASTNode stmt = parseStatement();
@@ -1083,7 +1082,7 @@ public class ScriptParser {
 
             ASTNode tryBlock;
             if (peek() == '{') {
-                tryBlock = parseBlock();
+                tryBlock = parseBlock(false);
             } else {
                 throw new RuntimeException("try block must be enclosed in braces");
             }
@@ -1106,7 +1105,7 @@ public class ScriptParser {
                 ASTNode catchBlock;
                 skipWhitespace();
                 if (peek() == '{') {
-                    catchBlock = parseBlock();
+                    catchBlock = parseBlock(false);
                 } else {
                     catchBlock = parseCompletedStatement();
                 }
@@ -1120,7 +1119,7 @@ public class ScriptParser {
                 expectWordToMove("finally");
                 skipWhitespace();
                 if (peek() == '{') {
-                    finallyBlock = parseBlock();
+                    finallyBlock = parseBlock(false);
                 } else {
                     finallyBlock = parseCompletedStatement();
                 }
@@ -1212,13 +1211,13 @@ public class ScriptParser {
         }
     }
 
-    private ASTNode parseBlock() {
+    private ASTNode parseBlock(boolean isIndependent) {
         savePosition();
         skipWhitespace();
         boolean failure = false;
         try {
             expectToMove('{');
-            BlockNode block = new BlockNode();
+            BlockNode block = new BlockNode(isIndependent);
             skipWhitespace();
 
             while (peek() != '}' && position < input.length()) {
@@ -1330,7 +1329,7 @@ public class ScriptParser {
             ASTNode body;
 
             if (peek() == '{') {
-                body = parseBlock();
+                body = parseBlock(false);
             } else {
                 BlockNode block = new BlockNode();
                 ASTNode stmt = parseStatement();
@@ -1374,7 +1373,7 @@ public class ScriptParser {
             skipWhitespace();
             ASTNode body;
             if (peek() == '{') {
-                body = parseBlock();
+                body = parseBlock(false);
             } else {
                 BlockNode block = new BlockNode();
                 ASTNode stmt = parseStatement();
@@ -1503,7 +1502,7 @@ public class ScriptParser {
         int pos = position;
         try {
             if (peek() == '{') {
-                result = parseBlock();
+                result = parseBlock(true);
                 clearLastUncompletedStmt();
                 return result;
             }
@@ -1578,7 +1577,7 @@ public class ScriptParser {
 
     private String parseClassIdentifier() {
         StringBuilder sb = new StringBuilder();
-        savePosition();
+        savePosition(); // 0
         boolean inSquareBrackets = false;
         int genericDepth = 0; // 当前套了几层模板类
         while (position < input.length()) {
@@ -1601,6 +1600,7 @@ public class ScriptParser {
                     genericDepth++;
                 } else if (c == '>') {
                     if (genericDepth == 0) {
+                        restorePosition(); // 0
                         unexpectedToken("Missing '<'");
                     } else
                         genericDepth--;
@@ -1616,6 +1616,9 @@ public class ScriptParser {
                 } else if (c == ',') {
                     if (genericDepth > 0) {
                         sb.append(c);
+                    } else {
+                        restorePosition(); // 0
+                        unexpectedToken("Unexcepted ','");
                     }
                 } else {
                     break;
@@ -1624,27 +1627,29 @@ public class ScriptParser {
             position++;
         }
         if (genericDepth > 0) {
+            restorePosition(); // 0
             unexpectedToken("Missing '>'");
         }
         if (inSquareBrackets) {
+            restorePosition(); // 0
             unexpectedToken("Missing ']'");
         }
         String result = sb.toString();
         if (result.isEmpty()) {
-            restorePosition();
+            restorePosition(); // 0
             throw new RuntimeException("Cannot parse identifier at position " + position);
         } else {
             if (Character.isDigit(result.charAt(0))) {
-                restorePosition();
+                restorePosition(); // 0
                 unexpectedToken("Invalid class name: ");
             } else if (result.charAt(0) == '.' || result.charAt(0) == '<' || result.charAt(0) == '>'
                     || result.charAt(0) == '[' || result.charAt(0) == ']') {
-                restorePosition();
+                restorePosition(); // 0
                 unexpectedToken("Invalid class name: ");
             }
         }
         validateClassIdentifier(result);
-        releasePosition();
+        releasePosition(); // 0
         return result;
     }
 
@@ -2041,11 +2046,8 @@ public class ScriptParser {
         boolean failure = false;
 
         try {
-            if (peek() != '(') {
-                throw new RuntimeException("Lambda expression missing '('");
-            }
 
-            expectToMove('(');
+            boolean hasLeftParenthesis = match('(');
             List<String> parameters = new ArrayList<>();
 
             skipWhitespace();
@@ -2055,12 +2057,19 @@ public class ScriptParser {
                 if (peek() == ',') {
                     advance();
                     skipWhitespace();
-                } else if (peek() != ')') {
-                    throw new RuntimeException("Error parsing lambda argument list, expected ',' or ')'");
+                } else if (peek(2).equals("->")) {
+                    break;
+                } else if (peek() == ')') {
+                    if (hasLeftParenthesis) {
+                        throw new RuntimeException("Invalid lambda expression");
+                    }
+                } else {
+                    throw new RuntimeException("Invalid lambda expression");
                 }
             }
 
-            expectToMove(')');
+            if (hasLeftParenthesis) expectToMove(')');
+
             skipWhitespace();
 
             if (!matchKeyword("->")) {
@@ -2071,7 +2080,7 @@ public class ScriptParser {
 
             ASTNode body;
             if (peek() == '{') {
-                body = parseBlock();
+                body = parseBlock(false);
             } else {
                 body = parseExpression();
             }
@@ -2225,7 +2234,7 @@ public class ScriptParser {
             // 首先检查是否有块结构 { }
             skipWhitespace();
             if (peek() == '{') {
-                thenBlock = parseBlock();
+                thenBlock = parseBlock(false);
             } else {
                 // 如果没有块结构，尝试解析单条语句
                 thenBlock = parseCompletedStatement();
@@ -2236,7 +2245,7 @@ public class ScriptParser {
             if (matchKeyword("else")) {
                 skipWhitespace();
                 if (peek() == '{') {
-                    elseBlock = parseBlock();
+                    elseBlock = parseBlock(false);
                 } else {
                     elseBlock = parseCompletedStatement();
                 }

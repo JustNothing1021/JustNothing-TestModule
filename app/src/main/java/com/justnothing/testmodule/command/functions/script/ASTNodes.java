@@ -103,7 +103,7 @@ public class ASTNodes {
                 for (ASTNode element : elements) {
                     Object value = element.evaluate(context);
                     values.add(value);
-                    if (!type.isAssignableFrom(value.getClass())) {
+                    if (value != null && !type.isAssignableFrom(value.getClass())) {
                         logger.warn("数组元素类型不一致: " + type + " != " + value.getClass() + ", 尝试解析为Object[]");
                         type = Object.class;
                     }
@@ -629,10 +629,12 @@ public class ASTNodes {
             }
 
             List<Object> argsList = new ArrayList<>();
+            List<Class<?>> argTypes = new ArrayList<>();
             for (int i = 0; i < arguments.size(); i++) {
                 ASTNode arg = arguments.get(i);
                 Object argValue = arg.evaluate(context);
                 argsList.add(argValue);
+                argTypes.add(argValue != null ? argValue.getClass() : Void.class);
             }
 
             if (target != null) {
@@ -644,7 +646,7 @@ public class ASTNodes {
 
                 if (targetObj instanceof CustomClassInstance customInstance) {
                     ClassDefinition classDef = customInstance.getClassDefinition();
-                    MethodDefinition methodDef = findMethodInHierarchy(classDef, methodName, context);
+                    MethodDefinition methodDef = findMethodInHierarchy(classDef, methodName, context, argTypes);
                     if (methodDef != null) {
                         // 保存当前的控制流状态
                         boolean originalShouldReturn = context.shouldReturn;
@@ -765,7 +767,6 @@ public class ASTNodes {
                 Method method = context.findMethod(targetClass, methodName, Arrays.asList(argTypes));
                 return method.getReturnType();
             } catch (NoSuchMethodException e) {
-                logger.error("没有找到" + targetClass.getName() + "的方法" + methodName);
                 throw new RuntimeException("Method not found: " + methodName + " on " + targetClass.getName());
             }
         }
@@ -928,6 +929,7 @@ public class ASTNodes {
             //     logger.error("尝试实例化一个抽象类或接口" + className);
             //     throw new InstantiationException("Cannot instantiate abstract class or interface: " + className);
             // }
+
             int[] dimensionsArr = dimensions.stream().mapToInt(i -> i).toArray();
             boolean isSpecificLength = false;
             boolean isNotSpecificLength = false;
@@ -987,7 +989,7 @@ public class ASTNodes {
                     throw new IndexOutOfBoundsException(
                             "Array dimensions do not match: " + dimensions + " vs " + origDimensions);
                 }
-                Object convertedValue = deepCastArrayElements(context, initialValue, elementClass);
+                Object convertedValue = deepCastArrayElements(context, initialValue, elementClass, 0);
                 return convertedValue;
             }
         }
@@ -995,16 +997,24 @@ public class ASTNodes {
         /**
          * 递归地对数组/列表中的每个元素进行类型转换
          */
-        private Object deepCastArrayElements(ExecutionContext context, Object value, Class<?> elementType) throws Exception {
+        private Object deepCastArrayElements(ExecutionContext context, Object value, Class<?> elementType, int depth) throws Exception {
             if (value == null) {
                 return null;
             }
             if (value.getClass().isArray()) {
+                List<Integer> dimensions = getArrayDimension(value);
                 int len = Array.getLength(value);
-                Object newArray = Array.newInstance(elementType, len);
+                int dim = dimensions.size();
+                Class<?> arrayType = elementType;
+                int currentDimCount = dim - depth;
+                int currentDimSize = dimensions.get(0);
+                for (int i = 0; i < currentDimCount - 1; i++) {
+                    arrayType = Array.newInstance(arrayType, 1).getClass();
+                }
+                Object newArray = Array.newInstance(arrayType, currentDimSize);
                 for (int i = 0; i < len; i++) {
                     Object elem = Array.get(value, i);
-                    Object casted = deepCastArrayElements(context, elem, elementType);
+                    Object casted = deepCastArrayElements(context, elem, elementType, depth + 1);
                     Array.set(newArray, i, casted);
                 }
                 return newArray;
@@ -1012,7 +1022,7 @@ public class ASTNodes {
                 List<?> list = (List<?>) value;
                 List<Object> newList = new ArrayList<>(list.size());
                 for (Object elem : list) {
-                    Object casted = deepCastArrayElements(context, elem, elementType);
+                    Object casted = deepCastArrayElements(context, elem, elementType, depth + 1);
                     newList.add(casted);
                 }
                 return newList;
@@ -1059,7 +1069,16 @@ public class ASTNodes {
                     if (!current.getClass().isArray())
                         break;
                     dimensions.add(Array.getLength(current));
-                    current = Array.get(current, 0);
+                    try {
+                        current = Array.get(current, 0);
+                    } catch (ArrayIndexOutOfBoundsException e) {
+                        Class<?> clazz = current.getClass();
+                        while (clazz.isArray()) {
+                            dimensions.add(0);
+                            clazz = clazz.getComponentType();
+                        }
+                        break;
+                    }
                 }
                 return dimensions;
             } else if (arr instanceof List) {
@@ -1776,6 +1795,15 @@ public class ASTNodes {
 
     public static class BlockNode extends ASTNode {
         private final List<ASTNode> statements = new ArrayList<>();
+        private boolean isIndependent;
+
+        BlockNode() {
+            isIndependent = false;
+        }
+
+        BlockNode(boolean isIndependent) {
+            this.isIndependent = isIndependent;
+        }
 
         public void addStatement(ASTNode statement) {
             statements.add(statement);
@@ -1784,15 +1812,20 @@ public class ASTNodes {
         @Override
         public Object evaluate(ExecutionContext context) throws Exception {
             Object lastResult = null;
-            for (int i = 0; i < statements.size(); i++) {
-                ASTNode statement = statements.get(i);
-                lastResult = statement.evaluate(context);
-                if (context.shouldReturn) {
-                    return context.returnValue;
+            if (isIndependent) context.enterScope();
+            try {
+                for (int i = 0; i < statements.size(); i++) {
+                    ASTNode statement = statements.get(i);
+                    lastResult = statement.evaluate(context);
+                    if (context.shouldReturn) {
+                        return context.returnValue;
+                    }
+                    if (context.shouldBreak || context.shouldContinue) {
+                        break;
+                    }
                 }
-                if (context.shouldBreak || context.shouldContinue) {
-                    break;
-                }
+            } finally {
+                if (isIndependent) context.exitScope();
             }
             return lastResult;
         }
@@ -3109,7 +3142,7 @@ public class ASTNodes {
                     if (!entry.getKey().equals("this")) {
                         Variable val = context.getVariable(entry.getKey());
                         try {
-                            if (val.value.getClass().getMethod("finalize") != null) {
+                            if (val != null && val.value.getClass().getMethod("finalize") != null) {
                                 context.callMethod(val.value, "finalize", new ArrayList<>());
                             }
                         } catch (NoSuchMethodException e) {
