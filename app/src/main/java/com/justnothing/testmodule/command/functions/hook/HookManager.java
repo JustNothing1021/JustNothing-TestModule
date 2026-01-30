@@ -1,7 +1,10 @@
 package com.justnothing.testmodule.command.functions.hook;
 
 
-import com.justnothing.testmodule.command.functions.script.TestInterpreter;
+import com.justnothing.testmodule.command.functions.script.ScriptModels;
+import com.justnothing.testmodule.command.functions.script.ScriptRunner;
+import com.justnothing.testmodule.command.functions.script.ScriptModels.*;
+import com.justnothing.testmodule.command.functions.script.ASTNodes.*;
 import com.justnothing.testmodule.command.output.IOutputHandler;
 import com.justnothing.testmodule.command.output.OutputHandler;
 import com.justnothing.testmodule.hooks.XposedBasicHook;
@@ -13,6 +16,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 import de.robv.android.xposed.XC_MethodHook;
@@ -26,7 +30,7 @@ public class HookManager {
     
     private static final ConcurrentHashMap<String, HookInfo> hooks = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, XC_MethodHook.Unhook> activeHooks = new ConcurrentHashMap<>();
-    private static final ConcurrentHashMap<String, TestInterpreter.ScriptRunner> scriptRunners = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, ScriptRunner> scriptRunners = new ConcurrentHashMap<>();
     
     private static XC_LoadPackage.LoadPackageParam currentLoadPackageParam;
     private static List<String> imports = new ArrayList<>(Arrays.asList("java.lang.*", "java.util.*"));
@@ -44,11 +48,11 @@ public class HookManager {
         currentLoadPackageParam = param;
     }
 
-    public static void addHookBuiltIn(TestInterpreter.ExecutionContext context,
-        MethodHookParam methodHookParam,
-        LoadPackageParam loadPackageParam,
-        HookInfo hookInfo,
-        String phase
+    public static void addHookBuiltIn(ScriptModels.ExecutionContext context,
+                                      MethodHookParam methodHookParam,
+                                      LoadPackageParam loadPackageParam,
+                                      HookInfo hookInfo,
+                                      String phase
     ) {
             context.addBuiltIn("getMethodHookParam", args -> {
                 if (!args.isEmpty()) {
@@ -156,7 +160,7 @@ public class HookManager {
     }
 
     private static void validateHookCode(HookInfo hookInfo, ClassLoader classLoader) throws Exception {
-        TestInterpreter.ScriptRunner runner = new TestInterpreter.ScriptRunner(classLoader);
+        ScriptRunner runner = new ScriptRunner(classLoader);
         
         if (hookInfo.getBeforeCode() != null && !hookInfo.getBeforeCode().isEmpty()) {
             logger.info("验证 before 代码");
@@ -201,7 +205,7 @@ public class HookManager {
         }
     }
 
-    private static void validateCode(TestInterpreter.ScriptRunner runner, String code, String phase) throws Exception {
+    private static void validateCode(ScriptRunner runner, String code, String phase) throws Exception {
         try {
             runner.execute(code);
         } catch (Exception e) {
@@ -393,13 +397,13 @@ public class HookManager {
                                         MethodHookParam param, String phase) {
         try {
             ClassLoader cl = hookInfo.getClassLoader();
-            TestInterpreter.ScriptRunner runner = scriptRunners.computeIfAbsent(
-                hookInfo.getId(), k -> new TestInterpreter.ScriptRunner(cl));
+            ScriptRunner runner = scriptRunners.computeIfAbsent(
+                hookInfo.getId(), k -> new ScriptRunner(cl));
 
             String prefix = "[" + hookInfo.getId() + "][" + phase + "] ";
             IOutputHandler outputHandler = new OutputHandler(logger, prefix);
             IOutputHandler errorHandler = new OutputHandler(logger, prefix);
-            TestInterpreter.ExecutionContext context = new TestInterpreter.ExecutionContext(cl, outputHandler, errorHandler);
+            ExecutionContext context = new ExecutionContext(cl, outputHandler, errorHandler);
             addHookBuiltIn(context, param, getLoadPackageParam(), hookInfo, phase);
             runner.setContext(context);
             runner.execute(code);
@@ -446,11 +450,10 @@ public class HookManager {
             }
             
             // 使用IOManager读取文件
-            String content = IOManager.readFile(scriptFile.getAbsolutePath());
-            
+
             // 简化处理：直接返回整个文件内容
             // 不再分析HOOK_PHASE标记，每个脚本文件对应一个代码块
-            return content;
+            return IOManager.readFile(scriptFile.getAbsolutePath());
         } catch (Exception e) {
             logger.error("加载脚本失败: " + codebase, e);
             return null;
@@ -624,7 +627,7 @@ public class HookManager {
         hookInfo.setActive(false);
         hooks.remove(hookId);
         
-        TestInterpreter.ScriptRunner runner = scriptRunners.remove(hookId);
+        ScriptRunner runner = scriptRunners.remove(hookId);
         if (runner != null) {
             runner.clearVariables();
         }
@@ -684,7 +687,7 @@ public class HookManager {
     public static String getHookOutput(String hookId, int count) {
         return "Hook 输出功能待实现\n" +
                "Hook ID: " + hookId + "\n" +
-               "调用次数: " + (hooks.get(hookId) != null ? hooks.get(hookId).getCallCount() : "N/A");
+               "调用次数: " + (hooks.get(hookId) != null ? Objects.requireNonNull(hooks.get(hookId)).getCallCount() : "N/A");
     }
 
     public static int getHookCount() {

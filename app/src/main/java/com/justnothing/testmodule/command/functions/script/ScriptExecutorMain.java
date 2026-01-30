@@ -18,9 +18,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class ScriptExecutorMain extends CommandBase {
 
-    private static final ConcurrentHashMap<ClassLoader, TestInterpreter.ScriptRunner>
+    private static final ConcurrentHashMap<ClassLoader, ScriptRunner>
             scriptRunners = new ConcurrentHashMap<>();
-    private static final TestInterpreter.ScriptRunner systemScriptRunner = new TestInterpreter.ScriptRunner(null);
+    private static final ScriptRunner systemScriptRunner = new ScriptRunner(null);
 
     private final String commandName;
 
@@ -238,26 +238,31 @@ public class ScriptExecutorMain extends CommandBase {
     @Override
     public String runMain(CommandExecutor.CmdExecContext context) {
         String cmdName = context.cmdName();
-        
-        if (cmdName.equals("sclear")) {
-            return clearExecutorVariables(context);
-        } else if (cmdName.equals("svars")) {
-            return listExecutorVariables(context);
-        } else if (cmdName.equals("srun")) {
-            return executeScriptCode(context);
-        } else if (cmdName.equals("sinteractive")) {
-            return runInteractiveMode(context);
-        } else if (cmdName.equals("script")) {
-            String[] args = context.args();
-            if (args.length == 0) return getHelpText();
-            try {
-                return handleScriptManagerCommand(context);
-            } catch (Exception e) {
-                logger.error("执行script命令失败", e);
-                return "错误: " + e.getMessage() +
-                        "\n堆栈追踪: \n" + Log.getStackTraceString(e);
-            }
 
+        switch (cmdName) {
+            case "sclear" -> {
+                return clearExecutorVariables(context);
+            }
+            case "svars" -> {
+                return listExecutorVariables(context);
+            }
+            case "srun" -> {
+                return executeScriptCode(context);
+            }
+            case "sinteractive" -> {
+                return runInteractiveMode(context);
+            }
+            case "script" -> {
+                String[] args = context.args();
+                if (args.length == 0) return getHelpText();
+                try {
+                    return handleScriptManagerCommand(context);
+                } catch (Exception e) {
+                    logger.error("执行script命令失败", e);
+                    return "错误: " + e.getMessage() +
+                            "\n堆栈追踪: \n" + Log.getStackTraceString(e);
+                }
+            }
         }
         
         return getHelpText();
@@ -266,8 +271,8 @@ public class ScriptExecutorMain extends CommandBase {
     private String executeScriptCode(CommandExecutor.CmdExecContext context) {
         try {
             logger.info("执行脚本代码: " + context.origCommand());
-            TestInterpreter.ScriptRunner runner = getScriptExecutor(context.classLoader());
-            runner.execute(context.origCommand().toString(), context.output(), context.output());
+            ScriptRunner runner = getScriptExecutor(context.classLoader());
+            runner.execute(context.origCommand(), context.output(), context.output());
             return "";
         } catch (Exception e) {
             logger.error("脚本执行失败", e);
@@ -312,9 +317,9 @@ public class ScriptExecutorMain extends CommandBase {
         }
     }
 
-    private TestInterpreter.ScriptRunner getScriptExecutor(ClassLoader cl) {
+    private ScriptRunner getScriptExecutor(ClassLoader cl) {
         if (cl == null) return systemScriptRunner;
-        return scriptRunners.computeIfAbsent(cl, TestInterpreter.ScriptRunner::new);
+        return scriptRunners.computeIfAbsent(cl, ScriptRunner::new);
     }
 
     public String clearExecutorVariables(CommandExecutor.CmdExecContext context) {
@@ -482,7 +487,7 @@ public class ScriptExecutorMain extends CommandBase {
         result.append("===== 执行脚本: ").append(fileName).append(" =====\n\n");
         
         try {
-            TestInterpreter.ScriptRunner runner = new TestInterpreter.ScriptRunner(context.classLoader());
+            ScriptRunner runner = new ScriptRunner(context.classLoader());
             runner.execute(content, context.output(), context.output());
             result.append("脚本执行成功");
         } catch (Exception e) {
@@ -510,7 +515,7 @@ public class ScriptExecutorMain extends CommandBase {
         result.append("===== 执行代码 =====\n\n");
         
         try {
-            TestInterpreter.ScriptRunner runner = new TestInterpreter.ScriptRunner(context.classLoader());
+            ScriptRunner runner = new ScriptRunner(context.classLoader());
             runner.execute(code, context.output(), context.output());
             result.append("代码执行成功");
         } catch (Exception e) {
@@ -659,7 +664,7 @@ public class ScriptExecutorMain extends CommandBase {
 
     private String runInteractiveMode(CommandExecutor.CmdExecContext context) {
         ClassLoader classLoader = context.classLoader();
-        TestInterpreter.ScriptRunner runner = getScriptExecutor(classLoader);
+        ScriptRunner runner = getScriptExecutor(classLoader);
         
         logger.info("进入交互式脚本执行模式");
         context.output().println("====== 脚本交互执行模式 ===");
