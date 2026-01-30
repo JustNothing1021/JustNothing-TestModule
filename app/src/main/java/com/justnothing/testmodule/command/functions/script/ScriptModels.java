@@ -4,10 +4,13 @@ import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Proxy;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -23,7 +26,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import com.justnothing.testmodule.command.functions.script.ScriptModels.*;
 import com.justnothing.testmodule.command.functions.script.ASTNodes.*;
 import com.justnothing.testmodule.command.output.IOutputHandler;
 import com.justnothing.testmodule.command.output.SystemOutputCollector;
@@ -31,12 +33,10 @@ import static com.justnothing.testmodule.command.functions.script.ScriptLogger.*
 import static com.justnothing.testmodule.command.functions.script.ScriptUtils.*;
 
 
-
 import androidx.annotation.NonNull;
 
 public class ScriptModels {
 
-    
     public static class Variable {
         public Object value;
         public Class<?> type;
@@ -1377,7 +1377,7 @@ public class ScriptModels {
 
             try {
                 return method.invoke(null, invokeArgs);
-            } catch (java.lang.reflect.InvocationTargetException e) {
+            } catch (InvocationTargetException e) {
                 Throwable cause = e.getCause();
                 if (cause instanceof Exception) {
                     throw (Exception) cause;
@@ -1391,78 +1391,131 @@ public class ScriptModels {
             }
         }
 
-        /**
-         * 准备调用参数，处理可变参数的特殊情况
-         */
-        private Object[] prepareInvokeArguments(Method method, List<Object> args) {
-            Class<?>[] paramTypes = method.getParameterTypes();
+        // 修改 prepareInvokeArguments 方法中的可变参数处理部分
+private Object[] prepareInvokeArguments(Method method, List<Object> args) {
+    Class<?>[] paramTypes = method.getParameterTypes();
 
-            // 如果不是可变参数方法，直接转换
-            if (!method.isVarArgs() || paramTypes.length == 0) {
-                return args.toArray();
+    if (!method.isVarArgs() || paramTypes.length == 0) {
+        return args.toArray();
+    }
+
+    int fixedParamCount = paramTypes.length - 1;
+    Class<?> varArgsType = paramTypes[fixedParamCount];
+    Class<?> varArgsComponentType = varArgsType.getComponentType();
+
+    // 获取泛型类型信息（如果有）
+    Type genericVarArgsType = method.getGenericParameterTypes()[fixedParamCount];
+    Class<?> inferredElementType = inferVarArgElementType(genericVarArgsType, args, fixedParamCount);
+
+    // 检查传入参数数量
+    if (args.size() < fixedParamCount) {
+        throw new IllegalArgumentException("Insufficient arguments");
+    }
+
+    Object[] invokeArgs = new Object[paramTypes.length];
+
+    // 设置固定参数
+    for (int i = 0; i < fixedParamCount; i++) {
+        invokeArgs[i] = args.get(i);
+    }
+
+    // 处理可变参数部分
+    int varArgCount = args.size() - fixedParamCount;
+
+    if (varArgCount == 1) {
+        Object lastArg = args.get(fixedParamCount);
+        
+        // 检查是否需要展开数组
+        if (shouldExpandArrayForVarArgs(method, lastArg, inferredElementType)) {
+            // 展开数组为多个参数
+            int length = Array.getLength(lastArg);
+            Object varArgArray = Array.newInstance(varArgsComponentType, length);
+            for (int i = 0; i < length; i++) {
+                Array.set(varArgArray, i, Array.get(lastArg, i));
             }
-
-            // 可变参数方法处理
-            int fixedParamCount = paramTypes.length - 1; // 固定参数数量
-            Class<?> varArgsType = paramTypes[fixedParamCount]; // 可变参数类型（应该是数组）
-            Class<?> varArgsComponentType = varArgsType.getComponentType(); // 可变参数的元素类型
-
-            // 检查传入参数数量
-            if (args.size() < fixedParamCount) {
-                throw new IllegalArgumentException("Insufficient arguments for method: " + method.getName() +
-                        " expected at least " + fixedParamCount + " arguments, got " + args.size());
-            }
-
-            // 创建最终调用参数数组
-            Object[] invokeArgs = new Object[paramTypes.length];
-
-            // 设置固定参数
-            for (int i = 0; i < fixedParamCount; i++) {
-                invokeArgs[i] = args.get(i);
-                // 如果需要，进行基本类型转换
-                if (paramTypes[i].isPrimitive() && invokeArgs[i] == null) {
-                    throw new IllegalArgumentException("Cannot pass null for primitive parameter at position " + i);
-                }
-            }
-
-            // 处理可变参数部分
-            int varArgCount = args.size() - fixedParamCount;
-
-            if (varArgCount == 0) {
-                // 没有传入可变参数，创建空数组
-                invokeArgs[fixedParamCount] = java.lang.reflect.Array.newInstance(varArgsComponentType, 0);
-            } else if (varArgCount == 1) {
-                // 只有一个参数，检查它是否已经是正确的数组类型
-                Object lastArg = args.get(fixedParamCount);
-                if (lastArg != null && lastArg.getClass().isArray() &&
-                        lastArg.getClass().getComponentType() == varArgsComponentType) {
-                    // 参数已经是正确的数组，直接使用
-                    invokeArgs[fixedParamCount] = lastArg;
-                } else {
-                    // 创建单元素数组
-                    Object varArgArray = java.lang.reflect.Array.newInstance(varArgsComponentType, 1);
-                    java.lang.reflect.Array.set(varArgArray, 0, lastArg);
-                    invokeArgs[fixedParamCount] = varArgArray;
-                }
-            } else {
-                // 多个可变参数，创建数组
-                Object varArgArray = java.lang.reflect.Array.newInstance(varArgsComponentType, varArgCount);
-                for (int i = 0; i < varArgCount; i++) {
-                    Object arg = args.get(fixedParamCount + i);
-                    // 基本类型处理
-                    if (varArgsComponentType.isPrimitive() && arg != null) {
-                        // 将包装类型转换为基本类型（反射会自动处理）
-                        java.lang.reflect.Array.set(varArgArray, i, arg);
-                    } else {
-                        // 引用类型直接设置
-                        java.lang.reflect.Array.set(varArgArray, i, arg);
-                    }
-                }
-                invokeArgs[fixedParamCount] = varArgArray;
-            }
-
-            return invokeArgs;
+            invokeArgs[fixedParamCount] = varArgArray;
+        } else if (lastArg != null && lastArg.getClass().isArray() &&
+                varArgsComponentType.isAssignableFrom(lastArg.getClass().getComponentType())) {
+            // 参数已经是正确的数组，直接使用
+            invokeArgs[fixedParamCount] = lastArg;
+        } else {
+            // 创建单元素数组
+            Object varArgArray = Array.newInstance(varArgsComponentType, 1);
+            Array.set(varArgArray, 0, lastArg);
+            invokeArgs[fixedParamCount] = varArgArray;
         }
+    } else if (varArgCount == 0) {
+        // 没有传入可变参数，创建空数组
+        invokeArgs[fixedParamCount] = Array.newInstance(varArgsComponentType, 0);
+    } else {
+        // 多个可变参数，创建数组
+        Object varArgArray = Array.newInstance(varArgsComponentType, varArgCount);
+        for (int i = 0; i < varArgCount; i++) {
+            Object arg = args.get(fixedParamCount + i);
+            Array.set(varArgArray, i, arg);
+        }
+        invokeArgs[fixedParamCount] = varArgArray;
+    }
+
+    return invokeArgs;
+}
+
+
+private Class<?> inferVarArgElementType(Type genericType, List<Object> args, int fixedParamCount) {
+    if (genericType instanceof ParameterizedType) {
+        // 处理泛型情况，如 List<T> asList(T... a)
+        Type[] actualTypeArgs = ((ParameterizedType) genericType).getActualTypeArguments();
+        if (actualTypeArgs.length > 0 && actualTypeArgs[0] instanceof Class) {
+            return (Class<?>) actualTypeArgs[0];
+        }
+    } else if (genericType instanceof GenericArrayType) {
+        // 处理泛型数组情况
+        Type componentType = ((GenericArrayType) genericType).getGenericComponentType();
+        if (componentType instanceof Class) {
+            return (Class<?>) componentType;
+        }
+    }
+    
+    // 如果没有泛型信息，尝试从参数推断
+    if (args.size() > fixedParamCount) {
+        Object lastArg = args.get(fixedParamCount);
+        if (lastArg != null && lastArg.getClass().isArray()) {
+            return lastArg.getClass().getComponentType();
+        }
+    }
+    
+    return null;
+}
+
+
+private boolean shouldExpandArrayForVarArgs(Method method, Object arrayArg, Class<?> inferredElementType) {
+    if (arrayArg == null || !arrayArg.getClass().isArray()) {
+        return false;
+    }
+    
+    Class<?> varArgsType = method.getParameterTypes()[method.getParameterTypes().length - 1];
+    Class<?> varArgsComponentType = varArgsType.getComponentType();
+    Class<?> arrayComponentType = arrayArg.getClass().getComponentType();
+    
+    // 对于像 Arrays.asList(T... a) 这样的泛型方法
+    // 如果传入数组，且数组的元素类型可以赋值给可变参数的元素类型，则展开
+    if (inferredElementType != null && 
+        inferredElementType.isAssignableFrom(arrayComponentType)) {
+        return true;
+    }
+    
+    // 避免双重数组
+    // 如果可变参数已经是数组类型（如 String[]...），则不展开
+    if (varArgsComponentType.isArray()) {
+        return false;
+    }
+    
+    // 如果数组元素类型可以赋值给可变参数元素类型，考虑展开
+    // 但这里需要小心，因为有时候确实需要传递数组作为单个参数
+    // 这是最复杂的情况，需要根据具体方法决定
+    // 但实际上我也不是很会补充，所以暂时返回false
+    return false;
+}
 
         public Object callStaticMethod(Class<?> clazz, String methodName, List<Object> args) throws Exception {
             return callStaticMethod(clazz.getName(), methodName, args);
