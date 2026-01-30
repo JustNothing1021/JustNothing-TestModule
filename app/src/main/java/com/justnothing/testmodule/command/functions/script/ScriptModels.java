@@ -2122,4 +2122,104 @@ private boolean shouldExpandArrayForVarArgs(Method method, Object arrayArg, Clas
         }
     }
 
+    /**
+     * Super 引用，用于在子类中调用父类的方法
+     */
+    public static class SuperReference {
+        private final CustomClassInstance instance;
+        private final ExecutionContext context;
+
+        public SuperReference(CustomClassInstance instance, ExecutionContext context) {
+            this.instance = instance;
+            this.context = context;
+        }
+
+        public Object callMethod(String methodName, Object[] args) throws Exception {
+            ClassDefinition classDef = instance.getClassDefinition();
+            String superClassName = classDef.getSuperClassName();
+            
+            if (superClassName == null) {
+                throw new RuntimeException("Class " + classDef.getClassName() + " has no superclass");
+            }
+
+            ClassDefinition superClassDef = context.customClasses.get(superClassName);
+            if (superClassDef == null) {
+                throw new RuntimeException("Superclass " + superClassName + " not found");
+            }
+
+            List<Class<?>> argTypes = new ArrayList<>();
+            for (Object arg : args) {
+                argTypes.add(arg != null ? arg.getClass() : Void.class);
+            }
+
+            MethodDefinition methodDef = findMethodInHierarchy(superClassDef, methodName, context, argTypes);
+            if (methodDef == null) {
+                throw new RuntimeException("Method " + methodName + " not found in superclass " + superClassName);
+            }
+
+            // 保存当前的控制流状态
+            boolean originalShouldReturn = context.shouldReturn;
+            boolean originalShouldBreak = context.shouldBreak;
+            boolean originalShouldContinue = context.shouldContinue;
+
+            // 保存当前上下文状态
+            context.enterScope();
+
+            // 设置this引用
+            context.setVariable("this", instance);
+
+            // 设置方法参数
+            List<Parameter> parameters = methodDef.getParameters();
+            for (int i = 0; i < parameters.size(); i++) {
+                Parameter param = parameters.get(i);
+                Object argValue = args[i];
+                context.setVariable(param.getName(), argValue);
+            }
+
+            // 执行方法体
+            Object result = null;
+            if (methodDef.getBody() != null) {
+                // 保存控制流状态的原始值
+                boolean savedShouldReturn = context.shouldReturn;
+                boolean savedShouldBreak = context.shouldBreak;
+                boolean savedShouldContinue = context.shouldContinue;
+                Object savedReturnValue = context.returnValue;
+                String savedMethodReturnType = context.getCurrentMethodReturnType();
+
+                // 设置当前方法的返回类型
+                context.setCurrentMethodReturnType(methodDef.getReturnType());
+
+                // 重置控制流状态
+                context.shouldReturn = false;
+                context.shouldBreak = false;
+                context.shouldContinue = false;
+
+                // 执行方法体
+                result = methodDef.getBody().evaluate(context);
+
+                // 检查方法体是否设置了return
+                if (context.shouldReturn) {
+                    result = context.returnValue;
+                }
+
+                // 恢复控制流状态
+                context.shouldReturn = savedShouldReturn;
+                context.shouldBreak = savedShouldBreak;
+                context.shouldContinue = savedShouldContinue;
+                context.returnValue = savedReturnValue;
+                context.setCurrentMethodReturnType(savedMethodReturnType);
+            }
+
+            // 恢复上下文状态
+            context.exitScope();
+
+            // 恢复控制流状态
+            context.shouldReturn = originalShouldReturn;
+            context.shouldBreak = originalShouldBreak;
+            context.shouldContinue = originalShouldContinue;
+
+            return result;
+        }
+    }
+
 }

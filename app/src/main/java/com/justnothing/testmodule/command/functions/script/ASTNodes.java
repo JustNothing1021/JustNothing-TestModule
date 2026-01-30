@@ -25,7 +25,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 public class ASTNodes {
-    
+
     public static abstract class ASTNode {
         /**
          * 评估这个节点。
@@ -353,16 +353,62 @@ public class ASTNodes {
         private int compare(Object a, Object b) {
             if (a == null || b == null) {
                 logger.error("无法在null值上执行比较: a = " + a);
-
                 throw new RuntimeException("Cannot apply comparison on null values");
             }
+
+            // 字符转成ASCII码
+            if (a instanceof Character) a = (int) (char) a;
+            if (b instanceof Character) b = (int) (char) b;
+
+            // 处理数字类型比较
+            if (a instanceof Number && b instanceof Number) {
+                return compareNumbers((Number) a, (Number) b);
+            }
+
+            // 保持你原有的逻辑不变
+            if (a instanceof Comparable && b instanceof Comparable) {
+                @SuppressWarnings("unchecked")
+                Comparable<Object> comparableA = (Comparable<Object>) a;
+                return comparableA.compareTo(b);
+            }
+
+
+            // 处理数字类型比较
+            if (a instanceof Number && b instanceof Number) {
+                return compareNumbers((Number) a, (Number) b);
+            }
+
+            // 保持你原有的逻辑不变
             if (a instanceof Comparable && b instanceof Comparable) {
                 @SuppressWarnings("unchecked")
                 Comparable<Object> compA = (Comparable<Object>) a;
                 return compA.compareTo(b);
             }
+
             logger.error("无法比较" + a.getClass() + "与" + b.getClass());
             throw new RuntimeException("Cannot compare: " + a.getClass() + " and " + b.getClass());
+        }
+
+        private int compareNumbers(Number a, Number b) {
+            // 按照Java的二进制数字提升规则
+            if (a instanceof Double || b instanceof Double) {
+                double da = a.doubleValue();
+                double db = b.doubleValue();
+                return Double.compare(da, db);
+            } else if (a instanceof Float || b instanceof Float) {
+                float fa = a.floatValue();
+                float fb = b.floatValue();
+                return Float.compare(fa, fb);
+            } else if (a instanceof Long || b instanceof Long) {
+                long la = a.longValue();
+                long lb = b.longValue();
+                return Long.compare(la, lb);
+            } else {
+                // 剩下的就是整数类型：int, short, byte
+                int ia = a.intValue();
+                int ib = b.intValue();
+                return Integer.compare(ia, ib);
+            }
         }
 
         private boolean logicAnd(Object a, Object b) {
@@ -556,6 +602,18 @@ public class ASTNodes {
             Variable var;
             if (context.hasClass(name))
                 return context.findClass(name);
+
+            // 处理 super 关键字
+            if (name.equals("super")) {
+                if (context.hasVariable("this")) {
+                    Object thisValue = context.getVariable("this").value;
+                    if (thisValue instanceof CustomClassInstance instance) {
+                        return new SuperReference(instance, context);
+                    }
+                }
+                throw new RuntimeException("'super' can only be used inside a class method");
+            }
+
             try {
                 var = context.getVariable(name);
                 return var.value;
@@ -642,6 +700,10 @@ public class ASTNodes {
 
                 if (targetObj instanceof Lambda) {
                     return ((Lambda) targetObj).apply(argsList.toArray());
+                }
+
+                if (targetObj instanceof SuperReference superRef) {
+                    return superRef.callMethod(methodName, argsList.toArray());
                 }
 
                 if (targetObj instanceof CustomClassInstance customInstance) {
@@ -744,18 +806,10 @@ public class ASTNodes {
                 return Object.class;
             }
 
-            Object targetObj = target != null ? target.evaluate(context) : null;
-            Class<?> targetClass;
+            Class<?> targetClass = target.getType(context);
 
-            if (targetObj instanceof Class) {
-                targetClass = Class.class;
-            } else if (targetObj != null) {
-                targetClass = targetObj.getClass();
-            } else if (target instanceof ClassReferenceNode) {
+            if (target instanceof ClassReferenceNode) {
                 targetClass = ((ClassReferenceNode) target).getClass(context);
-            } else {
-                logger.error("无法确定方法调用的目标: " + methodName);
-                throw new RuntimeException("Cannot determine target for method call: " + methodName);
             }
 
             Class<?>[] argTypes = new Class<?>[arguments.size()];
@@ -771,7 +825,6 @@ public class ASTNodes {
             }
         }
     }
-
 
     public static class ConstructorCallNode extends ASTNode {
         private final String className;
@@ -858,9 +911,11 @@ public class ASTNodes {
                     return instance;
                 }
                 // 让Java自己判断吧
-                // if ((clazz.isInterface() || Modifier.isAbstract(clazz.getModifiers())) && !clazz.isPrimitive()) {
-                //     logger.error("尝试实例化一个抽象类或接口" + className);
-                //     throw new InstantiationException("Cannot instantiate abstract class or interface: " + className);
+                // if ((clazz.isInterface() || Modifier.isAbstract(clazz.getModifiers())) &&
+                // !clazz.isPrimitive()) {
+                // logger.error("尝试实例化一个抽象类或接口" + className);
+                // throw new InstantiationException("Cannot instantiate abstract class or
+                // interface: " + className);
                 // }
                 Object[] args = new Object[arguments.size()];
                 Class<?>[] argTypes = new Class<?>[arguments.size()];
@@ -925,9 +980,12 @@ public class ASTNodes {
         private Object createArray(ExecutionContext context, String elementType,
                 List<Integer> dimensions, ASTNode arrInitial) throws Exception {
             Class<?> elementClass = context.findClass(elementType);
-            // if (elementClass.isInterface() || Modifier.isAbstract(elementClass.getModifiers()) && !elementClass.isPrimitive()) {
-            //     logger.error("尝试实例化一个抽象类或接口" + className);
-            //     throw new InstantiationException("Cannot instantiate abstract class or interface: " + className);
+            // if (elementClass.isInterface() ||
+            // Modifier.isAbstract(elementClass.getModifiers()) &&
+            // !elementClass.isPrimitive()) {
+            // logger.error("尝试实例化一个抽象类或接口" + className);
+            // throw new InstantiationException("Cannot instantiate abstract class or
+            // interface: " + className);
             // }
 
             int[] dimensionsArr = dimensions.stream().mapToInt(i -> i).toArray();
@@ -997,7 +1055,8 @@ public class ASTNodes {
         /**
          * 递归地对数组/列表中的每个元素进行类型转换
          */
-        private Object deepCastArrayElements(ExecutionContext context, Object value, Class<?> elementType, int depth) throws Exception {
+        private Object deepCastArrayElements(ExecutionContext context, Object value, Class<?> elementType, int depth)
+                throws Exception {
             if (value == null) {
                 return null;
             }
@@ -1812,7 +1871,8 @@ public class ASTNodes {
         @Override
         public Object evaluate(ExecutionContext context) throws Exception {
             Object lastResult = null;
-            if (isIndependent) context.enterScope();
+            if (isIndependent)
+                context.enterScope();
             try {
                 for (int i = 0; i < statements.size(); i++) {
                     ASTNode statement = statements.get(i);
@@ -1825,7 +1885,8 @@ public class ASTNodes {
                     }
                 }
             } finally {
-                if (isIndependent) context.exitScope();
+                if (isIndependent)
+                    context.exitScope();
             }
             return lastResult;
         }

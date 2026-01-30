@@ -1755,14 +1755,14 @@ public class ScriptParser {
         }
     }
 
-    private FieldDefinition tryParseField() {
+    private List<FieldDefinition> tryParseField() {
         skipWhitespace();
         savePosition();
         try {
-            FieldDefinition fieldDef = parseFieldDeclaration();
-            if (fieldDef != null) {
+            List<FieldDefinition> fieldDefs = parseFieldDeclaration();
+            if (fieldDefs != null && !fieldDefs.isEmpty()) {
                 releasePosition();
-                return fieldDef;
+                return fieldDefs;
             }
             restorePosition();
             return null;
@@ -1836,11 +1836,11 @@ public class ScriptParser {
                 break;
 
             int startPos = position;
+            advanceToNextMeaningful();
             String firstWord = peekWord();
 
             if (firstWord.isEmpty()) {
-                advanceToNextMeaningful();
-                continue;
+                throw new RuntimeException("Unterminated class declaration");
             }
 
             boolean parsed = false;
@@ -1871,9 +1871,11 @@ public class ScriptParser {
                 }
 
                 if (!parsed) {
-                    FieldDefinition fieldDef = tryParseField();
-                    if (fieldDef != null) {
-                        classDef.addField(fieldDef.getFieldName(), fieldDef);
+                    List<FieldDefinition> fieldDefs = tryParseField();
+                    if (fieldDefs != null && !fieldDefs.isEmpty()) {
+                        for (FieldDefinition fieldDef : fieldDefs) {
+                            classDef.addField(fieldDef.getFieldName(), fieldDef);
+                        }
                         parsed = true;
                     } else {
                         position = afterModifierPos;
@@ -1908,9 +1910,11 @@ public class ScriptParser {
                         }
 
                         if (!parsed) {
-                            FieldDefinition fieldDef = tryParseField();
-                            if (fieldDef != null) {
-                                classDef.addField(fieldDef.getFieldName(), fieldDef);
+                            List<FieldDefinition> fieldDefs = tryParseField();
+                            if (fieldDefs != null && !fieldDefs.isEmpty()) {
+                                for (FieldDefinition fieldDef : fieldDefs) {
+                                    classDef.addField(fieldDef.getFieldName(), fieldDef);
+                                }
                                 parsed = true;
                             }
                         }
@@ -1923,9 +1927,11 @@ public class ScriptParser {
                             }
                         }
                     } else {
-                        FieldDefinition fieldDef = tryParseField();
-                        if (fieldDef != null) {
-                            classDef.addField(fieldDef.getFieldName(), fieldDef);
+                        List<FieldDefinition> fieldDefs = tryParseField();
+                        if (fieldDefs != null && !fieldDefs.isEmpty()) {
+                            for (FieldDefinition fieldDef : fieldDefs) {
+                                classDef.addField(fieldDef.getFieldName(), fieldDef);
+                            }
                             parsed = true;
                         }
 
@@ -1938,9 +1944,11 @@ public class ScriptParser {
                         }
                     }
                 } else {
-                    FieldDefinition fieldDef = tryParseField();
-                    if (fieldDef != null) {
-                        classDef.addField(fieldDef.getFieldName(), fieldDef);
+                    List<FieldDefinition> fieldDefs = tryParseField();
+                    if (fieldDefs != null && !fieldDefs.isEmpty()) {
+                        for (FieldDefinition fieldDef : fieldDefs) {
+                            classDef.addField(fieldDef.getFieldName(), fieldDef);
+                        }
                         parsed = true;
                     }
 
@@ -2596,7 +2604,7 @@ public class ScriptParser {
     /**
      * 解析字段声明
      */
-    private FieldDefinition parseFieldDeclaration() {
+    private List<FieldDefinition> parseFieldDeclaration() {
         try {
             skipWhitespace();
             String type = peekWord();
@@ -2610,26 +2618,29 @@ public class ScriptParser {
                 return null;
             }
 
+            List<FieldDefinition> fields = new ArrayList<>();
+
             if (peek() == '=') {
                 expectToMove('=');
                 skipWhitespace();
                 ASTNode value = parseExpression();
                 if (value != null) {
                     expectToMove(';');
-                    return new FieldDefinition(name, type, value);
+                    fields.add(new FieldDefinition(name, type, value));
+                    return fields;
                 }
             } else if (peek() == ';') {
                 expectToMove(';');
-                return new FieldDefinition(name, type, null);
+                fields.add(new FieldDefinition(name, type, null));
+                return fields;
             } else if (peek() == ',') {
-                List<String> names = new ArrayList<>();
-                names.add(name);
+                fields.add(new FieldDefinition(name, type, null));
                 while (peek() == ',') {
                     expectToMove(',');
                     skipWhitespace();
                     String nextName = peekWord();
                     expectWordToMove(nextName);
-                    names.add(nextName);
+                    fields.add(new FieldDefinition(nextName, type, null));
                     skipWhitespace();
                     if (peek() == '=') {
                         expectToMove('=');
@@ -2638,9 +2649,10 @@ public class ScriptParser {
                     }
                 }
                 expectToMove(';');
-                return new FieldDefinition(name, type, null);
+                return fields;
             }
-            return new FieldDefinition(name, type, null);
+            fields.add(new FieldDefinition(name, type, null));
+            return fields;
         } catch (Exception e) {
             logger.warn("解析字段声明失败: " + e.getMessage());
             return null;
@@ -2699,30 +2711,8 @@ public class ScriptParser {
 
             expectToMove(')');
             skipWhitespace();
-            expectToMove('{');
+            ASTNode methodBody = parseBlock(false);
             skipWhitespace();
-            // TODO: 用BlockNode自带的解析
-
-            BlockNode methodBody = new BlockNode();
-            while (peek() != '}' && position < input.length()) {
-                int stmtStart = position;
-                ASTNode stmt = parseCompletedStatement();
-                if (stmt != null) {
-                    methodBody.addStatement(stmt);
-                    skipWhitespace();
-                    if (position == stmtStart) {
-                        logger.debug("解释器在解析方法时开始原地踏步");
-                        throw new RuntimeException(
-                                "Cannot parse statement in method definition; are there any syntax error?");
-                    }
-                } else {
-                    logger.debug("解析器在解析方法时parseCompletedStatement返回null");
-                    unexpectedToken();
-                }
-                skipWhitespace();
-            }
-
-            expectToMove('}');
 
             return new MethodDefinition(methodName, returnType, parameters, methodBody);
         } catch (Exception e) {
@@ -2778,19 +2768,8 @@ public class ScriptParser {
 
             expectToMove(')');
             skipWhitespace();
-            expectToMove('{');
+            ASTNode methodBody = parseBlock(false);
             skipWhitespace();
-
-            BlockNode methodBody = new BlockNode();
-            while (peek() != '}' && position < input.length()) {
-                ASTNode stmt = parseCompletedStatement();
-                if (stmt != null) {
-                    methodBody.addStatement(stmt);
-                }
-                skipWhitespace();
-            }
-
-            expectToMove('}');
 
             return new MethodDefinition(methodName, returnType, parameters, methodBody);
         } catch (Exception e) {
@@ -2899,32 +2878,7 @@ public class ScriptParser {
             skipWhitespace();
 
             // 解析构造函数体
-            expectToMove('{');
-            skipWhitespace();
-
-            // 解析构造函数体中的语句序列
-            BlockNode constructorBody = new BlockNode();
-            if (peek() != '}') {
-                // 解析构造函数体中的所有语句
-                while (peek() != '}' && position < input.length()) {
-                    int stmtStart = position;
-                    ASTNode stmt = parseCompletedStatement();
-                    if (stmt != null) {
-                        constructorBody.addStatement(stmt);
-                        skipWhitespace();
-                        if (position == stmtStart) {
-                            logger.debug("解释器在解析构造函数时开始原地踏步");
-                            throw new RuntimeException("Cannot parse statement; are there any syntax error?");
-                        }
-                    } else {
-                        logger.debug("解释器在解析构造函数时parseCompletedStatement解析出null");
-                        unexpectedToken();
-                    }
-                    skipWhitespace();
-                }
-            }
-
-            expectToMove('}');
+            ASTNode constructorBody = parseBlock(false);
 
             return new ConstructorDefinition(constructorName, parameters, constructorBody);
 
