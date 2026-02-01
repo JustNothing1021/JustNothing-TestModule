@@ -13,6 +13,7 @@ public class TestInterpreter {
 
         while (true) {
             String code;
+
             try {
                 System.out.print(">>> ");
                 BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));

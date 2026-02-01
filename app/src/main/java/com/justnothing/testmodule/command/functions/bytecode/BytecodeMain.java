@@ -714,7 +714,7 @@ public class BytecodeMain extends CommandBase {
     }
 
     private byte[] getClassBytecode(Class<?> clazz) {
-        return SystemBytecodeExtractor.getEnhancedClassBytecode(clazz);
+        return SystemBytecodeExtractor.getClassBytecode(clazz);
     }
 
     private String disasmClassWithASM(Class<?> clazz, byte[] bytecode) {

@@ -59,6 +59,8 @@ dependencies {
     implementation libs.asm.tree
     implementation libs.asm.util
     implementation libs.cfr
+    implementation files("libs/NCW-Logger-1.0.3-hotfix.jar")
+
     compileOnly libs.xposed.api
 
     testImplementation libs.junit

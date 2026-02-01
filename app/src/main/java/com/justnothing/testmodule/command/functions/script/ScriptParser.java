@@ -535,25 +535,25 @@ public class ScriptParser {
         if (numberStr.startsWith("0") && numberStr.length() >= 2 && Character.isDigit(numberStr.charAt(1))) {
             // 八进制数
             try {
-                return new LiteralNode(Integer.parseInt(numberStr, 8), Integer.class);
+                return new LiteralNode(Integer.parseInt(numberStr, 8), int.class);
             } catch (NumberFormatException e) {
                 throw new RuntimeException("Invalid octal number: " + numberStr);
             }
         } else if (numberStr.startsWith("0b") || numberStr.startsWith("0B")) {
             try {
-                return new LiteralNode(Integer.parseInt(numberStr.substring(2), 2), Integer.class);
+                return new LiteralNode(Integer.parseInt(numberStr.substring(2), 2), int.class);
             } catch (NumberFormatException e) {
                 throw new RuntimeException("Invalid binary number: " + numberStr);
             }
         } else if (numberStr.startsWith("0x") || numberStr.startsWith("0X")) {
             try {
-                return new LiteralNode(Integer.parseInt(numberStr.substring(2), 16), Integer.class);
+                return new LiteralNode(Integer.parseInt(numberStr.substring(2), 16), int.class);
             } catch (NumberFormatException e) {
                 throw new RuntimeException("Invalid hexadecimal number: " + numberStr);
             }
         } else if (numberStr.startsWith("0o") || numberStr.startsWith("0O")) {
             try {
-                return new LiteralNode(Integer.parseInt(numberStr.substring(2), 8), Integer.class);
+                return new LiteralNode(Integer.parseInt(numberStr.substring(2), 8), int.class);
             } catch (NumberFormatException e) {
                 throw new RuntimeException("Invalid octal number: " + numberStr);
             }
@@ -585,10 +585,10 @@ public class ScriptParser {
             }
         } else {
             try {
-                return new LiteralNode(Integer.parseInt(numberStr), Integer.class);
+                return new LiteralNode(Integer.parseInt(numberStr), int.class);
             } catch (NumberFormatException e) {
                 try {
-                    return new LiteralNode(Long.parseLong(numberStr), Long.class);
+                    return new LiteralNode(Long.parseLong(numberStr), long.class);
                 } catch (NumberFormatException e2) {
                     throw new RuntimeException("Invalid number: " + numberStr);
                 }
@@ -600,14 +600,14 @@ public class ScriptParser {
         skipWhitespace();
         savePosition();
         try {
-            ASTNode result = parseMap();
+            ASTNode result = parseArray();
             releasePosition();
             return result;
         } catch (RuntimeException e) {
             restorePosition();
             savePosition();
             try {
-                ASTNode result = parseArray();
+                ASTNode result = parseMap();
                 releasePosition();
                 return result;
             } catch (RuntimeException e2) {
@@ -646,16 +646,12 @@ public class ScriptParser {
     private ASTNode parseMap() throws RuntimeException {
         skipWhitespace();
         expectToMove('{');
-        Map<String, ASTNode> entries = new HashMap<>();
+        Map<ASTNode, ASTNode> entries = new HashMap<>();
 
         while (peek() != '}') {
             skipWhitespace();
-            if (peek() != '"' && peek() != '\'') {
-                throw new RuntimeException("Map key must be a string, position: " + position
-                        + ", current character: '" + peek() + "'");
-            }
-
-            String key = (String) ((LiteralNode) parseString()).value;
+            
+            ASTNode key = parseLiteral();
             skipWhitespace();
             expectToMove(':');
             ASTNode value = parseLiteral();
@@ -791,8 +787,8 @@ public class ScriptParser {
             } else if (peek() == '{' || peek() == '[') {
                 ASTNode result =  parseArrayOrMap(); // 我用久了甚至都忘记new数组语法这一说了
                 if (context.getFlag("W_RAW_ARRAY_EXPR") == null) {
-                    logger.warn("直接指定的数组一般解释为包装类型，为了防止歧义，最好用 new typename[] {element...} 来代替");
-                    context.printlnWarn("Arrays without 'new' constructor will be interpreted into wrapped types, " +
+                    logger.warn("直接指定的数组一般解释为原始类型，为了防止歧义，最好用 new typename[] {element...} 来代替");
+                    context.printlnWarn("Arrays without 'new' constructor will be interpreted into primitive types, " +
                             "consider using 'new typename[] {element...}' for array literals");
                     context.setFlag("W_RAW_ARRAY_EXPR", true);
                 }

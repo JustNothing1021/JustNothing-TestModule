@@ -32,7 +32,6 @@ import com.justnothing.testmodule.command.output.SystemOutputCollector;
 import static com.justnothing.testmodule.command.functions.script.ScriptLogger.*;
 import static com.justnothing.testmodule.command.functions.script.ScriptUtils.*;
 
-
 import androidx.annotation.NonNull;
 
 public class ScriptModels {
@@ -66,10 +65,9 @@ public class ScriptModels {
         Object call(List<Object> args);
 
     }
-    
+
     public static class ExecutionContext {
 
-        private final ConcurrentHashMap<String, Variable> variables;
         final ConcurrentHashMap<String, BuiltInFunction> builtIns;
         private final ConcurrentHashMap<String, Object> runtimeFlags;
         private final List<String> imports;
@@ -93,7 +91,6 @@ public class ScriptModels {
             this.runtimeFlags = new ConcurrentHashMap<>();
             this.outputBuffer = new SystemOutputCollector(System.out, System.in);
             this.warnMsgBuffer = new SystemOutputCollector(System.err, System.in);
-            this.variables = new ConcurrentHashMap<>();
             this.builtIns = new ConcurrentHashMap<>();
             this.imports = new ArrayList<>();
             this.classCache = new ConcurrentHashMap<>();
@@ -106,6 +103,7 @@ public class ScriptModels {
             setupBuiltInFunctions();
             logger.debug("ExecutionContext初始化完成");
         }
+
         public ExecutionContext(ClassLoader classLoader,
                 IOutputHandler builtInOutStream,
                 IOutputHandler builtInErrStream) {
@@ -114,7 +112,6 @@ public class ScriptModels {
             this.outputBuffer = builtInOutStream;
             this.warnMsgBuffer = builtInErrStream;
             this.runtimeFlags = new ConcurrentHashMap<>();
-            this.variables = new ConcurrentHashMap<>();
             this.builtIns = new ConcurrentHashMap<>();
             this.imports = new ArrayList<>();
             this.classCache = new ConcurrentHashMap<>();
@@ -182,7 +179,6 @@ public class ScriptModels {
             runtimeFlags.put(key, value);
         }
 
-
         public void setVariable(String name, Object value) {
             if (scopeStack.isEmpty()) {
                 enterScope();
@@ -190,8 +186,6 @@ public class ScriptModels {
 
             Map<String, Variable> currentScope = scopeStack.get(scopeStack.size() - 1);
             currentScope.put(name, new Variable(value));
-            // 同步更新variables
-            variables.put(name, new Variable(value));
         }
 
         public Variable getVariable(String name) {
@@ -222,18 +216,14 @@ public class ScriptModels {
                 Map<String, Variable> scope = scopeStack.get(i);
                 if (scope.containsKey(name)) {
                     scope.remove(name);
-                    variables.remove(name);
                     return;
                 }
             }
         }
 
         public Class<?> getVariableType(String name) {
-            if (!hasVariable(name)) {
-                logger.error("未定义的变量: " + name);
-                throw new RuntimeException("Undefined variable: " + name);
-            }
-            return Objects.requireNonNull(variables.get(name)).type;
+            Variable var = getVariable(name);
+            return var.type;
         }
 
         public void addBuiltIn(String name, BuiltInFunction function) {
@@ -253,22 +243,9 @@ public class ScriptModels {
         }
 
         public void enterScope() {
-            Map<String, Variable> newScope;
-
-            if (scopeStack.isEmpty()) {
-                // 第一个作用域（全局）
-                newScope = new ConcurrentHashMap<>();
-            } else {
-                // 创建新作用域，继承父作用域的变量（浅拷贝）
-                Map<String, Variable> parentScope = scopeStack.get(scopeStack.size() - 1);
-                newScope = new ConcurrentHashMap<>(parentScope);
-            }
-
-            scopeStack.add(newScope);
-            // 更新当前变量映射到最新作用域
-            updateCurrentVariables();
+            // 创建新作用域，不拷贝父作用域的变量，而是在查找时向上搜索
+            scopeStack.add(new ConcurrentHashMap<>());
         }
-
 
         public void exitScope() {
             if (scopeStack.size() <= 1) {
@@ -278,16 +255,6 @@ public class ScriptModels {
             }
 
             scopeStack.remove(scopeStack.size() - 1);
-            // 更新当前变量映射
-            updateCurrentVariables();
-        }
-
-        private void updateCurrentVariables() {
-            if (!scopeStack.isEmpty()) {
-                // 清空当前variables，从栈顶作用域重新填充
-                variables.clear();
-                variables.putAll(scopeStack.get(scopeStack.size() - 1));
-            }
         }
 
         public String getCurrentMethodReturnType() {
@@ -310,7 +277,11 @@ public class ScriptModels {
         public <T> T castObject(Object object, Class<T> clazz) {
             if (object == null) {
                 // 对于基本类型，null 不能转换为基本类型，返回默认值
-                return getDefaultValue(clazz);
+                if (clazz.isPrimitive()) {
+                    return getDefaultValue(clazz);
+                } else {
+                    return null;
+                }
             }
 
             // 如果目标类型是 String，转换为字符串
@@ -593,11 +564,21 @@ public class ScriptModels {
         }
 
         public Map<String, Variable> getAllVariables() {
-            return new HashMap<>(variables);
+            Map<String, Variable> allVariables = new HashMap<>();
+            // 从外到内添加变量，内层变量会覆盖外层变量
+            for (Map<String, Variable> scope : scopeStack) {
+                allVariables.putAll(scope);
+            }
+            return allVariables;
         }
 
         public void clearVariables() {
-            variables.clear();
+            if (scopeStack.isEmpty()) {
+                enterScope();
+            }
+
+            Map<String, Variable> currentScope = scopeStack.get(scopeStack.size() - 1);
+            currentScope.clear();
         }
 
         public ClassLoader getClassLoader() {
@@ -1392,130 +1373,128 @@ public class ScriptModels {
         }
 
         // 修改 prepareInvokeArguments 方法中的可变参数处理部分
-private Object[] prepareInvokeArguments(Method method, List<Object> args) {
-    Class<?>[] paramTypes = method.getParameterTypes();
+        private Object[] prepareInvokeArguments(Method method, List<Object> args) {
+            Class<?>[] paramTypes = method.getParameterTypes();
 
-    if (!method.isVarArgs() || paramTypes.length == 0) {
-        return args.toArray();
-    }
-
-    int fixedParamCount = paramTypes.length - 1;
-    Class<?> varArgsType = paramTypes[fixedParamCount];
-    Class<?> varArgsComponentType = varArgsType.getComponentType();
-
-    // 获取泛型类型信息（如果有）
-    Type genericVarArgsType = method.getGenericParameterTypes()[fixedParamCount];
-    Class<?> inferredElementType = inferVarArgElementType(genericVarArgsType, args, fixedParamCount);
-
-    // 检查传入参数数量
-    if (args.size() < fixedParamCount) {
-        throw new IllegalArgumentException("Insufficient arguments");
-    }
-
-    Object[] invokeArgs = new Object[paramTypes.length];
-
-    // 设置固定参数
-    for (int i = 0; i < fixedParamCount; i++) {
-        invokeArgs[i] = args.get(i);
-    }
-
-    // 处理可变参数部分
-    int varArgCount = args.size() - fixedParamCount;
-
-    if (varArgCount == 1) {
-        Object lastArg = args.get(fixedParamCount);
-        
-        // 检查是否需要展开数组
-        if (shouldExpandArrayForVarArgs(method, lastArg, inferredElementType)) {
-            // 展开数组为多个参数
-            int length = Array.getLength(lastArg);
-            Object varArgArray = Array.newInstance(varArgsComponentType, length);
-            for (int i = 0; i < length; i++) {
-                Array.set(varArgArray, i, Array.get(lastArg, i));
+            if (!method.isVarArgs() || paramTypes.length == 0) {
+                return args.toArray();
             }
-            invokeArgs[fixedParamCount] = varArgArray;
-        } else if (lastArg != null && lastArg.getClass().isArray() &&
-                varArgsComponentType.isAssignableFrom(lastArg.getClass().getComponentType())) {
-            // 参数已经是正确的数组，直接使用
-            invokeArgs[fixedParamCount] = lastArg;
-        } else {
-            // 创建单元素数组
-            Object varArgArray = Array.newInstance(varArgsComponentType, 1);
-            Array.set(varArgArray, 0, lastArg);
-            invokeArgs[fixedParamCount] = varArgArray;
-        }
-    } else if (varArgCount == 0) {
-        // 没有传入可变参数，创建空数组
-        invokeArgs[fixedParamCount] = Array.newInstance(varArgsComponentType, 0);
-    } else {
-        // 多个可变参数，创建数组
-        Object varArgArray = Array.newInstance(varArgsComponentType, varArgCount);
-        for (int i = 0; i < varArgCount; i++) {
-            Object arg = args.get(fixedParamCount + i);
-            Array.set(varArgArray, i, arg);
-        }
-        invokeArgs[fixedParamCount] = varArgArray;
-    }
 
-    return invokeArgs;
-}
+            int fixedParamCount = paramTypes.length - 1;
+            Class<?> varArgsType = paramTypes[fixedParamCount];
+            Class<?> varArgsComponentType = varArgsType.getComponentType();
 
+            // 获取泛型类型信息（如果有）
+            Type genericVarArgsType = method.getGenericParameterTypes()[fixedParamCount];
+            Class<?> inferredElementType = inferVarArgElementType(genericVarArgsType, args, fixedParamCount);
 
-private Class<?> inferVarArgElementType(Type genericType, List<Object> args, int fixedParamCount) {
-    if (genericType instanceof ParameterizedType) {
-        // 处理泛型情况，如 List<T> asList(T... a)
-        Type[] actualTypeArgs = ((ParameterizedType) genericType).getActualTypeArguments();
-        if (actualTypeArgs.length > 0 && actualTypeArgs[0] instanceof Class) {
-            return (Class<?>) actualTypeArgs[0];
+            // 检查传入参数数量
+            if (args.size() < fixedParamCount) {
+                throw new IllegalArgumentException("Insufficient arguments");
+            }
+
+            Object[] invokeArgs = new Object[paramTypes.length];
+
+            // 设置固定参数
+            for (int i = 0; i < fixedParamCount; i++) {
+                invokeArgs[i] = args.get(i);
+            }
+
+            // 处理可变参数部分
+            int varArgCount = args.size() - fixedParamCount;
+
+            if (varArgCount == 1) {
+                Object lastArg = args.get(fixedParamCount);
+
+                // 检查是否需要展开数组
+                if (shouldExpandArrayForVarArgs(method, lastArg, inferredElementType)) {
+                    // 展开数组为多个参数
+                    int length = Array.getLength(lastArg);
+                    Object varArgArray = Array.newInstance(varArgsComponentType, length);
+                    for (int i = 0; i < length; i++) {
+                        Array.set(varArgArray, i, Array.get(lastArg, i));
+                    }
+                    invokeArgs[fixedParamCount] = varArgArray;
+                } else if (lastArg != null && lastArg.getClass().isArray() &&
+                        varArgsComponentType.isAssignableFrom(lastArg.getClass().getComponentType())) {
+                    // 参数已经是正确的数组，直接使用
+                    invokeArgs[fixedParamCount] = lastArg;
+                } else {
+                    // 创建单元素数组
+                    Object varArgArray = Array.newInstance(varArgsComponentType, 1);
+                    Array.set(varArgArray, 0, lastArg);
+                    invokeArgs[fixedParamCount] = varArgArray;
+                }
+            } else if (varArgCount == 0) {
+                // 没有传入可变参数，创建空数组
+                invokeArgs[fixedParamCount] = Array.newInstance(varArgsComponentType, 0);
+            } else {
+                // 多个可变参数，创建数组
+                Object varArgArray = Array.newInstance(varArgsComponentType, varArgCount);
+                for (int i = 0; i < varArgCount; i++) {
+                    Object arg = args.get(fixedParamCount + i);
+                    Array.set(varArgArray, i, arg);
+                }
+                invokeArgs[fixedParamCount] = varArgArray;
+            }
+
+            return invokeArgs;
         }
-    } else if (genericType instanceof GenericArrayType) {
-        // 处理泛型数组情况
-        Type componentType = ((GenericArrayType) genericType).getGenericComponentType();
-        if (componentType instanceof Class) {
-            return (Class<?>) componentType;
-        }
-    }
-    
-    // 如果没有泛型信息，尝试从参数推断
-    if (args.size() > fixedParamCount) {
-        Object lastArg = args.get(fixedParamCount);
-        if (lastArg != null && lastArg.getClass().isArray()) {
-            return lastArg.getClass().getComponentType();
-        }
-    }
-    
-    return null;
-}
 
+        private Class<?> inferVarArgElementType(Type genericType, List<Object> args, int fixedParamCount) {
+            if (genericType instanceof ParameterizedType) {
+                // 处理泛型情况，如 List<T> asList(T... a)
+                Type[] actualTypeArgs = ((ParameterizedType) genericType).getActualTypeArguments();
+                if (actualTypeArgs.length > 0 && actualTypeArgs[0] instanceof Class) {
+                    return (Class<?>) actualTypeArgs[0];
+                }
+            } else if (genericType instanceof GenericArrayType) {
+                // 处理泛型数组情况
+                Type componentType = ((GenericArrayType) genericType).getGenericComponentType();
+                if (componentType instanceof Class) {
+                    return (Class<?>) componentType;
+                }
+            }
 
-private boolean shouldExpandArrayForVarArgs(Method method, Object arrayArg, Class<?> inferredElementType) {
-    if (arrayArg == null || !arrayArg.getClass().isArray()) {
-        return false;
-    }
-    
-    Class<?> varArgsType = method.getParameterTypes()[method.getParameterTypes().length - 1];
-    Class<?> varArgsComponentType = varArgsType.getComponentType();
-    Class<?> arrayComponentType = arrayArg.getClass().getComponentType();
-    
-    // 对于像 Arrays.asList(T... a) 这样的泛型方法
-    // 如果传入数组，且数组的元素类型可以赋值给可变参数的元素类型，则展开
-    if (inferredElementType != null && 
-        inferredElementType.isAssignableFrom(arrayComponentType)) {
-        return true;
-    }
-    
-    // 避免双重数组
-    // 如果可变参数已经是数组类型（如 String[]...），则不展开
-    if (varArgsComponentType.isArray()) {
-        return false;
-    }
-    
-    // 如果数组元素类型可以赋值给可变参数元素类型，考虑展开
-    // 但这里需要小心，因为有时候确实需要传递数组作为单个参数
-    // 这是最复杂的情况，需要根据具体方法决定
-    // 但实际上我也不是很会补充，所以暂时返回false
-    return false;
-}
+            // 如果没有泛型信息，尝试从参数推断
+            if (args.size() > fixedParamCount) {
+                Object lastArg = args.get(fixedParamCount);
+                if (lastArg != null && lastArg.getClass().isArray()) {
+                    return lastArg.getClass().getComponentType();
+                }
+            }
+
+            return null;
+        }
+
+        private boolean shouldExpandArrayForVarArgs(Method method, Object arrayArg, Class<?> inferredElementType) {
+            if (arrayArg == null || !arrayArg.getClass().isArray()) {
+                return false;
+            }
+
+            Class<?> varArgsType = method.getParameterTypes()[method.getParameterTypes().length - 1];
+            Class<?> varArgsComponentType = varArgsType.getComponentType();
+            Class<?> arrayComponentType = arrayArg.getClass().getComponentType();
+
+            // 对于像 Arrays.asList(T... a) 这样的泛型方法
+            // 如果传入数组，且数组的元素类型可以赋值给可变参数的元素类型，则展开
+            if (inferredElementType != null &&
+                    inferredElementType.isAssignableFrom(arrayComponentType)) {
+                return true;
+            }
+
+            // 避免双重数组
+            // 如果可变参数已经是数组类型（如 String[]...），则不展开
+            if (varArgsComponentType.isArray()) {
+                return false;
+            }
+
+            // 如果数组元素类型可以赋值给可变参数元素类型，考虑展开
+            // 但这里需要小心，因为有时候确实需要传递数组作为单个参数
+            // 这是最复杂的情况，需要根据具体方法决定
+            // 但实际上我也不是很会补充，所以暂时返回false
+            return false;
+        }
 
         public Object callStaticMethod(Class<?> clazz, String methodName, List<Object> args) throws Exception {
             return callStaticMethod(clazz.getName(), methodName, args);
@@ -1663,7 +1642,6 @@ private boolean shouldExpandArrayForVarArgs(Method method, Object arrayArg, Clas
             return true;
         }
 
-
         /**
          * 通过接口查找方法（确保返回公共接口中的方法）
          */
@@ -1767,7 +1745,6 @@ private boolean shouldExpandArrayForVarArgs(Method method, Object arrayArg, Clas
             }
         }
 
-
         /**
          * 安全地尝试设置方法可访问（处理模块系统限制）
          */
@@ -1786,7 +1763,7 @@ private boolean shouldExpandArrayForVarArgs(Method method, Object arrayArg, Clas
         }
     }
 
-      public static class ClassDefinition {
+    public static class ClassDefinition {
         private final String className;
         private final Map<String, List<MethodDefinition>> methods;
         private final Map<String, FieldDefinition> fields;
@@ -2137,7 +2114,7 @@ private boolean shouldExpandArrayForVarArgs(Method method, Object arrayArg, Clas
         public Object callMethod(String methodName, Object[] args) throws Exception {
             ClassDefinition classDef = instance.getClassDefinition();
             String superClassName = classDef.getSuperClassName();
-            
+
             if (superClassName == null) {
                 throw new RuntimeException("Class " + classDef.getClassName() + " has no superclass");
             }

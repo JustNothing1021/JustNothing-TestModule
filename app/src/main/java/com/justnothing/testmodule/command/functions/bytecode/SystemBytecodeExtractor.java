@@ -21,7 +21,7 @@ public class SystemBytecodeExtractor {
     /**
      * 增强版：获取类的字节码（支持系统类）
      */
-    public static byte[] getEnhancedClassBytecode(Class<?> clazz) {
+    public static byte[] getClassBytecode(Class<?> clazz) {
         if (clazz == null) return null;
         
         String className = clazz.getName();
@@ -297,7 +297,7 @@ public class SystemBytecodeExtractor {
             assert classes != null;
             for (Class<?> clazz : classes) {
                 try {
-                    byte[] bytecode = getEnhancedClassBytecode(clazz);
+                    byte[] bytecode = getClassBytecode(clazz);
                     if (bytecode != null) {
                         result.put(clazz.getName(), bytecode);
                     }

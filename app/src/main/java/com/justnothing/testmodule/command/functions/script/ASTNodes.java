@@ -103,7 +103,7 @@ public class ASTNodes {
                 for (ASTNode element : elements) {
                     Object value = element.evaluate(context);
                     values.add(value);
-                    if (value != null && !type.isAssignableFrom(value.getClass())) {
+                    if (value != null && !isTypeCompatible(type, value.getClass())) {
                         logger.warn("数组元素类型不一致: " + type + " != " + value.getClass() + ", 尝试解析为Object[]");
                         type = Object.class;
                     }
@@ -136,10 +136,10 @@ public class ASTNodes {
 
     public static class MapNode extends ASTNode {
 
-        private final Map<String, ASTNode> entries;
+        private final Map<ASTNode, ASTNode> entries;
         private final Class<?> type;
 
-        public MapNode(Map<String, ASTNode> entries, Class<?> type) {
+        public MapNode(Map<ASTNode, ASTNode> entries, Class<?> type) {
             this.entries = entries;
             this.type = type;
         }
@@ -147,9 +147,11 @@ public class ASTNodes {
         @Override
         public Object evaluate(ExecutionContext context) throws RuntimeException {
             try {
-                Map<String, Object> map = new HashMap<>();
-                for (Map.Entry<String, ASTNode> entry : entries.entrySet()) {
-                    map.put(entry.getKey(), entry.getValue().evaluate(context));
+                Map<Object, Object> map = new HashMap<>();
+                for (Map.Entry<ASTNode, ASTNode> entry : entries.entrySet()) {
+                    Object key = entry.getKey().evaluate(context);
+                    Object value = entry.getValue().evaluate(context);
+                    map.put(key, value);
                 }
                 return map;
             } catch (Exception e) {
@@ -224,7 +226,7 @@ public class ASTNodes {
         }
 
         private Object add(Object a, Object b) {
-            if (a != null && a instanceof String) { // 特例，String可以加null
+            if (a != null && a instanceof String) {
                 return a + String.valueOf(b);
             } else if (b != null && b instanceof String) {
                 return String.valueOf(a) + b;
@@ -232,42 +234,44 @@ public class ASTNodes {
                 logger.error("无法在null值上执行运算: a = " + a + ", b = " + b);
                 throw new RuntimeException("Cannot apply operations on null values");
             }
-            if (a instanceof Number num1 && b instanceof Number num2) {
-                if (a instanceof Double || b instanceof Double) {
-                    return num1.doubleValue() + num2.doubleValue();
-                }
-                if (a instanceof Float || b instanceof Float) {
-                    return num1.floatValue() + num2.floatValue();
-                }
-                if (a instanceof Long || b instanceof Long) {
-                    return num1.longValue() + num2.longValue();
-                }
-                return num1.intValue() + num2.intValue();
+            NumberPair pair = toComparableNumbers(a, b);
+            if (pair == null) {
+                logger.error("无法在" + a.getClass() + "和" + b.getClass() + "之间进行加法运算");
+                throw new RuntimeException("Cannot add: " + a.getClass() + " and " + b.getClass());
             }
-            logger.error("无法在" + a.getClass() + "和" + b.getClass() + "之间进行加法运算");
-            throw new RuntimeException("Cannot add: " + a.getClass() + " and " + b.getClass());
+            
+            if (pair.targetType == Double.class) {
+                return pair.a.doubleValue() + pair.b.doubleValue();
+            } else if (pair.targetType == Float.class) {
+                return pair.a.floatValue() + pair.b.floatValue();
+            } else if (pair.targetType == Long.class) {
+                return pair.a.longValue() + pair.b.longValue();
+            } else {
+                return pair.a.intValue() + pair.b.intValue();
+            }
         }
 
         private Object subtract(Object a, Object b) {
             if (a == null || b == null) {
                 logger.error("无法在null值上执行运算: a = " + a + ", b = " + b);
-
                 throw new RuntimeException("Cannot apply operations on null values");
             }
-            if (a instanceof Number num1 && b instanceof Number num2) {
-                if (a instanceof Double || b instanceof Double) {
-                    return num1.doubleValue() - num2.doubleValue();
-                }
-                if (a instanceof Float || b instanceof Float) {
-                    return num1.floatValue() - num2.floatValue();
-                }
-                if (a instanceof Long || b instanceof Long) {
-                    return num1.longValue() - num2.longValue();
-                }
-                return num1.intValue() - num2.intValue();
+            
+            NumberPair pair = toComparableNumbers(a, b);
+            if (pair == null) {
+                logger.error("无法在" + a.getClass() + "和" + b.getClass() + "之间进行减法运算");
+                throw new RuntimeException("Cannot subtract: " + a.getClass() + " and " + b.getClass());
             }
-            logger.error("无法在" + a.getClass() + "和" + b.getClass() + "之间进行减法运算");
-            throw new RuntimeException("Cannot subtract: " + a.getClass() + " and " + b.getClass());
+            
+            if (pair.targetType == Double.class) {
+                return pair.a.doubleValue() - pair.b.doubleValue();
+            } else if (pair.targetType == Float.class) {
+                return pair.a.floatValue() - pair.b.floatValue();
+            } else if (pair.targetType == Long.class) {
+                return pair.a.longValue() - pair.b.longValue();
+            } else {
+                return pair.a.intValue() - pair.b.intValue();
+            }
         }
 
         private Object multiply(Object a, Object b) {
@@ -277,18 +281,20 @@ public class ASTNodes {
                 logger.error("无法在null值上执行运算: a = " + aStr + ", b = " + bStr);
                 throw new RuntimeException("Cannot apply operations on null values");
             }
-            if (a instanceof Number num1 && b instanceof Number num2) {
-                if (a instanceof Double || b instanceof Double) {
-                    return num1.doubleValue() * num2.doubleValue();
+            
+            NumberPair pair = toComparableNumbers(a, b);
+            if (pair != null) {
+                if (pair.targetType == Double.class) {
+                    return pair.a.doubleValue() * pair.b.doubleValue();
+                } else if (pair.targetType == Float.class) {
+                    return pair.a.floatValue() * pair.b.floatValue();
+                } else if (pair.targetType == Long.class) {
+                    return pair.a.longValue() * pair.b.longValue();
+                } else {
+                    return pair.a.intValue() * pair.b.intValue();
                 }
-                if (a instanceof Float || b instanceof Float) {
-                    return num1.floatValue() * num2.floatValue();
-                }
-                if (a instanceof Long || b instanceof Long) {
-                    return num1.longValue() * num2.longValue();
-                }
-                return num1.intValue() * num2.intValue();
             }
+            
             if (a instanceof String && b instanceof Number) {
                 return repeat((String) a, (Integer) b);
             }
@@ -303,20 +309,22 @@ public class ASTNodes {
                 logger.error("无法在null值上执行运算: a = " + aStr + ", b = " + bStr);
                 throw new RuntimeException("Cannot apply operations on null values");
             }
-            if (a instanceof Number num1 && b instanceof Number num2) {
-                if (a instanceof Double || b instanceof Double) {
-                    return num1.doubleValue() / num2.doubleValue();
-                }
-                if (a instanceof Float || b instanceof Float) {
-                    return num1.floatValue() / num2.floatValue();
-                }
-                if (a instanceof Long || b instanceof Long) {
-                    return num1.longValue() / num2.longValue();
-                }
-                return num1.intValue() / num2.intValue();
+            
+            NumberPair pair = toComparableNumbers(a, b);
+            if (pair == null) {
+                logger.error("无法在" + a.getClass() + "和" + b.getClass() + "之间进行除法运算");
+                throw new RuntimeException("Cannot divide: " + a.getClass() + " and " + b.getClass());
             }
-            logger.error("无法在" + a.getClass() + "和" + b.getClass() + "之间进行除法运算");
-            throw new RuntimeException("Cannot divide: " + a.getClass() + " and " + b.getClass());
+            
+            if (pair.targetType == Double.class) {
+                return pair.a.doubleValue() / pair.b.doubleValue();
+            } else if (pair.targetType == Float.class) {
+                return pair.a.floatValue() / pair.b.floatValue();
+            } else if (pair.targetType == Long.class) {
+                return pair.a.longValue() / pair.b.longValue();
+            } else {
+                return pair.a.intValue() / pair.b.intValue();
+            }
         }
 
         private Object modulo(Object a, Object b) {
@@ -326,20 +334,22 @@ public class ASTNodes {
                 logger.error("无法在null值上执行运算: a = " + aStr + ", b = " + bStr);
                 throw new RuntimeException("Cannot apply operations on null values");
             }
-            if (a instanceof Number num1 && b instanceof Number num2) {
-                if (a instanceof Double || b instanceof Double) {
-                    return num1.doubleValue() % num2.doubleValue();
-                }
-                if (a instanceof Float || b instanceof Float) {
-                    return num1.floatValue() % num2.floatValue();
-                }
-                if (a instanceof Long || b instanceof Long) {
-                    return num1.longValue() % num2.longValue();
-                }
-                return num1.intValue() % num2.intValue();
+            
+            NumberPair pair = toComparableNumbers(a, b);
+            if (pair == null) {
+                logger.error("无法在" + a.getClass() + "和" + b.getClass() + "之间进行模运算");
+                throw new RuntimeException("Cannot modulo: " + a.getClass() + " and " + b.getClass());
             }
-            logger.error("无法在" + a.getClass() + "和" + b.getClass() + "之间进行模运算");
-            throw new RuntimeException("Cannot modulo: " + a.getClass() + " and " + b.getClass());
+            
+            if (pair.targetType == Double.class) {
+                return pair.a.doubleValue() % pair.b.doubleValue();
+            } else if (pair.targetType == Float.class) {
+                return pair.a.floatValue() % pair.b.floatValue();
+            } else if (pair.targetType == Long.class) {
+                return pair.a.longValue() % pair.b.longValue();
+            } else {
+                return pair.a.intValue() % pair.b.intValue();
+            }
         }
 
         private boolean equals(Object a, Object b) {
@@ -463,59 +473,76 @@ public class ASTNodes {
         private Object bitAnd(Object a, Object b) {
             if (a == null || b == null) {
                 logger.error("无法在null值上执行逻辑运算: a = " + a + ", b = " + b);
-
                 throw new RuntimeException("Cannot apply logic operations on null values");
             }
-            if (a instanceof Integer && b instanceof Integer) {
-                return ((Integer) a) & ((Integer) b);
-            } else if (a instanceof Long && b instanceof Long) {
-                return ((Long) a) & ((Long) b);
+            
+            NumberPair pair = toComparableNumbers(a, b);
+            if (pair == null) {
+                logger.error("无法在" + a.getClass() + "和" + b.getClass() + "之间进行按位与操作");
+                throw new RuntimeException("Cannot bitwise and: " + a.getClass() + " and " + b.getClass());
             }
-            logger.error("无法在" + a.getClass() + "和" + b.getClass() + "之间进行按位与操作");
-            throw new RuntimeException("Cannot bitwise and: " + a.getClass() + " and " + b.getClass());
+            
+            if (pair.targetType == Long.class) {
+                return pair.a.longValue() & pair.b.longValue();
+            } else {
+                return pair.a.intValue() & pair.b.intValue();
+            }
         }
 
         private Object bitOr(Object a, Object b) {
             if (a == null || b == null) {
                 logger.error("无法在null值上执行逻辑运算: a = " + a + ", b = " + b);
-
                 throw new RuntimeException("Cannot apply logic operations on null values");
             }
-            if (a instanceof Integer && b instanceof Integer) {
-                return ((Integer) a) | ((Integer) b);
-            } else if (a instanceof Long && b instanceof Long) {
-                return ((Long) a) | ((Long) b);
+            
+            NumberPair pair = toComparableNumbers(a, b);
+            if (pair == null) {
+                logger.error("无法在" + a.getClass() + "和" + b.getClass() + "之间进行按位或操作");
+                throw new RuntimeException("Cannot bitwise or: " + a.getClass() + " and " + b.getClass());
             }
-            logger.error("无法在" + a.getClass() + "和" + b.getClass() + "之间进行按位或操作");
-            throw new RuntimeException("Cannot bitwise or: " + a.getClass() + " and " + b.getClass());
+            
+            if (pair.targetType == Long.class) {
+                return pair.a.longValue() | pair.b.longValue();
+            } else {
+                return pair.a.intValue() | pair.b.intValue();
+            }
         }
 
         private Object bitXor(Object a, Object b) {
             if (a == null || b == null) {
                 logger.error("无法在null值上执行逻辑运算: a = " + a + ", b = " + b);
-
                 throw new RuntimeException("Cannot apply logic operations on null values");
             }
-            if (a instanceof Integer && b instanceof Integer) {
-                return ((Integer) a) ^ ((Integer) b);
-            } else if (a instanceof Long && b instanceof Long) {
-                return ((Long) a) ^ ((Long) b);
+            
+            NumberPair pair = toComparableNumbers(a, b);
+            if (pair == null) {
+                logger.error("无法在" + a.getClass() + "和" + b.getClass() + "之间进行按位异或操作");
+                throw new RuntimeException("Cannot bitwise xor: " + a.getClass() + " and " + b.getClass());
             }
-            logger.error("无法在" + a.getClass() + "和" + b.getClass() + "之间进行按位异或操作");
-            throw new RuntimeException("Cannot bitwise xor: " + a.getClass() + " and " + b.getClass());
+            
+            if (pair.targetType == Long.class) {
+                return pair.a.longValue() ^ pair.b.longValue();
+            } else {
+                return pair.a.intValue() ^ pair.b.intValue();
+            }
         }
 
         private Object bitRev(Object a) {
             if (a == null) {
                 logger.error("无法在null值上执行逻辑运算: a = " + null);
-
                 throw new RuntimeException("Cannot apply bitwise operations on null values");
             }
-            if (a instanceof Integer) {
-                return ~((Integer) a);
-            } else if (a instanceof Long) {
-                return ~((Long) a);
+            
+            Integer intA = toInt(a);
+            if (intA != null) {
+                return ~intA;
             }
+            
+            Long longA = toLong(a);
+            if (longA != null) {
+                return ~longA;
+            }
+            
             logger.error("无法在" + a.getClass() + "上进行按位取反操作");
             throw new RuntimeException("Cannot bitwise invert: " + a.getClass());
         }
@@ -525,13 +552,19 @@ public class ASTNodes {
                 logger.error("无法在null值上执行位运算");
                 throw new RuntimeException("Cannot apply bitwise operations on null values");
             }
-            if (a instanceof Integer && b instanceof Integer) {
-                return ((Integer) a) >> ((Integer) b);
-            } else if (a instanceof Long && b instanceof Integer) {
-                return ((Long) a) >> ((Integer) b);
+            
+            NumberPair pair = toComparableNumbers(a, b);
+            if (pair == null) {
+                logger.error("无法在" + a.getClass() + "和" + b.getClass() + "之间进行右移操作");
+                throw new RuntimeException("Cannot right shift: " + a.getClass() + " and " + b.getClass());
             }
-            logger.error("无法在" + a.getClass() + "和" + b.getClass() + "之间进行右移操作");
-            throw new RuntimeException("Cannot right shift: " + a.getClass() + " and " + b.getClass());
+            
+            int shiftAmount = pair.b.intValue();
+            if (pair.targetType == Long.class) {
+                return pair.a.longValue() >> shiftAmount;
+            } else {
+                return pair.a.intValue() >> shiftAmount;
+            }
         }
 
         private Object leftShift(Object a, Object b) {
@@ -539,13 +572,19 @@ public class ASTNodes {
                 logger.error("无法在null值上执行位运算");
                 throw new RuntimeException("Cannot apply bitwise operations on null values");
             }
-            if (a instanceof Integer && b instanceof Integer) {
-                return ((Integer) a) << ((Integer) b);
-            } else if (a instanceof Long && b instanceof Integer) {
-                return ((Long) a) << ((Integer) b);
+            
+            NumberPair pair = toComparableNumbers(a, b);
+            if (pair == null) {
+                logger.error("无法在" + a.getClass() + "和" + b.getClass() + "之间进行左移操作");
+                throw new RuntimeException("Cannot left shift: " + a.getClass() + " and " + b.getClass());
             }
-            logger.error("无法在" + a.getClass() + "和" + b.getClass() + "之间进行左移操作");
-            throw new RuntimeException("Cannot left shift: " + a.getClass() + " and " + b.getClass());
+            
+            int shiftAmount = pair.b.intValue();
+            if (pair.targetType == Long.class) {
+                return pair.a.longValue() << shiftAmount;
+            } else {
+                return pair.a.intValue() << shiftAmount;
+            }
         }
 
         private Object unsignedRightShift(Object a, Object b) {
@@ -553,15 +592,120 @@ public class ASTNodes {
                 logger.error("无法在null值上执行位运算");
                 throw new RuntimeException("Cannot apply bitwise operations on null values");
             }
-            if (a instanceof Integer && b instanceof Integer) {
-                return ((Integer) a) >>> ((Integer) b);
-            } else if (a instanceof Long && b instanceof Integer) {
-                return ((Long) a) >>> ((Integer) b);
+            
+            NumberPair pair = toComparableNumbers(a, b);
+            if (pair == null) {
+                logger.error("无法在" + a.getClass() + "和" + b.getClass() + "之间进行无符号右移操作");
+                throw new RuntimeException("Cannot unsigned right shift: " + a.getClass() + " and " + b.getClass());
             }
-            logger.error("无法在" + a.getClass() + "和" + b.getClass() + "之间进行无符号右移操作");
-            throw new RuntimeException("Cannot unsigned right shift: " + a.getClass() + " and " + b.getClass());
+            
+            int shiftAmount = pair.b.intValue();
+            if (pair.targetType == Long.class) {
+                return pair.a.longValue() >>> shiftAmount;
+            } else {
+                return pair.a.intValue() >>> shiftAmount;
+            }
         }
 
+        private Integer toInt(Object obj) {
+            if (obj instanceof Integer) {
+                return (Integer) obj;
+            } else if (obj instanceof Long) {
+                return ((Long) obj).intValue();
+            } else if (obj instanceof Short) {
+                return ((Short) obj).intValue();
+            } else if (obj instanceof Byte) {
+                return ((Byte) obj).intValue();
+            } else if (obj instanceof Character) {
+                return (int) ((Character) obj).charValue();
+            } else if (obj instanceof Float) {
+                return ((Float) obj).intValue();
+            } else if (obj instanceof Double) {
+                return ((Double) obj).intValue();
+            }
+            return null;
+        }
+
+        private Long toLong(Object obj) {
+            if (obj instanceof Long) {
+                return (Long) obj;
+            } else if (obj instanceof Integer) {
+                return ((Integer) obj).longValue();
+            } else if (obj instanceof Short) {
+                return ((Short) obj).longValue();
+            } else if (obj instanceof Byte) {
+                return ((Byte) obj).longValue();
+            } else if (obj instanceof Character) {
+                return (long) ((Character) obj).charValue();
+            } else if (obj instanceof Float) {
+                return ((Float) obj).longValue();
+            } else if (obj instanceof Double) {
+                return ((Double) obj).longValue();
+            }
+            return null;
+        }
+
+        private static class NumberPair {
+            final Number a;
+            final Number b;
+            final Class<?> targetType;
+
+            NumberPair(Number a, Number b, Class<?> targetType) {
+                this.a = a;
+                this.b = b;
+                this.targetType = targetType;
+            }
+        }
+
+        private NumberPair toComparableNumbers(Object a, Object b) {
+            Number numA = toNumber(a);
+            Number numB = toNumber(b);
+            
+            if (numA == null || numB == null) {
+                return null;
+            }
+            
+            Class<?> targetType = getNumericPromotionType(a, b);
+            
+            return new NumberPair(
+                promoteNumber(numA, targetType),
+                promoteNumber(numB, targetType),
+                targetType
+            );
+        }
+
+        private Number toNumber(Object obj) {
+            if (obj instanceof Number) {
+                return (Number) obj;
+            } else if (obj instanceof Character) {
+                return (int) ((Character) obj).charValue();
+            }
+            return null;
+        }
+
+        private Class<?> getNumericPromotionType(Object a, Object b) {
+            if (a instanceof Double || b instanceof Double) {
+                return Double.class;
+            } else if (a instanceof Float || b instanceof Float) {
+                return Float.class;
+            } else if (a instanceof Long || b instanceof Long) {
+                return Long.class;
+            } else {
+                return Integer.class;
+            }
+        }
+
+        private Number promoteNumber(Number num, Class<?> targetType) {
+            if (targetType == Double.class) {
+                return num.doubleValue();
+            } else if (targetType == Float.class) {
+                return num.floatValue();
+            } else if (targetType == Long.class) {
+                return num.longValue();
+            } else {
+                return num.intValue();
+            }
+        }
     }
 
     public static class ClassReferenceNode extends ASTNode {
@@ -1977,7 +2121,6 @@ public class ASTNodes {
                 context.shouldBreak = false;
                 context.shouldContinue = false;
                 context.shouldReturn = false;
-                context.enterScope();
 
                 while (loopCount < MAX_LOOPS) {
 
@@ -2009,7 +2152,7 @@ public class ASTNodes {
                 // 恢复控制流状态
                 context.shouldBreak = originalBreak;
                 context.shouldContinue = originalContinue;
-                context.exitScope();
+                context.shouldReturn = originalReturn;
             }
         }
 
@@ -2410,7 +2553,7 @@ public class ASTNodes {
                     Object returnValue = value.evaluate(context);
                     context.returnValue = returnValue;
                     String expectedReturnType = context.getCurrentMethodReturnType();
-                    if (!isTypeCompatible(returnValue.getClass(), context.findClass(expectedReturnType))) {
+                    if (!isTypeCompatible(context.findClass(expectedReturnType), returnValue.getClass())) {
                         String actualType = returnValue != null ? returnValue.getClass().getSimpleName() : "null";
                         logger.error("返回值类型不匹配: 期望 '" + expectedReturnType + "', 实际 '" + actualType + "'");
                         throw new RuntimeException(
@@ -2442,9 +2585,28 @@ public class ASTNodes {
     }
 
     public static class TryCatchNode extends ASTNode {
+        private final List<ResourceDeclaration> resources;
         private final ASTNode tryBlock;
         private final List<CatchBlock> catchBlocks;
         private final ASTNode finallyBlock;
+
+        public static class ResourceDeclaration {
+            private final String variableName;
+            private final ASTNode initializer;
+
+            public ResourceDeclaration(String variableName, ASTNode initializer) {
+                this.variableName = variableName;
+                this.initializer = initializer;
+            }
+
+            public String getVariableName() {
+                return variableName;
+            }
+
+            public ASTNode getInitializer() {
+                return initializer;
+            }
+        }
 
         public static class CatchBlock {
             private final String exceptionType;
@@ -2470,10 +2632,15 @@ public class ASTNodes {
             }
         }
 
-        public TryCatchNode(ASTNode tryBlock, List<CatchBlock> catchBlocks, ASTNode finallyBlock) {
+        public TryCatchNode(List<ResourceDeclaration> resources, ASTNode tryBlock, List<CatchBlock> catchBlocks, ASTNode finallyBlock) {
+            this.resources = resources != null ? resources : Collections.emptyList();
             this.tryBlock = tryBlock;
-            this.catchBlocks = catchBlocks;
+            this.catchBlocks = catchBlocks != null ? catchBlocks : Collections.emptyList();
             this.finallyBlock = finallyBlock;
+        }
+
+        public TryCatchNode(ASTNode tryBlock, List<CatchBlock> catchBlocks, ASTNode finallyBlock) {
+            this(Collections.emptyList(), tryBlock, catchBlocks, finallyBlock);
         }
 
         @Override
@@ -2482,24 +2649,37 @@ public class ASTNodes {
             Throwable caughtException = null;
             boolean shouldExecuteFinally = true;
             boolean matchedCatch = false;
-
-            context.enterScope();
+            List<AutoCloseable> closeableResources = new ArrayList<>();
 
             try {
+                // 初始化资源
+                for (ResourceDeclaration resource : resources) {
+                    Object resourceValue = resource.getInitializer().evaluate(context);
+                    context.setVariable(resource.getVariableName(), resourceValue);
+                    
+                    // 检查是否为 AutoCloseable
+                    if (resourceValue instanceof AutoCloseable) {
+                        closeableResources.add((AutoCloseable) resourceValue);
+                    }
+                }
+
                 result = tryBlock.evaluate(context);
 
                 if (context.shouldReturn) {
                     Object returnValue = context.returnValue;
+                    closeResources(closeableResources);
+                    
                     if (finallyBlock != null) {
                         context.shouldReturn = false;
                         finallyBlock.evaluate(context);
                         context.shouldReturn = true;
                     }
-                    context.exitScope();
                     return returnValue;
                 }
 
                 if (context.shouldBreak || context.shouldContinue) {
+                    closeResources(closeableResources);
+                    
                     if (finallyBlock != null) {
                         boolean originalShouldBreak = context.shouldBreak;
                         boolean originalShouldContinue = context.shouldContinue;
@@ -2509,7 +2689,6 @@ public class ASTNodes {
                         context.shouldBreak = originalShouldBreak;
                         context.shouldContinue = originalShouldContinue;
                     }
-                    context.exitScope();
                     return null;
                 }
             } catch (Throwable e) {
@@ -2519,27 +2698,27 @@ public class ASTNodes {
                     try {
                         Class<?> exceptionClass = context.findClass(catchBlock.getExceptionType());
                         if (exceptionClass != null && exceptionClass.isAssignableFrom(e.getClass())) {
-                            matchedCatch = true;
+                                matchedCatch = true;
 
-                            context.exitScope();
-                            context.enterScope();
+                                context.setVariable(catchBlock.getExceptionName(), e);
 
-                            context.setVariable(catchBlock.getExceptionName(), e);
-
-                            Object catchResult = catchBlock.getCatchBlock().evaluate(context);
+                                Object catchResult = catchBlock.getCatchBlock().evaluate(context);
 
                             if (context.shouldReturn) {
                                 Object returnValue = context.returnValue;
+                                closeResources(closeableResources);
+                                
                                 if (finallyBlock != null) {
                                     context.shouldReturn = false;
                                     finallyBlock.evaluate(context);
                                     context.shouldReturn = true;
                                 }
-                                context.exitScope();
                                 return returnValue;
                             }
 
                             if (context.shouldBreak || context.shouldContinue) {
+                                closeResources(closeableResources);
+                                
                                 if (finallyBlock != null) {
                                     boolean originalShouldBreak = context.shouldBreak;
                                     boolean originalShouldContinue = context.shouldContinue;
@@ -2549,7 +2728,6 @@ public class ASTNodes {
                                     context.shouldBreak = originalShouldBreak;
                                     context.shouldContinue = originalShouldContinue;
                                 }
-                                context.exitScope();
                                 return null;
                             }
 
@@ -2565,19 +2743,16 @@ public class ASTNodes {
                 if (!matchedCatch) {
                     shouldExecuteFinally = false;
                 }
+            } finally {
+                // 关闭资源
+                closeResources(closeableResources);
             }
 
             if (finallyBlock != null) {
-                if (matchedCatch) {
-                    context.exitScope();
-                    context.enterScope();
-                }
-
                 finallyBlock.evaluate(context);
 
                 if (context.shouldReturn) {
                     Object returnValue = context.returnValue;
-                    context.exitScope();
 
                     // 如果没有匹配的 catch 块，需要重新抛出异常
                     if (!matchedCatch && caughtException != null) {
@@ -2594,8 +2769,6 @@ public class ASTNodes {
                 }
 
                 if (context.shouldBreak || context.shouldContinue) {
-                    context.exitScope();
-
                     // 如果没有匹配的 catch 块，需要重新抛出异常
                     if (!matchedCatch && caughtException != null) {
                         if (caughtException instanceof Exception) {
@@ -2611,8 +2784,6 @@ public class ASTNodes {
                 }
             }
 
-            context.exitScope();
-
             if (!matchedCatch && caughtException != null) {
                 if (caughtException instanceof Exception) {
                     throw (Exception) caughtException;
@@ -2624,6 +2795,24 @@ public class ASTNodes {
             }
 
             return result;
+        }
+
+        private void closeResources(List<AutoCloseable> resources) {
+            // 按照声明的相反顺序关闭资源
+            List<Exception> closeExceptions = new ArrayList<>();
+            
+            for (int i = resources.size() - 1; i >= 0; i--) {
+                try {
+                    resources.get(i).close();
+                } catch (Exception e) {
+                    closeExceptions.add(e);
+                }
+            }
+            
+            // 如果有多个关闭异常，抛出第一个
+            if (!closeExceptions.isEmpty()) {
+                throw new RuntimeException("Error closing resources", closeExceptions.get(0));
+            }
         }
 
         @Override
@@ -2885,11 +3074,14 @@ public class ASTNodes {
 
         @Override
         public Object evaluate(ExecutionContext context) throws Exception {
-            if (!isTypeCompatible(thenExpr.getType(context), elseExpr.getType(context))) {
+            Class<?> thenType = thenExpr.getType(context);
+            Class<?> elseType = elseExpr.getType(context);
+            
+            if (!isTypeCompatible(thenType, elseType) && !isTypeCompatible(elseType, thenType)) {
                 logger.error(
-                        "三元表达式中的两个表达式类型不匹配，类型分别为：" + thenExpr.getType(context) + " 和 " + elseExpr.getType(context));
+                        "三元表达式中的两个表达式类型不匹配，类型分别为：" + thenType + " 和 " + elseType);
                 throw new RuntimeException("Types of two expressions in ternary expression do not match: "
-                        + thenExpr.getType(context) + " and " + elseExpr.getType(context));
+                        + thenType + " and " + elseType);
             }
             if (toBoolean(condition.evaluate(context))) {
                 return thenExpr.evaluate(context);
@@ -2900,7 +3092,16 @@ public class ASTNodes {
 
         @Override
         public Class<?> getType(ExecutionContext context) throws Exception {
-            return thenExpr.getType(context);
+            Class<?> thenType = thenExpr.getType(context);
+            Class<?> elseType = elseExpr.getType(context);
+            
+            if (thenType == elseType) {
+                return thenType;
+            }
+            if (isTypeCompatible(thenType, elseType)) {
+                return thenType;
+            }
+            return elseType;
         }
     }
 
@@ -3152,7 +3353,7 @@ public class ASTNodes {
             if (funcObj instanceof Lambda) {
                 return ((Lambda) funcObj).call(args.toArray());
             } else if (funcObj instanceof Function) {
-                return ((Function<Object[], ?>) funcObj).apply(args.toArray());
+                return ((Function) funcObj).apply(args.toArray());
             } else if (funcObj instanceof Supplier) {
                 return ((Supplier<?>) funcObj).get();
             } else if (funcObj instanceof Callable) {
@@ -3163,9 +3364,9 @@ public class ASTNodes {
             } else if (funcObj instanceof Method) {
                 return ((Method) funcObj).invoke(null, args.toArray());
             } else if (funcObj instanceof Predicate) {
-                return ((Predicate<Object>) funcObj).test(args.get(0));
+                return ((Predicate) funcObj).test(args.get(0));
             } else if (funcObj instanceof Consumer) {
-                ((Consumer<Object>) funcObj).accept(args.get(0));
+                ((Consumer) funcObj).accept(args.get(0));
                 return null;
             } else {
                 logger.error("对象" + funcObj + "无法被调用");
