@@ -136,10 +136,23 @@ tasks.register('dexifyClientSourceJar') {
         def xposedLibPath = "${project.projectDir}\\libs\\XposedBridgeApi.jar"
         def androidLibPath = "${androidSdkDir}\\platforms\\android-27\\android.jar"
         if (androidSdkDir != null) {
-            def d8Tool = new File(androidSdkDir, "build-tools/${android.buildToolsVersion}/d8.bat").absolutePath
+            def d8BatTool = new File(androidSdkDir, "build-tools/${android.buildToolsVersion}/d8.bat")
+            def d8Tool = new File(androidSdkDir, "build-tools/${android.buildToolsVersion}/d8")
+            
+            def d8Executable
+            if (d8BatTool.exists()) {
+                d8Executable = d8BatTool.absolutePath
+                logger.lifecycle("使用d8.bat: ${d8Executable}")
+            } else if (d8Tool.exists()) {
+                d8Executable = d8Tool.absolutePath
+                logger.lifecycle("使用d8: ${d8Executable}")
+            } else {
+                throw new GradleException("无法找到d8，请检查Android SDK build-tools目录")
+            }
+            
             providers.exec {
                 workingDir project.projectDir
-                commandLine d8Tool,
+                commandLine d8Executable,
                         '--release',
                         '--lib', androidLibPath,
                         '--lib', xposedLibPath,

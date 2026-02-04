@@ -9,7 +9,7 @@ JAVA_CLIENT_JAR="/system/framework/methods-client.jar"
 CPP_CLIENT="/system/framework/methods_client"
 CLASS_NAME="com.justnothing.methodsclient.StreamClient"
 TRANSACTION_EXECUTE_FILE="2"
-TRANSACTION_EXECUTE_STREAM="3"
+#TRANSACTION_EXECUTE_STREAM="3"
 TRANSACTION_WRITE_PORT_FILE="4"
 TRANSACTION_UPDATE_PORT="5"
 TRANSACTION_EXPORT_CONTEXT="6"
@@ -181,6 +181,31 @@ execute_java_client_direct() {
     
     # 执行Java客户端，直接传递所有参数
     /system/bin/app_process -cp "$classpath" /system/bin $CLASS_NAME "$@"
+    return $?
+}
+
+# 执行C++客户端（直接传递参数）
+execute_cpp_client_direct() {
+    log "DEBUG" "执行C++客户端直接模式"
+    
+    # 检查C++客户端
+    if ! check_cpp_client; then
+        log "ERROR" "C++客户端未找到"
+        color_red "C++客户端未找到或不可执行: $CPP_CLIENT" >&2
+        return 1
+    fi
+    
+    # 检查是否启用了调试模式，如果是，则添加-d参数
+    local cpp_args=""
+    if [ "$DEBUG" = "1" ]; then
+        cpp_args="-d"
+        log "DEBUG" "启用C++客户端调试模式"
+    fi
+    
+    log "DEBUG" "执行C++命令: $CPP_CLIENT $cpp_args $@"
+    
+    # 执行C++客户端，直接传递所有参数
+    "$CPP_CLIENT" $cpp_args "$@"
     return $?
 }
 
@@ -475,10 +500,10 @@ start_interactive_terminal() {
         local start_time=$(date +%s)
         
         if [ "$INTERACTIVE_MODE" = "socket" ]; then
-            if check_cpp_client; then
-                execute_cpp_client "$input"
-            elif [ -f "$JAVA_CLIENT_JAR" ]; then
+            if [ -f "$JAVA_CLIENT_JAR" ]; then
                 execute_java_client "socket" "$input"
+            elif check_cpp_client; then
+                execute_cpp_client "$input"
             else
                 execute_file_mode "$input"
             fi
@@ -506,7 +531,7 @@ start_interactive_terminal() {
     log "INFO" "交互式终端结束"
 }
 
-# 套接字模式（优先使用C++客户端）
+# 套接字模式（优先使用Java客户端）
 execute_socket_mode() {
     local command="$*"
     log "INFO" "套接字模式执行: $command"
@@ -701,6 +726,7 @@ show_help() {
     echo "  ${GREEN}--update-port <端口>${NC} 更新Socket服务器端口，会重启Socket服务端"
     echo "  ${GREEN}--export-context${NC}     导出设备的XTChttp上下文，Json格式，搭配xtchttplib使用"
     echo "  ${GREEN}-j, --java-client${NC}    使用Java客户端直接执行命令（传递所有后续参数给Java客户端）"
+    echo "  ${GREEN}-b, --cpp-client${NC}     使用C++客户端直接执行命令（传递所有后续参数给C++客户端）"
     echo "  ${GREEN}--${NC}                   将所有后续参数直接传给服务端（绕过客户端选项解析）"
     echo ""
     echo "${YELLOW}参数解析机制:${NC}"
@@ -715,11 +741,12 @@ show_help() {
     echo "  ${GREEN}文件模式${NC}        - 纯Shell实现，通过文件通信不用调用Java客户端，一次性输出，适用于短时间执行需求"
     echo "  ${GREEN}交互式终端${NC}      - 持续输入命令的终端界面"
     echo "  ${GREEN}Java客户端直连${NC}  - 使用 -j 选项，直接传递所有参数给Java客户端"
+    echo "  ${GREEN}C++客户端直连${NC}   - 使用 -b 选项，直接传递所有参数给C++客户端"
     echo ""
     echo "${YELLOW}客户端优先级:${NC}"
-    echo "  1. ${GREEN}C++客户端${NC} (methods_client) - 优先使用，启动快，不破坏输入"
-    echo "  2. ${GREEN}Java客户端${NC} (methods-client.jar) - 降级选项"
-    echo "  3. ${GREEN}文件模式${NC} - 最后选项"
+    echo "  1. ${GREEN}Java客户端${NC} (methods-client.jar) - 默认优先，性能好，兼容性强"
+    echo "  2. ${GREEN}C++客户端${NC} (methods_client) - 启动快，支持调试模式"
+    echo "  3. ${GREEN}文件模式${NC} - 最后选项，纯Shell实现"
     echo ""
     echo "${YELLOW}客户端路径:${NC}"
     echo "  C++客户端: $CPP_CLIENT"
@@ -744,6 +771,8 @@ show_help() {
     echo "  ${BLUE}methods -d -- list -v java.lang.String ${NC}                         # 查看String类的所有方法，同时展示客户端debug信息"
     echo "  ${BLUE}methods -j --help${NC}                                               # 查看Java客户端的帮助"
     echo "  ${BLUE}methods -j --file packages${NC}                                      # 使用Java客户端的文件模式 (不建议)"
+    echo "  ${BLUE}methods -b --help${NC}                                               # 查看C++客户端的帮助"
+    echo "  ${BLUE}methods -b -d help${NC}                                              # 使用C++客户端调试模式查看帮助"
     echo ""
     echo ""
     echo "${YELLOW}交互式终端命令:${NC}"
@@ -864,6 +893,11 @@ main() {
                 execute_java_client_direct "$@"
                 return $?
                 ;;
+            -b|--cpp-client)
+                shift
+                execute_cpp_client_direct "$@"
+                return $?
+                ;;
             --exec-file)
                 if [ $# -gt 1 ]; then
                     exec_file="$2"
@@ -960,15 +994,16 @@ main() {
     
     # 交互式模式
     if [ "$MODE" = "interactive" ]; then
-        # 设置交互式模式的默认执行方式
-        if check_cpp_client; then
+        # 设置交互式模式的默认执行方式（优先使用Java客户端）
+        if [ -f "$JAVA_CLIENT_JAR" ]; then
             INTERACTIVE_MODE="socket"
-        elif [ -f "$JAVA_CLIENT_JAR" ]; then
+            color_green "交互式模式使用Java客户端套接字模式"
+        elif check_cpp_client; then
             INTERACTIVE_MODE="socket"
-            color_yellow "C++客户端不可用，交互式模式使用Java客户端"
+            color_yellow "Java客户端不可用，交互式模式使用C++客户端套接字模式"
         else
             INTERACTIVE_MODE="file"
-            color_yellow "C++和Java客户端都不可用，交互式模式使用文件模式"
+            color_yellow "Java和C++客户端都不可用，交互式模式使用文件模式"
         fi
         
         start_interactive_terminal
