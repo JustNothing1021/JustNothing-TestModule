@@ -1076,6 +1076,28 @@ public class ScriptParser {
             expectWordToMove("try");
             skipWhitespace();
 
+            List<ASTNode> resources = new ArrayList<>();
+            
+            if (peek() == '(') {
+                expectToMove('(');
+                skipWhitespace();
+                
+                while (peek() != ')') {
+                    resources.add(parseTryResourceDeclaration());
+                    skipWhitespace();
+                    
+                    if (peek() == ';') {
+                        expectToMove(';');
+                        skipWhitespace();
+                    } else if (peek() != ')') {
+                        throw new RuntimeException("Expected ';' or ')' in resource declaration, position: " + position);
+                    }
+                }
+                
+                expectToMove(')');
+                skipWhitespace();
+            }
+
             ASTNode tryBlock;
             if (peek() == '{') {
                 tryBlock = parseBlock(false);
@@ -1125,7 +1147,7 @@ public class ScriptParser {
                 throw new RuntimeException("try statement must have at least one catch block or a finally block");
             }
 
-            return new TryCatchNode(tryBlock, catchBlocks, finallyBlock);
+            return new TryCatchNode(resources, tryBlock, catchBlocks, finallyBlock);
         } catch (RuntimeException e) {
             failure = true;
             logger.debug("解析try语句失败: " + e.getMessage());
@@ -1135,6 +1157,50 @@ public class ScriptParser {
                 restorePosition();
             else
                 releasePosition();
+        }
+    }
+
+    private ASTNode parseTryResourceDeclaration() {
+        skipWhitespace();
+        savePosition();
+        boolean failure = false;
+        try {
+            // 先尝试解析变量声明
+            try {
+                StringBuilder className = new StringBuilder(parseClassIdentifier());
+                skipWhitespace();
+                String variableName = parseIdentifier();
+                skipWhitespace();
+
+                while (peek() == '[') {
+                    expectToMove('[');
+                    expectToMove(']');
+                    className.append("[]");
+                    skipWhitespace();
+                }
+
+                ASTNode initialValue = null;
+                if (peek() == '=') {
+                    expectToMove('=');
+                    skipWhitespace();
+                    initialValue = parseExpression();
+                }
+
+                releasePosition();
+                return new VariableDeclarationNode(className.toString(), variableName, initialValue);
+            } catch (RuntimeException e) {
+                // 变量声明解析失败，尝试解析表达式
+                restorePosition();
+                ASTNode expr = parseExpression();
+                releasePosition();
+                return expr;
+            }
+        } catch (RuntimeException e) {
+            failure = true;
+            throw new RuntimeException("Invalid resource declaration");
+        } finally {
+            if (failure)
+                restorePosition();
         }
     }
 
@@ -1359,7 +1425,6 @@ public class ScriptParser {
             skipWhitespace();
             String itemName = parseIdentifier();
             skipWhitespace();
-
             expectToMove(':');
 
             skipWhitespace();

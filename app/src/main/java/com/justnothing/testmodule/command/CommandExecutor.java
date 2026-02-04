@@ -29,17 +29,12 @@ import com.justnothing.testmodule.utils.functions.Logger;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 
 
 public class CommandExecutor {
-    private ClassLoaderManager classLoaderManager;
-    private volatile boolean initialized = false;
-
-    private String targetPackage = null;
-    private ClassLoader currentClassLoader = null;
-
-    public static class CmdExcLogger extends Logger {
+    private static class CmdExcLogger extends Logger {
         @Override
         public String getTag() {
             return "CommandExecutor";
@@ -48,7 +43,13 @@ public class CommandExecutor {
 
     public static final CmdExcLogger logger = new CmdExcLogger();
 
-    private static final Map<String, CommandBase> commandRegistry = new HashMap<>();
+    private static final Map<String, CommandBase> commandRegistry = new ConcurrentHashMap<>();
+
+    private static final ThreadLocal<String> targetPackageThreadLocal = new ThreadLocal<>();
+    private static final ThreadLocal<ClassLoader> classLoaderThreadLocal = new ThreadLocal<>();
+    private static final ThreadLocal<ClassLoaderManager> classLoaderManagerThreadLocal = new ThreadLocal<>();
+
+    private volatile boolean initialized = false;
 
     static {
         registerCommand("help", new HelpMain());
@@ -115,14 +116,12 @@ public class CommandExecutor {
     }
 
     public CommandExecutor() {
-        this.classLoaderManager = new ClassLoaderManager();
     }
 
     private void initializeIfNeeded() {
         if (!initialized) {
             synchronized (this) {
                 if (!initialized) {
-                    this.classLoaderManager = new ClassLoaderManager();
                     initialized = true;
                 }
             }
@@ -130,23 +129,49 @@ public class CommandExecutor {
     }
 
     public void setTargetPackage(String pkgName) {
-        this.targetPackage = pkgName;
-        this.currentClassLoader = null;
+        targetPackageThreadLocal.set(pkgName);
+        classLoaderThreadLocal.remove();
+        logger.debug("设置目标包名: " + pkgName);
+    }
+
+    private String getTargetPackage() {
+        return targetPackageThreadLocal.get();
     }
 
     private ClassLoader getClassLoader() {
-        if (currentClassLoader != null) {
-            return currentClassLoader;
+        ClassLoader classLoader = classLoaderThreadLocal.get();
+        if (classLoader != null) {
+            return classLoader;
         }
+        
+        String targetPackage = getTargetPackage();
         if (targetPackage == null || targetPackage.equals("default") || targetPackage.isEmpty()) {
-            currentClassLoader = Thread.currentThread().getContextClassLoader();
-            if (currentClassLoader == null) {
-                currentClassLoader = getClass().getClassLoader();
+            classLoader = Thread.currentThread().getContextClassLoader();
+            if (classLoader == null) {
+                classLoader = getClass().getClassLoader();
             }
-            return currentClassLoader;
+        } else {
+            ClassLoaderManager manager = getClassLoaderManager();
+            classLoader = manager.getClassLoaderForPackage(targetPackage);
         }
-        currentClassLoader = classLoaderManager.getClassLoaderForPackage(targetPackage);
-        return currentClassLoader;
+        
+        classLoaderThreadLocal.set(classLoader);
+        return classLoader;
+    }
+
+    private ClassLoaderManager getClassLoaderManager() {
+        ClassLoaderManager manager = classLoaderManagerThreadLocal.get();
+        if (manager == null) {
+            manager = new ClassLoaderManager();
+            classLoaderManagerThreadLocal.set(manager);
+        }
+        return manager;
+    }
+
+    public void cleanup() {
+        targetPackageThreadLocal.remove();
+        classLoaderThreadLocal.remove();
+        classLoaderManagerThreadLocal.remove();
     }
 
 
@@ -182,8 +207,9 @@ public class CommandExecutor {
             output.println("错误信息:");
             output.printStackTrace(e);
             output.println("===============================================");
-            // 出错时也要关闭output
             output.close();
+        } finally {
+            cleanup();
         }
         logger.info("命令执行完成");
     }
@@ -251,7 +277,7 @@ public class CommandExecutor {
             command,
             args,
             commandString,
-            targetPackage,
+            getTargetPackage(),
             getClassLoader(),
             output
         );
@@ -323,23 +349,24 @@ public class CommandExecutor {
               watch                             - 监控字段或方法的变化
               trace                             - 跟踪方法调用链
               profile                           - 性能分析
-              graph                             - 生成类图, 调用图和依赖图
-              export-context                    - 导出设备xtchttp上下文信息
-              memory                            - 显示详细内存使用情况
-                minfo                            - 显示内存信息（快捷方式）
-                mgc                               - 执行垃圾回收（快捷方式）
-                mdump                             - 导出堆信息（快捷方式）
-              threads                           - 列出所有线程及其状态
+              export-context                    - 导出设备xtchttp上下文信息）
+              threads                          - 列出所有线程及其状态
               system                            - 显示系统信息
               breakpoint                        - 设置和管理断点
               packages                          - 列出已知包名
               hook                              - 动态Hook注入器
               reflect                           - 使用反射访问和操作类的私有成员
-              bytecode                          - 查看和分析Java字节码
-                binfo                            - 查看类的字节码信息 (快捷方式)
-                banalyze                         - 分析类的字节码结构 (快捷方式)
-                bdecompile                       - 反编译为Java代码 (快捷方式)
               native                            - 查看和调试Native代码
+
+              bytecode                          - 查看和分析Java字节码 (未正式使用, 很可能实现不了)
+                binfo                           - 查看类的字节码信息 (快捷方式)
+                banalyze                        - 分析类的字节码结构 (快捷方式)
+                bdecompile                      - 反编译为Java代码 (快捷方式)
+
+              memory                            - 显示详细内存使用情况
+                minfo                           - 显示内存信息 (快捷方式)
+                mgc                             - 执行垃圾回收 (快捷方式)
+                mdump                           - 导出堆信息 (快捷方式)
 
               bsh                               - 通过BeanShell执行代码
                 bvars                           - 显示BeanShell执行器的变量
@@ -371,9 +398,7 @@ public class CommandExecutor {
               -cl, --classloader <package>      - 指定类加载器（软件包名，没找到会是默认的类加载器）
             
             示例:
-              methods class info java.lang.String
               methods class graph java.util.ArrayList
-              methods class search annotation Override
               methods -cl android clist com.android.server.am.ActivityManagerService
               methods minfo -h
               methods mgc --full
@@ -381,38 +406,10 @@ public class CommandExecutor {
               methods script for (int i = 0; i < 114; i++) println(i); // 命令行记得加引号
               methods watch add field java.lang.System out 1000
               methods hook add com.example.MainActivity onCreate before 'println("onCreate called")'
-              methods reflect java.lang.System field out
-              methods reflect java.lang.System field -v "test" out
-              methods reflect java.lang.String method valueOf -p String:"123"
               methods reflect java.lang.String constructor
               methods reflect -s java.lang.String field value
-              methods reflect -c android java.lang.System field out
-              methods binfo java.lang.String
               methods binfo -v java.util.ArrayList
-              methods banalyze java.lang.String
-              methods banalyze -v java.util.ArrayList
-              methods bdecompile java.lang.String
-              methods bdecompile com.example.MyClass -o /sdcard/MyClass.java
-              methods bytecode info java.lang.String
-              methods bytecode method java.lang.String valueOf
-              methods bytecode dump java.lang.String -o /sdcard/String.class
-              methods bytecode analyze java.util.ArrayList
-              methods bytecode disasm java.lang.String
-              methods bytecode disasm java.lang.String valueOf
-              methods bytecode constants java.lang.String
-              methods bytecode verify java.lang.String
-              methods bytecode decompile java.lang.String
-              methods bytecode decompile com.example.MyClass -o /sdcard/MyClass.java
               methods native list libart.so
-              methods native info libc.so
-              methods native functions java.lang.System
-              methods native disasm java.lang.System arraycopy
-              methods native symbols libc.so
-              methods native memory
-              methods native heap
-              methods native stack 1234
-              methods native maps
-              methods native search malloc
             
             (MainModule: 让AI给我写了一堆新功能, 再也不用担心自己研究不透系统了)
             """, MAIN_MODULE_VER);

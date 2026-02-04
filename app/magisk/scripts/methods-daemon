@@ -1,0 +1,233 @@
+#!/system/bin/sh
+
+# Java 客户端守护进程管理脚本
+
+VERSION="0.1.0"
+SERVICE_NAME="justnothing_xposed_method_cli"
+METHODS_WORKDIR="/data/local/tmp/methods"
+JAVA_CLIENT_JAR="/system/framework/methods-client.jar"
+CLASS_NAME="com.justnothing.methodsclient.StreamClient"
+DAEMON_PID_FILE="$METHODS_WORKDIR/daemon.pid"
+DAEMON_LOG_FILE="$METHODS_WORKDIR/daemon.log"
+DAEMON_PORT_FILE="$METHODS_WORKDIR/methods_port"
+
+# 颜色定义
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+color_red() { echo -e "${RED}$1${NC}"; }
+color_green() { echo -e "${GREEN}$1${NC}"; }
+color_yellow() { echo -e "${YELLOW}$1${NC}"; }
+color_cyan() { echo -e "${CYAN}$1${NC}"; }
+
+# 日志函数
+log() {
+    local level="$1"
+    local message="$2"
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    echo "[$timestamp] [$level] $message" >> "$DAEMON_LOG_FILE"
+}
+
+# 检查守护进程是否运行
+is_daemon_running() {
+    if [ ! -f "$DAEMON_PID_FILE" ]; then
+        return 1
+    fi
+    
+    local pid=$(cat "$DAEMON_PID_FILE" 2>/dev/null)
+    if [ -z "$pid" ]; then
+        return 1
+    fi
+    
+    # 检查进程是否存在
+    if kill -0 "$pid" 2>/dev/null; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# 启动守护进程
+start_daemon() {
+    if is_daemon_running; then
+        color_yellow "守护进程已经在运行"
+        return 0
+    fi
+    
+    color_cyan "启动Java客户端守护进程..."
+    
+    # 创建工作目录
+    mkdir -p "$METHODS_WORKDIR" 2>/dev/null
+    
+    # 启动守护进程
+    nohup /system/bin/app_process \
+        -cp "/system/framework/core-oj.jar:/system/framework/core-libart.jar:/system/framework/framework.jar:$JAVA_CLIENT_JAR" \
+        /system/bin \
+        "$CLASS_NAME" \
+        --daemon \
+        >> "$DAEMON_LOG_FILE" 2>&1 &
+    
+    local pid=$!
+    echo "$pid" > "$DAEMON_PID_FILE"
+    
+    log "INFO" "守护进程启动 (PID: $pid)"
+    
+    # 等待端口文件创建
+    local max_wait=10
+    local waited=0
+    while [ $waited -lt $max_wait ]; do
+        if [ -f "$DAEMON_PORT_FILE" ]; then
+            local port=$(cat "$DAEMON_PORT_FILE" 2>/dev/null)
+            if [ -n "$port" ]; then
+                color_green "守护进程启动成功 (PID: $pid, 端口: $port)"
+                return 0
+            fi
+        fi
+        sleep 1
+        waited=$((waited + 1))
+    done
+    
+    color_yellow "守护进程已启动，等待端口文件..."
+    return 0
+}
+
+# 停止守护进程
+stop_daemon() {
+    if ! is_daemon_running; then
+        color_yellow "守护进程未运行"
+        return 0
+    fi
+    
+    local pid=$(cat "$DAEMON_PID_FILE" 2>/dev/null)
+    color_cyan "停止守护进程 (PID: $pid)..."
+    
+    kill "$pid" 2>/dev/null
+    
+    # 等待进程结束
+    local max_wait=5
+    local waited=0
+    while [ $waited -lt $max_wait ]; do
+        if ! kill -0 "$pid" 2>/dev/null; then
+            break
+        fi
+        sleep 1
+        waited=$((waited + 1))
+    done
+    
+    # 如果进程还在运行，强制杀死
+    if kill -0 "$pid" 2>/dev/null; then
+        kill -9 "$pid" 2>/dev/null
+    fi
+    
+    rm -f "$DAEMON_PID_FILE"
+    log "INFO" "守护进程已停止"
+    color_green "守护进程已停止"
+}
+
+# 重启守护进程
+restart_daemon() {
+    stop_daemon
+    sleep 1
+    start_daemon
+}
+
+# 查看守护进程状态
+status_daemon() {
+    if is_daemon_running; then
+        local pid=$(cat "$DAEMON_PID_FILE" 2>/dev/null)
+        local port=""
+        if [ -f "$DAEMON_PORT_FILE" ]; then
+            port=$(cat "$DAEMON_PORT_FILE" 2>/dev/null)
+        fi
+        
+        color_green "守护进程运行中"
+        echo "  PID: $pid"
+        if [ -n "$port" ]; then
+            echo "  端口: $port"
+        fi
+        echo "  日志: $DAEMON_LOG_FILE"
+        return 0
+    else
+        color_red "守护进程未运行"
+        return 1
+    fi
+}
+
+# 查看日志
+view_logs() {
+    if [ -f "$DAEMON_LOG_FILE" ]; then
+        tail -n 50 "$DAEMON_LOG_FILE"
+    else
+        color_yellow "日志文件不存在"
+    fi
+}
+
+# 清理日志
+clean_logs() {
+    if [ -f "$DAEMON_LOG_FILE" ]; then
+        > "$DAEMON_LOG_FILE"
+        color_green "日志已清理"
+    fi
+}
+
+# 显示帮助
+show_help() {
+    echo "Java 客户端守护进程管理工具 v$VERSION"
+    echo ""
+    echo "用法:"
+    echo "  $0 <命令>"
+    echo ""
+    echo "命令:"
+    echo "  start     启动守护进程"
+    echo "  stop      停止守护进程"
+    echo "  restart   重启守护进程"
+    echo "  status    查看守护进程状态"
+    echo "  logs      查看日志"
+    echo "  clean     清理日志"
+    echo "  help      显示帮助"
+    echo ""
+    echo "示例:"
+    echo "  $0 start"
+    echo "  $0 status"
+    echo "  $0 logs"
+}
+
+# 主函数
+main() {
+    local command="$1"
+    
+    case "$command" in
+        start)
+            start_daemon
+            ;;
+        stop)
+            stop_daemon
+            ;;
+        restart)
+            restart_daemon
+            ;;
+        status)
+            status_daemon
+            ;;
+        logs)
+            view_logs
+            ;;
+        clean)
+            clean_logs
+            ;;
+        help|--help|-h)
+            show_help
+            ;;
+        *)
+            color_red "未知命令: $command"
+            echo ""
+            show_help
+            exit 1
+            ;;
+    esac
+}
+
+main "$@"

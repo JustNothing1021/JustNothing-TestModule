@@ -2,10 +2,11 @@
 
 
 # 常量定义
-VERSION="0.3.1"
+VERSION="0.4.0"
 SERVICE_NAME="justnothing_xposed_method_cli"
 METHODS_WORKDIR="/data/local/tmp/methods"
 JAVA_CLIENT_JAR="/system/framework/methods-client.jar"
+CPP_CLIENT="/system/framework/methods_client"
 CLASS_NAME="com.justnothing.methodsclient.StreamClient"
 TRANSACTION_EXECUTE_FILE="2"
 TRANSACTION_EXECUTE_STREAM="3"
@@ -91,6 +92,52 @@ check_java_client() {
     
     log "DEBUG" "未找到Java客户端"
     return 1
+}
+
+# 检查C++客户端
+check_cpp_client() {
+    if [ -f "$CPP_CLIENT" ] && [ -x "$CPP_CLIENT" ]; then
+        log "DEBUG" "找到C++客户端: $CPP_CLIENT"
+        return 0
+    fi
+    
+    log "DEBUG" "未找到C++客户端"
+    return 1
+}
+
+# 执行C++客户端
+execute_cpp_client() {
+    local command="$*"
+    log "DEBUG" "执行C++客户端: $command"
+    
+    if ! check_cpp_client; then
+        log "ERROR" "C++客户端未找到或不可执行"
+        color_red "C++客户端未找到或不可执行: $CPP_CLIENT" >&2
+        return 1
+    fi
+    
+    log "DEBUG" "执行C++命令: $CPP_CLIENT \"$command\""
+    
+    # 执行C++客户端
+    "$CPP_CLIENT" "$command"
+    return $?
+}
+
+# C++客户端交互式模式
+execute_cpp_client_interactive() {
+    log "DEBUG" "执行C++客户端交互式模式"
+    
+    if ! check_cpp_client; then
+        log "ERROR" "C++客户端未找到或不可执行"
+        color_red "C++客户端未找到或不可执行: $CPP_CLIENT" >&2
+        return 1
+    fi
+    
+    log "DEBUG" "执行C++命令: $CPP_CLIENT -i"
+    
+    # 执行C++客户端交互式模式
+    "$CPP_CLIENT" -i
+    return $?
 }
 
 # 请求服务器更新端口文件
@@ -427,8 +474,14 @@ start_interactive_terminal() {
         # 根据当前模式执行命令
         local start_time=$(date +%s)
         
-        if [ "$INTERACTIVE_MODE" = "socket" ] && [ -f "$JAVA_CLIENT_JAR" ]; then
-            execute_java_client "socket" "$input"
+        if [ "$INTERACTIVE_MODE" = "socket" ]; then
+            if check_cpp_client; then
+                execute_cpp_client "$input"
+            elif [ -f "$JAVA_CLIENT_JAR" ]; then
+                execute_java_client "socket" "$input"
+            else
+                execute_file_mode "$input"
+            fi
         else
             execute_file_mode "$input"
         fi
@@ -453,18 +506,25 @@ start_interactive_terminal() {
     log "INFO" "交互式终端结束"
 }
 
-# 套接字模式（使用Java客户端）
+# 套接字模式（优先使用C++客户端）
 execute_socket_mode() {
     local command="$*"
     log "INFO" "套接字模式执行: $command"
     
+    # 优先使用Java客户端
     if [ -f "$JAVA_CLIENT_JAR" ]; then
-        log "DEBUG" "使用Java客户端套接字模式" 
-        
+        log "DEBUG" "使用Java客户端套接字模式"
         execute_java_client "socket" "$command"
         return $?
+    # 降级到C++客户端
+    elif check_cpp_client; then
+        log "WARN" "Java客户端不可用，降级到C++客户端"
+        color_yellow "[使用C++客户端套接字模式]" >&2
+        execute_cpp_client "$command"
+        return $?
     else
-        log "WARN" "Java客户端不可用，降级为文件模式"
+        log "WARN" "Java和C++客户端都不可用，降级到文件模式"
+        color_yellow "[Java和C++客户端都不可用，使用文件模式]" >&2
         execute_file_mode "$command"
         return $?
     fi
@@ -649,18 +709,30 @@ show_help() {
     echo "  3. 使用 ${GREEN}--${NC} 可以显式指定后续参数都传给服务端"
     echo ""
     echo "${YELLOW}执行模式说明:${NC}"
+    echo "  ${GREEN}C++套接字模式${NC}  - 使用C++客户端，实时输出 (优先选择，启动快，不破坏输入)"
     echo "  ${GREEN}Java套接字模式${NC}  - 使用Java客户端，实时输出 (通过app_process执行，性能开销较大但体验好)"
     echo "  ${GREEN}Java文件模式${NC}    - 使用Java客户端，通过文件缓存，一次性输出 (测试用, 不是很建议)"
     echo "  ${GREEN}文件模式${NC}        - 纯Shell实现，通过文件通信不用调用Java客户端，一次性输出，适用于短时间执行需求"
     echo "  ${GREEN}交互式终端${NC}      - 持续输入命令的终端界面"
     echo "  ${GREEN}Java客户端直连${NC}  - 使用 -j 选项，直接传递所有参数给Java客户端"
     echo ""
-    echo "${YELLOW}Java客户端路径:${NC}"
-    echo "  $JAVA_CLIENT_JAR"
-    if [ -f "$JAVA_CLIENT_JAR" ]; then
-        echo "  ${GREEN}(已找到)${NC}"
+    echo "${YELLOW}客户端优先级:${NC}"
+    echo "  1. ${GREEN}C++客户端${NC} (methods_client) - 优先使用，启动快，不破坏输入"
+    echo "  2. ${GREEN}Java客户端${NC} (methods-client.jar) - 降级选项"
+    echo "  3. ${GREEN}文件模式${NC} - 最后选项"
+    echo ""
+    echo "${YELLOW}客户端路径:${NC}"
+    echo "  C++客户端: $CPP_CLIENT"
+    if [ -f "$CPP_CLIENT" ] && [ -x "$CPP_CLIENT" ]; then
+        echo "    ${GREEN}(已找到)${NC}"
     else
-        echo "  ${RED}(未找到，请检查模块安装是否正确)${NC}"
+        echo "    ${RED}(未找到或不可执行)${NC}"
+    fi
+    echo "  Java客户端: $JAVA_CLIENT_JAR"
+    if [ -f "$JAVA_CLIENT_JAR" ]; then
+        echo "    ${GREEN}(已找到)${NC}"
+    else
+        echo "    ${RED}(未找到)${NC}"
     fi
     echo ""
     echo "${YELLOW}示例:${NC}"
@@ -694,13 +766,29 @@ show_version() {
     color_cyan "Xposed Method CLI Shell 客户端 v${VERSION}"
     echo "当前时间: $(date '+%Y-%m-%d %H:%M:%S')"
     echo "服务名称: $SERVICE_NAME"
-    echo "Java客户端: $JAVA_CLIENT_JAR"
+    echo ""
     
     if check_service; then
         color_green "✓ 服务状态: 正常"
     else
         log "WARN" "服务状态异常"
         color_red "服务状态: 异常"
+    fi
+    
+    if check_cpp_client; then
+        color_green "✓ C++客户端: 已安装"
+        # 尝试获取文件信息
+        if command -v stat >/dev/null 2>&1; then
+            local cpp_size=$(stat -c%s "$CPP_CLIENT" 2>/dev/null || echo "未知")
+            local cpp_mtime=$(stat -c%y "$CPP_CLIENT" 2>/dev/null || echo "未知")
+            echo "  文件大小: $cpp_size 字节"
+            echo "  修改时间: $cpp_mtime"
+        else
+            echo "  文件信息: 无法获取"
+        fi
+    else
+        log "WARN" "C++客户端未安装"
+        color_yellow "⚠ C++客户端: 未安装（某些功能受限）"
     fi
     
     if [ -f "$JAVA_CLIENT_JAR" ]; then
@@ -716,7 +804,7 @@ show_version() {
         fi
     else
         log "WARN" "Java客户端未安装"
-        color_yellow "⚠ Java客户端: 未安装（某些功能受限）"
+        color_yellow "⚠ Java客户端: 未安装（降级选项）"
     fi
 }
 
@@ -873,11 +961,14 @@ main() {
     # 交互式模式
     if [ "$MODE" = "interactive" ]; then
         # 设置交互式模式的默认执行方式
-        if [ -f "$JAVA_CLIENT_JAR" ]; then
+        if check_cpp_client; then
             INTERACTIVE_MODE="socket"
+        elif [ -f "$JAVA_CLIENT_JAR" ]; then
+            INTERACTIVE_MODE="socket"
+            color_yellow "C++客户端不可用，交互式模式使用Java客户端"
         else
             INTERACTIVE_MODE="file"
-            color_yellow "Java客户端不可用，交互式模式使用文件模式"
+            color_yellow "C++和Java客户端都不可用，交互式模式使用文件模式"
         fi
         
         start_interactive_terminal

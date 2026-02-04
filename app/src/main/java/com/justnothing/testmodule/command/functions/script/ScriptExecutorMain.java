@@ -83,7 +83,8 @@ public class ScriptExecutorMain extends CommandBase {
                         range(int end)
                         range(int begin, int end)
                         range(int begin, int end, int step)
-                        analyze(Object obj)   -> null              - 分析一个对象
+                        analyze(Object obj)     -> null            - 分析一个对象
+                        deepAnalyze(Object obj) -> null            - 更详细的分析, 继承关系之类的
                         getContext()          -> Context           - 获取上下文
                         getApplicationInfo()  -> ApplicationInfo   - 获取应用信息
                         getPackageName()      -> String            - 获取包名
@@ -91,6 +92,28 @@ public class ScriptExecutorMain extends CommandBase {
                         asRunnable(Lambda lambda)                  - 防止Lambda不兼容
                         asFunction(Lambda lambda)                  - 同上
                         runLater(Lambda lambda)                    - 把Lambda放新线程跑
+                        continueOnErrors(boolean enable) -> null   - 启用/禁用错误继续执行模式
+                        typeOf(Object obj) -> String              - 获取对象的类型名称
+                        isInstanceOf(Object obj, String className) -> boolean - 检查对象是否是某个类的实例
+                        keys(Map map) -> List                    - 获取 Map 的所有键
+                        values(Map map) -> List                  - 获取 Map 的所有值
+                        size(Collection/Map/Array) -> int        - 获取集合/Map/数组的大小
+                        contains(Collection/Map/Array, element) -> boolean - 检查集合/Map/数组是否包含某个元素
+                        split(String str, String delimiter) -> List - 分割字符串
+                        join(Collection/Array, String delimiter) -> String - 连接集合/数组元素为字符串
+                        trace() -> null                          - 打印调用栈
+                        currentTimeMillis() -> long               - 获取当前时间戳(毫秒)
+                        nanoTime() -> long                       - 获取高精度时间(纳秒)
+                        sleep(long ms) -> null                   - 休眠指定毫秒数
+                        random() -> double                       - 生成随机数(0.0-1.0)
+                        randint(int min, int max) -> int      - 生成指定范围内的随机整数
+                        abs(Number number) -> Number             - 绝对值
+                        min(Number a, Number b) -> Number        - 最小值
+                        max(Number a, Number b) -> Number        - 最大值
+                        clamp(Number value, Number min, Number max) -> Number - 将值限制在指定范围内
+                        getField(Object obj, String fieldName) -> Object - 获取对象的字段值
+                        setField(Object obj, String fieldName, Object value) -> null - 设置对象的字段值
+                        invokeMethod(Object obj, String methodName, Object... args) -> Object - 调用对象的方法
                     
                     退出命令:
                         exit, quit                                 - 退出交互式模式
@@ -138,6 +161,7 @@ public class ScriptExecutorMain extends CommandBase {
                             range(int begin, int end, int step)        - 都能写Java了, 相信你也会用Python的range(真的吗...?)
                             getInterpreterClassLoader() -> ClassLoader - 获取解释器的类加载器, 可以用来加载类
                             analyze(Object obj)   -> null              - 分析一个对象, 打印出一些它的相关信息
+                            deepAnalyze(Object obj) -> null            - 更详细的分析, 继承关系之类的
                             getContext()          -> Context           - 获取上下文, DeepSeek神力
                             getApplicationInfo()  -> ApplicationInfo   - 也是DeepSeek写的
                             getPackageName()      -> String            - 和上面一样
@@ -151,6 +175,35 @@ public class ScriptExecutorMain extends CommandBase {
                             asRunnable(Lambda lambda)                  - 本来是为了防止Lambda不兼容的, 现在如果没必要其实可以不用了
                             asFunction(Lambda lambda)                  - 一样的
                             runLater(Lambda lambda)                    - 把Lambda放新线程跑
+                            
+                            continueOnErrors(boolean enable) -> null   - 启用/禁用错误继续执行模式, 启用后遇到错误会继续执行下一行
+                            typename(Object obj) -> String
+                            isInstanceOf(Object obj, String className) -> boolean
+                            cast(Object obj, String className) -> Object - 强制类型转换
+                            
+                            keys(Map map) -> List                    - 获取 Map 的所有键
+                            values(Map map) -> List                  - 获取 Map 的所有值
+                            entries(Map map) -> List                 - 获取 Map 的所有键值对
+                            size(Collection/Map/Array) -> int        - 获取集合/Map/数组的大小
+                            contains(Collection/Map/Array, element) -> boolean - 检查集合/Map/数组是否包含某个元素
+                            
+                            split(String str, String delimiter) -> List - 分割字符串
+                            join(Collection/Array, String delimiter) -> String - 连接集合/数组元素为字符串
+                            
+                            currentTimeMillis() -> long               - 获取当前时间戳(毫秒)
+                            nanoTime() -> long                       - 获取高精度时间(纳秒)
+                            sleep(long ms) -> null                   - 休眠指定毫秒数
+                            
+                            random() -> double                       - 生成随机数(0.0-1.0)
+                            randint(int min, int max) -> int      - 生成指定范围内的随机整数
+                            abs(Number number) -> Number             - 绝对值
+                            min(Number a, Number b) -> Number        - 最小值
+                            max(Number a, Number b) -> Number        - 最大值
+                            clamp(Number value, Number min, Number max) -> Number - 将值限制在指定范围内
+                            
+                            getField(Object obj, String fieldName) -> Object - 获取对象的字段值
+                            setField(Object obj, String fieldName, Object value) -> null - 设置对象的字段值
+                            invokeMethod(Object obj, String methodName, Object... args) -> Object - 调用对象的方法
                         
                         需要注意的几个点(语法点):
                         
@@ -667,8 +720,8 @@ public class ScriptExecutorMain extends CommandBase {
         ScriptRunner runner = getScriptExecutor(classLoader);
         
         logger.info("进入交互式脚本执行模式");
-        context.output().println("====== 脚本交互执行模式 ===");
-        context.output().println("输入 'exit' 或 'quit' 退出");
+        context.output().println("====== 脚本交互执行模式 =====");
+        context.output().println("输入 'exit' 或 'quit' 退出 (你不会闲到拿这俩做变量名, 对吧)");
         context.output().println("");
 
         while (true) {

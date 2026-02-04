@@ -36,10 +36,22 @@ public class ScriptRunner {
             Object lastResult = null;
 
             try {
-                while ((node = parser.parseCompletedStatement()) != null)
-                    lastResult = node.evaluate(context);
+                while ((node = parser.parseCompletedStatement()) != null) {
+                    try {
+                        lastResult = node.evaluate(context);
+                    } catch (Exception e) {
+                        if (context.continueOnErrors) {
+                            System.err.println("Error: " + e.getMessage());
+                            System.err.println(getStackTraceString(e));
+                        } else {
+                            throw e;
+                        }
+                    }
+                }
             } catch (Exception e) {
-                System.err.println(getStackTraceString(e));
+                if (!context.continueOnErrors) {
+                    System.err.println(getStackTraceString(e));
+                }
             }
             return lastResult;
         }
@@ -56,10 +68,22 @@ public class ScriptRunner {
             Object lastResult = null;
 
             try {
-                while ((node = parser.parseCompletedStatement()) != null)
-                    lastResult = node.evaluate(context);
+                while ((node = parser.parseCompletedStatement()) != null) {
+                    try {
+                        lastResult = node.evaluate(context);
+                    } catch (Exception e) {
+                        if (context.continueOnErrors) {
+                            System.err.println("Error: " + e.getMessage());
+                            System.err.println(getStackTraceString(e));
+                        } else {
+                            throw e;
+                        }
+                    }
+                }
             } catch (Exception e) {
-                System.err.println(getStackTraceString(e));
+                if (!context.continueOnErrors) {
+                    System.err.println(getStackTraceString(e));
+                }
             }
             return lastResult;
         }
@@ -71,10 +95,21 @@ public class ScriptRunner {
             ASTNode node;
             try {
                 while ((node = parser.parseCompletedStatement()) != null) {
-                    node.evaluate(context);
+                    try {
+                        node.evaluate(context);
+                    } catch (Exception e) {
+                        if (context.continueOnErrors) {
+                            System.err.println("Error: " + e.getMessage());
+                            System.err.println(getStackTraceString(e));
+                        } else {
+                            throw e;
+                        }
+                    }
                 }
             } catch (Exception e) {
-                System.err.println(getStackTraceString(e));
+                if (!context.continueOnErrors) {
+                    System.err.println(getStackTraceString(e));
+                }
             }
         }
 
@@ -90,10 +125,21 @@ public class ScriptRunner {
             ASTNode node;
             try {
                 while ((node = parser.parseCompletedStatement()) != null) {
-                    node.evaluate(context);
+                    try {
+                        node.evaluate(context);
+                    } catch (Exception e) {
+                        if (context.continueOnErrors) {
+                            System.err.println("Error: " + e.getMessage());
+                            System.err.println(getStackTraceString(e));
+                        } else {
+                            throw e;
+                        }
+                    }
                 }
             } catch (Exception e) {
-                System.err.println(getStackTraceString(e));
+                if (!context.continueOnErrors) {
+                    System.err.println(getStackTraceString(e));
+                }
             }
         }
 

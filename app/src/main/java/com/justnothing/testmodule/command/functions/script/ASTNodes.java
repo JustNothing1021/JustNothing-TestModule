@@ -2560,6 +2560,7 @@ public class ASTNodes {
                                 "Return value type mismatch: expected " + expectedReturnType + ", got " + actualType);
                     }
 
+                    context.exitScope();
                     return returnValue;
                 } else {
                     context.returnValue = null;
@@ -2570,6 +2571,7 @@ public class ASTNodes {
                                 "Return value type mismatch: expected " + expectedReturnType + ", got void");
                     }
 
+                    context.exitScope();
                     return null;
                 }
             } else {
@@ -2584,29 +2586,11 @@ public class ASTNodes {
         }
     }
 
-    public static class TryCatchNode extends ASTNode {
-        private final List<ResourceDeclaration> resources;
+        public static class TryCatchNode extends ASTNode {
+        private final List<ASTNode> resources;
         private final ASTNode tryBlock;
         private final List<CatchBlock> catchBlocks;
         private final ASTNode finallyBlock;
-
-        public static class ResourceDeclaration {
-            private final String variableName;
-            private final ASTNode initializer;
-
-            public ResourceDeclaration(String variableName, ASTNode initializer) {
-                this.variableName = variableName;
-                this.initializer = initializer;
-            }
-
-            public String getVariableName() {
-                return variableName;
-            }
-
-            public ASTNode getInitializer() {
-                return initializer;
-            }
-        }
 
         public static class CatchBlock {
             private final String exceptionType;
@@ -2632,7 +2616,7 @@ public class ASTNodes {
             }
         }
 
-        public TryCatchNode(List<ResourceDeclaration> resources, ASTNode tryBlock, List<CatchBlock> catchBlocks, ASTNode finallyBlock) {
+        public TryCatchNode(List<ASTNode> resources, ASTNode tryBlock, List<CatchBlock> catchBlocks, ASTNode finallyBlock) {
             this.resources = resources != null ? resources : Collections.emptyList();
             this.tryBlock = tryBlock;
             this.catchBlocks = catchBlocks != null ? catchBlocks : Collections.emptyList();
@@ -2647,15 +2631,15 @@ public class ASTNodes {
         public Object evaluate(ExecutionContext context) throws Exception {
             Object result = null;
             Throwable caughtException = null;
-            boolean shouldExecuteFinally = true;
             boolean matchedCatch = false;
             List<AutoCloseable> closeableResources = new ArrayList<>();
 
+            context.enterScope();
+
             try {
                 // 初始化资源
-                for (ResourceDeclaration resource : resources) {
-                    Object resourceValue = resource.getInitializer().evaluate(context);
-                    context.setVariable(resource.getVariableName(), resourceValue);
+                for (ASTNode resourceNode : resources) {
+                    Object resourceValue = resourceNode.evaluate(context);
                     
                     // 检查是否为 AutoCloseable
                     if (resourceValue instanceof AutoCloseable) {
@@ -2674,6 +2658,7 @@ public class ASTNodes {
                         finallyBlock.evaluate(context);
                         context.shouldReturn = true;
                     }
+                    context.exitScope();
                     return returnValue;
                 }
 
@@ -2689,6 +2674,7 @@ public class ASTNodes {
                         context.shouldBreak = originalShouldBreak;
                         context.shouldContinue = originalShouldContinue;
                     }
+                    context.exitScope();
                     return null;
                 }
             } catch (Throwable e) {
@@ -2713,6 +2699,7 @@ public class ASTNodes {
                                     finallyBlock.evaluate(context);
                                     context.shouldReturn = true;
                                 }
+                                context.exitScope();
                                 return returnValue;
                             }
 
@@ -2728,6 +2715,7 @@ public class ASTNodes {
                                     context.shouldBreak = originalShouldBreak;
                                     context.shouldContinue = originalShouldContinue;
                                 }
+                                context.exitScope();
                                 return null;
                             }
 
@@ -2740,9 +2728,6 @@ public class ASTNodes {
                     }
                 }
 
-                if (!matchedCatch) {
-                    shouldExecuteFinally = false;
-                }
             } finally {
                 // 关闭资源
                 closeResources(closeableResources);
@@ -2765,6 +2750,7 @@ public class ASTNodes {
                         }
                     }
 
+                    context.exitScope();
                     return returnValue;
                 }
 
@@ -2780,6 +2766,7 @@ public class ASTNodes {
                         }
                     }
 
+                    context.exitScope();
                     return null;
                 }
             }
@@ -2793,6 +2780,8 @@ public class ASTNodes {
                     throw new RuntimeException(caughtException);
                 }
             }
+
+            context.exitScope();
 
             return result;
         }
@@ -3430,6 +3419,7 @@ public class ASTNodes {
                     }
                 } catch (NoSuchMethodException e) {
                 }
+
                 context.deleteVariable(variableName);
             }
             return null;

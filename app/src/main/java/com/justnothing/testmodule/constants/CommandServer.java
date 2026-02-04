@@ -1,12 +1,12 @@
 package com.justnothing.testmodule.constants;
 
 public class CommandServer {
-    public static final String MAIN_MODULE_VER = "v0.3.3";
+    public static final String MAIN_MODULE_VER = "v0.3.4";
     public static final String CMD_BEAN_SHELL_VER = "v0.1.0";
     public static final String CMD_CLASS_VER = "v0.1.1";
     public static final String CMD_WATCH_VER = "v0.1.1";
     public static final String CMD_TRACE_VER = "v0.1.0";
-    public static final String CMD_SCRIPT_VER = "v0.1.9";
+    public static final String CMD_SCRIPT_VER = "v0.2.0";
     public static final String CMD_EXPORT_CONTEXT_VER = "v0.1.0";
     public static final String CMD_MEMORY_VER = "v0.1.1";
     public static final String CMD_THREADS_VER = "v0.1.1";

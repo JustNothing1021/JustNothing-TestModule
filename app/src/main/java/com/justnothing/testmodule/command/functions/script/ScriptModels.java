@@ -13,9 +13,11 @@ import java.lang.reflect.Proxy;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -27,12 +29,14 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.justnothing.testmodule.command.functions.script.ASTNodes.*;
+import com.justnothing.testmodule.command.functions.script.ScriptLogger.StandaloneLogger;
 import com.justnothing.testmodule.command.output.IOutputHandler;
 import com.justnothing.testmodule.command.output.SystemOutputCollector;
 import static com.justnothing.testmodule.command.functions.script.ScriptLogger.*;
 import static com.justnothing.testmodule.command.functions.script.ScriptUtils.*;
 
 import androidx.annotation.NonNull;
+import de.robv.android.xposed.XposedHelpers;
 
 public class ScriptModels {
 
@@ -82,6 +86,7 @@ public class ScriptModels {
         boolean shouldReturn;
         Object returnValue;
         private String currentMethodReturnType;
+        boolean continueOnErrors;
 
         private final List<Map<String, Variable>> scopeStack = new ArrayList<>();
 
@@ -96,9 +101,7 @@ public class ScriptModels {
             this.classCache = new ConcurrentHashMap<>();
             this.customClasses = new ConcurrentHashMap<>();
             this.methodCache = new ConcurrentHashMap<>();
-
             enterScope();
-
             setupDefaultImports();
             setupBuiltInFunctions();
             logger.debug("ExecutionContext初始化完成");
@@ -117,9 +120,9 @@ public class ScriptModels {
             this.classCache = new ConcurrentHashMap<>();
             this.customClasses = new ConcurrentHashMap<>();
             this.methodCache = new ConcurrentHashMap<>();
+            enterScope();
             setupDefaultImports();
             setupBuiltInFunctions();
-            enterScope();
             logger.debug("ExecutionContext初始化完成");
         }
 
@@ -892,7 +895,16 @@ public class ScriptModels {
                     result.append("No fields\n");
                 } else {
                     for (Field field : fields) {
-                        result.append("  ").append(field.toString()).append("\n");
+                        result.append("  ").append(field.toString());
+                        // 尝试获取字段的值
+                        try {
+                            field.setAccessible(true);
+                            Object value = field.get(target);
+                            result.append(" = ").append(value != null ? value.toString() : "null");
+                        } catch (Exception e) {
+                            result.append(" = [Cannot access: ").append(e.getMessage()).append("]");
+                        }
+                        result.append("\n");
                     }
                 }
                 if (fields.length > 0)
@@ -934,6 +946,156 @@ public class ScriptModels {
                     result.append("Total Interfaces: ")
                             .append(interfaces.length).append("\n");
                 println(result.toString());
+                return null;
+            });
+
+            addBuiltIn("deepAnalyze", args -> {
+                if (args.size() != 1) {
+                    logger.error("deepAnalyze requires exactly 1 argument, but got " + args.size());
+                    throw new RuntimeException("deepAnalyze() requires exactly 1 argument");
+                }
+
+                Object target = args.get(0);
+                StringBuilder result = new StringBuilder();
+
+                if (target == null) {
+                    result.append("Target object is null\n");
+                    println(result.toString());
+                    return null;
+                }
+
+                Class<?> clazz = target.getClass();
+                result.append("=== Deep Object Analysis ===\n");
+                result.append("String: ").append(target).append("\n");
+                result.append("Class Name: ").append(clazz.getName()).append("\n");
+                result.append("Simple Name: ").append(clazz.getSimpleName()).append("\n");
+                result.append("Package: ").append(clazz.getPackage() != null ? clazz.getPackage().getName() : "None")
+                        .append("\n");
+                result.append("Is Array: ").append(clazz.isArray()).append("\n");
+                result.append("Is Interface: ").append(clazz.isInterface()).append("\n");
+                result.append("Is Annotation: ").append(clazz.isAnnotation()).append("\n");
+                result.append("Is Enum: ").append(clazz.isEnum()).append("\n");
+                result.append("Is Primitive: ").append(clazz.isPrimitive()).append("\n\n");
+
+                // 收集所有类层次结构中的字段和方法
+                Set<Field> allFields = new LinkedHashSet<>();
+                Set<Method> allMethods = new LinkedHashSet<>();
+                Map<Field, Class<?>> fieldSources = new HashMap<>();
+                Map<Method, Class<?>> methodSources = new HashMap<>();
+
+                // 遍历类层次结构
+                Class<?> currentClass = clazz;
+                while (currentClass != null) {
+                    // 收集字段
+                    for (Field field : currentClass.getDeclaredFields()) {
+                        allFields.add(field);
+                        fieldSources.put(field, currentClass);
+                    }
+                    
+                    // 收集方法
+                    for (Method method : currentClass.getDeclaredMethods()) {
+                        allMethods.add(method);
+                        methodSources.put(method, currentClass);
+                    }
+                    
+                    // 处理接口
+                    for (Class<?> iface : currentClass.getInterfaces()) {
+                        collectInterfaceMembers(iface, allFields, allMethods, fieldSources, methodSources);
+                    }
+                    
+                    currentClass = currentClass.getSuperclass();
+                }
+
+                result.append("=== Fields (with inheritance) ===\n");
+                if (allFields.isEmpty()) {
+                    result.append("No fields\n");
+                } else {
+                    for (Field field : allFields) {
+                        Class<?> sourceClass = fieldSources.get(field);
+                        result.append("  ").append(field.toString());
+                        
+                        // 尝试获取字段的值
+                        try {
+                            field.setAccessible(true);
+                            Object value = field.get(target);
+                            result.append(" = ").append(value != null ? value.toString() : "null");
+                        } catch (Exception e) {
+                            result.append(" = [Cannot access: ").append(e.getMessage()).append("]");
+                        }
+                        
+                        // 显示继承关系
+                        if (sourceClass != clazz) {
+                            if (sourceClass.isInterface()) {
+                                result.append("\n    └─> implements ").append(sourceClass.getName());
+                            } else {
+                                result.append("\n    └─> extends ").append(sourceClass.getName());
+                            }
+                        }
+                        result.append("\n");
+                    }
+                }
+                result.append("Total Fields: ").append(allFields.size()).append("\n\n");
+
+                result.append("=== Methods (with inheritance) ===\n");
+                if (allMethods.isEmpty()) {
+                    result.append("No methods\n");
+                } else {
+                    for (Method method : allMethods) {
+                        Class<?> sourceClass = methodSources.get(method);
+                        result.append("  ").append(method.toString());
+                        
+                        // 显示继承关系
+                        if (sourceClass != clazz) {
+                            if (sourceClass.isInterface()) {
+                                result.append("\n    └─> implements ").append(sourceClass.getName());
+                            } else {
+                                result.append("\n    └─> extends ").append(sourceClass.getName());
+                            }
+                        }
+                        result.append("\n");
+                    }
+                }
+                result.append("Total Methods: ").append(allMethods.size()).append("\n\n");
+
+                result.append("=== Superclass Hierarchy ===\n");
+                Class<?> superClass = clazz.getSuperclass();
+                int level = 0;
+                while (superClass != null) {
+                    result.append("  ").append("  ".repeat(level)).append("└─> ").append(superClass.getName()).append("\n");
+                    superClass = superClass.getSuperclass();
+                    level++;
+                }
+                if (level == 0) {
+                    result.append("No superclass\n");
+                }
+                result.append("\n");
+
+                result.append("=== Implemented Interfaces ===\n");
+                Class<?>[] interfaces = clazz.getInterfaces();
+                if (interfaces.length == 0) {
+                    result.append("No interfaces\n");
+                } else {
+                    for (Class<?> _interface : interfaces) {
+                        result.append("  └─> ").append(_interface.getName()).append("\n");
+                    }
+                }
+                result.append("Total Interfaces: ").append(interfaces.length).append("\n");
+                
+                println(result.toString());
+                return null;
+            });
+
+            addBuiltIn("continueOnErrors", args -> {
+                if (args.size() != 1) {
+                    logger.error("continueOnErrors requires exactly 1 argument, but got " + args.size());
+                    throw new RuntimeException("continueOnErrors() requires exactly 1 argument");
+                }
+                Object value = args.get(0);
+                if (!(value instanceof Boolean)) {
+                    logger.error("continueOnErrors argument must be a boolean");
+                    throw new RuntimeException("continueOnErrors() argument must be a boolean");
+                }
+                continueOnErrors = Boolean.TRUE.equals(value);
                 return null;
             });
 
@@ -1289,6 +1451,410 @@ public class ScriptModels {
                     throw new RuntimeException("Failed to run Runnable: " + e.getMessage());
                 }
             });
+
+            addBuiltIn("continueOnErrors", args -> {
+                if (args.size() != 1) {
+                    logger.error("continueOnErrors需要1个参数，但是接收到了" + args.size() + "个");
+                    throw new RuntimeException("continueOnErrors() requires exactly 1 argument");
+                }
+                Object value = args.get(0);
+                if (!(value instanceof Boolean)) {
+                    logger.error("continueOnErrors参数必须是一个bool");
+                    throw new RuntimeException("continueOnErrors() argument must be a boolean");
+                }
+                continueOnErrors = Boolean.TRUE.equals(value);
+                return null;
+            });
+
+            addBuiltIn("typename", args -> {
+                if (args.size() != 1) {
+                    logger.error("typename需要1个参数，但是接收到了" + args.size() + "个");
+                    throw new RuntimeException("typename() requires exactly 1 argument");
+                }
+                Object obj = args.get(0);
+                if (obj == null) {
+                    return "null";
+                }
+                Class<?> clazz = obj.getClass();
+                return clazz.getName();
+            });
+
+            addBuiltIn("isInstanceOf", args -> {
+                if (args.size() != 2) {
+                    logger.error("isInstanceOf需要2个参数，但是接收到了" + args.size() + "个");
+                    throw new RuntimeException("isInstanceOf() requires exactly 2 arguments");
+                }
+                Object obj = args.get(0);
+                Object className = args.get(1);
+                if (obj == null) {
+                    return false;
+                }
+                Class<?> targetClass;
+                try {
+                    if (className instanceof Class) {
+                        targetClass = (Class<?>) className;
+                    } else {
+                        targetClass = findClass(className.toString());
+                    }
+                } catch (Exception e) {
+                    logger.error("找不到类: " + className, e);
+                    throw new RuntimeException("Failed to find class: " + className, e);
+                }
+                return targetClass.isInstance(obj);
+            });
+
+            addBuiltIn("cast", args -> {
+                if (args.size() != 2) {
+                    logger.error("cast需要2个参数，但是接收到了" + args.size() + "个");
+                    throw new RuntimeException("cast() requires exactly 2 arguments");
+                }
+                Object obj = args.get(0);
+                Object className = args.get(1);
+                if (obj == null) {
+                    return null;
+                }
+                Class<?> targetClass;
+                try {
+                    if (className instanceof Class) {
+                        targetClass = (Class<?>) className;
+                    } else {
+                        targetClass = findClass(className.toString());
+                    }
+                } catch (Exception e) {
+                    logger.error("找不到类: " + className, e);
+                    throw new RuntimeException("Failed to find class: " + className, e);
+                }
+                if (!targetClass.isInstance(obj)) {
+                    logger.error("不能将 " + obj.getClass().getName() + " 转换为 " + targetClass.getName());
+                    throw new RuntimeException("Cannot cast " + obj.getClass().getName() + " to " + targetClass.getName());
+                }
+                return targetClass.cast(obj);
+            });
+
+            addBuiltIn("keys", args -> {
+                if (args.size() != 1) {
+                    logger.error("keys需要1个参数，但是接收到了" + args.size() + "个");
+                    throw new RuntimeException("keys() requires exactly 1 argument");
+                }
+                Object obj = args.get(0);
+                if (!(obj instanceof Map)) {
+                    logger.error("提供给keys的参数必须是一个Map");
+                    throw new RuntimeException("keys() argument must be a Map");
+                }
+                Map<?, ?> map = (Map<?, ?>) obj;
+                return new ArrayList<>(map.keySet());
+            });
+
+            addBuiltIn("values", args -> {
+                if (args.size() != 1) {
+                    logger.error("values需要1个参数，但是接收到了" + args.size() + "个");
+                    throw new RuntimeException("values() requires exactly 1 argument");
+                }
+                Object obj = args.get(0);
+                if (!(obj instanceof Map)) {
+                    logger.error("提供给values的参数必须是一个Map");
+                    throw new RuntimeException("values() argument must be a Map");
+                }
+                Map<?, ?> map = (Map<?, ?>) obj;
+                return new ArrayList<>(map.values());
+            });
+
+            addBuiltIn("entries", args -> {
+                if (args.size() != 1) {
+                    logger.error("entries需要1个参数，但是接收到了" + args.size() + "个");
+                    throw new RuntimeException("entries() requires exactly 1 argument");
+                }
+                Object obj = args.get(0);
+                if (!(obj instanceof Map)) {
+                    logger.error("提供给entries的参数必须是一个Map");
+                    throw new RuntimeException("entries() argument must be a Map");
+                }
+                Map<?, ?> map = (Map<?, ?>) obj;
+                return new ArrayList<>(map.entrySet());
+            });
+
+            addBuiltIn("size", args -> {
+                if (args.size() != 1) {
+                    logger.error("size需要1个参数，但是接收到了" + args.size() + "个");
+                    throw new RuntimeException("size() requires exactly 1 argument");
+                }
+                Object obj = args.get(0);
+                if (obj instanceof Collection) {
+                    return ((Collection<?>) obj).size();
+                } else if (obj instanceof Map) {
+                    return ((Map<?, ?>) obj).size();
+                } else if (obj != null && obj.getClass().isArray()) {
+                    return java.lang.reflect.Array.getLength(obj);
+                } else {
+                    logger.error("提供给size的参数必须是Collection, Map或者Array");
+                    throw new RuntimeException("size() argument must be a Collection, Map, or Array");
+                }
+            });
+
+            addBuiltIn("contains", args -> {
+                if (args.size() != 2) {
+                    logger.error("contains需要2个参数，但是接收到了" + args.size() + "个");
+                    throw new RuntimeException("contains() requires exactly 2 arguments");
+                }
+                Object collection = args.get(0);
+                Object element = args.get(1);
+                if (collection instanceof Collection) {
+                    return ((Collection<?>) collection).contains(element);
+                } else if (collection instanceof Map) {
+                    return ((Map<?, ?>) collection).containsKey(element);
+                } else if (collection != null && collection.getClass().isArray()) {
+                    int length = java.lang.reflect.Array.getLength(collection);
+                    for (int i = 0; i < length; i++) {
+                        Object item = java.lang.reflect.Array.get(collection, i);
+                        if (item == null && element == null) return true;
+                        if (item != null && item.equals(element)) return true;
+                    }
+                    return false;
+                } else {
+                    logger.error("contains的第一个参数必须是Collection, Map或者Array");
+                    throw new RuntimeException("contains() first argument must be a Collection, Map, or Array");
+                }
+            });
+
+            addBuiltIn("split", args -> {
+                if (args.size() != 2) {
+                    logger.error("split需要2个参数，但是接收到了" + args.size() + "个");
+                    throw new RuntimeException("split() requires exactly 2 arguments");
+                }
+                Object str = args.get(0);
+                Object delimiter = args.get(1);
+                if (str == null || delimiter == null) {
+                    logger.error("split的参数不能为null");
+                    throw new RuntimeException("split() arguments cannot be null");
+                }
+                String[] parts = str.toString().split(delimiter.toString());
+                return Arrays.asList(parts);
+            });
+
+            addBuiltIn("join", args -> {
+                if (args.size() < 1 || args.size() > 2) {
+                    logger.error("join需要1个或2个参数，但是接收到了" + args.size() + "个");
+                    throw new RuntimeException("join() requires 1 or 2 arguments");
+                }
+                Object collection = args.get(0);
+                String delimiter = args.size() > 1 ? args.get(1).toString() : "";
+                if (collection instanceof Collection) {
+                    StringBuilder sb = new StringBuilder();
+                    boolean first = true;
+                    for (Object item : (Collection<?>) collection) {
+                        if (!first) sb.append(delimiter);
+                        sb.append(item != null ? item.toString() : "null");
+                        first = false;
+                    }
+                    return sb.toString();
+                } else if (collection != null && collection.getClass().isArray()) {
+                    int length = java.lang.reflect.Array.getLength(collection);
+                    StringBuilder sb = new StringBuilder();
+                    for (int i = 0; i < length; i++) {
+                        if (i > 0) sb.append(delimiter);
+                        Object item = java.lang.reflect.Array.get(collection, i);
+                        sb.append(item != null ? item.toString() : "null");
+                    }
+                    return sb.toString();
+                } else {
+                    logger.error("join的第一个参数必须是Collection或者Array");
+                    throw new RuntimeException("join() first argument must be a Collection or Array");
+                }
+            });
+
+            addBuiltIn("currentTimeMillis", args -> {
+                if (!args.isEmpty()) {
+                    logger.warn("currentTimeMillis()不接受任何参数，将会忽略");
+                }
+                return System.currentTimeMillis();
+            });
+
+            addBuiltIn("nanoTime", args -> {
+                if (!args.isEmpty()) {
+                    logger.warn("nanoTime()不接受任何参数，将会忽略");
+                }
+                return System.nanoTime();
+            });
+
+            addBuiltIn("sleep", args -> {
+                if (args.size() != 1) {
+                    logger.error("sleep需要1个参数，但是接收到了" + args.size() + "个");
+                    throw new RuntimeException("sleep() requires exactly 1 argument");
+                }
+                Object ms = args.get(0);
+                long milliseconds;
+                if (ms instanceof Number) {
+                    milliseconds = ((Number) ms).longValue();
+                } else {
+                    logger.error("sleep的参数必须是一个数字");
+                    throw new RuntimeException("sleep() argument must be a number");
+                }
+                try {
+                    Thread.sleep(milliseconds);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    logger.warn("休眠被终止", e);
+                }
+                return null;
+            });
+
+            addBuiltIn("random", args -> {
+                if (!args.isEmpty()) {
+                    logger.warn("random() does not accept any arguments, ignoring them");
+                }
+                return Math.random();
+            });
+
+            addBuiltIn("randint", args -> {
+                if (args.size() != 2) {
+                    logger.error("randint需要2个参数，但是接收到了" + args.size() + "个");
+                    throw new RuntimeException("randint() requires exactly 2 arguments");
+                }
+                Object min = args.get(0);
+                Object max = args.get(1);
+                if (!(min instanceof Number) || !(max instanceof Number)) {
+                    logger.error("randint的参数必须是2个数字");
+                    throw new RuntimeException("randint() arguments must be numbers");
+                }
+                int minInt = ((Number) min).intValue();
+                int maxInt = ((Number) max).intValue();
+                return minInt + (int) (Math.random() * (maxInt - minInt));
+            });
+
+            addBuiltIn("abs", args -> {
+                if (args.size() != 1) {
+                    logger.error("abs需要1个参数，但是接收到了" + args.size() + "个");
+                    throw new RuntimeException("abs() requires exactly 1 argument");
+                }
+                Object num = args.get(0);
+                if (!(num instanceof Number)) {
+                    logger.error("abs的参数必须是一个数字");
+                    throw new RuntimeException("abs() argument must be a number");
+                }
+                return Math.abs(((Number) num).doubleValue());
+            });
+
+            addBuiltIn("min", args -> {
+                if (args.size() != 2) {
+                    logger.error("min需要2个参数，但是接收到了" + args.size() + "个");
+                    throw new RuntimeException("min() requires exactly 2 arguments");
+                }
+                Object a = args.get(0);
+                Object b = args.get(1);
+                if (!(a instanceof Number) || !(b instanceof Number)) {
+                    logger.error("min的参数必须是2个数字");
+                    throw new RuntimeException("min() arguments must be numbers");
+                }
+                return Math.min(((Number) a).doubleValue(), ((Number) b).doubleValue());
+            });
+
+            addBuiltIn("max", args -> {
+                if (args.size() != 2) {
+                    logger.error("max需要2个参数，但是接收到了" + args.size() + "个");
+                    throw new RuntimeException("max() requires exactly 2 arguments");
+                }
+                Object a = args.get(0);
+                Object b = args.get(1);
+                if (!(a instanceof Number) || !(b instanceof Number)) {
+                    logger.error("max的参数必须是2个数字");
+                    throw new RuntimeException("max() arguments must be numbers");
+                }
+                return Math.max(((Number) a).doubleValue(), ((Number) b).doubleValue());
+            });
+
+            addBuiltIn("clamp", args -> {
+                if (args.size() != 3) {
+                    logger.error("clamp需要3个参数，但是接收到了" + args.size() + "个");
+                    throw new RuntimeException("clamp() requires exactly 3 arguments");
+                }
+                Object value = args.get(0);
+                Object min = args.get(1);
+                Object max = args.get(2);
+                if (!(value instanceof Number) || !(min instanceof Number) || !(max instanceof Number)) {
+                    logger.error("clamp的参数必须是3个数字");
+                    throw new RuntimeException("clamp() arguments must be numbers");
+                }
+                double val = ((Number) value).doubleValue();
+                double minVal = ((Number) min).doubleValue();
+                double maxVal = ((Number) max).doubleValue();
+                return Math.max(minVal, Math.min(maxVal, val));
+            });
+
+            addBuiltIn("getField", args -> {
+                if (args.size() != 2) {
+                    logger.error("getField需要2个参数，但是接收到了" + args.size() + "个");
+                    throw new RuntimeException("getField() requires exactly 2 arguments");
+                }
+                Object obj = args.get(0);
+                Object fieldName = args.get(1);
+                if (obj == null) {
+                    logger.error("getField的第一个参数不能为null");
+                    throw new RuntimeException("getField() first argument cannot be null");
+                }
+                try {
+                    Field field = obj.getClass().getDeclaredField(fieldName.toString());
+                    field.setAccessible(true);
+                    return field.get(obj);
+                } catch (Exception e) {
+                    logger.error("getField获取字段" + fieldName + "失败", e);
+                    throw new RuntimeException("Failed to get field: " + fieldName, e);
+                }
+            });
+
+            addBuiltIn("setField", args -> {
+                if (args.size() != 3) {
+                    logger.error("setField需要3个参数，但是接收到了" + args.size() + "个");
+                    throw new RuntimeException("setField() requires exactly 3 arguments");
+                }
+                Object obj = args.get(0);
+                Object fieldName = args.get(1);
+                Object value = args.get(2);
+                if (obj == null) {
+                    logger.error("setField的第一个参数不能为null");
+                    throw new RuntimeException("setField() first argument cannot be null");
+                }
+                try {
+                    Field field = obj.getClass().getDeclaredField(fieldName.toString());
+                    field.setAccessible(true);
+                    field.set(obj, value);
+                    return null;
+                } catch (Exception e) {
+                    logger.error("setField设置字段" + fieldName + "失败", e);
+                    throw new RuntimeException("Failed to set field: " + fieldName, e);
+                }
+            });
+
+            addBuiltIn("invokeMethod", args -> {
+                if (args.size() < 2) {
+                    logger.error("invokeMethod需要至少2个参数，但是接收到了" + args.size() + "个");
+                    throw new RuntimeException("invokeMethod() requires at least 2 arguments");
+                }
+                Object obj = args.get(0);
+                Object methodName = args.get(1);
+                if (obj == null) {
+                    logger.error("invokeMethod的第一个参数不能为null");
+                    throw new RuntimeException("invokeMethod() first argument cannot be null");
+                }
+                List<Object> methodArgs = new ArrayList<>();
+                for (int i = 2; i < args.size(); i++) {
+                    methodArgs.add(args.get(i));
+                }
+                try {
+                    Method[] methods = obj.getClass().getDeclaredMethods();
+                    for (Method method : methods) {
+                        if (method.getName().equals(methodName.toString())) {
+                            method.setAccessible(true);
+                            return method.invoke(obj, methodArgs.toArray());
+                        }
+                    }
+                    logger.error("invokeMethod未找到方法" + methodName);
+                    throw new RuntimeException("Method not found: " + methodName);
+                } catch (Exception e) {
+                    logger.error("invokeMethod调用方法" + methodName + "失败", e);
+                    throw new RuntimeException("Failed to invoke method: " + methodName, e);
+                }
+            });
+
 
         }
 
@@ -2196,6 +2762,36 @@ public class ScriptModels {
             context.shouldContinue = originalShouldContinue;
 
             return result;
+        }
+    }
+
+    /**
+     * 递归收集接口中的字段和方法
+     */
+    private static void collectInterfaceMembers(Class<?> iface, 
+                                              Set<Field> allFields, 
+                                              Set<Method> allMethods,
+                                              Map<Field, Class<?>> fieldSources,
+                                              Map<Method, Class<?>> methodSources) {
+        if (iface == null || iface == Object.class) {
+            return;
+        }
+
+        // 收集当前接口的字段
+        for (Field field : iface.getDeclaredFields()) {
+            allFields.add(field);
+            fieldSources.put(field, iface);
+        }
+
+        // 收集当前接口的方法
+        for (Method method : iface.getDeclaredMethods()) {
+            allMethods.add(method);
+            methodSources.put(method, iface);
+        }
+
+        // 递归处理父接口
+        for (Class<?> parentIface : iface.getInterfaces()) {
+            collectInterfaceMembers(parentIface, allFields, allMethods, fieldSources, methodSources);
         }
     }
 

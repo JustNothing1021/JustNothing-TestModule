@@ -5,7 +5,6 @@ plugins {
 }
 
 
-
 android {
     namespace 'com.justnothing.testmodule'
     compileSdkVersion 36
@@ -14,10 +13,14 @@ android {
         applicationId "com.justnothing.testmodule"
         minSdk 26
         targetSdk 36
-        versionCode 41
-        versionName "0.4.2"
+        versionCode 43
+        versionName "0.4.3"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        ndk {
+            abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86_64', 'x86'
+        }
     }
 
     buildTypes {
@@ -39,9 +42,18 @@ android {
         viewBinding true
     }
 
+    externalNativeBuild {
+        cmake {
+            path "src/main/cpp/CMakeLists.txt"
+            version "3.22.1"
+        }
+    }
+
     configurations {
         all*.exclude group: 'androidx.lifecycle', module: 'lifecycle-viewmodel-ktx'
     }
+    buildToolsVersion '36.1.0'
+    ndkVersion '29.0.14206865'
 }
 
 dependencies {
@@ -168,6 +180,97 @@ tasks.register('createClientJar', Jar) {
                 'Created-By': "Gradle ${gradle.gradleVersion}",
                 'Build-Time': new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
         )
+    }
+}
+
+tasks.register('packageMagiskModule', Task) {
+    group = 'build'
+    description = '打包Magisk模块'
+    
+    dependsOn tasks.named('createClientJar')
+
+    def magiskDir = file('build/magisk')
+    def systemBinDir = file("${magiskDir}/system/bin")
+    def systemFrameworkDir = file("${magiskDir}/system/framework")
+    def commonBinaryDir = file("${magiskDir}/common/binary")
+    def commonDir = file("${magiskDir}/common")
+
+    doLast {
+        delete magiskDir
+        magiskDir.mkdirs()
+        systemBinDir.mkdirs()
+        systemFrameworkDir.mkdirs()
+        commonBinaryDir.mkdirs()
+        commonDir.mkdirs()
+
+        def moduleProp = file("${magiskDir}/module.prop")
+        moduleProp.text = """
+id=JustNothing-module
+name=啥也不是的模块
+version=${android.defaultConfig.versionName}
+versionCode=${android.defaultConfig.versionCode}
+author=JustNothing1021
+description=一个用来调试安卓开发千奇百怪的诡异问题的Xposed模块/命令行工具
+"""
+
+        project.copy {
+            from file('magisk/install.sh')
+            into magiskDir
+        }
+
+        project.copy {
+            from file('magisk/common/post-fs-data.sh')
+            into commonDir
+        }
+
+        project.copy {
+            from file('magisk/common/service.sh')
+            into commonDir
+        }
+
+        project.copy {
+            from file('build/libs/client/methods-client.jar')
+            into systemFrameworkDir
+            rename { 'methods-client.jar' }
+        }
+
+        project.copy {
+            from file('src/main/assets')
+            into commonBinaryDir
+            include 'arm64-v8a/methods_client_arm64-v8a'
+            include 'armeabi-v7a/methods_client_armeabi-v7a'
+            include 'x86_64/methods_client_x86_64'
+            include 'x86/methods_client_x86'
+        }
+
+        project.copy {
+            from file('magisk/scripts')
+            into systemBinDir
+        }
+    }
+}
+
+tasks.register('createMagiskZip', Zip) {
+    group = 'build'
+    description = '创建Magisk模块'
+
+    dependsOn tasks.named('packageMagiskModule')
+
+    def magiskDir = file('build/magisk')
+    
+    archiveFileName = "magisk-module.zip"
+    destinationDirectory = file('build/outputs')
+    
+    from magiskDir
+}
+
+afterEvaluate {
+    tasks.named('assembleDebug').configure {
+        dependsOn tasks.named('createMagiskZip')
+    }
+
+    tasks.named('assembleRelease').configure {
+        dependsOn tasks.named('createMagiskZip')
     }
 }
 
