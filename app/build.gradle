@@ -134,7 +134,7 @@ tasks.register('dexifyClientSourceJar') {
         logger.lifecycle("输出目录: ${outputDir.absolutePath}")
         def androidSdkDir = android.sdkDirectory
         def xposedLibPath = "${project.projectDir}/libs/XposedBridgeApi.jar"
-        def androidLibPath = "${androidSdkDir}/platforms/android-27/android.jar"
+        def androidLibPath = "${project.projectDir}/libs/android.jar" // 没招了
         if (androidSdkDir != null) {
             def d8BatTool = new File(androidSdkDir, "build-tools/${android.buildToolsVersion}/d8.bat")
             def d8Tool = new File(androidSdkDir, "build-tools/${android.buildToolsVersion}/d8")
