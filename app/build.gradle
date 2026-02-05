@@ -133,12 +133,12 @@ tasks.register('dexifyClientSourceJar') {
         logger.lifecycle("开始将 ${inputJarFile.absolutePath} 转换为dex格式...")
         logger.lifecycle("输出目录: ${outputDir.absolutePath}")
         def androidSdkDir = android.sdkDirectory
-        def xposedLibPath = "${project.projectDir}\\libs\\XposedBridgeApi.jar"
-        def androidLibPath = "${androidSdkDir}\\platforms\\android-27\\android.jar"
+        def xposedLibPath = "${project.projectDir}/libs/XposedBridgeApi.jar"
+        def androidLibPath = "${androidSdkDir}/platforms/android-27/android.jar"
         if (androidSdkDir != null) {
             def d8BatTool = new File(androidSdkDir, "build-tools/${android.buildToolsVersion}/d8.bat")
             def d8Tool = new File(androidSdkDir, "build-tools/${android.buildToolsVersion}/d8")
-            
+
             def d8Executable
             if (d8BatTool.exists()) {
                 d8Executable = d8BatTool.absolutePath
@@ -149,16 +149,38 @@ tasks.register('dexifyClientSourceJar') {
             } else {
                 throw new GradleException("无法找到d8，请检查Android SDK build-tools目录")
             }
-            
-            providers.exec {
-                workingDir project.projectDir
-                commandLine d8Executable,
-                        '--release',
-                        '--lib', androidLibPath,
-                        '--lib', xposedLibPath,
-                        inputJarFile.absolutePath,
-                        '--output', outputDir.absolutePath
-            }.standardOutput.asText.get()
+            ExecOutput result = null
+            try {
+                def command = [d8Executable, '--release', '--lib', androidLibPath, '--lib', xposedLibPath, inputJarFile.absolutePath, '--output', outputDir.absolutePath] as String[]
+                def process = new ProcessBuilder(command)
+                        .directory(project.projectDir)
+                        .redirectErrorStream(false)  // 分开stdout和stderr
+                        .start()
+                
+                def stdout = new StringBuilder()
+                def stderr = new StringBuilder()
+                
+                Thread.start { process.inputStream.eachLine { stdout.append(it).append('\n') } }
+                Thread.start { process.errorStream.eachLine { stderr.append(it).append('\n') } }
+                
+                def exitCode = process.waitFor()
+                
+                logger.lifecycle("d8执行完成，退出码: " + exitCode)
+                if (stdout.length() > 0) {
+                    logger.lifecycle("stdout: " + stdout.toString().trim())
+                }
+                if (stderr.length() > 0) {
+                    logger.lifecycle("stderr: " + stderr.toString().trim())
+                }
+                
+                if (exitCode != 0) {
+                    throw new GradleException("d8执行失败，退出码: " + exitCode)
+                }
+            } catch (Exception e) {
+                logger.lifecycle("d8命令执行失败，错误信息: " + e.message)
+                logger.lifecycle("执行的d8命令: " + d8Executable + " --release --lib " + androidLibPath + " --lib " + xposedLibPath + " " + inputJarFile.absolutePath + " --output " + outputDir.absolutePath)
+                throw e
+            }
         } else {
             throw new GradleException("无法找到Android SDK路径")
         }
