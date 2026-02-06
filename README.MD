@@ -144,76 +144,57 @@ chmod -R 0775 /data/local/tmp/methods
 
 ```
 TestModule/
-├── app/                           # Android应用模块
+├── app/                            # Android应用模块
 │   ├── src/
 │   │   ├── main/
-│   │   │   ├── assets/            # 资源文件
-│   │   │   │   ├── arm64-v8a/      # ARM64架构的C++客户端
-│   │   │   │   ├── armeabi-v7a/  # ARM32架构的C++客户端
-│   │   │   │   ├── x86/           # x86架构的C++客户端
-│   │   │   │   ├── x86_64/        # x86_64架构的C++客户端
-│   │   │   │   ├── codebase/       # 示例代码
-│   │   │   │   └── ...           # 其他资源文件
-│   │   │   ├── cpp/             # C++客户端源码
+│   │   │   ├── assets/             # 资源文件
+│   │   │   │   └── codebase/       # 动态Hook示例代码
+│   │   │   ├── cpp/                # C++客户端源码
 │   │   │   │   ├── CMakeLists.txt
 │   │   │   │   └── methods_client.cpp
-│   │   │   ├── java/            # Java源码
+│   │   │   ├── java/               # Java源码
 │   │   │   │   └── com/justnothing/
-│   │   │   │       ├── methodsclient/      # 客户端代码
+│   │   │   │       ├── methodsclient/        # 客户端代码
 │   │   │   │       │   ├── executor/         # 命令执行器
 │   │   │   │       │   ├── monitor/          # 监控器
 │   │   │   │       │   └── StreamClient.java
-│   │   │   │       ├── testmodule/       # Xposed模块代码
+│   │   │   │       ├── testmodule/          # Xposed模块代码
 │   │   │   │       │   ├── command/         # 命令处理
 │   │   │   │       │   ├── constants/       # 常量定义
 │   │   │   │       │   ├── hooks/           # Xposed钩子
 │   │   │   │       │   ├── service/         # 服务端代码
 │   │   │   │       │   ├── ui/              # 用户界面
 │   │   │   │       │   └── utils/           # 工具类
-│   │   │   │       └── xtchttplib/       # HTTP库
-│   │   │   └── res/             # Android资源
-│   │   │       ├── anim/            # 动画
-│   │   │       ├── drawable/        # 图片
-│   │   │       ├── layout/          # 布局
-│   │   │       ├── mipmap-*/       # 图标
-│   │   │       ├── values/          # 值
-│   │   │       └── xml/            # 配置
+│   │   │   │       └── xtchttplib/          # HTTP库（类似存根）
+│   │   │   └── res/              # Android资源
 │   │   ├── libs/                 # 依赖库
-│   │   │   ├── NCW-Logger-1.0.3-hotfix.jar
-│   │   │   └── XposedBridgeApi.jar
-│   │   └── build.gradle         # Gradle构建配置
+│   │   └── build.gradle          # Gradle构建配置
 ├── magisk/                       # Magisk模块文件
-│   ├── install.sh               # 安装脚本
-│   └── scripts/                # Shell脚本
-│       ├── methods              # 主脚本
-│       ├── methods-daemon       # 守护进程
-│       └── methods-concurrent-test # 并发测试
-├── docs/                        # 文档
-│   ├── magisk-module-template/ # Magisk模块模板
-│   ├── CONCURRENT_HANDLING.md  # 并发处理文档
-│   ├── HYBRID_SOLUTION.md      # 混合方案文档
-│   ├── PROJECT_REFACTOR_SUMMARY.md  # 项目重构总结
-│   └── PROJECT_STRUCTURE.md     # 项目结构文档
-├── gradle/                      # Gradle配置
+│   ├── install.sh                # 安装脚本
+│   └── scripts/                  # Shell脚本
+│       ├── methods                 # 主脚本
+│       ├── methods-daemon          # 守护进程脚本
+│       └── methods-concurrent-test # 并发测试脚本
+├── gradle/                         # Gradle配置
 │   └── wrapper/
-├── .github/                     # GitHub配置
+├── .github/                        # GitHub配置
 │   └── workflows/
 │       └── release.yml
-├── .idea/                       # Android Studio配置
-├── .vscode/                     # VS Code配置
+├── .idea/                        # Android Studio配置
+├── .vscode/                      # VSCode配置
 ├── .gitignore                    # Git忽略文件
-├── README.MD                     # 项目说明
-├── build.gradle                   # 根Gradle配置
-├── gradle.properties              # Gradle属性
-├── gradlew                      # Gradle包装器(Unix)
-├── gradlew.bat                  # Gradle包装器(Windows)
-└── settings.gradle                # Gradle设置
+├── README.MD                     # 你现在在看的东西
+├── build.gradle                  # 根Gradle配置
+├── gradle.properties             # Gradle属性
+├── gradlew                       # Gradle包装器(Unix)
+├── gradlew.bat                   # Gradle包装器(Windows)
+└── settings.gradle               # Gradle设置
 ```
 
 ## 技术栈
 
 ### Android
- - **Xposed Framework** - 系统级钩子框架
+ - **Xposed Framework** - 系统Hook框架
  - **Magisk** - Root权限管理
  - **NDK** - C++原生开发
  - **Gradle** - 构建系统
@@ -226,8 +207,6 @@ TestModule/
 
 ### 前端
  - **Java** - Android UI
- - **ViewBinding** - 视图绑定
- - **Material Design** - 材料设计
 
 ## 开发指南
 
@@ -291,29 +270,31 @@ cd JustNothing-TestModule
 
 ~~这个图是我自己画的，不是AI，如何呢~~
 
+对了，这个MD只在Github上效果好
+
 ```
 
   输入/输出
 ┌─────────┐
-│  客户端  │
+│  客户端 │
 │ (Shell) │
 └──────▲──┘     ┌─────────┐
        │        │  app    │
-命令行  ├────────▶ process │ --> 目前主要的瓶颈
+命令行 ├────────> process │ --> 目前主要的瓶颈
        │        └──────▲──┘     破坏输入且开销大
        │               │ 
 ┌──────▼──┐     ┌──────▼──┐ 
-│  客户端  │     │  客户端  │
+│ 客户端  │     │  客户端 │
 │  (C++)  │     │  (Java) │
 └──────▲──┘     └──────▲──┘ 
        ├───────────────┘
        │ Socket
        │
 ┌──────▼────────┐
-│    服务端      │
+│    服务端     │
 │    (Java)     │
 │   (Binder)    │
-│ (注入android)  │
+│ (注入android) │
 │               │
 │  ┌────────┐   │
 │  │ Xposed │   │
@@ -321,21 +302,14 @@ cd JustNothing-TestModule
 │  └───▲────┘   │
 │      │        │
 │   ┌──▼───┐    │
-│   │ 系统  │    │
+│   │ 系统 │    │
 │   │ API  │    │
 │   └──────┘    │
 └───────────────┘
 ```
 
-### 并发处理
-
-使用 `ThreadLocal` 实现线程安全的命令执行器，每个线程独立的状态管理。
-
-使用Java守护进程 + C++轻量级客户端的混合架构。
-
 
 ## 贡献指南
-
 欢迎提交 Issue 和 Pull Request！（其实根本不会有人）
 
 ### 代码规范
@@ -372,14 +346,19 @@ cd JustNothing-TestModule
 
 ## 更新日志
 
+### 当前暂存的更新
+ - 修复了工作流不能用的问题（脑溢血方法）
+ - 让readme在github上面看起来美观一些
+
 ### v0.4.3
 README.MD!!!!!
+
 修复大量解释器问题
 
 ## 常见问题
 
 ### Q: 为什么有三个客户端？
-A: Shell处理终端，Java通过app_process执行，体验好，C++处理轻量命令。
+A: Shell处理终端，Java通过app_process执行，体验好; C++处理轻量命令 (虽然还用不了)。
 
 ## 相关链接
 
