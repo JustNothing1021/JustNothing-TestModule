@@ -219,7 +219,7 @@ public class ScriptParser {
      */
     private boolean matchKeywordExact(String expected, String whiteList) {
         savePosition();
-        if (!matchKeyword(expected)) {
+        if (!matchWord(expected)) {
             restorePosition();
             return false;
         }
@@ -267,7 +267,7 @@ public class ScriptParser {
      * @param expected 关键字
      * @return 结果
      */
-    private boolean matchKeyword(String expected) {
+    private boolean matchWord(String expected) {
         if (input.substring(position).startsWith(expected)) {
             position += expected.length();
             return true;
@@ -721,6 +721,15 @@ public class ScriptParser {
                 } catch (Exception ignored) {
                 }
 
+                while (peek(2).equals("[]")) {
+                    if (expr instanceof ClassReferenceNode classRef) {
+                        expr = new ClassReferenceNode(classRef.getClassName() + "[]");
+                    } else {
+                        logger.error("不能给" + expr.getClass().getSimpleName() + "类型的变量添加数组后缀");
+                        unexpectedToken();
+                    }
+                }
+
                 // 如果后面有括号，创建方法调用节点
                 if (peek() == '(') {
                     expectToMove('(');
@@ -733,6 +742,26 @@ public class ScriptParser {
                     // 否则创建成员访问节点
                     expr = new MemberAccessNode(expr, member);
                 }
+            }
+
+            while (peek(2).equals("[]")) {
+                expectWordToMove("[]");
+                if (expr instanceof ClassReferenceNode classRef) {
+                    expr = new ClassReferenceNode(classRef.getClassName() + "[]");
+                } else {
+                    logger.error("不能给" + expr.getClass().getSimpleName() + "类型的变量添加数组后缀");
+                    unexpectedToken();
+                }
+            }
+
+            skipWhitespace();
+            logger.debug("方法解析完成，接下来的大致内容: " + peek(20));
+            while (matchWord("::")) {
+                skipWhitespace();
+                String methodName = parseIdentifier();
+                skipWhitespace();
+                
+                expr = new MethodReferenceNode(expr, methodName);
             }
             skipWhitespace();
 
@@ -806,6 +835,26 @@ public class ScriptParser {
 
             if (peek() == '(') {
                 expectToMove('(');
+                
+                // 检查是否是强制转换语法: (Type) expr
+                savePosition();
+                try {
+                    String typeName = parseIdentifier();
+                    skipWhitespace();
+                    
+                    // 如果后面是 )，说明是强制转换
+                    if (peek() == ')') {
+                        expectToMove(')');
+                        skipWhitespace();
+                        ASTNode expr = parseExpression();
+                        return new CastNode(typeName, expr);
+                    }
+                } catch (RuntimeException e) {
+                    // 不是强制转换，回退到括号表达式
+                    restorePosition();
+                }
+                
+                // 普通括号表达式
                 ASTNode expr = parseExpression();
                 expectToMove(')');
                 return new ParenthesizedExpressionNode(expr);
@@ -1853,7 +1902,7 @@ public class ScriptParser {
     private ClassDeclarationNode parseClassDeclaration() {
         skipWhitespace();
 
-        if (!matchKeyword("class")) {
+        if (!matchWord("class")) {
             throw new RuntimeException("Expected 'class' keyword at position " + position);
         }
         skipWhitespace();
@@ -1862,14 +1911,14 @@ public class ScriptParser {
         ClassDefinition classDef = new ClassDefinition(className);
         skipWhitespace();
 
-        if (matchKeyword("extends")) {
+        if (matchWord("extends")) {
             skipWhitespace();
             String superClassName = parseIdentifier();
             classDef.setSuperClassName(superClassName);
             skipWhitespace();
         }
 
-        if (matchKeyword("implements")) {
+        if (matchWord("implements")) {
             skipWhitespace();
 
             while (true) {
@@ -2141,7 +2190,7 @@ public class ScriptParser {
 
             skipWhitespace();
 
-            if (!matchKeyword("->")) {
+            if (!matchWord("->")) {
                 throw new RuntimeException("Lambda expression missing '->'");
             }
 
@@ -2311,7 +2360,7 @@ public class ScriptParser {
 
             skipWhitespace();
             ASTNode elseBlock = null;
-            if (matchKeyword("else")) {
+            if (matchWord("else")) {
                 skipWhitespace();
                 if (peek() == '{') {
                     elseBlock = parseBlock(false);
@@ -2390,7 +2439,7 @@ public class ScriptParser {
     private ASTNode parseLogicalOr() {
         ASTNode left = parseLogicalAnd();
         skipWhitespace();
-        while (matchKeyword("||")) {
+        while (matchWord("||")) {
             skipWhitespace();
             ASTNode right = parseLogicalAnd();
             left = new BinaryOperatorNode("||", left, right);
@@ -2402,7 +2451,7 @@ public class ScriptParser {
     private ASTNode parseLogicalAnd() {
         ASTNode left = parseBitwiseOr();
         skipWhitespace();
-        while (matchKeyword("&&")) {
+        while (matchWord("&&")) {
             skipWhitespace();
             ASTNode right = parseBitwiseOr();
             left = new BinaryOperatorNode("&&", left, right);
@@ -2453,13 +2502,13 @@ public class ScriptParser {
         skipWhitespace();
         while (true) {
             skipWhitespace();
-            if (matchKeyword("instanceof")) {
+            if (matchWord("instanceof")) {
                 ASTNode right = parseRelational();
                 left = new BinaryOperatorNode("instanceof", left, right);
-            } else if (matchKeyword("==")) {
+            } else if (matchWord("==")) {
                 ASTNode right = parseRelational();
                 left = new BinaryOperatorNode("==", left, right);
-            } else if (matchKeyword("!=")) {
+            } else if (matchWord("!=")) {
                 ASTNode right = parseRelational();
                 left = new BinaryOperatorNode("!=", left, right);
             } else {
@@ -2569,7 +2618,7 @@ public class ScriptParser {
         skipWhitespace();
         boolean hasCast = false;
         String castType = null;
-        if (matchKeyword("++")) {
+        if (matchWord("++")) {
             ASTNode operand = parseUnary();
             if (operand instanceof VariableNode) {
                 return new IncrementNode(((VariableNode) operand).name, true, true);
@@ -2579,7 +2628,7 @@ public class ScriptParser {
                 logger.error("前置++只能用在变量或字段访问上");
                 throw new RuntimeException("++ can only be applied to variables or field access");
             }
-        } else if (matchKeyword("--")) {
+        } else if (matchWord("--")) {
             ASTNode operand = parseUnary();
             if (operand instanceof VariableNode) {
                 return new IncrementNode(((VariableNode) operand).name, true, false);
@@ -2622,7 +2671,7 @@ public class ScriptParser {
 
         ASTNode result = parseLiteral();
 
-        if (matchKeyword("++")) {
+        if (matchWord("++")) {
             if (result instanceof ParenthesizedExpressionNode paren) {
                 if (paren.expression instanceof VariableNode) {
                     return new IncrementNode(((VariableNode) paren.expression).name, false, true);
@@ -2640,7 +2689,7 @@ public class ScriptParser {
                 logger.error("后置++只能用在变量或字段访问上");
                 throw new RuntimeException("++ can only be applied to variables or field access");
             }
-        } else if (matchKeyword("--")) {
+        } else if (matchWord("--")) {
             if (result instanceof ParenthesizedExpressionNode paren) {
                 if (paren.expression instanceof VariableNode) {
                     return new IncrementNode(((VariableNode) paren.expression).name, false, false);

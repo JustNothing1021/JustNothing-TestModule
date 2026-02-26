@@ -23,6 +23,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 public class ASTNodes {
 
@@ -937,6 +938,11 @@ public class ASTNodes {
                 // }
                 // 这个还是算了，不然有二义性
 
+                // 检查是否是Invocable对象（方法引用代理）
+                if (targetObj instanceof Invocable) {
+                    return ((Invocable) targetObj).invoke(argsList.toArray());
+                }
+                
                 return context.callMethod(targetObj, methodName, argsList);
             }
 
@@ -1463,7 +1469,7 @@ public class ASTNodes {
 
             // 特殊处理数组的length字段
             if (targetObj.getClass().isArray() && "length".equals(memberName)) {
-                return java.lang.reflect.Array.getLength(targetObj);
+                return Array.getLength(targetObj);
             }
 
             Field field = findField(targetClass, memberName);
@@ -1952,8 +1958,27 @@ public class ASTNodes {
                         value = initialValue.evaluate(context);
                     }
                 } else {
-                    // 不是lambda表达式，正常解析
-                    value = initialValue.evaluate(context);
+                    // 检查是否是方法引用，且目标类型是函数式接口
+                    if (!typeName.equals("auto")) {
+                        try {
+                            Class<?> targetClass = context.findClass(typeName);
+                            if (targetClass.isAnnotationPresent(java.lang.FunctionalInterface.class)) {
+                                // 先正常解析方法引用
+                                value = initialValue.evaluate(context);
+                                
+                                // 如果是方法引用，适配到函数式接口
+                                if (value instanceof Invocable) {
+                                    value = adaptMethodReferenceToFunctionalInterface((Invocable) value, targetClass, context);
+                                }
+                            } else {
+                                value = initialValue.evaluate(context);
+                            }
+                        } catch (ClassNotFoundException e) {
+                            value = initialValue.evaluate(context);
+                        }
+                    } else {
+                        value = initialValue.evaluate(context);
+                    }
                 }
             }
             if (typeName.equals("auto")) {
@@ -1975,7 +2000,25 @@ public class ASTNodes {
 
             try {
                 if (!clazz.equals(Object.class)) {
-                    value = context.castObject(value, clazz);
+                    // 特殊处理：函数式接口适配器
+                    if (clazz.isAnnotationPresent(java.lang.FunctionalInterface.class) && 
+                        java.lang.reflect.Proxy.isProxyClass(value.getClass())) {
+                        // 检查代理对象是否实现了目标接口
+                        Class<?>[] interfaces = value.getClass().getInterfaces();
+                        boolean implementsInterface = false;
+                        for (Class<?> iface : interfaces) {
+                            if (iface.equals(clazz)) {
+                                implementsInterface = true;
+                                break;
+                            }
+                        }
+                        if (!implementsInterface) {
+                            throw new ClassCastException("Proxy does not implement " + clazz.getName());
+                        }
+                        // 类型匹配，不需要转换
+                    } else {
+                        value = context.castObject(value, clazz);
+                    }
                 }
             } catch (ClassCastException e) {
                 String s = value == null ? "null" : value.getClass().getName();
@@ -2279,11 +2322,14 @@ public class ASTNodes {
                     throw new NullPointerException("Cannot iterate over null collection");
                 }
 
-                if (coll instanceof Object[]) {
-                    for (Object item : (Object[]) coll) {
+                if (coll.getClass().isArray()) {
+                    int length = Array.getLength(coll);
+                    for (int i = 0; i < length; i++) {
                         if (loopCount >= MAX_LOOPS)
                             break;
 
+                        Object item = Array.get(coll, i);
+                        
                         if (clazz != null) {
                             item = context.castObject(item, clazz);
                         }
@@ -3135,6 +3181,12 @@ public class ASTNodes {
             }
             try {
                 Class<?> targetType = context.findClass(className);
+                
+                // 特殊处理：方法引用到函数式接口的转换
+                if (value instanceof Invocable && targetType.isAnnotationPresent(java.lang.FunctionalInterface.class)) {
+                    return adaptMethodReferenceToFunctionalInterface((Invocable) value, targetType, context);
+                }
+                
                 return context.castObject(value, targetType);
             } catch (ClassNotFoundException e) {
                 Variable var = context.getVariable(className);
@@ -3427,6 +3479,299 @@ public class ASTNodes {
 
         public Class<?> getType(ExecutionContext context) {
             return Void.class;
+        }
+    }
+
+
+    public static class MethodReferenceNode extends ASTNode {
+        private final ASTNode target;
+        private final String methodName;
+
+        public MethodReferenceNode(ASTNode target, String methodName) {
+            this.target = target;
+            this.methodName = methodName;
+        }
+
+        @Override
+        public Object evaluate(ExecutionContext context) throws Exception {
+            Object targetObj = target.evaluate(context);
+            
+            // 处理构造函数引用：String::new
+            if (methodName.equals("new") && targetObj instanceof Class) {
+                Class<?> clazz = (Class<?>) targetObj;
+                
+                if (clazz.isArray()) {
+                    // 为数组类型创建一个特殊的 Constructor 包装器
+                    return createArrayConstructor(clazz);
+                }
+                
+                try {
+                    return clazz.getConstructor();
+                } catch (NoSuchMethodException e) {
+                    throw new RuntimeException("No default constructor found for: " + clazz.getName() + 
+                            ". For arrays, use Array.newInstance() instead.");
+                }
+            }
+            
+            // 如果目标是类，获取静态方法
+            if (targetObj instanceof Class) {
+                Class<?> clazz = (Class<?>) targetObj;
+                
+                List<Method> candidates = Arrays.stream(clazz.getMethods())
+                    .filter(m -> m.getName().equals(methodName) && 
+                           java.lang.reflect.Modifier.isStatic(m.getModifiers()))
+                    .collect(Collectors.toList());
+                
+                if (candidates.isEmpty()) {
+                    throw new RuntimeException("Static method not found: " + clazz.getName() + "::" + methodName);
+                }
+                
+                return createMethodProxy(null, candidates, true);
+            }
+            // 如果目标是对象实例，获取实例方法
+            else {
+                Class<?> clazz = targetObj.getClass();
+                
+                List<Method> candidates = Arrays.stream(clazz.getMethods())
+                    .filter(m -> m.getName().equals(methodName))
+                    .collect(Collectors.toList());
+                
+                if (candidates.isEmpty()) {
+                    throw new RuntimeException("Method not found: " + clazz.getName() + "::" + methodName);
+                }
+                
+                // 返回方法代理，在调用时动态选择最匹配的方法
+                return createMethodProxy(targetObj, candidates, false);
+            }
+        }
+
+        @Override
+        public Class<?> getType(ExecutionContext context) throws Exception {
+            Object targetObj = target.evaluate(context);
+            
+            // 构造函数引用返回 Constructor 类型
+            if (methodName.equals("new") && targetObj instanceof Class) {
+                return java.lang.reflect.Constructor.class;
+            }
+            
+            // 方法引用返回 Invocable 类型
+            return Invocable.class;
+        }
+    }
+
+    /**
+     * 将方法引用适配到函数式接口
+     */
+    private static Object adaptMethodReferenceToFunctionalInterface(Invocable methodReference, Class<?> functionalInterface, 
+                                                                   ExecutionContext context) throws Exception {
+        if (!functionalInterface.isAnnotationPresent(java.lang.FunctionalInterface.class)) {
+            throw new RuntimeException(functionalInterface + " is not a functional interface");
+        }
+
+        Method functionalMethod = null;
+        for (Method method : functionalInterface.getMethods()) {
+            if (method.isDefault() || java.lang.reflect.Modifier.isStatic(method.getModifiers())) {
+                continue;
+            }
+            if (functionalMethod == null) {
+                functionalMethod = method;
+            } else {
+                throw new IllegalArgumentException("Not a functional interface (multiple abstract methods): " + 
+                                                    functionalInterface.getName());
+            }
+        }
+
+        if (functionalMethod == null) {
+            throw new IllegalArgumentException("No abstract method found: " + functionalInterface.getName());
+        }
+
+        final Method finalFunctionalMethod = functionalMethod;
+        
+        return Proxy.newProxyInstance(
+            functionalInterface.getClassLoader(),
+            new Class<?>[] { functionalInterface },
+            (proxy, method, args) -> {
+                if (method.equals(finalFunctionalMethod)) {
+                    // 调用方法引用
+                    return methodReference.invoke(args);
+                } else if (method.getName().equals("toString")) {
+                    return "FunctionalInterface adapter for " + methodReference;
+                } else if (method.getName().equals("equals")) {
+                    return proxy == args[0];
+                } else if (method.getName().equals("hashCode")) {
+                    return System.identityHashCode(proxy);
+                } else {
+                    throw new UnsupportedOperationException("Method not supported: " + method.getName());
+                }
+            });
+    }
+
+    /**
+     * 根据参数类型选择最匹配的方法
+     */
+    private static Method findBestMethodMatch(java.util.List<Method> candidates, Class<?>[] expectedParamTypes) {
+        // 优先选择参数数量匹配的方法
+        java.util.List<Method> paramCountMatches = candidates.stream()
+            .filter(m -> m.getParameterCount() == expectedParamTypes.length)
+            .collect(java.util.stream.Collectors.toList());
+        
+        if (!paramCountMatches.isEmpty()) {
+            // 如果有参数数量匹配的方法，返回第一个
+            return paramCountMatches.get(0);
+        }
+        
+        // 否则返回参数最少的方法
+        return candidates.stream()
+            .min(java.util.Comparator.comparingInt(Method::getParameterCount))
+            .orElse(candidates.get(0));
+    }
+
+    /**
+     * 创建方法代理，实现延迟绑定和重载解析
+     */
+    private static Object createMethodProxy(Object target, List<Method> candidates, boolean isStatic) {
+        // 创建一个自定义的 Invocable 对象，而不是使用动态代理
+        return new Invocable() {
+            @Override
+            public Object invoke(Object... args) throws Exception {
+                return invokeBestMatch(target, candidates, isStatic, args);
+            }
+            
+            @Override
+            public String toString() {
+                return "MethodProxy for " + candidates.get(0).getName() + " (" + candidates.size() + " overloads)";
+            }
+            
+            public String getName() {
+                return candidates.get(0).getName();
+            }
+            
+            public int getOverloadCount() {
+                return candidates.size();
+            }
+        };
+    }
+    
+    /**
+     * 可调用接口，用于方法代理
+     */
+    private interface Invocable {
+        Object invoke(Object... args) throws Exception;
+    }
+
+    /**
+     * 根据实际参数调用最匹配的重载方法
+     */
+    private static Object invokeBestMatch(Object target, java.util.List<Method> candidates, boolean isStatic, Object[] args) throws Exception {
+        // 如果没有参数，优先选择无参方法
+        if (args == null || args.length == 0) {
+            for (Method m : candidates) {
+                if (m.getParameterCount() == 0) {
+                    return m.invoke(isStatic ? null : target);
+                }
+            }
+        }
+        
+        assert args != null : "args must not be null";
+        // 根据参数数量匹配
+        java.util.List<Method> paramCountMatches = candidates.stream()
+            .filter(m -> m.getParameterCount() == args.length)
+            .collect(java.util.stream.Collectors.toList());
+        
+        if (!paramCountMatches.isEmpty()) {
+            // 尝试调用参数数量匹配的方法
+            for (Method m : paramCountMatches) {
+                try {
+                    return m.invoke(isStatic ? null : target, args);
+                } catch (IllegalArgumentException e) {
+                    // 参数类型不匹配，继续尝试下一个
+                    continue;
+                }
+            }
+        }
+        
+        // 如果没有精确匹配，尝试第一个方法（提供错误信息）
+        Method firstMethod = candidates.get(0);
+        try {
+            return firstMethod.invoke(isStatic ? null : target, args);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("No suitable overload found for " + firstMethod.getName() + 
+                ". Expected " + firstMethod.getParameterCount() + " parameters but got " + 
+                (args != null ? args.length : 0) + ". Available overloads: " + 
+                candidates.stream().map(m -> m.getParameterCount() + " params").collect(java.util.stream.Collectors.toList()));
+        }
+    }
+
+    /**
+     * 为数组类型创建 Constructor 包装器
+     */
+    private static java.lang.reflect.Constructor<?> createArrayConstructor(Class<?> arrayType) {
+        try {
+            // 创建一个动态代理，让数组构造引用也返回 Constructor 对象
+            return (java.lang.reflect.Constructor<?>) java.lang.reflect.Proxy.newProxyInstance(
+                ASTNodes.class.getClassLoader(),
+                new Class[]{java.lang.reflect.Constructor.class},
+                (proxy, method, args) -> {
+                    if (method.getName().equals("newInstance")) {
+                        // 处理 newInstance 调用
+                        if (args == null || args.length == 0) {
+                            // 无参调用：创建长度为0的数组
+                            return java.lang.reflect.Array.newInstance(arrayType.getComponentType(), 0);
+                        } else if (args.length == 1 && args[0] instanceof Integer) {
+                            // 单参数：创建指定长度的数组
+                            return java.lang.reflect.Array.newInstance(arrayType.getComponentType(), (Integer) args[0]);
+                        } else {
+                            // 多参数：创建多维数组
+                            int[] dimensions = new int[args.length];
+                            for (int i = 0; i < args.length; i++) {
+                                dimensions[i] = (Integer) args[i];
+                            }
+                            return java.lang.reflect.Array.newInstance(arrayType.getComponentType(), dimensions);
+                        }
+                    } else if (method.getName().equals("toString")) {
+                        return "Constructor for " + arrayType.getName();
+                    } else if (method.getName().equals("getDeclaringClass")) {
+                        return arrayType;
+                    }
+                    return method.invoke(arrayType, args);
+                }
+            );
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to create array constructor for: " + arrayType.getName(), e);
+        }
+    }
+
+    /**
+     * 数组构造函数，处理 int[]::new 这样的数组构造引用
+     */
+    private static class ArrayConstructor {
+        private final Class<?> arrayType;
+
+        public ArrayConstructor(Class<?> arrayType) {
+            this.arrayType = arrayType;
+        }
+
+        /**
+         * 创建数组实例
+         * @param length 数组长度
+         * @return 数组实例
+         */
+        public Object newInstance(int length) {
+            return java.lang.reflect.Array.newInstance(arrayType.getComponentType(), length);
+        }
+
+        /**
+         * 创建多维数组
+         * @param dimensions 各维度长度
+         * @return 多维数组实例
+         */
+        public Object newInstance(int... dimensions) {
+            return java.lang.reflect.Array.newInstance(arrayType.getComponentType(), dimensions);
+        }
+
+        @Override
+        public String toString() {
+            return "ArrayConstructor for " + arrayType.getName();
         }
     }
 }

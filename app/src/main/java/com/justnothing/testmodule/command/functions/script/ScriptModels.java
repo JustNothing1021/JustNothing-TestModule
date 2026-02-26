@@ -1906,6 +1906,38 @@ public class ScriptModels {
             }
         }
 
+        /**
+         * 直接调用 Method 对象的方法
+         * @param method Method 对象
+         * @param target 目标对象（对于静态方法为 null）
+         * @param args 参数列表
+         * @return 方法调用结果
+         * @throws Exception 调用失败时抛出异常
+         */
+        public Object callMethod(Method method, Object target, List<Object> args) throws Exception {
+            if (method == null) {
+                throw new NullPointerException("Method cannot be null");
+            }
+
+            Object[] invokeArgs = prepareInvokeArguments(method, args);
+            try {
+                method.setAccessible(true);
+            } catch (SecurityException ignored) {
+            }
+            try {
+                return method.invoke(target, invokeArgs);
+            } catch (InvocationTargetException e) {
+                Throwable cause = e.getCause();
+                if (cause instanceof Exception) {
+                    throw (Exception) cause;
+                } else if (cause instanceof Error) {
+                    throw (Error) cause;
+                } else {
+                    throw new Exception(cause);
+                }
+            }
+        }
+
         public Object callStaticMethod(String className, String methodName, List<Object> args) throws Exception {
             Class<?> clazz = findClass(className);
             if (clazz == null) {
