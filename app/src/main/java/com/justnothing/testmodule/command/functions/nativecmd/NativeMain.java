@@ -5,13 +5,13 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_NATIVE_VER;
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
+import com.justnothing.testmodule.utils.data.ClassResolver;
 import com.justnothing.testmodule.utils.io.IOManager;
 import com.justnothing.testmodule.utils.io.RootProcessPool;
 
 import org.objectweb.asm.Type;
 
 import java.io.File;
-import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -94,7 +94,7 @@ public class NativeMain extends CommandBase {
         return switch (subcmd) {
             case "list" -> handleList(args, verbose);
             case "info" -> handleInfo(args, verbose);
-            case "functions" -> handleFunctions(args, verbose);
+            case "functions" -> handleFunctions(args, verbose, context.classLoader());
             case "symbols" -> handleSymbols(args);
             case "memory" -> handleMemory();
             case "heap" -> handleHeap(verbose);
@@ -171,7 +171,7 @@ public class NativeMain extends CommandBase {
         }
     }
     
-    private String handleFunctions(String[] args, boolean verbose) {
+    private String handleFunctions(String[] args, boolean verbose, ClassLoader classLoader) {
         if (args.length < 2) {
             return "参数不足，需要指定类名";
         }
@@ -179,7 +179,7 @@ public class NativeMain extends CommandBase {
         String className = args[1];
         
         try {
-            Class<?> targetClass = Class.forName(className);
+            Class<?> targetClass = ClassResolver.findClassOrFail(className, classLoader);
             
             Method[] methods = targetClass.getDeclaredMethods();
             List<Method> nativeMethods = new ArrayList<>();
@@ -538,12 +538,5 @@ public class NativeMain extends CommandBase {
         
         return maps;
     }
-    
-    private String getStackTrace(Exception e) {
-        StringBuilder sb = new StringBuilder();
-        for (StackTraceElement element : e.getStackTrace()) {
-            sb.append("\n    at ").append(element.toString());
-        }
-        return sb.toString();
-    }
+
 }

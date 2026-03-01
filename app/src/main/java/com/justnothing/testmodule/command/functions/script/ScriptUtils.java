@@ -1,6 +1,5 @@
 package com.justnothing.testmodule.command.functions.script;
 
-import com.justnothing.testmodule.hooks.XposedBasicHook;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -41,17 +40,6 @@ public class ScriptUtils {
         return sw.toString();
     }
 
-    static Class<?> findClassThroughApi(String className, ClassLoader classLoader) {
-        try {
-            return XposedBasicHook.ClassFinder.withClassLoader(classLoader).find(className);
-        } catch (Exception e) {
-            try {
-                return Class.forName(className, false, classLoader);
-            } catch (ClassNotFoundException ex) {
-                return null;
-            }
-        }
-    }
 
     static boolean isStandaloneMode() {
         try {

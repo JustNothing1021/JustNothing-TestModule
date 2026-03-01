@@ -1,6 +1,7 @@
 package com.justnothing.testmodule.command.functions.watch;
 
 import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.data.ClassResolver;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -53,7 +54,7 @@ public class WatchManager {
     public int addMethodWatch(ClassLoader classLoader, String className, String methodName, String signature, long interval) {
         try {
             logger.debug("尝试加载类: " + className + " 使用类加载器: " + classLoader);
-            Class<?> targetClass = XposedHelpers.findClass(className, classLoader);
+            Class<?> targetClass = ClassResolver.findClassOrFail(className, classLoader);
             logger.debug("成功加载类: " + targetClass.getName());
             
             int id = nextId.getAndIncrement();

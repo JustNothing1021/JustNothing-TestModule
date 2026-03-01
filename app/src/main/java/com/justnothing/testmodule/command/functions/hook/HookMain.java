@@ -7,8 +7,6 @@ import com.justnothing.testmodule.command.functions.CommandBase;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.data.DataBridge;
 
-import java.util.HashMap;
-import java.util.Map;
 
 public class HookMain extends CommandBase {
 

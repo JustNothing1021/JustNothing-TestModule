@@ -1,5 +1,6 @@
 package com.justnothing.testmodule.command.functions.trace;
 
+import com.justnothing.testmodule.utils.data.ClassResolver;
 import com.justnothing.testmodule.utils.functions.Logger;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -7,7 +8,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import de.robv.android.xposed.XposedHelpers;
 
 public class TraceManager {
 
@@ -37,7 +37,7 @@ public class TraceManager {
     public int addTraceTask(String className, String methodName, String signature, ClassLoader classLoader) {
         try {
             logger.debug("尝试加载类: " + className + " 使用类加载器: " + classLoader);
-            Class<?> targetClass = XposedHelpers.findClass(className, classLoader);
+            Class<?> targetClass = ClassResolver.findClassOrFail(className, classLoader);
             logger.debug("成功加载类: " + targetClass.getName());
             
             int id = nextId.getAndIncrement();

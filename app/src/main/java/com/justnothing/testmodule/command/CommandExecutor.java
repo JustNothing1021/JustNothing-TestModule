@@ -277,12 +277,12 @@ public class CommandExecutor {
 
 
     public record CmdExecContext(
-            String cmdName,
-            String[] args,
-            String origCommand,
-            String targetPackage,
-            ClassLoader classLoader,
-            IOutputHandler output
+            String cmdName, // 请求的命令名称
+            String[] args, // 除去命令名称以外的参数
+            String origCommand, // 除去命令名外完整的请求命令行
+            String targetPackage, // 请求的目标包名
+            ClassLoader classLoader, // 指定的类加载器
+            IOutputHandler output // 输出流
     ) {
 
         public void print(Object obj) {

@@ -18,8 +18,6 @@ import java.util.Objects;
 
 public class FileCommandExecutor {
 
-    private static final int BUFFER_SIZE = 8192;
-
     private static final StreamClient.ClientLogger logger = new StreamClient.ClientLogger();
     
     public static volatile boolean isInAppProcess = false;

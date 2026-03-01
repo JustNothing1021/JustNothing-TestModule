@@ -1,6 +1,6 @@
 package com.justnothing.testmodule.command.functions.classcmd;
 
-import de.robv.android.xposed.XposedHelpers;
+import com.justnothing.testmodule.utils.data.ClassResolver;
 import com.justnothing.testmodule.utils.functions.Logger;
 import java.lang.reflect.Method;
 import java.lang.reflect.Constructor;
@@ -79,15 +79,11 @@ public class TypeParser {
     }
 
     private static Object parseCustomType(String typeName, String expression, ClassLoader classLoader) {
-        if (classLoader == null) {
-            throw new IllegalArgumentException("ClassLoader不能为null");
-        }
-
         logger.debug("解析自定义类型: " + typeName);
 
         Class<?> targetClass;
         try {
-            targetClass = XposedHelpers.findClass(typeName, classLoader);
+            targetClass = ClassResolver.findClassOrFail(typeName, classLoader);
         } catch (Throwable e) {
             logger.error("找不到类: " + typeName, e);
             throw new IllegalArgumentException("Class not found: " + typeName + ", 原因: " + e.getMessage());
@@ -104,12 +100,11 @@ public class TypeParser {
 
             if (expression.startsWith("FIELD:")) {
                 String fieldName = expression.substring(6);
-                try {
-                    return XposedHelpers.getStaticObjectField(targetClass, fieldName);
-                } catch (Throwable e) {
-                    logger.error("获取静态字段失败: " + typeName + "." + fieldName, e);
+                Object result = ClassResolver.getStaticField(typeName, fieldName, classLoader);
+                if (result == null) {
                     throw new IllegalArgumentException("无法获取静态字段: " + typeName + "." + fieldName);
                 }
+                return result;
             }
 
             try {

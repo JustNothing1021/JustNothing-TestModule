@@ -6,6 +6,7 @@ import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
 import com.justnothing.testmodule.command.utils.CommandArgumentParser;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
+import com.justnothing.testmodule.utils.data.ClassResolver;
 import com.justnothing.testmodule.utils.functions.Logger;
 
 import java.util.HashMap;
@@ -134,7 +135,8 @@ public class BreakpointMain extends CommandBase {
         }
 
         try {
-            Class<?> targetClass = Class.forName(className, false, classLoader);
+            ClassResolver.findClassOrFail(className, classLoader);
+
             int id = nextId.getAndIncrement();
             
             BreakpointInfo info = new BreakpointInfo(id, className, methodName, signature);
@@ -143,13 +145,15 @@ public class BreakpointMain extends CommandBase {
             String sigText = signature != null ? " (签名: " + signature + ")" : " (所有重载)";
             logger.info("添加断点: " + className + "." + methodName + sigText);
             
+            BreakpointHook.setupBreakpoints(classLoader);
+            
             return "断点已添加 (ID: " + id + ")\n" +
                     "  类: " + className + "\n" +
                     "  方法: " + methodName + "\n" +
                     "  签名: " + (signature != null ? signature : "所有重载") + "\n" +
                     "  状态: 启用\n" +
                     "\n" +
-                    "注意: 断点已设置，但需要Xposed框架支持才能生效。";
+                    "断点已设置并生效！";
             
         } catch (ClassNotFoundException e) {
             logger.error("类未找到: " + className, e);
@@ -246,12 +250,14 @@ public class BreakpointMain extends CommandBase {
             return "错误: 断点不存在 (ID: " + id + ")";
         }
         
+        BreakpointHook.removeBreakpoint(id);
         logger.info("移除断点: " + id);
         return "断点已移除 (ID: " + id + ")";
     }
 
     private String handleClear() {
         int count = breakpoints.size();
+        BreakpointHook.clearAllBreakpoints();
         breakpoints.clear();
         nextId.set(1);
         logger.info("清除所有断点");

@@ -1,7 +1,6 @@
 package com.justnothing.testmodule.command.functions.hook;
 
 
-import android.util.Log;
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
@@ -11,6 +10,7 @@ import com.justnothing.testmodule.command.functions.script.ScriptModels.*;
 import com.justnothing.testmodule.command.output.IOutputHandler;
 import com.justnothing.testmodule.command.output.OutputHandler;
 import com.justnothing.testmodule.hooks.XposedBasicHook;
+import com.justnothing.testmodule.utils.data.ClassResolver;
 import com.justnothing.testmodule.utils.data.DataBridge;
 import com.justnothing.testmodule.utils.io.IOManager;
 import com.justnothing.testmodule.utils.functions.Logger;
@@ -234,7 +234,7 @@ public class HookManager {
 
     private static void applyHook(HookInfo hookInfo) throws ClassNotFoundException, NoSuchMethodException {
         logger.info("开始查找类: " + hookInfo.getClassName());
-        Class<?> targetClass = Class.forName(hookInfo.getClassName());
+        Class<?> targetClass = ClassResolver.findClassOrFail(hookInfo.getClassName(), hookInfo.getClassLoader());
         logger.info("类查找成功: " + targetClass.getName());
         
         boolean isConstructor = hookInfo.getMethodName().equals("<init>");

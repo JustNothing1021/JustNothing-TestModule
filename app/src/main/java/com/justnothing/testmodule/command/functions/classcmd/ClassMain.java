@@ -6,6 +6,7 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_CLASS_VER;
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
+import com.justnothing.testmodule.utils.data.ClassResolver;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
@@ -18,10 +19,11 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Vector;
 import java.util.HashMap;
+import java.util.HashSet;
 
-import de.robv.android.xposed.XposedHelpers;
 
 public class ClassMain extends CommandBase {
 
@@ -238,7 +240,7 @@ public class ClassMain extends CommandBase {
                         
                         使用统一的反射接口访问和操作类的私有成员.
                         
-                        类型说明:
+                        类型 (type参数) 说明:
                             field        - 获取/设置字段值
                             method       - 调用方法
                             constructor  - 创建实例
@@ -342,6 +344,7 @@ public class ClassMain extends CommandBase {
                 }
 
                 String subCommand = args[0];
+                args = Arrays.copyOfRange(args, 1, args.length);
 
                 try {
                     return switch (subCommand) {
@@ -366,8 +369,8 @@ public class ClassMain extends CommandBase {
     }
 
     private String handleInfo(String[] args, ClassLoader classLoader, String targetPackage) {
-        if (args.length < 2) {
-            logger.warn("参数不足，需要至少2个参数");
+        if (args.length < 1) {
+            logger.warn("参数不足，需要至少1个参数");
             return getHelpText();
         }
 
@@ -378,7 +381,7 @@ public class ClassMain extends CommandBase {
         boolean showAll = true;
         String className = args[args.length - 1];
 
-        for (int i = 1; i < args.length - 1; i++) {
+        for (int i = 0; i < args.length - 1; i++) { // 解析选项
             String arg = args[i];
             switch (arg) {
                 case "-i", "--interfaces" -> {
@@ -409,13 +412,14 @@ public class ClassMain extends CommandBase {
                 logger.debug("尝试加载类: " + className);
                 if (classLoader == null) {
                     logger.debug("使用默认类加载器");
-                    targetClass = XposedHelpers.findClass(className, null);
+                    targetClass = ClassResolver.findClassOrFail(className);
                 } else {
                     logger.debug("使用提供的类加载器: " + classLoader);
-                    targetClass = XposedHelpers.findClass(className, classLoader);
+                    targetClass = ClassResolver.findClassOrFail(className, classLoader);
                 }
                 logger.info("成功加载类: " + targetClass.getName());
             } catch (Throwable e) {
+                assert classLoader != null;
                 Map<String, Object> errContext = Map.of(
                         "使用的包", targetPackage,
                         "类加载器", classLoader,
@@ -435,13 +439,36 @@ public class ClassMain extends CommandBase {
                 sb.append("修饰符: ").append(getModifiers(targetClass.getModifiers())).append("\n");
             }
             
-            sb.append("是否为数组: ").append(targetClass.isArray()).append("\n");
-            sb.append("是否为接口: ").append(targetClass.isInterface()).append("\n");
-            sb.append("是否为注解: ").append(targetClass.isAnnotation()).append("\n");
-            sb.append("是否为枚举: ").append(targetClass.isEnum()).append("\n");
-            sb.append("是否为原始类型: ").append(targetClass.isPrimitive()).append("\n");
-            sb.append("是否为抽象类: ").append(Modifier.isAbstract(targetClass.getModifiers())).append("\n");
-            sb.append("是否为final类: ").append(Modifier.isFinal(targetClass.getModifiers())).append("\n\n");
+            String typeInfo = "普通类";
+            if (targetClass.isArray()) {
+                typeInfo = "数组类型";
+            } else if (targetClass.isPrimitive()) {
+                typeInfo = "原始类型";
+            } else if (targetClass.isEnum()) {
+                typeInfo = "枚举";
+            } else if (targetClass.isAnnotation()) {
+                typeInfo = "注解";
+            } else if (targetClass.isInterface()) {
+                typeInfo = "接口";
+            }
+            sb.append("类型: ").append(typeInfo).append("\n");
+            
+            List<String> modifiers = new ArrayList<>();
+            if (Modifier.isAbstract(targetClass.getModifiers())) {
+                modifiers.add("抽象类");
+            }
+            if (Modifier.isFinal(targetClass.getModifiers())) {
+                modifiers.add("final类");
+            }
+            if (!modifiers.isEmpty()) {
+                sb.append("修饰符: ");
+                for (int i = 0; i < modifiers.size(); i++) {
+                    if (i > 0) sb.append(", ");
+                    sb.append(modifiers.get(i));
+                }
+                sb.append("\n");
+            }
+            sb.append("\n");
 
             if (showAll || showSuper) {
                 sb.append("=== 继承关系 ===\n");
@@ -547,23 +574,23 @@ public class ClassMain extends CommandBase {
     }
 
     private String handleGraph(String[] args, ClassLoader classLoader) {
-        if (args.length < 2) {
+        if (args.length < 1) {
             return "错误: 参数不足\n用法: class graph <class_name>";
         }
 
         try {
-            String className = args[1];
+            String className = args[0];
             Class<?> clazz;
             if (classLoader == null) {
-                clazz = XposedHelpers.findClass(className, null);
+                clazz = ClassResolver.findClassOrFail(className);
             } else {
-                clazz = XposedHelpers.findClass(className, classLoader);
+                clazz = ClassResolver.findClassOrFail(className, classLoader);
             }
             
             return generateClassInheritanceGraph(clazz);
         } catch (Throwable e) {
             logger.error("生成类继承图失败", e);
-            return "错误: 未找到类: " + args[1] + "\n" + e.getMessage();
+            return "错误: 未找到类: " + args[0] + "\n" + e.getMessage();
         }
     }
 
@@ -648,17 +675,17 @@ public class ClassMain extends CommandBase {
     }
 
     private String handleAnalyze(String[] args, ClassLoader classLoader, String targetPackage) {
-        if (args.length < 2) {
-            logger.warn("参数不足，需要至少2个参数");
+        if (args.length < 1) {
+            logger.warn("参数不足, 需要至少1个参数, 用法: class analyze <class_name>");
             return getHelpText();
         }
 
         boolean showFields = false;
         boolean showMethods = false;
         boolean showAll = true;
-        String className = args[args.length - 1];
+        String className = args[0];
 
-        for (int i = 1; i < args.length - 1; i++) {
+        for (int i = 0; i < args.length - 1; i++) {
             String arg = args[i];
             switch (arg) {
                 case "-f", "--fields" -> {
@@ -687,10 +714,10 @@ public class ClassMain extends CommandBase {
                 logger.debug("尝试加载类: " + className);
                 if (classLoader == null) {
                     logger.debug("使用默认类加载器");
-                    targetClass = XposedHelpers.findClass(className, null);
+                    targetClass = ClassResolver.findClassOrFail(className);
                 } else {
                     logger.debug("使用提供的类加载器: " + classLoader);
-                    targetClass = XposedHelpers.findClass(className, classLoader);
+                    targetClass = ClassResolver.findClassOrFail(className, classLoader);
                 }
                 logger.info("成功加载类: " + targetClass.getName());
             } catch (Throwable e) {
@@ -706,28 +733,63 @@ public class ClassMain extends CommandBase {
             
             if (showAll || showFields) {
                 sb.append("=== 字段 ===\n");
-                Field[] fields = targetClass.getDeclaredFields();
-                if (fields.length == 0) {
+                Map<String, FieldInfo> fieldMap = collectAllFields(targetClass);
+                if (fieldMap.isEmpty()) {
                     sb.append("无字段\n");
                 } else {
-                    for (Field field : fields) {
-                        sb.append("  ").append(getFieldDescriptor(field)).append("\n");
+                    for (Map.Entry<String, FieldInfo> entry : fieldMap.entrySet()) {
+                        FieldInfo fieldInfo = entry.getValue();
+                        sb.append("  ").append(getFieldDescriptor(fieldInfo.field));
+                        sb.append(" = ");
+                        try {
+                            Object value = fieldInfo.field.get(null);
+                            if (value == null) {
+                                sb.append("null");
+                            } else if (value instanceof String) {
+                                sb.append("\"").append(value).append("\"");
+                            } else {
+                                sb.append(value);
+                            }
+                        } catch (IllegalAccessException e) {
+                            sb.append("[无法访问: ").append(e.getMessage()).append("]");
+                        }
+                        sb.append("\n");
+                        
+                        if (fieldInfo.fromClass != targetClass) {
+                            sb.append("    └─> 继承自 ").append(fieldInfo.fromClass.getSimpleName()).append("\n");
+                        }
                     }
                 }
-                sb.append("字段总数: ").append(fields.length).append("\n\n");
+                sb.append("字段总数: ").append(fieldMap.size()).append("\n\n");
             }
 
             if (showAll || showMethods) {
                 sb.append("=== 方法 ===\n");
-                Method[] methods = targetClass.getDeclaredMethods();
-                if (methods.length == 0) {
+                Map<String, MethodInfo> methodMap = collectAllMethods(targetClass);
+                if (methodMap.isEmpty()) {
                     sb.append("无方法\n");
                 } else {
-                    for (Method method : methods) {
-                        sb.append("  ").append(getMethodDescriptor(method)).append("\n");
+                    for (Map.Entry<String, MethodInfo> entry : methodMap.entrySet()) {
+                        MethodInfo methodInfo = entry.getValue();
+                        sb.append("  ").append(getMethodDescriptor(methodInfo.method)).append("\n");
+                        
+                        if (!methodInfo.fromInterfaces.isEmpty()) {
+                            sb.append("    └─> 实现接口 ");
+                            boolean first = true;
+                            for (Class<?> iface : methodInfo.fromInterfaces) {
+                                if (!first) sb.append(", ");
+                                sb.append(iface.getSimpleName());
+                                first = false;
+                            }
+                            sb.append("\n");
+                        }
+                        
+                        if (methodInfo.fromClass != targetClass) {
+                            sb.append("    └─> 继承自 ").append(methodInfo.fromClass.getSimpleName()).append("\n");
+                        }
                     }
                 }
-                sb.append("方法总数: ").append(methods.length).append("\n\n");
+                sb.append("方法总数: ").append(methodMap.size()).append("\n\n");
             }
 
             if (showAll) {
@@ -735,12 +797,37 @@ public class ClassMain extends CommandBase {
                 sb.append("类名: ").append(targetClass.getName()).append("\n");
                 sb.append("简单类名: ").append(targetClass.getSimpleName()).append("\n");
                 sb.append("包名: ").append(targetClass.getPackage() != null ? targetClass.getPackage().getName() : "无").append("\n");
-                sb.append("是否为数组: ").append(targetClass.isArray()).append("\n");
-                sb.append("是否为接口: ").append(targetClass.isInterface()).append("\n");
-                sb.append("是否为注解: ").append(targetClass.isAnnotation()).append("\n");
-                sb.append("是否为枚举: ").append(targetClass.isEnum()).append("\n");
-                sb.append("是否为原始类型: ").append(targetClass.isPrimitive()).append("\n");
-                sb.append("是否为抽象类: ").append(Modifier.isAbstract(targetClass.getModifiers())).append("\n\n");
+                
+                String typeInfo = "普通类";
+                if (targetClass.isArray()) {
+                    typeInfo = "数组类型";
+                } else if (targetClass.isPrimitive()) {
+                    typeInfo = "原始类型";
+                } else if (targetClass.isEnum()) {
+                    typeInfo = "枚举";
+                } else if (targetClass.isAnnotation()) {
+                    typeInfo = "注解";
+                } else if (targetClass.isInterface()) {
+                    typeInfo = "接口";
+                }
+                sb.append("类型: ").append(typeInfo).append("\n");
+                
+                List<String> modifiers = new ArrayList<>();
+                if (Modifier.isAbstract(targetClass.getModifiers())) {
+                    modifiers.add("抽象类");
+                }
+                if (Modifier.isFinal(targetClass.getModifiers())) {
+                    modifiers.add("final类");
+                }
+                if (!modifiers.isEmpty()) {
+                    sb.append("修饰符: ");
+                    for (int i = 0; i < modifiers.size(); i++) {
+                        if (i > 0) sb.append(", ");
+                        sb.append(modifiers.get(i));
+                    }
+                    sb.append("\n");
+                }
+                sb.append("\n");
 
                 sb.append("=== 父类 ===\n");
                 Class<?> superClass = targetClass.getSuperclass();
@@ -781,9 +868,130 @@ public class ClassMain extends CommandBase {
         }
     }
 
+    private static class FieldInfo {
+        Field field;
+        Class<?> fromClass;
+        
+        FieldInfo(Field field, Class<?> fromClass) {
+            this.field = field;
+            this.fromClass = fromClass;
+        }
+    }
+
+    private static class MethodInfo {
+        Method method;
+        Class<?> fromClass;
+        List<Class<?>> fromInterfaces;
+        
+        MethodInfo(Method method, Class<?> fromClass) {
+            this.method = method;
+            this.fromClass = fromClass;
+            this.fromInterfaces = new ArrayList<>();
+        }
+    }
+
+    private Map<String, FieldInfo> collectAllFields(Class<?> targetClass) {
+        Map<String, FieldInfo> fieldMap = new LinkedHashMap<>();
+        
+        Class<?> current = targetClass;
+        while (current != null && current != Object.class) {
+            try {
+                Field[] fields = current.getDeclaredFields();
+                for (Field field : fields) {
+                    String key = field.getName();
+                    if (!fieldMap.containsKey(key)) {
+                        field.setAccessible(true);
+                        fieldMap.put(key, new FieldInfo(field, current));
+                    }
+                }
+            } catch (Exception e) {
+                logger.debug("获取字段失败: " + current.getName() + ", " + e.getMessage());
+            }
+            current = current.getSuperclass();
+        }
+        
+        return fieldMap;
+    }
+
+    private Map<String, MethodInfo> collectAllMethods(Class<?> targetClass) {
+        Map<String, MethodInfo> methodMap = new LinkedHashMap<>();
+        
+        Class<?> current = targetClass;
+        while (current != null && current != Object.class) {
+            try {
+                Method[] methods = current.getDeclaredMethods();
+                for (Method method : methods) {
+                    String key = getMethodSignature(method);
+                    if (!methodMap.containsKey(key)) {
+                        method.setAccessible(true);
+                        methodMap.put(key, new MethodInfo(method, current));
+                    }
+                }
+            } catch (Exception e) {
+                logger.debug("获取方法失败: " + current.getName() + ", " + e.getMessage());
+            }
+            current = current.getSuperclass();
+        }
+        
+        Class<?>[] interfaces = getAllInterfaces(targetClass);
+        for (Class<?> iface : interfaces) {
+            try {
+                Method[] methods = iface.getDeclaredMethods();
+                for (Method method : methods) {
+                    String key = getMethodSignature(method);
+                    MethodInfo methodInfo = methodMap.get(key);
+                    if (methodInfo != null) {
+                        methodInfo.fromInterfaces.add(iface);
+                    } else {
+                        method.setAccessible(true);
+                        MethodInfo newInfo = new MethodInfo(method, iface);
+                        newInfo.fromInterfaces.add(iface);
+                        methodMap.put(key, newInfo);
+                    }
+                }
+            } catch (Exception e) {
+                logger.debug("获取接口方法失败: " + iface.getName() + ", " + e.getMessage());
+            }
+        }
+        
+        return methodMap;
+    }
+
+    private Class<?>[] getAllInterfaces(Class<?> clazz) {
+        List<Class<?>> interfaces = new ArrayList<>();
+        Set<Class<?>> visited = new HashSet<>();
+        
+        Class<?> current = clazz;
+        while (current != null) {
+            Class<?>[] currentInterfaces = current.getInterfaces();
+            for (Class<?> iface : currentInterfaces) {
+                if (!visited.contains(iface)) {
+                    visited.add(iface);
+                    interfaces.add(iface);
+                    interfaces.addAll(Arrays.asList(getAllInterfaces(iface)));
+                }
+            }
+            current = current.getSuperclass();
+        }
+        
+        return interfaces.toArray(new Class<?>[0]);
+    }
+
+    private String getMethodSignature(Method method) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(method.getName()).append("(");
+        Class<?>[] params = method.getParameterTypes();
+        for (int i = 0; i < params.length; i++) {
+            if (i > 0) sb.append(",");
+            sb.append(params[i].getName());
+        }
+        sb.append(")");
+        return sb.toString();
+    }
+
     private String handleList(String[] args, ClassLoader classLoader, String targetPackage) {
         if (args.length < 1) {
-            logger.warn("参数不足，需要至少1个参数");
+            logger.warn("参数不足, 需要至少1个参数, 用法: class list [-vb] <class_name>");
             return getHelpText();
         }
 
@@ -802,10 +1010,10 @@ public class ClassMain extends CommandBase {
                 logger.debug("尝试加载类: " + className);
                 if (classLoader == null) {
                     logger.debug("使用默认类加载器");
-                    targetClass = XposedHelpers.findClass(className, null);
+                    targetClass = ClassResolver.findClassOrFail(className);
                 } else {
                     logger.debug("使用提供的类加载器: " + classLoader);
-                    targetClass = XposedHelpers.findClass(className, classLoader);
+                    targetClass = ClassResolver.findClassOrFail(className, classLoader);
                 }
                 logger.info("成功加载类: " + targetClass.getName());
             } catch (Throwable e) {
@@ -994,7 +1202,7 @@ public class ClassMain extends CommandBase {
 
     private String handleInvoke(String[] args, ClassLoader classLoader, String targetPackage, CommandExecutor.CmdExecContext context) {
         if (args.length < 2) {
-            logger.warn("提供的参数不足");
+            logger.warn("提供的参数不足, 需要至少2个参数, 用法: class invoke <class_name> <method_name> [params]");
             return getHelpText();
         }
 
@@ -1030,7 +1238,7 @@ public class ClassMain extends CommandBase {
         try {
             Class<?> targetClass;
             try {
-                targetClass = XposedHelpers.findClass(className, classLoader);
+                targetClass = ClassResolver.findClassOrFail(className, classLoader);
             } catch (Throwable e) {
                 Map<String, Object> errContext = Map.of(
                         "使用的包", targetPackage,
@@ -1153,7 +1361,7 @@ public class ClassMain extends CommandBase {
 
     private String handleField(String[] args, ClassLoader classLoader, String targetPackage) {
         if (args.length < 1) {
-            logger.warn("参数不足，需要至少1个参数");
+            logger.warn("参数不足, 需要至少1个参数, 用法: class field <options> <class>");
             return getHelpText();
         }
 
@@ -1222,10 +1430,10 @@ public class ClassMain extends CommandBase {
                 logger.debug("尝试加载类: " + className);
                 if (classLoader == null) {
                     logger.debug("使用默认类加载器");
-                    targetClass = XposedHelpers.findClass(className, null);
+                    targetClass = ClassResolver.findClassOrFail(className);
                 } else {
                     logger.debug("使用提供的类加载器: " + classLoader);
-                    targetClass = XposedHelpers.findClass(className, classLoader);
+                    targetClass = ClassResolver.findClassOrFail(className, classLoader);
                 }
                 logger.info("成功加载类: " + targetClass.getName());
             } catch (Throwable e) {
@@ -1485,7 +1693,7 @@ public class ClassMain extends CommandBase {
 
     private String handleSearch(String[] args, ClassLoader classLoader) {
         if (args.length < 2) {
-            logger.warn("参数不足");
+            logger.warn("参数不足, 需要至少2个参数, 用法: class search <sub_command> <pattern>");
             return getHelpText();
         }
 
@@ -1714,16 +1922,16 @@ public class ClassMain extends CommandBase {
     }
 
     private String handleConstructor(String[] args, ClassLoader classLoader, String targetPackage) {
-        if (args.length < 2) {
-            logger.warn("参数不足，需要至少2个参数");
+        if (args.length < 1) {
+            logger.warn("参数不足, 需要至少1个参数, 用法: class constructor <class_name> [param1:value1, param2:value2, ...]");
             return getHelpText();
         }
 
-        String className = args[1];
+        String className = args[0];
         List<Object> params = new ArrayList<>();
         List<Class<?>> paramTypes = new ArrayList<>();
 
-        for (int i = 2; i < args.length; i++) {
+        for (int i = 1; i < args.length; i++) {
             String paramStr = args[i];
             int colonIndex = paramStr.indexOf(':');
             if (colonIndex <= 0) {
@@ -1757,7 +1965,7 @@ public class ClassMain extends CommandBase {
         try {
             Class<?> targetClass;
             try {
-                targetClass = XposedHelpers.findClass(className, classLoader);
+                targetClass = ClassResolver.findClassOrFail(className, classLoader);
             } catch (Throwable e) {
                 logger.warn("没有找到类" + className);
                 Map<String, Object> errContext = new HashMap<>();
@@ -1818,22 +2026,18 @@ public class ClassMain extends CommandBase {
         }
         return null;
     }
-
     // ========== 从 reflect 模块整合的功能 ==========
 
-    /**
-     * 处理统一的反射命令
-     */
+
     private String handleReflect(String[] args, ClassLoader classLoader, CommandExecutor.CmdExecContext context) {
-        if (args.length < 4) {
-            return "参数不足，需要至少4个参数: class reflect <class> <type> <name> [options]\n" + 
+        if (args.length < 3) {
+            return "参数不足, 需要至少3个参数: class reflect <class> <type> <name> [options]\n" + 
                    getHelpText();
         }
 
-        // args[0] 是 "reflect"，所以实际参数从 args[1] 开始
-        String className = args[1];
-        String type = args[2];
-        String memberName = args[3];
+        String className = args[0];
+        String type = args[1];
+        String memberName = args[2];
         
         String valueToSet = null;
         String[] methodParams = null;
@@ -1841,8 +2045,8 @@ public class ClassMain extends CommandBase {
         boolean accessInterfaces = false;
         boolean rawOutput = false;
 
-        // 解析选项（从第4个参数开始，因为前3个是 reflect <class> <type> <name>）
-        for (int i = 4; i < args.length; i++) {
+        // 解析选项（从第3个参数开始，因为0-2是 reflect <class> <type> <name>）
+        for (int i = 3; i < args.length; i++) {
             String arg = args[i];
             switch (arg) {
                 case "-v", "--value" -> {
@@ -1865,9 +2069,9 @@ public class ClassMain extends CommandBase {
         try {
             Class<?> targetClass;
             if (classLoader != null) {
-                targetClass = XposedHelpers.findClass(className, classLoader);
+                targetClass = ClassResolver.findClassOrFail(className, classLoader);
             } else {
-                targetClass = XposedHelpers.findClass(className, null);
+                targetClass = ClassResolver.findClassOrFail(className);
             }
             if (targetClass == null) {
                 logger.error("找不到类: " + className);
@@ -1993,7 +2197,6 @@ public class ClassMain extends CommandBase {
         }
     }
 
-    // ========== 从 reflect 模块整合的工具函数 ==========
 
     private Field findReflectField(Class<?> targetClass, String fieldName, boolean accessSuper, boolean accessInterfaces) {
         Class<?> currentClass = targetClass;

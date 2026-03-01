@@ -32,11 +32,11 @@ import com.justnothing.testmodule.command.functions.script.ASTNodes.*;
 import com.justnothing.testmodule.command.functions.script.ScriptLogger.StandaloneLogger;
 import com.justnothing.testmodule.command.output.IOutputHandler;
 import com.justnothing.testmodule.command.output.SystemOutputCollector;
+import com.justnothing.testmodule.utils.data.ClassResolver;
 import static com.justnothing.testmodule.command.functions.script.ScriptLogger.*;
 import static com.justnothing.testmodule.command.functions.script.ScriptUtils.*;
 
 import androidx.annotation.NonNull;
-import de.robv.android.xposed.XposedHelpers;
 
 public class ScriptModels {
 
@@ -724,7 +724,7 @@ public class ScriptModels {
             Class<?> clazz;
             if (className.contains(".")) {
                 // 尝试原始类名
-                clazz = findClassThroughApi(className, classLoader);
+                clazz = ClassResolver.findClass(className, classLoader);
 
                 if (clazz != null) {
                     logger.debug("通过完整类名找到类: " + clazz.getName());
@@ -745,7 +745,7 @@ public class ScriptModels {
                                 nestedClassName.append('$').append(parts[j]);
                             }
                         }
-                        clazz = findClassThroughApi(nestedClassName.toString(), classLoader);
+                        clazz = ClassResolver.findClass(nestedClassName.toString(), classLoader);
 
                         if (clazz != null) {
                             logger.debug("通过嵌套类名找到类: " + clazz.getName());
@@ -767,7 +767,7 @@ public class ScriptModels {
                         continue;
                     }
                 }
-                clazz = findClassThroughApi(fullClassName, classLoader);
+                clazz = ClassResolver.findClass(fullClassName, classLoader);
 
                 if (clazz != null) {
                     logger.debug("通过完整类名找到类: " + clazz.getName());
@@ -785,7 +785,7 @@ public class ScriptModels {
                                 nestedClassName.append('$').append(parts[j]);
                             }
                         }
-                        clazz = findClassThroughApi(nestedClassName.toString(), classLoader);
+                        clazz = ClassResolver.findClass(nestedClassName.toString(), classLoader);
 
                         if (clazz != null) {
                             logger.debug("通过嵌套类名找到类: " + clazz.getName());
@@ -1192,7 +1192,7 @@ public class ScriptModels {
                 private Object createHandler(Object looper) throws Exception {
                     Class<?> handlerClass = findClass("android.os.Handler");
                     Constructor<?> constructor = handlerClass
-                            .getConstructor(findClassThroughApi("android.os.Looper", classLoader));
+                            .getConstructor(ClassResolver.findClass("android.os.Looper", classLoader));
                     return constructor.newInstance(looper);
                 }
 
@@ -1321,7 +1321,7 @@ public class ScriptModels {
                             // 发送一个退出消息
                             Class<?> handlerClass = findClass("android.os.Handler");
                             Method postDelayedMethod = handlerClass.getMethod("postDelayed",
-                                    findClassThroughApi("java.lang.Runnable", classLoader), long.class);
+                                    ClassResolver.findClass("java.lang.Runnable", classLoader), long.class);
 
                             Class<?> runnableClass = findClass("java.lang.Runnable");
                             Object quitRunnable = Proxy.newProxyInstance(

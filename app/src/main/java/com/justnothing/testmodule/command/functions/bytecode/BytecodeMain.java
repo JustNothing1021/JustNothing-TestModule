@@ -5,6 +5,7 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_BYTECODE_VE
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
+import com.justnothing.testmodule.utils.data.ClassResolver;
 
 import org.benf.cfr.reader.api.CfrDriver;
 import org.benf.cfr.reader.api.OutputSinkFactory;
@@ -29,7 +30,6 @@ import java.util.Map;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
 
-import de.robv.android.xposed.XposedHelpers;
 
 public class BytecodeMain extends CommandBase {
 
@@ -590,7 +590,7 @@ public class BytecodeMain extends CommandBase {
             }
 
             try {
-                Class.forName(targetClass.getName());
+                ClassResolver.findClassOrFail(className, classLoader);
                 sb.append("✓ 类可以正常加载\n");
             } catch (Exception e) {
                 sb.append("❌ 类加载失败: ").append(e.getMessage()).append("\n");
@@ -697,17 +697,8 @@ public class BytecodeMain extends CommandBase {
         }
     }
 
-    private Class<?> loadClass(String className, ClassLoader classLoader) {
-        try {
-            if (classLoader != null) {
-                return XposedHelpers.findClass(className, classLoader);
-            } else {
-                return XposedHelpers.findClass(className, null);
-            }
-        } catch (Throwable e) {
-            logger.error("找不到类: " + className, e);
-            return null;
-        }
+    private Class<?> loadClass(String className, ClassLoader classLoader) throws ClassNotFoundException {
+        return ClassResolver.findClassOrFail(className, classLoader);
     }
 
     private byte[] getClassBytecode(Class<?> clazz) {

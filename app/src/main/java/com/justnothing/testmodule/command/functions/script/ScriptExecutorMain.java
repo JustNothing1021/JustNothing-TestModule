@@ -2,7 +2,6 @@ package com.justnothing.testmodule.command.functions.script;
 
 import static com.justnothing.testmodule.constants.CommandServer.CMD_SCRIPT_VER;
 
-import android.util.Log;
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;

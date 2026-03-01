@@ -2,7 +2,7 @@ package com.justnothing.testmodule.command.functions.watch;
 
 import androidx.annotation.NonNull;
 
-import com.justnothing.testmodule.hooks.XposedBasicHook;
+import com.justnothing.testmodule.utils.data.ClassResolver;
 import com.justnothing.testmodule.utils.functions.Logger;
 
 import java.lang.reflect.Field;
@@ -90,18 +90,6 @@ public class WatchTask implements Runnable {
         }
     }
 
-    private static Class<?> findClassThroughApi(String className, ClassLoader classLoader) {
-        try {
-            return XposedBasicHook.ClassFinder.withClassLoader(classLoader).find(className);
-        } catch (Exception e) {
-            try {
-                return Class.forName(className, false, classLoader);
-            } catch (ClassNotFoundException ex) {
-                return null;
-            }
-        }
-    }
-
     public Class<?> findClassInternal(String className) throws ClassNotFoundException {
         // TODO: 支持泛型（从TestInterpreter复制来的，不过这个TODO大概率是要被鸽掉了）
         if (className.contains("<")) {
@@ -143,7 +131,7 @@ public class WatchTask implements Runnable {
         Class<?> clazz;
         if (className.contains(".")) {
             logger.debug("尝试完整类名: " + className);
-            clazz = findClassThroughApi(className, classLoader);
+            clazz = ClassResolver.findClass(className, classLoader);
 
             if (clazz != null) {
                 logger.debug("通过完整类名找到类: " + clazz.getName());
@@ -163,7 +151,7 @@ public class WatchTask implements Runnable {
                     continue;
                 }
             }
-            clazz = findClassThroughApi(fullClassName, classLoader);
+            clazz = ClassResolver.findClass(fullClassName, classLoader);
             if (clazz != null) {
                 logger.debug("通过导入找到类: " + clazz.getName());
                 return clazz;
