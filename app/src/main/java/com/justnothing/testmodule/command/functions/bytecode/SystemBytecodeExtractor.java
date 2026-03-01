@@ -168,24 +168,23 @@ public class SystemBytecodeExtractor {
     private static byte[] extractClassFromJar(String jarPath, String classEntry) {
         try {
             if (jarPath.endsWith(".jar")) {
-                JarFile jarFile = new JarFile(jarPath);
-                JarEntry entry = jarFile.getJarEntry(classEntry);
-                if (entry != null) {
-                    try (InputStream is = jarFile.getInputStream(entry)) {
-                        return readAllBytes(is);
+                try (JarFile jarFile = new JarFile(jarPath)) {
+                    JarEntry entry = jarFile.getJarEntry(classEntry);
+                    if (entry != null) {
+                        try (InputStream is = jarFile.getInputStream(entry)) {
+                            return readAllBytes(is);
+                        }
                     }
                 }
-                jarFile.close();
             } else if (jarPath.endsWith(".apk")) {
-                // APK文件实际上也是ZIP格式
-                ZipFile zipFile = new ZipFile(jarPath);
-                ZipEntry entry = zipFile.getEntry(classEntry);
-                if (entry != null) {
-                    try (InputStream is = zipFile.getInputStream(entry)) {
-                        return readAllBytes(is);
+                try (ZipFile zipFile = new ZipFile(jarPath)) {
+                    ZipEntry entry = zipFile.getEntry(classEntry);
+                    if (entry != null) {
+                        try (InputStream is = zipFile.getInputStream(entry)) {
+                            return readAllBytes(is);
+                        }
                     }
                 }
-                zipFile.close();
             }
         } catch (Exception e) {
             logger.warn("extractClassFromJar出现错误", e);
@@ -248,11 +247,11 @@ public class SystemBytecodeExtractor {
             
             if (fileName != null) {
                 // 从文件中读取
-                RandomAccessFile raf = new RandomAccessFile(fileName, "r");
-                byte[] data = new byte[(int) raf.length()];
-                raf.readFully(data);
-                raf.close();
-                return data;
+                try (RandomAccessFile raf = new RandomAccessFile(fileName, "r")) {
+                    byte[] data = new byte[(int) raf.length()];
+                    raf.readFully(data);
+                    return data;
+                }
             }
         } catch (Exception e) {
             logger.warn("getDexBytecode出现错误", e);

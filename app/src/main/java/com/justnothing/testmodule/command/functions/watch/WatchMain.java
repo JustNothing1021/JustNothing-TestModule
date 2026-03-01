@@ -3,11 +3,14 @@ package com.justnothing.testmodule.command.functions.watch;
 import static com.justnothing.testmodule.constants.CommandServer.CMD_WATCH_VER;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
-import android.util.Log;
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.utils.CommandArgumentParser;
+import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 
 public class WatchMain extends CommandBase {
 
@@ -89,44 +92,43 @@ public class WatchMain extends CommandBase {
                 default -> "未知子命令: " + subCommand + "\n" + getHelpText();
             };
         } catch (Exception e) {
-            logger.error("执行watch命令失败", e);
-            return "错误: " + e.getMessage() +
-                    "\n堆栈追踪: \n" + Log.getStackTraceString(e);
+            return CommandExceptionHandler.handleException("watch", e, logger, "执行watch命令失败");
         }
     }
 
     private String handleAdd(String[] args, ClassLoader classLoader, WatchManager manager) {
-        if (args.length < 4) {
-            return "参数不足\n用法: watch add <field|method> <class_name> <member_name> [sig/signature <signature>] [interval]\n" + getHelpText();
+        try {
+            CommandArgumentParser.requireArgsLength(args, 4, "watch add");
+        } catch (IllegalArgumentException e) {
+            return e.getMessage() + "\n用法: watch add <field|method> <class_name> <member_name> [sig/signature <signature>] [interval]\n" + getHelpText();
         }
 
         String type = args[1];
         String className = args[2];
         String memberName = args[3];
-        String signature = null;
+        String signature = CommandArgumentParser.getOptionValue(args, "sig", "signature");
         long interval = 1000;
 
-        int i = 4;
-        while (i < args.length) {
-            if (args[i].equals("sig") || args[i].equals("signature")) {
-                if (i + 1 < args.length) {
-                    signature = args[i + 1];
-                    i += 2;
-                } else {
-                    return "sig参数需要指定签名\n用法: watch add <field|method> <class_name> <member_name> [sig/signature <signature>] [interval]";
-                }
-            } else {
-                try {
-                    interval = Long.parseLong(args[i]);
-                    i++;
-                } catch (NumberFormatException e) {
-                    return "无效参数: " + args[i];
-                }
+        String intervalStr = null;
+        for (int i = 4; i < args.length; i++) {
+            if (!args[i].equals("sig") && !args[i].equals("signature")) {
+                intervalStr = args[i];
+                break;
             }
         }
 
-        if (interval < 10) {
-            return "间隔不能小于10ms (指定的是" + interval + "ms, 频率过高容易炸掉系统)";
+        if (intervalStr != null) {
+            try {
+                interval = Long.parseLong(intervalStr);
+            } catch (NumberFormatException e) {
+                return CommandExceptionHandler.handleException("watch add", e, logger, "无效的interval参数");
+            }
+        }
+
+        try {
+            CommandArgumentParser.requireMin(interval, 10, "间隔");
+        } catch (IllegalArgumentException e) {
+            return e.getMessage() + " (指定的是" + interval + "ms, 频率过高容易炸掉系统)";
         }
 
         try {
@@ -152,16 +154,13 @@ public class WatchMain extends CommandBase {
                 return "未知类型: " + type + "，必须是 'field' 或 'method'";
             }
         } catch (Exception e) {
-            logger.error("添加watch任务失败", e);
-            StringBuilder sb = new StringBuilder();
-            sb.append("添加watch任务失败: ").append(e.getClass().getSimpleName()).append(": ").append(e.getMessage()).append("\n");
-            
-            if (e.getCause() != null) {
-                sb.append("原因: ").append(e.getCause().getClass().getSimpleName()).append(": ").append(e.getCause().getMessage()).append("\n");
-            }
-            
-            sb.append("\n堆栈追踪:\n").append(Log.getStackTraceString(e));
-            return sb.toString();
+            Map<String, Object> context = new HashMap<>();
+            context.put("类型", type);
+            context.put("类名", className);
+            context.put("成员名", memberName);
+            context.put("签名", signature != null ? signature : "无");
+            context.put("间隔", interval + "ms");
+            return CommandExceptionHandler.handleException("watch add", e, logger, context, "添加watch任务失败");
         }
     }
 

@@ -6,6 +6,7 @@ import android.util.Log;
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.data.DataBridge;
 import com.justnothing.testmodule.utils.io.IOManager;
 
@@ -145,7 +146,7 @@ public class BeanShellExecutorMain extends CommandBase {
                 return "BeanShell执行器结果:\n\n" + result;
 
             } catch (Exception e) {
-                return "BeanShell执行出错: " + e.getMessage() + "\n堆栈追踪: \n" + Log.getStackTraceString(e);
+                return CommandExceptionHandler.handleException(cmdName, e, logger, "BeanShell执行出错");
             }
         }
     }
@@ -347,18 +348,19 @@ public class BeanShellExecutorMain extends CommandBase {
 
         String content = IOManager.readFile(scriptFile.getAbsolutePath());
         
-        StringBuilder result = new StringBuilder();
-        result.append("===== 执行BeanShell脚本: ").append(scriptName).append(" =====\n\n");
+        context.output().print("===== 执行BeanShell脚本: ");
+        context.output().print(scriptName);
+        context.output().print(" =====\n\n");
         
         try {
             String execResult = getBeanShellExecutor(context.classLoader()).execute(content, beanShellExecutionContext);
-            result.append("执行结果:\n").append(execResult);
+            context.output().print("执行结果:\n");
+            context.output().print(execResult);
         } catch (Exception e) {
-            result.append("脚本执行失败: ").append(e.getMessage());
-            result.append("\n堆栈追踪:\n").append(Log.getStackTraceString(e));
+            return CommandExceptionHandler.handleException("bsh", e, logger, "BeanShell执行出错");
         }
         
-        return result.toString();
+        return "";
     }
 
     private String handleScriptImport(String[] args) throws IOException {

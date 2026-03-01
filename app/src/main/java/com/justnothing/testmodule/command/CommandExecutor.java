@@ -23,6 +23,7 @@ import com.justnothing.testmodule.command.functions.CommandBase;
 import com.justnothing.testmodule.command.output.StringBuilderCollector;
 import com.justnothing.testmodule.command.output.IOutputHandler;
 import com.justnothing.testmodule.command.output.SystemOutputRedirector;
+import com.justnothing.testmodule.command.utils.CommandArgumentParser;
 import com.justnothing.testmodule.utils.data.ClassLoaderManager;
 import com.justnothing.testmodule.utils.functions.Logger;
 
@@ -213,41 +214,6 @@ public class CommandExecutor {
     }
 
 
-    private String parseOptions(String cmdline) {
-        while (true) {
-            cmdline = cmdline.trim();
-            if (cmdline.startsWith("-")) {
-                int index = cmdline.indexOf(' ');
-                if (index == -1) {
-                    return cmdline;
-                } else {
-                    String option = cmdline.substring(0, index);
-                    if (option.equals("-cl") || option.equals("-classloader")) {
-                        cmdline = cmdline.substring(index).trim();
-                        int nextIndex = cmdline.indexOf(' ');
-                        if (nextIndex == -1) {
-                            logger.warn("指定了类加载器参数，但没有指定类加载器名称");
-                        }
-                        String classloader = cmdline.substring(0, nextIndex);
-                        setTargetPackage(classloader);
-                        cmdline = cmdline.substring(nextIndex).trim();
-                    } else {
-                        logger.warn("无效的参数: " + option);
-                        cmdline = cmdline.substring(index).trim();
-                    }
-                }
-            } else {
-                break;
-            }
-        }
-        return cmdline;
-    }
-
-    private String[] splitArguments(String cmdline) {
-        return cmdline.split(" ");
-    }
-
-
     private void executeCommandInternal(String fullCommand, IOutputHandler output) {
         fullCommand = fullCommand.trim();
         if (fullCommand.isEmpty()) {
@@ -255,8 +221,13 @@ public class CommandExecutor {
             return;
         }
 
-        fullCommand = parseOptions(fullCommand);
-        String[] commandParams = splitArguments(fullCommand);
+        CommandArgumentParser.ParseResult parseResult = CommandArgumentParser.parseOptions(fullCommand, logger);
+        
+        if (parseResult.getClassLoader() != null) {
+            setTargetPackage(parseResult.getClassLoader());
+        }
+        
+        String[] commandParams = CommandArgumentParser.splitArguments(parseResult.getCommandLine());
         if (commandParams.length == 0) {
             output.println("没有指定命令 (可以用help来获取帮助)");
             return;

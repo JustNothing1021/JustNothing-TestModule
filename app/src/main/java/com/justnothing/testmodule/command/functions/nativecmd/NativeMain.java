@@ -4,10 +4,14 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_NATIVE_VER;
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
+import com.justnothing.testmodule.utils.io.IOManager;
+import com.justnothing.testmodule.utils.io.RootProcessPool;
 
 import org.objectweb.asm.Type;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -125,8 +129,7 @@ public class NativeMain extends CommandBase {
             return sb.toString();
             
         } catch (Exception e) {
-            logger.error("获取native库列表失败", e);
-            return "错误: " + e.getMessage() + "\n堆栈: " + getStackTrace(e);
+            return CommandExceptionHandler.handleException("native list", e, logger, "获取native库列表失败");
         }
     }
     
@@ -164,8 +167,7 @@ public class NativeMain extends CommandBase {
             return sb.toString();
             
         } catch (Exception e) {
-            logger.error("获取库信息失败", e);
-            return "错误: " + e.getMessage() + "\n堆栈: " + getStackTrace(e);
+            return CommandExceptionHandler.handleException("native info", e, logger, "获取库信息失败");
         }
     }
     
@@ -207,8 +209,7 @@ public class NativeMain extends CommandBase {
             return sb.toString();
             
         } catch (Exception e) {
-            logger.error("获取native方法失败", e);
-            return "错误: " + e.getMessage() + "\n堆栈: " + getStackTrace(e);
+            return CommandExceptionHandler.handleException("native functions", e, logger, "获取native方法失败");
         }
     }
 
@@ -233,8 +234,7 @@ public class NativeMain extends CommandBase {
             return sb.toString();
             
         } catch (Exception e) {
-            logger.error("获取符号表失败", e);
-            return "错误: " + e.getMessage() + "\n堆栈: " + getStackTrace(e);
+            return CommandExceptionHandler.handleException("native symbols", e, logger, "获取符号表失败");
         }
     }
     
@@ -253,8 +253,7 @@ public class NativeMain extends CommandBase {
             return sb.toString();
             
         } catch (Exception e) {
-            logger.error("获取native内存信息失败", e);
-            return "错误: " + e.getMessage() + "\n堆栈: " + getStackTrace(e);
+            return CommandExceptionHandler.handleException("native memory", e, logger, "获取native内存信息失败");
         }
     }
     
@@ -280,8 +279,7 @@ public class NativeMain extends CommandBase {
             return sb.toString();
             
         } catch (Exception e) {
-            logger.error("获取native堆信息失败", e);
-            return "错误: " + e.getMessage() + "\n堆栈: " + getStackTrace(e);
+            return CommandExceptionHandler.handleException("native heap", e, logger, "获取native堆信息失败");
         }
     }
     
@@ -300,8 +298,7 @@ public class NativeMain extends CommandBase {
             return sb.toString();
             
         } catch (Exception e) {
-            logger.error("获取native栈失败", e);
-            return "错误: " + e.getMessage() + "\n堆栈: " + getStackTrace(e);
+            return CommandExceptionHandler.handleException("native stack", e, logger, "获取native栈失败");
         }
     }
     
@@ -328,8 +325,7 @@ public class NativeMain extends CommandBase {
             return sb.toString();
             
         } catch (Exception e) {
-            logger.error("获取内存映射失败", e);
-            return "错误: " + e.getMessage() + "\n堆栈: " + getStackTrace(e);
+            return CommandExceptionHandler.handleException("native maps", e, logger, "获取内存映射失败");
         }
     }
     
@@ -368,8 +364,7 @@ public class NativeMain extends CommandBase {
             return sb.toString();
             
         } catch (Exception e) {
-            logger.error("搜索失败", e);
-            return "错误: " + e.getMessage() + "\n堆栈: " + getStackTrace(e);
+            return CommandExceptionHandler.handleException("native search", e, logger, "搜索失败");
         }
     }
     
@@ -377,27 +372,22 @@ public class NativeMain extends CommandBase {
         List<String> libraries = new ArrayList<>();
         
         try {
-            Runtime runtime = Runtime.getRuntime();
-            java.lang.Process process = runtime.exec("cat /proc/self/maps");
-            java.io.BufferedReader reader = new java.io.BufferedReader(
-                new java.io.InputStreamReader(process.getInputStream())
-            );
+            IOManager.ProcessResult result = RootProcessPool.executeCommand("cat /proc/self/maps", 30000, false);
             
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if (line.contains(".so")) {
-                    String[] parts = line.split("\\s+");
-                    if (parts.length >= 6) {
-                        String libPath = parts[5];
-                        if (libPath.endsWith(".so") && !libraries.contains(libPath)) {
-                            libraries.add(libPath);
+            if (result.isSuccess()) {
+                String[] lines = result.stdout().split("\n");
+                for (String line : lines) {
+                    if (line.contains(".so")) {
+                        String[] parts = line.split("\\s+");
+                        if (parts.length >= 6) {
+                            String libPath = parts[5];
+                            if (libPath.endsWith(".so") && !libraries.contains(libPath)) {
+                                libraries.add(libPath);
+                            }
                         }
                     }
                 }
             }
-            
-            reader.close();
-            process.waitFor();
             
         } catch (Exception e) {
             logger.error("获取已加载库失败", e);
@@ -427,24 +417,19 @@ public class NativeMain extends CommandBase {
                 return symbols;
             }
             
-            Runtime runtime = Runtime.getRuntime();
-            java.lang.Process process = runtime.exec("readelf -s " + libPath);
-            java.io.BufferedReader reader = new java.io.BufferedReader(
-                new java.io.InputStreamReader(process.getInputStream())
-            );
+            IOManager.ProcessResult result = RootProcessPool.executeCommand("readelf -s " + libPath, 30000, false);
             
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if (line.contains("FUNC") || line.contains("OBJECT")) {
-                    String[] parts = line.trim().split("\\s+");
-                    if (parts.length >= 8) {
-                        symbols.add(parts[7]);
+            if (result.isSuccess()) {
+                String[] lines = result.stdout().split("\n");
+                for (String line : lines) {
+                    if (line.contains("FUNC") || line.contains("OBJECT")) {
+                        String[] parts = line.trim().split("\\s+");
+                        if (parts.length >= 8) {
+                            symbols.add(parts[7]);
+                        }
                     }
                 }
             }
-            
-            reader.close();
-            process.waitFor();
             
         } catch (Exception e) {
             logger.error("获取库符号失败", e);
@@ -475,27 +460,22 @@ public class NativeMain extends CommandBase {
         Map<String, String> info = new HashMap<>();
         
         try {
-            Runtime runtime = Runtime.getRuntime();
-            java.lang.Process process = runtime.exec("cat /proc/self/status");
-            java.io.BufferedReader reader = new java.io.BufferedReader(
-                new java.io.InputStreamReader(process.getInputStream())
-            );
+            IOManager.ProcessResult result = RootProcessPool.executeCommand("cat /proc/self/status", 30000, false);
             
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if (line.startsWith("Vm") || line.contains("Mem")) {
-                    String[] parts = line.split(":");
-                    if (parts.length == 2) {
-                        info.put(parts[0].trim(), parts[1].trim());
+            if (result.isSuccess()) {
+                String[] lines = result.stdout().split("\n");
+                for (String line : lines) {
+                    if (line.startsWith("Vm") || line.contains("Mem")) {
+                        String[] parts = line.split(":");
+                        if (parts.length == 2) {
+                            info.put(parts[0].trim(), parts[1].trim());
+                        }
                     }
                 }
             }
             
-            reader.close();
-            process.waitFor();
-            
         } catch (Exception e) {
-            logger.error("获取native内存信息失败", e);
+            logger.error("获取Native内存信息失败", e);
         }
         
         return info;
@@ -518,23 +498,18 @@ public class NativeMain extends CommandBase {
         StringBuilder sb = new StringBuilder();
         
         try {
-            Runtime runtime = Runtime.getRuntime();
             String command = threadId != null ? 
                 "cat /proc/" + threadId + "/stack" : 
                 "cat /proc/self/task/*/stack";
             
-            java.lang.Process process = runtime.exec(command);
-            java.io.BufferedReader reader = new java.io.BufferedReader(
-                new java.io.InputStreamReader(process.getInputStream())
-            );
+            IOManager.ProcessResult result = RootProcessPool.executeCommand(command, 30000, false);
             
-            String line;
-            while ((line = reader.readLine()) != null) {
-                sb.append("  ").append(line).append("\n");
+            if (result.isSuccess()) {
+                String[] lines = result.stdout().split("\n");
+                for (String line : lines) {
+                    sb.append("  ").append(line).append("\n");
+                }
             }
-            
-            reader.close();
-            process.waitFor();
             
         } catch (Exception e) {
             logger.error("获取native栈失败", e);
@@ -548,19 +523,14 @@ public class NativeMain extends CommandBase {
         List<String> maps = new ArrayList<>();
         
         try {
-            Runtime runtime = Runtime.getRuntime();
-            java.lang.Process process = runtime.exec("cat /proc/self/maps");
-            java.io.BufferedReader reader = new java.io.BufferedReader(
-                new java.io.InputStreamReader(process.getInputStream())
-            );
+            IOManager.ProcessResult result = RootProcessPool.executeCommand("cat /proc/self/maps", 30000, false);
             
-            String line;
-            while ((line = reader.readLine()) != null) {
-                maps.add(line);
+            if (result.isSuccess()) {
+                String[] lines = result.stdout().split("\n");
+                for (String line : lines) {
+                    maps.add(line);
+                }
             }
-            
-            reader.close();
-            process.waitFor();
             
         } catch (Exception e) {
             logger.error("获取内存映射失败", e);

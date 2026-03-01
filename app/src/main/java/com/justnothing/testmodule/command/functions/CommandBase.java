@@ -18,7 +18,7 @@ public abstract class CommandBase {
         }
     }
 
-    protected static CommandLogger logger;
+    protected CommandLogger logger;
 
     public CommandBase(String commandName) {
         logger = new CommandLogger(commandName);

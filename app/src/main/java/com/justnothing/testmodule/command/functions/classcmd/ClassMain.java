@@ -2,10 +2,10 @@ package com.justnothing.testmodule.command.functions.classcmd;
 
 import static com.justnothing.testmodule.constants.CommandServer.CMD_CLASS_VER;
 
-import android.util.Log;
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
@@ -19,6 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Vector;
+import java.util.HashMap;
 
 import de.robv.android.xposed.XposedHelpers;
 
@@ -356,9 +357,7 @@ public class ClassMain extends CommandBase {
                         default -> "未知子命令: " + subCommand + "\n" + getHelpText();
                     };
                 } catch (Exception e) {
-                    logger.error("执行class命令失败", e);
-                    return "错误: " + e.getMessage() +
-                            "\n堆栈追踪: \n" + Log.getStackTraceString(e);
+                    return CommandExceptionHandler.handleException("class " + subCommand, e, logger, "执行class命令失败");
                 }
             }
         }
@@ -417,12 +416,12 @@ public class ClassMain extends CommandBase {
                 }
                 logger.info("成功加载类: " + targetClass.getName());
             } catch (Throwable e) {
-                logger.error("加载类失败: " + className, e);
-                logger.warn("类加载器为: " + targetPackage);
-                return "找不到类: " + className +
-                        "\n使用的包: " + (targetPackage != null ? targetPackage : "default") +
-                        "\n类加载器: " + (classLoader != null ? classLoader : "无") +
-                        "\n错误信息: " + e.getMessage() + "\n堆栈追踪: " + Log.getStackTraceString(e);
+                Map<String, Object> errContext = Map.of(
+                        "使用的包", targetPackage,
+                        "类加载器", classLoader,
+                        "错误信息", e.getMessage()
+                );
+                return CommandExceptionHandler.handleException("class info", e, logger, errContext, "找不到类" + className);
             }
 
             StringBuilder sb = new StringBuilder();
@@ -537,9 +536,13 @@ public class ClassMain extends CommandBase {
             return sb.toString();
 
         } catch (Exception e) {
-            logger.error("执行class info命令失败", e);
-            return "错误: " + e.getMessage() +
-                    "\n堆栈追踪: \n" + Log.getStackTraceString(e);
+            logger.error("执行info命令失败", e);
+            Map<String, Object> errContext = Map.of(
+                    "使用的包", targetPackage,
+                    "类加载器", classLoader,
+                    "错误信息", e.getMessage()
+            );
+            return CommandExceptionHandler.handleException("class info", e, logger, errContext, "执行info命令失败");
         }
     }
 
@@ -691,12 +694,12 @@ public class ClassMain extends CommandBase {
                 }
                 logger.info("成功加载类: " + targetClass.getName());
             } catch (Throwable e) {
-                logger.error("加载类失败: " + className, e);
-                logger.warn("类加载器为: " + targetPackage);
-                return "找不到类: " + className +
-                        "\n使用的包: " + (targetPackage != null ? targetPackage : "default") +
-                        "\n类加载器: " + (classLoader != null ? classLoader : "无") +
-                        "\n错误信息: " + e.getMessage() + "\n堆栈追踪: " + Log.getStackTraceString(e);
+                Map<String, Object> errContext = Map.of(
+                        "使用的包", targetPackage,
+                        "类加载器", classLoader,
+                        "错误信息", e.getMessage()
+                );
+                return CommandExceptionHandler.handleException("class analyze", e, logger, errContext, "加载类失败");
             }
 
             StringBuilder sb = new StringBuilder();
@@ -769,9 +772,12 @@ public class ClassMain extends CommandBase {
             return sb.toString();
 
         } catch (Exception e) {
-            logger.error("执行class analyze命令失败", e);
-            return "错误: " + e.getMessage() +
-                    "\n堆栈追踪: \n" + Log.getStackTraceString(e);
+            Map<String, Object> errContext = Map.of(
+                    "使用的包", targetPackage,
+                    "类加载器", classLoader,
+                    "错误信息", e.getMessage()
+            );
+            return CommandExceptionHandler.handleException("class analyze", e, logger, errContext, "执行analyze命令失败");
         }
     }
 
@@ -803,12 +809,12 @@ public class ClassMain extends CommandBase {
                 }
                 logger.info("成功加载类: " + targetClass.getName());
             } catch (Throwable e) {
-                logger.error("加载类失败: " + className, e);
-                logger.warn("类加载器为: " + targetPackage);
-                return "找不到类: " + className +
-                        "\n使用的包: " + (targetPackage != null ? targetPackage : "default") +
-                        "\n类加载器: " + (classLoader != null ? classLoader : "无") +
-                        "\n错误信息: " + e.getMessage() + "\n堆栈追踪: " + Log.getStackTraceString(e);
+                Map<String, Object> errContext = Map.of(
+                        "使用的包", targetPackage,
+                        "类加载器", classLoader,
+                        "错误信息", e.getMessage()
+                );
+                return CommandExceptionHandler.handleException("class list", e, logger, errContext, "找不到类" + className);
             }
 
             StringBuilder sb = new StringBuilder();
@@ -852,8 +858,12 @@ public class ClassMain extends CommandBase {
 
         } catch (Exception e) {
             logger.error("执行list命令失败", e);
-            return "错误: " + e.getMessage() +
-                    "\n堆栈追踪: \n" + Log.getStackTraceString(e);
+            Map<String, Object> errContext = Map.of(
+                    "使用的包", targetPackage,
+                    "类加载器", classLoader,
+                    "错误信息", e.getMessage()
+            );
+            return CommandExceptionHandler.handleException("class list", e, logger, errContext, "执行list命令失败");
         }
     }
 
@@ -1022,11 +1032,12 @@ public class ClassMain extends CommandBase {
             try {
                 targetClass = XposedHelpers.findClass(className, classLoader);
             } catch (Throwable e) {
-                logger.warn("没有找到类" + className);
-                return "找不到类: " + className +
-                        "\n类加载器: " + (targetPackage != null ? targetPackage : "default") +
-                        "\n错误信息: " + e.getMessage() +
-                        "\n堆栈追踪: " + Log.getStackTraceString(e);
+                Map<String, Object> errContext = Map.of(
+                        "使用的包", targetPackage,
+                        "类加载器", classLoader,
+                        "错误信息", e.getMessage()
+                );
+                return CommandExceptionHandler.handleException("class invoke", e, logger, errContext, "没有找到类" + className);
             }
 
             List<Object> params = new ArrayList<>();
@@ -1047,17 +1058,20 @@ public class ClassMain extends CommandBase {
                 String valueExpr = paramStr.substring(colonIndex + 1);
 
                 try {
-                    Object parsedValue = com.justnothing.testmodule.command.functions.classcmd.TypeParser.parse(typeName, valueExpr, classLoader);
+                    Object parsedValue = TypeParser.parse(typeName, valueExpr, classLoader);
                     params.add(parsedValue);
                     paramTypes.add(parsedValue.getClass());
                     logger.info("参数" + (params.size() - 1) +
                             ": (" + paramTypes.get(paramTypes.size()-1).getName() +")" +
                             params.get(paramTypes.size()-1).toString());
                 } catch (Exception e) {
-                    logger.warn("无法解析参数" + paramStr);
-                    return "解析参数 " + (i-1) + "失败: " + e.getMessage() +
-                            "\n参数: " + paramStr +
-                            "\n堆栈追踪: " + Log.getStackTraceString(e);
+                    Map<String, Object> errContext = Map.of(
+                            "参数索引", i-1,
+                            "参数类型", typeName,
+                            "参数值表达式", valueExpr,
+                            "错误信息", e.getMessage()
+                    );
+                    return CommandExceptionHandler.handleException("class invoke", e, logger, errContext, "无法解析参数" + paramStr);
                 }
             }
 
@@ -1106,9 +1120,12 @@ public class ClassMain extends CommandBase {
                     try {
                         result = targetClass.getDeclaredConstructor().newInstance();
                     } catch (Exception e) {
-                        logger.warn("尝试调用非静态方法" + className + "." + methodName + "时创建实例失败", e);
-                        return "非静态方法需要一个示例，在创建实例的时候出现错误: " + e.getMessage() +
-                                "\n堆栈追踪: " + Log.getStackTraceString(e);
+                        Map<String, Object> errContext = Map.of(
+                                "类名", className,
+                                "方法名", methodName,
+                                "错误信息", e.getMessage()
+                        );
+                        return CommandExceptionHandler.handleException("class invoke", e, logger, errContext, "非静态方法需要一个示例，在创建实例的时候出现错误");
                     }
                 }
                 result = method.invoke(result, params.toArray());
@@ -1125,16 +1142,12 @@ public class ClassMain extends CommandBase {
             }
 
         } catch (Throwable e) {
-            StringBuilder sb = new StringBuilder();
-            logger.info("调用失败", e);
-            sb.append("调用失败: ").append(e.getMessage()).append("\n");
-            Throwable cause = e.getCause();
-            if (cause != null && cause != e) {
-                sb.append("原因: ").append(cause.getMessage()).append("\n");
-            }
-            sb.append("堆栈追踪:\n");
-            sb.append(Log.getStackTraceString(e));
-            return sb.toString();
+            Map<String, Object> errContext = Map.of(
+                    "类名", className,
+                    "方法名", methodName,
+                    "错误信息", e.getMessage()
+            );
+            return CommandExceptionHandler.handleException("class invoke", e, logger, errContext, "调用失败");
         }
     }
 
@@ -1216,12 +1229,14 @@ public class ClassMain extends CommandBase {
                 }
                 logger.info("成功加载类: " + targetClass.getName());
             } catch (Throwable e) {
-                logger.error("加载类失败: " + className, e);
-                logger.warn("类加载器为: " + targetPackage);
-                return "找不到类: " + className +
-                        "\n使用的包: " + (targetPackage != null ? targetPackage : "default") +
-                        "\n类加载器: " + (classLoader != null ? classLoader : "无") +
-                        "\n错误信息: " + e.getMessage() + "\n堆栈追踪: " + Log.getStackTraceString(e);
+                Map<String, Object> errContext = Map.of(
+                        "类名", className,
+                        "字段名", fieldName,
+                        "错误信息", e.getMessage(),
+                        "使用的包", targetPackage,
+                        "类加载器", classLoader != null ? classLoader.toString() : "无"
+                );
+                return CommandExceptionHandler.handleException("class field", e, logger, errContext, "找不到字段");
             }
 
             if (fieldName != null) {
@@ -1303,9 +1318,14 @@ public class ClassMain extends CommandBase {
             }
 
         } catch (Exception e) {
-            logger.error("执行field命令失败", e);
-            return "错误: " + e.getMessage() +
-                    "\n堆栈追踪: \n" + Log.getStackTraceString(e);
+            Map<String, Object> errContext = Map.of(
+                    "类名", className,
+                    "字段名", fieldName,
+                    "错误信息", e.getMessage(),
+                    "使用的包", targetPackage,
+                    "类加载器", classLoader != null ? classLoader.toString() : "无"
+            );
+            return CommandExceptionHandler.handleException("class field", e, logger, errContext, "找不到字段");
         }
     }
 
@@ -1482,8 +1502,11 @@ public class ClassMain extends CommandBase {
             };
         } catch (Exception e) {
             logger.error("执行search命令失败", e);
-            return "错误: " + e.getMessage() +
-                    "\n堆栈追踪: \n" + Log.getStackTraceString(e);
+            Map<String, Object> errContext = Map.of(
+                    "搜索模式", pattern,
+                    "使用的包", classLoader != null ? classLoader.toString() : "无"
+            );
+            return CommandExceptionHandler.handleException("class search", e, logger, errContext, "搜索类失败");
         }
     }
 
@@ -1724,9 +1747,10 @@ public class ClassMain extends CommandBase {
                         params.get(paramTypes.size()-1).toString());
             } catch (Exception e) {
                 logger.warn("无法解析参数" + paramStr);
-                return "解析参数 " + (i-1) + "失败: " + e.getMessage() +
-                        "\n参数: " + paramStr +
-                        "\n堆栈追踪: " + Log.getStackTraceString(e);
+                Map<String, Object> errContext = new HashMap<>();
+                errContext.put("参数索引", i-1);
+                errContext.put("参数字符串", paramStr);
+                return CommandExceptionHandler.handleException("class constructor", e, logger, errContext, "解析参数失败");
             }
         }
 
@@ -1736,10 +1760,10 @@ public class ClassMain extends CommandBase {
                 targetClass = XposedHelpers.findClass(className, classLoader);
             } catch (Throwable e) {
                 logger.warn("没有找到类" + className);
-                return "找不到类: " + className +
-                        "\n类加载器: " + (targetPackage != null ? targetPackage : "default") +
-                        "\n错误信息: " + e.getMessage() +
-                        "\n堆栈追踪: " + Log.getStackTraceString(e);
+                Map<String, Object> errContext = new HashMap<>();
+                errContext.put("类名", className);
+                errContext.put("使用的包", targetPackage != null ? targetPackage : "default");
+                return CommandExceptionHandler.handleException("class constructor", e, logger, errContext, "找不到类");
             }
 
             Constructor<?> constructor = findConstructor(targetClass, paramTypes.toArray(new Class<?>[0]));
@@ -1770,16 +1794,7 @@ public class ClassMain extends CommandBase {
                     "\nHash: " + System.identityHashCode(instance);
 
         } catch (Throwable e) {
-            StringBuilder sb = new StringBuilder();
-            logger.info("创建实例失败", e);
-            sb.append("创建实例失败: ").append(e.getMessage()).append("\n");
-            Throwable cause = e.getCause();
-            if (cause != null && cause != e) {
-                sb.append("原因: ").append(cause.getMessage()).append("\n");
-            }
-            sb.append("堆栈追踪:\n");
-            sb.append(Log.getStackTraceString(e));
-            return sb.toString();
+            return CommandExceptionHandler.handleException("class create", e, logger, "创建实例失败");
         }
     }
 
@@ -1868,8 +1883,7 @@ public class ClassMain extends CommandBase {
             };
             
         } catch (Exception e) {
-            logger.error("执行reflect命令失败", e);
-            return "错误: " + e.getMessage() + "\n堆栈: " + getStackTrace(e);
+            return CommandExceptionHandler.handleException("class reflect", e, logger, "执行reflect命令失败");
         }
     }
 
@@ -1900,8 +1914,7 @@ public class ClassMain extends CommandBase {
             }
             
         } catch (Exception e) {
-            logger.error("处理字段失败", e);
-            return "错误: " + e.getMessage() + "\n堆栈: " + getStackTrace(e);
+            return CommandExceptionHandler.handleException("class reflect field", e, logger, "处理字段失败");
         }
     }
 
@@ -1927,8 +1940,7 @@ public class ClassMain extends CommandBase {
             return "方法 " + methodName + " 返回: " + formatValue(result, rawOutput);
             
         } catch (Exception e) {
-            logger.error("调用方法失败", e);
-            return "错误: " + e.getMessage() + "\n堆栈: " + getStackTrace(e);
+            return CommandExceptionHandler.handleException("class reflect method", e, logger, "调用方法失败");
         }
     }
 
@@ -1947,8 +1959,7 @@ public class ClassMain extends CommandBase {
             return "创建实例: " + formatValue(instance, rawOutput);
             
         } catch (Exception e) {
-            logger.error("创建实例失败", e);
-            return "错误: " + e.getMessage() + "\n堆栈: " + getStackTrace(e);
+            return CommandExceptionHandler.handleException("class reflect constructor", e, logger, "创建实例失败");
         }
     }
 
@@ -1978,8 +1989,7 @@ public class ClassMain extends CommandBase {
             }
             
         } catch (Exception e) {
-            logger.error("处理静态字段失败", e);
-            return "错误: " + e.getMessage() + "\n堆栈: " + getStackTrace(e);
+            return CommandExceptionHandler.handleException("class reflect static", e, logger, "处理静态字段失败");
         }
     }
 
@@ -2141,11 +2151,4 @@ public class ClassMain extends CommandBase {
         return value.toString();
     }
 
-    private String getStackTrace(Throwable e) {
-        StringBuilder sb = new StringBuilder();
-        for (StackTraceElement element : e.getStackTrace()) {
-            sb.append("    at ").append(element.toString()).append("\n");
-        }
-        return sb.toString();
-    }
 }

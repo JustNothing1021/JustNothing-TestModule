@@ -4,6 +4,7 @@ package com.justnothing.testmodule.command.functions.hook;
 import android.util.Log;
 
 import com.justnothing.testmodule.command.CommandExecutor;
+import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.command.functions.script.ScriptModels;
 import com.justnothing.testmodule.command.functions.script.ScriptRunner;
 import com.justnothing.testmodule.command.functions.script.ScriptModels.*;
@@ -20,6 +21,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
 
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedHelpers;
@@ -134,10 +136,15 @@ public class HookManager {
             validateHookCode(hookInfo, classLoader);
             logger.info("Hook 代码验证成功: " + hookInfo.getId());
         } catch (Exception e) {
-            logger.error("Hook代码验证失败", e);
+            String errorMsg = CommandExceptionHandler.handleException(
+                "hook add", 
+                e, 
+                logger, 
+                context.output(), 
+                "Hook代码验证失败"
+            );
             context.output().println("[ERROR] Hook代码验证失败... 信息: " + e + "\n\n");
-            return "Hook 码验证失败: " + e.getMessage() + "\n" +
-                   "堆栈追踪:\n" + Log.getStackTraceString(e);
+            return errorMsg;
         }
         
         hooks.put(hookInfo.getId(), hookInfo);
@@ -154,11 +161,21 @@ public class HookManager {
             context.output().println("[INFO]  Hook添加成功!\n\n");
             return "Hook添加成功\nID: " + hookInfo.getId() + "\n" + hookInfo.getDisplayInfo();
         } catch (Exception e) {
-            logger.error("Hook添加失败", e);
-            context.output().println("[ERROR] Hook添加失败... 信息: " + e + "\n\n");
             hooks.remove(hookInfo.getId());
-            return "Hook添加失败: " + e.getMessage() + "\n" +
-                   "堆栈追踪:\n" + android.util.Log.getStackTraceString(e);
+            Map<String, Object> errContext = new java.util.HashMap<>();
+            errContext.put("类名", className);
+            errContext.put("方法名", methodName);
+            errContext.put("签名", signature != null ? signature : "默认");
+            errContext.put("Hook ID", hookInfo.getId());
+            String errorMsg = CommandExceptionHandler.handleException(
+                "hook add", 
+                e, 
+                logger, 
+                errContext,
+                "Hook添加失败"
+            );
+            context.output().println("[ERROR] Hook添加失败... 信息: " + e + "\n\n");
+            return errorMsg;
         }
     }
 

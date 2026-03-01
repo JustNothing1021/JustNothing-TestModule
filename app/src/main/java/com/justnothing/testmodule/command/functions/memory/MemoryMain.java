@@ -9,6 +9,7 @@ import android.os.Debug;
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 
 import java.io.BufferedWriter;
 import java.io.BufferedReader;
@@ -172,8 +173,7 @@ public class MemoryMain extends CommandBase {
                 default -> "未知子命令: " + subCommand + "\n" + getHelpText();
             };
         } catch (Exception e) {
-            logger.error("执行memory命令失败", e);
-            return "错误: " + e.getMessage();
+            return CommandExceptionHandler.handleException("memory", e, logger, "执行memory命令失败");
         }
     }
 
@@ -264,8 +264,7 @@ public class MemoryMain extends CommandBase {
             logger.info("内存信息查询完成");
             
         } catch (Exception e) {
-            logger.error("获取内存信息失败", e);
-            return "错误: " + e.getMessage();
+            return CommandExceptionHandler.handleException("memory info", e, logger, "获取内存信息失败");
         }
         
         return result.toString();
@@ -376,8 +375,7 @@ public class MemoryMain extends CommandBase {
             logger.info("垃圾回收完成");
             
         } catch (Exception e) {
-            logger.error("垃圾回收失败", e);
-            return "错误: " + e.getMessage();
+            return CommandExceptionHandler.handleException("memory gc", e, logger, "垃圾回收失败");
         }
         
         return result.toString();
@@ -565,26 +563,26 @@ public class MemoryMain extends CommandBase {
         StringBuilder result = new StringBuilder();
         try {
             int pid = android.os.Process.myPid();
-            BufferedReader reader = new BufferedReader(new FileReader("/proc/" + pid + "/statm"));
-            String line = reader.readLine();
-            if (line != null) {
-                String[] parts = line.split("\\s+");
-                if (parts.length >= 7) {
-                    long pageSize = 4096;
-                    long size = Long.parseLong(parts[0]) * pageSize;
-                    long resident = Long.parseLong(parts[1]) * pageSize;
-                    long shared = Long.parseLong(parts[2]) * pageSize;
-                    long text = Long.parseLong(parts[3]) * pageSize;
-                    long data = Long.parseLong(parts[5]) * pageSize;
-                    
-                    result.append("总大小: ").append(formatBytes(size)).append("\n");
-                    result.append("驻留内存: ").append(formatBytes(resident)).append("\n");
-                    result.append("共享内存: ").append(formatBytes(shared)).append("\n");
-                    result.append("代码段: ").append(formatBytes(text)).append("\n");
-                    result.append("数据段: ").append(formatBytes(data)).append("\n");
+            try (BufferedReader reader = new BufferedReader(new FileReader("/proc/" + pid + "/statm"))) {
+                String line = reader.readLine();
+                if (line != null) {
+                    String[] parts = line.split("\\s+");
+                    if (parts.length >= 7) {
+                        long pageSize = 4096;
+                        long size = Long.parseLong(parts[0]) * pageSize;
+                        long resident = Long.parseLong(parts[1]) * pageSize;
+                        long shared = Long.parseLong(parts[2]) * pageSize;
+                        long text = Long.parseLong(parts[3]) * pageSize;
+                        long data = Long.parseLong(parts[5]) * pageSize;
+                        
+                        result.append("总大小: ").append(formatBytes(size)).append("\n");
+                        result.append("驻留内存: ").append(formatBytes(resident)).append("\n");
+                        result.append("共享内存: ").append(formatBytes(shared)).append("\n");
+                        result.append("代码段: ").append(formatBytes(text)).append("\n");
+                        result.append("数据段: ").append(formatBytes(data)).append("\n");
+                    }
                 }
             }
-            reader.close();
         } catch (IOException e) {
             result.append("无法读取进程内存统计: ").append(e.getMessage()).append("\n");
         }

@@ -6,6 +6,7 @@ import android.util.Log;
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.data.DataBridge;
 import com.justnothing.testmodule.utils.io.IOManager;
 
@@ -311,9 +312,7 @@ public class ScriptExecutorMain extends CommandBase {
                 try {
                     return handleScriptManagerCommand(context);
                 } catch (Exception e) {
-                    logger.error("执行script命令失败", e);
-                    return "错误: " + e.getMessage() +
-                            "\n堆栈追踪: \n" + Log.getStackTraceString(e);
+                    return CommandExceptionHandler.handleException("script script", e, logger, "执行script命令失败");
                 }
             }
         }
@@ -328,8 +327,7 @@ public class ScriptExecutorMain extends CommandBase {
             runner.execute(context.origCommand(), context.output(), context.output());
             return "";
         } catch (Exception e) {
-            logger.error("脚本执行失败", e);
-            return "脚本执行失败: " + e.getMessage() + "\n堆栈追踪: \n" + android.util.Log.getStackTraceString(e);
+            return CommandExceptionHandler.handleException("script", e, logger, "脚本执行失败");
         }
     }
 
@@ -544,8 +542,7 @@ public class ScriptExecutorMain extends CommandBase {
             runner.execute(content, context.output(), context.output());
             result.append("脚本执行成功");
         } catch (Exception e) {
-            result.append("脚本执行失败: ").append(e.getMessage());
-            result.append("\n堆栈追踪:\n").append(Log.getStackTraceString(e));
+            result.append(CommandExceptionHandler.handleException("script run", e, logger, "脚本执行失败"));
         }
         
         return result.toString();
@@ -572,8 +569,7 @@ public class ScriptExecutorMain extends CommandBase {
             runner.execute(code, context.output(), context.output());
             result.append("代码执行成功");
         } catch (Exception e) {
-            result.append("代码执行失败: ").append(e.getMessage());
-            result.append("\n堆栈追踪:\n").append(Log.getStackTraceString(e));
+            result.append(CommandExceptionHandler.handleException("script runcode", e, logger, "代码执行失败"));
         }
         
         return result.toString();

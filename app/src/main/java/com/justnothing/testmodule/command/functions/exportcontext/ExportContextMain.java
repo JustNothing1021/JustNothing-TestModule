@@ -13,6 +13,7 @@ import android.util.Log;
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.xtchttplib.ContextManager;
 import com.xtc.sync.elt;
 import com.xtc.sync.byw;
@@ -138,8 +139,7 @@ public class ExportContextMain extends CommandBase {
             
         } catch (Exception e) {
             logger.error("导出设备上下文信息失败", e);
-            return "错误: " + e.getMessage() +
-                    "\n堆栈追踪: \n" + Log.getStackTraceString(e);
+            return CommandExceptionHandler.handleException("export context", e, logger, "导出设备上下文信息失败");
         }
     }
 

@@ -4,6 +4,8 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_BYTECODE_VE
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
+
 import org.benf.cfr.reader.api.CfrDriver;
 import org.benf.cfr.reader.api.OutputSinkFactory;
 import org.objectweb.asm.ClassReader;
@@ -14,9 +16,11 @@ import org.objectweb.asm.util.TraceClassVisitor;
 import org.objectweb.asm.util.TraceMethodVisitor;
 import org.objectweb.asm.util.Textifier;
 
+import java.io.FileOutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Method;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -225,10 +229,10 @@ public class BytecodeMain extends CommandBase {
                 }
             }
 
-            java.lang.reflect.Field[] fields = targetClass.getDeclaredFields();
+            Field[] fields = targetClass.getDeclaredFields();
             sb.append("字段: ").append(fields.length).append(" 个\n");
             if (verbose) {
-                for (java.lang.reflect.Field field : fields) {
+                for (Field field : fields) {
                     sb.append("  - ").append(field.getType().getSimpleName()).append(" ").append(field.getName())
                             .append("\n");
                 }
@@ -238,7 +242,7 @@ public class BytecodeMain extends CommandBase {
 
         } catch (Exception e) {
             logger.error("获取类信息失败", e);
-            return "错误: " + e.getMessage() + "\n堆栈: " + getStackTrace(e);
+            return CommandExceptionHandler.handleException("bytecode", e, logger, "获取类信息失败");
         }
     }
 
@@ -302,8 +306,7 @@ public class BytecodeMain extends CommandBase {
             return sb.toString();
 
         } catch (Exception e) {
-            logger.error("获取方法信息失败", e);
-            return "错误: " + e.getMessage() + "\n堆栈: " + getStackTrace(e);
+            return CommandExceptionHandler.handleException("bytecode", e, logger, "获取方法信息失败");
         }
     }
 
@@ -330,16 +333,15 @@ public class BytecodeMain extends CommandBase {
                 return "无法获取类字节码";
             }
 
-            java.io.FileOutputStream fos = new java.io.FileOutputStream(outputPath);
-            fos.write(bytecode);
-            fos.close();
+            try (FileOutputStream fos = new FileOutputStream(outputPath)) {
+                fos.write(bytecode);
+            }
 
             logger.info("字节码已导出到: " + outputPath);
             return "字节码已导出到: " + outputPath + "\n大小: " + bytecode.length + " 字节";
 
         } catch (Exception e) {
-            logger.error("导出字节码失败", e);
-            return "错误: " + e.getMessage() + "\n堆栈: " + getStackTrace(e);
+            return CommandExceptionHandler.handleException("bytecode", e, logger, "导出字节码失败");
         }
     }
 
@@ -414,8 +416,7 @@ public class BytecodeMain extends CommandBase {
             return sb.toString();
 
         } catch (Exception e) {
-            logger.error("分析字节码失败", e);
-            return "错误: " + e.getMessage() + "\n堆栈: " + getStackTrace(e);
+            return CommandExceptionHandler.handleException("bytecode", e, logger, "分析字节码失败");
         }
     }
 
@@ -470,8 +471,7 @@ public class BytecodeMain extends CommandBase {
             return sb.toString();
 
         } catch (Exception e) {
-            logger.error("反汇编失败", e);
-            return "错误: " + e.getMessage() + "\n堆栈: " + getStackTrace(e);
+            return CommandExceptionHandler.handleException("bytecode", e, logger, "反汇编失败");
         }
     }
 
@@ -537,8 +537,7 @@ public class BytecodeMain extends CommandBase {
             return sb.toString();
 
         } catch (Exception e) {
-            logger.error("获取常量池失败", e);
-            return "错误: " + e.getMessage() + "\n堆栈: " + getStackTrace(e);
+            return CommandExceptionHandler.handleException("bytecode", e, logger, "获取常量池失败");
         }
     }
 
@@ -603,8 +602,7 @@ public class BytecodeMain extends CommandBase {
             return sb.toString();
 
         } catch (Exception e) {
-            logger.error("验证字节码失败", e);
-            return "错误: " + e.getMessage() + "\n堆栈: " + getStackTrace(e);
+            return CommandExceptionHandler.handleException("bytecode", e, logger, "验证字节码失败");
         }
     }
 
@@ -643,9 +641,9 @@ public class BytecodeMain extends CommandBase {
             String decompiledCode = decompileWithCFR(bytecode, className);
 
             if (outputPath != null) {
-                java.io.FileOutputStream fos = new java.io.FileOutputStream(outputPath);
-                fos.write(decompiledCode.getBytes());
-                fos.close();
+                try (FileOutputStream fos = new FileOutputStream(outputPath)) {
+                    fos.write(decompiledCode.getBytes());
+                }
                 logger.info("反编译代码已导出到: " + outputPath);
                 return "反编译代码已导出到: " + outputPath + "\n\n" + decompiledCode;
             } else {
@@ -653,8 +651,7 @@ public class BytecodeMain extends CommandBase {
             }
 
         } catch (Exception e) {
-            logger.error("反编译失败", e);
-            return "错误: " + e.getMessage() + "\n堆栈: " + getStackTrace(e);
+            return CommandExceptionHandler.handleException("bytecode", e, logger, "反编译失败");
         }
     }
 

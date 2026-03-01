@@ -4,7 +4,11 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_HOOK_VER;
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.data.DataBridge;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class HookMain extends CommandBase {
 
@@ -116,9 +120,7 @@ public class HookMain extends CommandBase {
                 default -> "未知子命令: " + subCommand + "\n" + getHelpText();
             };
         } catch (Exception e) {
-            logger.error("Hook命令执行失败", e);
-            return "Hook 命令执行失败: " + e.getMessage() + "\n" + 
-                    "堆栈追踪:\n" + android.util.Log.getStackTraceString(e);
+            return CommandExceptionHandler.handleException("hook", e, logger, "执行hook命令失败");
         }
     }
 

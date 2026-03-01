@@ -6,6 +6,11 @@ import android.util.Log;
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.utils.CommandArgumentParser;
+import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class TraceMain extends CommandBase {
 
@@ -80,38 +85,30 @@ public class TraceMain extends CommandBase {
                 default -> "未知子命令: " + subCommand + "\n" + getHelpText();
             };
         } catch (Exception e) {
-            logger.error("执行trace命令失败", e);
-            return "错误: " + e.getMessage() +
-                    "\n堆栈追踪: \n" + Log.getStackTraceString(e);
+            return CommandExceptionHandler.handleException("trace", e, logger, "执行trace命令失败");
         }
     }
 
     private String handleAdd(String[] args, ClassLoader classLoader, TraceManager manager) {
-        if (args.length < 3) {
-            return "错误: 参数不足\n用法: trace add <class_name> <method_name> [sig/signature <signature>]";
+        try {
+            CommandArgumentParser.requireArgsLength(args, 3, "trace add");
+        } catch (IllegalArgumentException e) {
+            return "错误: " + e.getMessage() + "\n用法: trace add <class_name> <method_name> [sig/signature <signature>]";
         }
 
         String className = args[1];
         String methodName = args[2];
-        String signature = null;
-
-        for (int i = 3; i < args.length; i++) {
-            if (args[i].equals("sig") || args[i].equals("signature")) {
-                if (i + 1 < args.length) {
-                    signature = args[i + 1];
-                    i++;
-                } else {
-                    return "错误: signature需要指定参数类型";
-                }
-            }
-        }
+        String signature = CommandArgumentParser.getOptionValue(args, "sig", "signature");
 
         try {
             int id = manager.addTraceTask(className, methodName, signature, classLoader);
             return "添加trace任务成功，ID: " + id;
         } catch (Exception e) {
-            logger.error("添加trace任务失败", e);
-            return "添加trace任务失败: " + e.getMessage();
+            Map<String, Object> context = new HashMap<>();
+            context.put("类名", className);
+            context.put("方法名", methodName);
+            context.put("签名", signature != null ? signature : "无");
+            return CommandExceptionHandler.handleException("trace add", e, logger, context, "添加trace任务失败");
         }
     }
 

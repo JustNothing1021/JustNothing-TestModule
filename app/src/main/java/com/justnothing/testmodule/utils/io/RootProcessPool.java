@@ -28,7 +28,9 @@ public class RootProcessPool extends Logger {
     });
 
     private final BlockingQueue<RootProcess> availableProcesses;
+    private final BlockingQueue<RootProcess> availableNonRootProcesses;
     private final AtomicInteger totalProcesses = new AtomicInteger(0);
+    private final AtomicInteger totalNonRootProcesses = new AtomicInteger(0);
     private final AtomicInteger activeCommands = new AtomicInteger(0);
     private final AtomicLong totalCommands = new AtomicLong(0);
     private final AtomicLong totalCommandTime = new AtomicLong(0);
@@ -40,6 +42,7 @@ public class RootProcessPool extends Logger {
     private RootProcessPool() {
         super();
         this.availableProcesses = new LinkedBlockingQueue<>(MAX_POOL_SIZE);
+        this.availableNonRootProcesses = new LinkedBlockingQueue<>(MAX_POOL_SIZE);
         initializePool();
         startMaintenanceTask();
         info("RootProcessPool初始化完成");
@@ -74,7 +77,18 @@ public class RootProcessPool extends Logger {
                 error("初始化Root进程失败", e);
             }
         }
-        info("Root进程池初始化完成，当前进程数: " + totalProcesses.get());
+        
+        for (int i = 0; i < MIN_POOL_SIZE; i++) {
+            try {
+                RootProcess process = createNonRootProcess();
+                availableNonRootProcesses.offer(process);
+                totalNonRootProcesses.incrementAndGet();
+            } catch (Exception e) {
+                error("初始化非Root进程失败", e);
+            }
+        }
+        
+        info("Root进程池初始化完成，当前Root进程数: " + totalProcesses.get() + ", 非Root进程数: " + totalNonRootProcesses.get());
     }
 
     private void startMaintenanceTask() {
@@ -136,7 +150,20 @@ public class RootProcessPool extends Logger {
             throw new IOException("Zygote阶段，无法创建Root进程");
         }
 
-        Process process = Runtime.getRuntime().exec("su");
+        ProcessBuilder pb = new ProcessBuilder("su");
+        Process process = pb.start();
+        RootProcess rootProcess = new RootProcess(process);
+        rootProcess.initialize();
+        return rootProcess;
+    }
+
+    private RootProcess createNonRootProcess() throws IOException {
+        if (BootMonitor.isZygotePhase()) {
+            throw new IOException("Zygote阶段，无法创建非Root进程");
+        }
+
+        ProcessBuilder pb = new ProcessBuilder("/system/bin/sh");
+        Process process = pb.start();
         RootProcess rootProcess = new RootProcess(process);
         rootProcess.initialize();
         return rootProcess;
@@ -147,7 +174,11 @@ public class RootProcessPool extends Logger {
     }
 
     public static Future<IOManager.ProcessResult> executeCommandAsync(String command, long timeoutMs) {
-        return ThreadPoolManager.submitIOCallable(() -> executeCommand(command, timeoutMs));
+        return executeCommandAsync(command, timeoutMs, true);
+    }
+
+    public static Future<IOManager.ProcessResult> executeCommandAsync(String command, long timeoutMs, boolean useRoot) {
+        return ThreadPoolManager.submitIOCallable(() -> executeCommand(command, timeoutMs, useRoot));
     }
 
     public static IOManager.ProcessResult executeCommand(String command) throws IOException, InterruptedException {
@@ -155,6 +186,10 @@ public class RootProcessPool extends Logger {
     }
 
     public static IOManager.ProcessResult executeCommand(String command, long timeoutMs) throws IOException, InterruptedException {
+        return executeCommand(command, timeoutMs, true);
+    }
+
+    public static IOManager.ProcessResult executeCommand(String command, long timeoutMs, boolean useRoot) throws IOException, InterruptedException {
         RootProcessPool pool = getInstance();
         if (pool == null) {
             throw new IOException("RootProcessPool未初始化");
@@ -165,76 +200,107 @@ public class RootProcessPool extends Logger {
         }
 
         if (BootMonitor.isZygotePhase()) {
-            throw new IOException("Zygote阶段，无法执行Root命令");
+            throw new IOException("Zygote阶段，无法执行命令");
         }
+
+        String processType = useRoot ? "Root" : "非Root";
+        pool.info("执行" + processType + "命令: " + command + " (超时: " + timeoutMs + "ms)");
 
         RootProcess process = null;
         try {
-            process = pool.acquireProcess(timeoutMs);
+            process = pool.acquireProcess(timeoutMs, useRoot);
 
             IOManager.ProcessResult result = process.executeCommand(command, timeoutMs);
 
             if (result.isSuccess()) {
                 pool.totalCommands.incrementAndGet();
                 pool.totalCommandTime.addAndGet(result.executionTime());
+                
+                String stdout = result.stdout();
+                if (stdout != null && !stdout.trim().isEmpty()) {
+                    pool.debug("命令输出(stdout): " + stdout.trim());
+                }
+                
+                pool.info("命令执行成功, 退出码: " + result.exitCode() + ", 耗时: " + result.executionTime() + "ms");
             } else {
                 pool.failedCommands.incrementAndGet();
+                
+                String stderr = result.stderr();
+                String stdout = result.stdout();
+                
+                pool.error("命令执行失败, 退出码: " + result.exitCode() + ", 耗时: " + result.executionTime() + "ms");
+                if (stdout != null && !stdout.trim().isEmpty()) {
+                    pool.error("命令输出(stdout): " + stdout.trim());
+                }
+                if (stderr != null && !stderr.trim().isEmpty()) {
+                    pool.error("错误输出(stderr): " + stderr.trim());
+                }
             }
 
             return result;
+        } catch (Exception e) {
+            pool.error("命令执行异常: " + command, e);
+            throw e;
         } finally {
             if (process != null) {
-                pool.releaseProcess(process);
+                pool.releaseProcess(process, useRoot);
             }
             pool.activeCommands.decrementAndGet();
         }
     }
 
-    private RootProcess acquireProcess(long timeoutMs) throws InterruptedException {
+    private RootProcess acquireProcess(long timeoutMs, boolean useRoot) throws InterruptedException {
         activeCommands.incrementAndGet();
 
-        RootProcess process = availableProcesses.poll(100, TimeUnit.MILLISECONDS);
+        BlockingQueue<RootProcess> queue = useRoot ? availableProcesses : availableNonRootProcesses;
+        AtomicInteger totalCounter = useRoot ? totalProcesses : totalNonRootProcesses;
+        String processType = useRoot ? "Root" : "非Root";
+
+        RootProcess process = queue.poll(100, TimeUnit.MILLISECONDS);
         if (process != null) {
             return process;
         }
 
         poolLock.lock();
         try {
-            if (totalProcesses.get() < MAX_POOL_SIZE) {
+            if (totalCounter.get() < MAX_POOL_SIZE) {
                 try {
-                    RootProcess newProcess = createRootProcess();
-                    availableProcesses.offer(newProcess);
-                    totalProcesses.incrementAndGet();
+                    RootProcess newProcess = useRoot ? createRootProcess() : createNonRootProcess();
+                    queue.offer(newProcess);
+                    totalCounter.incrementAndGet();
                     return newProcess;
                 } catch (Exception e) {
-                    error("创建新Root进程失败", e);
+                    error("创建新" + processType + "进程失败", e);
                 }
             }
         } finally {
             poolLock.unlock();
         }
 
-        process = availableProcesses.poll(timeoutMs - 100, TimeUnit.MILLISECONDS);
+        process = queue.poll(timeoutMs - 100, TimeUnit.MILLISECONDS);
         if (process == null) {
-            throw new InterruptedException("获取Root进程超时");
+            throw new InterruptedException("获取" + processType + "进程超时");
         }
 
         return process;
     }
 
-    private void releaseProcess(RootProcess process) {
+    private void releaseProcess(RootProcess process, boolean useRoot) {
         if (process == null) {
             return;
         }
 
+        BlockingQueue<RootProcess> queue = useRoot ? availableProcesses : availableNonRootProcesses;
+        AtomicInteger totalCounter = useRoot ? totalProcesses : totalNonRootProcesses;
+
         if (process.isHealthy()) {
             process.updateLastUsedTime();
-            availableProcesses.offer(process);
+            queue.offer(process);
         } else {
             process.close();
             poolLock.lock();
             try {
-                totalProcesses.decrementAndGet();
+                totalCounter.decrementAndGet();
             } finally {
                 poolLock.unlock();
             }

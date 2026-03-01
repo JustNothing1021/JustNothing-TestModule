@@ -4,6 +4,9 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_BREAKPOINT_
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.utils.CommandArgumentParser;
+import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
+import com.justnothing.testmodule.utils.functions.Logger;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -12,6 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class BreakpointMain extends CommandBase {
 
+    private static final Logger staticLogger = Logger.getLoggerForName("Breakpoint");
     private static final AtomicInteger nextId = new AtomicInteger(1);
     private static final ConcurrentHashMap<Integer, BreakpointInfo> breakpoints = new ConcurrentHashMap<>();
 
@@ -109,8 +113,7 @@ public class BreakpointMain extends CommandBase {
                 default -> "未知子命令: " + subCommand + "\n" + getHelpText();
             };
         } catch (Exception e) {
-            logger.error("执行breakpoint命令失败", e);
-            return "错误: " + e.getMessage();
+            return CommandExceptionHandler.handleException("breakpoint", e, logger);
         }
     }
 
@@ -180,68 +183,71 @@ public class BreakpointMain extends CommandBase {
     }
 
     private String handleEnable(String[] args) {
-        if (args.length < 2) {
-            return "错误: 参数不足\n用法: breakpoint enable <id>";
+        try {
+            CommandArgumentParser.requireArgsLength(args, 2, "breakpoint enable");
+        } catch (IllegalArgumentException e) {
+            return "错误: " + e.getMessage() + "\n用法: breakpoint enable <id>";
         }
 
-        try {
-            int id = Integer.parseInt(args[1]);
-            BreakpointInfo info = breakpoints.get(id);
-            
-            if (info == null) {
-                return "错误: 断点不存在 (ID: " + id + ")";
-            }
-            
-            info.enabled = true;
-            logger.info("启用断点: " + id);
-            return "断点已启用 (ID: " + id + ")";
-            
-        } catch (NumberFormatException e) {
+        Integer id = CommandArgumentParser.parseId(args, 1);
+        if (id == null) {
             return "错误: 无效的断点ID";
         }
+        
+        BreakpointInfo info = breakpoints.get(id);
+        
+        if (info == null) {
+            return "错误: 断点不存在 (ID: " + id + ")";
+        }
+        
+        info.enabled = true;
+        logger.info("启用断点: " + id);
+        return "断点已启用 (ID: " + id + ")";
     }
 
     private String handleDisable(String[] args) {
-        if (args.length < 2) {
-            return "错误: 参数不足\n用法: breakpoint disable <id>";
+        try {
+            CommandArgumentParser.requireArgsLength(args, 2, "breakpoint disable");
+        } catch (IllegalArgumentException e) {
+            return "错误: " + e.getMessage() + "\n用法: breakpoint disable <id>";
         }
 
-        try {
-            int id = Integer.parseInt(args[1]);
-            BreakpointInfo info = breakpoints.get(id);
-            
-            if (info == null) {
-                return "错误: 断点不存在 (ID: " + id + ")";
-            }
-            
-            info.enabled = false;
-            logger.info("禁用断点: " + id);
-            return "断点已禁用 (ID: " + id + ")";
-            
-        } catch (NumberFormatException e) {
+        Integer id = CommandArgumentParser.parseId(args, 1);
+        if (id == null) {
             return "错误: 无效的断点ID";
         }
+        
+        BreakpointInfo info = breakpoints.get(id);
+        
+        if (info == null) {
+            return "错误: 断点不存在 (ID: " + id + ")";
+        }
+        
+        info.enabled = false;
+        logger.info("禁用断点: " + id);
+        return "断点已禁用 (ID: " + id + ")";
     }
 
     private String handleRemove(String[] args) {
-        if (args.length < 2) {
-            return "错误: 参数不足\n用法: breakpoint remove <id>";
+        try {
+            CommandArgumentParser.requireArgsLength(args, 2, "breakpoint remove");
+        } catch (IllegalArgumentException e) {
+            return "错误: " + e.getMessage() + "\n用法: breakpoint remove <id>";
         }
 
-        try {
-            int id = Integer.parseInt(args[1]);
-            BreakpointInfo info = breakpoints.remove(id);
-            
-            if (info == null) {
-                return "错误: 断点不存在 (ID: " + id + ")";
-            }
-            
-            logger.info("移除断点: " + id);
-            return "断点已移除 (ID: " + id + ")";
-            
-        } catch (NumberFormatException e) {
+        Integer id = CommandArgumentParser.parseId(args, 1);
+        if (id == null) {
             return "错误: 无效的断点ID";
         }
+        
+        BreakpointInfo info = breakpoints.remove(id);
+        
+        if (info == null) {
+            return "错误: 断点不存在 (ID: " + id + ")";
+        }
+        
+        logger.info("移除断点: " + id);
+        return "断点已移除 (ID: " + id + ")";
     }
 
     private String handleClear() {
@@ -282,11 +288,11 @@ public class BreakpointMain extends CommandBase {
         if (info != null && info.enabled) {
             info.hitCount++;
             info.lastHitAt = System.currentTimeMillis();
-            logger.info("断点命中: " + info.className + "." + info.methodName + " (ID: " + id + ")");
+            staticLogger.info("断点命中: " + info.className + "." + info.methodName + " (ID: " + id + ")");
             StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
-            logger.info("调用栈:");
+            staticLogger.info("调用栈:");
             for (StackTraceElement element : stackTrace) {
-                logger.info("  " + element.toString());
+                staticLogger.info("  " + element.toString());
             }
         }
     }

@@ -14,6 +14,7 @@ import com.justnothing.testmodule.constants.FileDirectory;
 import com.justnothing.testmodule.hooks.HookEntry;
 import com.justnothing.testmodule.utils.functions.CmdUtils;
 import com.justnothing.testmodule.utils.io.IOManager;
+import com.justnothing.testmodule.utils.io.RootProcessPool;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
 import java.io.BufferedReader;
@@ -24,10 +25,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 public class FileCommandExecutor {
 
@@ -331,28 +329,12 @@ public class FileCommandExecutor {
         try {
             Thread.sleep(200);
 
-            String[] cmd = {"rm", "-rf", dir};
-            Process process = Runtime.getRuntime().exec(cmd);
-
-            long timeoutMs = 5000;
-            Future<Integer> exitCodeFuture = ThreadPoolManager.submitIOCallable(() -> {
-                try {
-                    return process.waitFor();
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    return -1;
-                }
-            });
+            IOManager.ProcessResult result = RootProcessPool.executeCommand("rm -rf " + dir, 5000, false);
             
-            try {
-                exitCodeFuture.get(timeoutMs, TimeUnit.MILLISECONDS);
+            if (result.isSuccess()) {
                 logger.debug("清理临时目录: " + dir);
-            } catch (TimeoutException e) {
-                exitCodeFuture.cancel(true);
-                process.destroyForcibly();
-                logger.warn("清理临时目录超时 (" + timeoutMs + "ms): " + dir);
-            } catch (Exception e) {
-                logger.warn("清理临时目录失败: " + e.getMessage());
+            } else {
+                logger.warn("清理临时目录失败: " + result.stderr());
             }
         } catch (Exception e) {
             logger.warn("清理临时目录失败: " + e.getMessage());

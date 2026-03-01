@@ -7,6 +7,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
+import com.justnothing.testmodule.utils.io.IOManager;
+import com.justnothing.testmodule.utils.io.RootProcessPool;
 
 public class CmdUtils {
 
@@ -103,21 +105,8 @@ public class CmdUtils {
     }
 
     public static CommandOutput runRootCommand(String command, long timeoutMs) throws IOException, InterruptedException {
-        Process process = Runtime.getRuntime().exec("su");
-        try {
-            DataOutputStream os = new DataOutputStream(process.getOutputStream());
-            os.writeBytes(command + "\n");
-            os.writeBytes("exit\n");
-            os.flush();
-            os.close();
-        } catch (IOException e) {
-            process.destroy();
-            throw new IOException("写入su命令失败: " + e.getMessage(), e);
-        }
-        
-        CommandOutput result = runCommandInternal(null, process, timeoutMs);
-        
-        return result;
+        IOManager.ProcessResult result = RootProcessPool.executeCommand(command, timeoutMs, true);
+        return new CommandOutput(result.exitCode(), result.stdout(), result.stderr(), result.stdout() + result.stderr());
     }
 
     /**
@@ -127,7 +116,8 @@ public class CmdUtils {
             throws IOException, InterruptedException {
         Process process = existingProcess;
         if (process == null) {
-            process = Runtime.getRuntime().exec(cmdArray);
+            IOManager.ProcessResult result = RootProcessPool.executeCommand(cmdArray, timeoutMs, false);
+            return new CommandOutput(result.exitCode(), result.stdout(), result.stderr(), result.stdout() + result.stderr());
         }
 
         final OutputCollector collector = new OutputCollector();
@@ -209,46 +199,24 @@ public class CmdUtils {
 
     public static int runCommandWithCallback(String command, LineHandler lineHandler, long timeoutMs)
             throws IOException, InterruptedException {
-        Process process = Runtime.getRuntime().exec(command);
-        Thread stdoutThread = readStreamToHandler(process.getInputStream(), lineHandler, "stdout");
-        Thread stderrThread = readStreamToHandler(process.getErrorStream(), lineHandler, "stderr");
+        IOManager.ProcessResult result = RootProcessPool.executeCommand(command, timeoutMs, false);
         
-        int exitCode;
-        try {
-            if (timeoutMs > 0) {
-                Future<Integer> exitCodeFuture = ThreadPoolManager.submitIOCallable(() -> {
-                    try {
-                        return process.waitFor();
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                        return -1;
-                    }
-                });
-                
-                try {
-                    assert exitCodeFuture != null;
-                    exitCode = exitCodeFuture.get(timeoutMs, TimeUnit.MILLISECONDS);
-                } catch (TimeoutException e) {
-                    exitCodeFuture.cancel(true);
-                    process.destroyForcibly();
-                    throw new InterruptedException("命令执行超时 (" + timeoutMs + "ms)");
-                } catch (ExecutionException e) {
-                    exitCodeFuture.cancel(true);
-                    process.destroyForcibly();
-                    throw new InterruptedException("命令执行异常: " + e.getMessage());
-                }
-            } else {
-                exitCode = process.waitFor();
+        String[] stdoutLines = result.stdout().split("\n");
+        String[] stderrLines = result.stderr().split("\n");
+        
+        for (String line : stdoutLines) {
+            if (line.length() > 0) {
+                lineHandler.onStdoutLine(line);
             }
-        } catch (InterruptedException e) {
-            process.destroyForcibly();
-            throw e;
         }
         
-        joinThreadQuietly(stdoutThread, THREAD_JOIN_TIMEOUT_MS);
-        joinThreadQuietly(stderrThread, THREAD_JOIN_TIMEOUT_MS);
-        process.destroy();
-        return exitCode;
+        for (String line : stderrLines) {
+            if (line.length() > 0) {
+                lineHandler.onStderrLine(line);
+            }
+        }
+        
+        return result.exitCode();
     }
 
     public static String quoted(String src) {
