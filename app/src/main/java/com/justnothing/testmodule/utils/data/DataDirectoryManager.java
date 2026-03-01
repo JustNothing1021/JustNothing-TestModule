@@ -36,20 +36,6 @@ public class DataDirectoryManager {
 
     private static final DataDirectoryManagerLogger logger = new DataDirectoryManagerLogger();
 
-    private static boolean hasPermission(File file) {
-        if (file.isDirectory()) {
-            if (!file.canRead() || !file.canWrite() || !file.canExecute()) {
-                boolean status = file.setReadable(true);
-                status = status && file.setWritable(true);
-                status = status && file.setExecutable(true);
-                return status;
-            } else {
-                return true;
-            }
-        }
-        return false;
-    }
-
     public static void deleteFallbackRecordFile() {
         File fallbackRecordFile = new File(FileDirectory.TEMP_FALLBACK_RECORD_FILE_DIR);
         if (fallbackRecordFile.isFile()) {

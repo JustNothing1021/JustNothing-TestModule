@@ -14,6 +14,7 @@ import com.justnothing.testmodule.command.functions.hook.HookMain;
 import com.justnothing.testmodule.command.functions.memory.MemoryMain;
 import com.justnothing.testmodule.command.functions.nativecmd.NativeMain;
 import com.justnothing.testmodule.command.functions.packages.PackagesMain;
+import com.justnothing.testmodule.command.functions.performance.PerformanceMain;
 import com.justnothing.testmodule.command.functions.script.ScriptExecutorMain;
 import com.justnothing.testmodule.command.functions.system.SystemMain;
 import com.justnothing.testmodule.command.functions.threads.ThreadsMain;
@@ -65,6 +66,7 @@ public class CommandExecutor {
         registerCommand("hook", new HookMain());
         registerCommand("bytecode", new BytecodeMain());
         registerCommand("native", new NativeMain());
+        registerCommand("performance", new PerformanceMain());
         
         BytecodeMain bytecodeExecutor = new BytecodeMain("bytecode");
         registerCommand("binfo", bytecodeExecutor);

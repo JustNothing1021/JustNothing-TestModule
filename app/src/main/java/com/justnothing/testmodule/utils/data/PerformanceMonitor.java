@@ -25,7 +25,6 @@ public class PerformanceMonitor extends Logger {
     private static final long WRITE_DELAY = 1000;
 
 
-    private boolean configLoaded = false;
     private boolean loadConfigPending = false;
 
     public PerformanceMonitor() {
@@ -46,7 +45,6 @@ public class PerformanceMonitor extends Logger {
         ThreadPoolManager.schedule(() -> {
             try {
                 loadConfig();
-                configLoaded = true;
             } catch (Exception e) {
                 error("延迟加载配置失败", e);
             } finally {
