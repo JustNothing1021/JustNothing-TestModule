@@ -1,10 +1,11 @@
 package com.justnothing.testmodule.constants;
 
-import java.io.File;
-import java.util.List;
+import android.annotation.SuppressLint;
+
 
 public class FileDirectory {
     public static final String APPLICATION_VERSION = "0.4.3";
+    @SuppressLint("SdCardPath") // hook端如果用Environment会出现未定义行为
     public static final String SDCARD = "/sdcard";
     public static final String EXTERNAL_PATH = "/data/user_de/0/com.justnothing.testmodule/JustNothing";
     public static final String SDCARD_PATH = SDCARD + "/JustNothing";
@@ -13,7 +14,6 @@ public class FileDirectory {
     public static String DATA_PATH = EXTERNAL_PATH;
     public static final String EXPORT_DIR_NAME = "TestModuleExports";
     public static final String SCRIPTS_DIR_NAME = "scripts";
-    public static final String ASSETS_CODEBASE_DIR_NAME = "assets/codebase";
     public static final String SCRIPTS_FILE_NAME = "scripts.json";
     public static final String CONTENTS_DIR_NAME = "contents";
     public static final String CONTENT_FILE_PREFIX = "content_";
@@ -29,12 +29,6 @@ public class FileDirectory {
     public static final String INPUT_FILE_NAME = "input.txt";
     public static final String OUTPUT_FILE_NAME = "output.txt";
     public static final String RESULT_FILE_NAME = "result.txt";
-
-    public static final List<File> fallbackDataDirs = List.of(
-            new File("/data/local/tmp/methods"),
-            new File(EXTERNAL_PATH),
-            new File(SDCARD_PATH)
-    );
 
     public static final String TEMP_FALLBACK_RECORD_FILE_DIR = SDCARD_PATH + "/fallback_dir";
 }

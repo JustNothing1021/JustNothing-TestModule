@@ -232,6 +232,30 @@ public class ClassMain extends CommandBase {
                         field <pattern>                - 搜索字段名
                         annotation <pattern>           - 搜索注解
                     
+                    reflect 子命令:
+                        语法: reflect <class> <type> <name> [options]
+                        
+                        使用统一的反射接口访问和操作类的私有成员.
+                        
+                        类型说明:
+                            field        - 获取/设置字段值
+                            method       - 调用方法
+                            constructor  - 创建实例
+                            static       - 访问静态成员
+                        
+                        选项:
+                            -v, --value <value>      设置字段值
+                            -p, --params <args>      方法参数（空格分隔）
+                            -s, --super             访问父类成员
+                            -i, --interfaces         访问接口成员
+                            -r, --raw                原始输出（不格式化）
+                        
+                        示例:
+                            class reflect java.lang.System field out
+                            class reflect java.lang.Integer method parseInt -p "String:\"123\""
+                            class reflect java.lang.String constructor -p "String:\"hello\""
+                            class reflect java.lang.System static out
+                    
                     快捷命令:
                         cinfo       - 等同于 class info
                         cgraph      - 等同于 class graph
@@ -241,6 +265,7 @@ public class ClassMain extends CommandBase {
                         cfield      - 等同于 class field
                         cconstructor - 等同于 class constructor
                         csearch     - 等同于 class search
+                        creflect    - 等同于 class reflect
                     
                     示例:
                         class info java.lang.String
@@ -306,6 +331,9 @@ public class ClassMain extends CommandBase {
             case "cconstructor" -> {
                 return handleConstructor(args, classLoader, targetPackage);
             }
+            case "creflect" -> {
+                return handleReflect(args, classLoader, context);
+            }
             case "class" -> {
                 if (args.length < 1) {
                     logger.warn("参数不足，需要至少1个参数");
@@ -324,6 +352,7 @@ public class ClassMain extends CommandBase {
                         case "field" -> handleField(args, classLoader, targetPackage);
                         case "search" -> handleSearch(args, classLoader);
                         case "constructor" -> handleConstructor(args, classLoader, targetPackage);
+                        case "reflect" -> handleReflect(args, classLoader, context);
                         default -> "未知子命令: " + subCommand + "\n" + getHelpText();
                     };
                 } catch (Exception e) {
@@ -1773,5 +1802,350 @@ public class ClassMain extends CommandBase {
             }
         }
         return null;
+    }
+
+    // ========== 从 reflect 模块整合的功能 ==========
+
+    /**
+     * 处理统一的反射命令
+     */
+    private String handleReflect(String[] args, ClassLoader classLoader, CommandExecutor.CmdExecContext context) {
+        if (args.length < 4) {
+            return "参数不足，需要至少4个参数: class reflect <class> <type> <name> [options]\n" + 
+                   getHelpText();
+        }
+
+        // args[0] 是 "reflect"，所以实际参数从 args[1] 开始
+        String className = args[1];
+        String type = args[2];
+        String memberName = args[3];
+        
+        String valueToSet = null;
+        String[] methodParams = null;
+        boolean accessSuper = false;
+        boolean accessInterfaces = false;
+        boolean rawOutput = false;
+
+        // 解析选项（从第4个参数开始，因为前3个是 reflect <class> <type> <name>）
+        for (int i = 4; i < args.length; i++) {
+            String arg = args[i];
+            switch (arg) {
+                case "-v", "--value" -> {
+                    if (i + 1 < args.length) {
+                        valueToSet = args[++i];
+                    }
+                }
+                case "-p", "--params" -> {
+                    if (i + 1 < args.length) {
+                        String paramsStr = args[++i];
+                        methodParams = parseParams(paramsStr);
+                    }
+                }
+                case "-s", "--super" -> accessSuper = true;
+                case "-i", "--interfaces" -> accessInterfaces = true;
+                case "-r", "--raw" -> rawOutput = true;
+            }
+        }
+        
+        try {
+            Class<?> targetClass;
+            if (classLoader != null) {
+                targetClass = XposedHelpers.findClass(className, classLoader);
+            } else {
+                targetClass = XposedHelpers.findClass(className, null);
+            }
+            if (targetClass == null) {
+                logger.error("找不到类: " + className);
+                return "找不到类: " + className;
+            }
+        
+            return switch (type) {
+                case "field" -> handleReflectField(targetClass, memberName, valueToSet, accessSuper, accessInterfaces, rawOutput);
+                case "method" -> handleReflectMethod(targetClass, memberName, methodParams, accessSuper, accessInterfaces, rawOutput);
+                case "constructor" -> handleReflectConstructor(targetClass, methodParams, rawOutput);
+                case "static" -> handleReflectStatic(targetClass, memberName, valueToSet, rawOutput);
+                default -> "未知类型: " + type + "\n" + getHelpText();
+            };
+            
+        } catch (Exception e) {
+            logger.error("执行reflect命令失败", e);
+            return "错误: " + e.getMessage() + "\n堆栈: " + getStackTrace(e);
+        }
+    }
+
+    private String handleReflectField(Class<?> targetClass, String fieldName, String valueToSet, 
+                                     boolean accessSuper, boolean accessInterfaces, boolean rawOutput) {
+        try {
+            Field field = findReflectField(targetClass, fieldName, accessSuper, accessInterfaces);
+            
+            if (field == null) {
+                return "找不到字段: " + fieldName;
+            }
+            
+            field.setAccessible(true);
+            
+            if (valueToSet != null) {
+                Object value = parseValue(valueToSet, field.getType());
+                if (targetClass.isMemberClass() && Modifier.isStatic(field.getModifiers())) {
+                    field.set(null, value);
+                } else {
+                    field.set(null, value);
+                }
+                logger.info("设置字段 " + fieldName + " = " + value);
+                return "字段 " + fieldName + " 已设置为: " + formatValue(value, rawOutput);
+            } else {
+                Object value = field.get(null);
+                logger.info("获取字段 " + fieldName + " = " + value);
+                return "字段 " + fieldName + " = " + formatValue(value, rawOutput);
+            }
+            
+        } catch (Exception e) {
+            logger.error("处理字段失败", e);
+            return "错误: " + e.getMessage() + "\n堆栈: " + getStackTrace(e);
+        }
+    }
+
+    private String handleReflectMethod(Class<?> targetClass, String methodName, String[] params,
+                                      boolean accessSuper, boolean accessInterfaces, boolean rawOutput) {
+        try {
+            Method method = findReflectMethod(targetClass, methodName, params, accessSuper, accessInterfaces);
+            
+            if (method == null) {
+                return "找不到方法: " + methodName;
+            }
+            
+            method.setAccessible(true);
+            
+            Object result;
+            if (Modifier.isStatic(method.getModifiers())) {
+                result = method.invoke(null, convertParams(params, method.getParameterTypes()));
+            } else {
+                return "方法 " + methodName + " 不是静态方法，需要实例对象";
+            }
+            
+            logger.info("调用方法 " + methodName + " = " + result);
+            return "方法 " + methodName + " 返回: " + formatValue(result, rawOutput);
+            
+        } catch (Exception e) {
+            logger.error("调用方法失败", e);
+            return "错误: " + e.getMessage() + "\n堆栈: " + getStackTrace(e);
+        }
+    }
+
+    private String handleReflectConstructor(Class<?> targetClass, String[] params, boolean rawOutput) {
+        try {
+            Constructor<?> constructor = findReflectConstructor(targetClass, params);
+            
+            if (constructor == null) {
+                return "找不到匹配的构造函数";
+            }
+            
+            constructor.setAccessible(true);
+            Object instance = constructor.newInstance(convertParams(params, constructor.getParameterTypes()));
+            
+            logger.info("创建实例: " + instance);
+            return "创建实例: " + formatValue(instance, rawOutput);
+            
+        } catch (Exception e) {
+            logger.error("创建实例失败", e);
+            return "错误: " + e.getMessage() + "\n堆栈: " + getStackTrace(e);
+        }
+    }
+
+    private String handleReflectStatic(Class<?> targetClass, String memberName, String valueToSet, boolean rawOutput) {
+        try {
+            Field field = findReflectField(targetClass, memberName, false, false);
+            
+            if (field == null) {
+                return "找不到静态字段: " + memberName;
+            }
+            
+            if (!Modifier.isStatic(field.getModifiers())) {
+                return memberName + " 不是静态字段";
+            }
+            
+            field.setAccessible(true);
+            
+            if (valueToSet != null) {
+                Object value = parseValue(valueToSet, field.getType());
+                field.set(null, value);
+                logger.info("设置静态字段 " + memberName + " = " + value);
+                return "静态字段 " + memberName + " 已设置为: " + formatValue(value, rawOutput);
+            } else {
+                Object value = field.get(null);
+                logger.info("获取静态字段 " + memberName + " = " + value);
+                return "静态字段 " + memberName + " = " + formatValue(value, rawOutput);
+            }
+            
+        } catch (Exception e) {
+            logger.error("处理静态字段失败", e);
+            return "错误: " + e.getMessage() + "\n堆栈: " + getStackTrace(e);
+        }
+    }
+
+    // ========== 从 reflect 模块整合的工具函数 ==========
+
+    private Field findReflectField(Class<?> targetClass, String fieldName, boolean accessSuper, boolean accessInterfaces) {
+        Class<?> currentClass = targetClass;
+        
+        while (currentClass != null) {
+            try {
+                return currentClass.getDeclaredField(fieldName);
+            } catch (NoSuchFieldException e) {
+                currentClass = currentClass.getSuperclass();
+            }
+        }
+        
+        if (accessInterfaces) {
+            assert targetClass != null;
+            Class<?>[] interfaces = targetClass.getInterfaces();
+            for (Class<?> _interface : interfaces) {
+                try {
+                    return _interface.getDeclaredField(fieldName);
+                } catch (NoSuchFieldException e) {
+                    continue;
+                }
+            }
+        }
+        
+        return null;
+    }
+
+    private Method findReflectMethod(Class<?> targetClass, String methodName, String[] params, 
+                                   boolean accessSuper, boolean accessInterfaces) {
+        Class<?> currentClass = targetClass;
+        
+        while (currentClass != null) {
+            Method[] methods = currentClass.getDeclaredMethods();
+            for (Method method : methods) {
+                if (method.getName().equals(methodName)) {
+                    if (params == null || params.length == 0) {
+                        if (method.getParameterCount() == 0) {
+                            return method;
+                        }
+                    } else {
+                        Class<?>[] paramTypes = method.getParameterTypes();
+                        if (paramTypes.length == params.length) {
+                            return method;
+                        }
+                    }
+                }
+            }
+            currentClass = currentClass.getSuperclass();
+        }
+        
+        if (accessInterfaces) {
+            Class<?>[] interfaces = targetClass.getInterfaces();
+            for (Class<?> iface : interfaces) {
+                Method[] methods = iface.getDeclaredMethods();
+                for (Method method : methods) {
+                    if (method.getName().equals(methodName)) {
+                        if (params == null || params.length == 0) {
+                            if (method.getParameterCount() == 0) {
+                                return method;
+                            }
+                        } else {
+                            Class<?>[] paramTypes = method.getParameterTypes();
+                            if (paramTypes.length == params.length) {
+                                return method;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        return null;
+    }
+
+    private Constructor<?> findReflectConstructor(Class<?> targetClass, String[] params) {
+        Constructor<?>[] constructors = targetClass.getDeclaredConstructors();
+        
+        for (Constructor<?> constructor : constructors) {
+            if (params == null || params.length == 0) {
+                if (constructor.getParameterCount() == 0) {
+                    return constructor;
+                }
+            } else {
+                Class<?>[] paramTypes = constructor.getParameterTypes();
+                if (paramTypes.length == params.length) {
+                    return constructor;
+                }
+            }
+        }
+        
+        return null;
+    }
+
+    private String[] parseParams(String paramsStr) {
+        List<String> params = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        boolean inQuotes = false;
+        
+        for (int i = 0; i < paramsStr.length(); i++) {
+            char c = paramsStr.charAt(i);
+            
+            if (c == '"') {
+                inQuotes = !inQuotes;
+            } else if (c == ' ' && !inQuotes) {
+                if (current.length() > 0) {
+                    params.add(current.toString());
+                    current = new StringBuilder();
+                }
+            } else {
+                current.append(c);
+            }
+        }
+        
+        if (current.length() > 0) {
+            params.add(current.toString());
+        }
+        
+        return params.toArray(new String[0]);
+    }
+
+
+
+
+
+    private Object[] convertParams(String[] params, Class<?>[] paramTypes) {
+        if (params == null || params.length == 0) {
+            return new Object[0];
+        }
+        
+        Object[] result = new Object[params.length];
+        for (int i = 0; i < params.length; i++) {
+            if (i < paramTypes.length) {
+                result[i] = parseValue(params[i], paramTypes[i]);
+            } else {
+                result[i] = parseValue(params[i], String.class);
+            }
+        }
+        
+        return result;
+    }
+
+    private String formatValue(Object value, boolean rawOutput) {
+        if (value == null) {
+            return "null";
+        }
+        
+        if (rawOutput) {
+            return value.toString();
+        }
+        
+        if (value.getClass().isArray()) {
+            return java.util.Arrays.toString((Object[]) value);
+        }
+        
+        return value.toString();
+    }
+
+    private String getStackTrace(Throwable e) {
+        StringBuilder sb = new StringBuilder();
+        for (StackTraceElement element : e.getStackTrace()) {
+            sb.append("    at ").append(element.toString()).append("\n");
+        }
+        return sb.toString();
     }
 }

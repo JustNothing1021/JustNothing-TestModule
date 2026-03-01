@@ -168,7 +168,7 @@ public class ScriptRunner {
                 }
             } catch (Exception e) {
                 logger.warn("解析代码时出错: " + e.getMessage());
-                return nodes;
+                throw e;
             }
             return nodes;
         }

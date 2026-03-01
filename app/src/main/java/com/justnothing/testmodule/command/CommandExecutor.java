@@ -14,7 +14,6 @@ import com.justnothing.testmodule.command.functions.hook.HookMain;
 import com.justnothing.testmodule.command.functions.memory.MemoryMain;
 import com.justnothing.testmodule.command.functions.nativecmd.NativeMain;
 import com.justnothing.testmodule.command.functions.packages.PackagesMain;
-import com.justnothing.testmodule.command.functions.reflect.ReflectMain;
 import com.justnothing.testmodule.command.functions.script.ScriptExecutorMain;
 import com.justnothing.testmodule.command.functions.system.SystemMain;
 import com.justnothing.testmodule.command.functions.threads.ThreadsMain;
@@ -63,7 +62,6 @@ public class CommandExecutor {
         registerCommand("breakpoint", new BreakpointMain());
         registerCommand("packages", new PackagesMain());
         registerCommand("hook", new HookMain());
-        registerCommand("reflect", new ReflectMain());
         registerCommand("bytecode", new BytecodeMain());
         registerCommand("native", new NativeMain());
         

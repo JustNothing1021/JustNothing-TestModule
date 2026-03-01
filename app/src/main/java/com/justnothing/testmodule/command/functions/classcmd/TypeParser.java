@@ -10,14 +10,9 @@ import java.util.List;
 
 public class TypeParser {
 
-    public static class TypeParserLogger extends Logger {
-        @Override
-        public String getTag() {
-            return "TypeParser";
-        }
-    }
 
-    public static final TypeParserLogger logger = new TypeParserLogger();
+    private static final Logger logger = Logger.getLoggerForName("TypeParser");
+
 
     public static Object parse(String typeName, String expression, ClassLoader classLoader) throws Exception {
         if (typeName == null || typeName.trim().isEmpty()) {

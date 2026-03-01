@@ -18,17 +18,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ProfileManager {
-    
-    public static class ProfileManagerLogger extends Logger {
-        @Override
-        public String getTag() {
-            return "ProfileManager";
-        }
-    }
-    
+    private static final Logger logger = Logger.getLoggerForName("ProfileManager");
     private static final ProfileManager instance = new ProfileManager();
-    private static final ProfileManagerLogger logger = new ProfileManagerLogger();
-    
     private final ExecutorService executor;
     private final AtomicBoolean profiling;
     private final AtomicInteger profilingDuration;

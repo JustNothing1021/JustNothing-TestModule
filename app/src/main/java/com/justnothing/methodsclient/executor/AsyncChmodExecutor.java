@@ -197,9 +197,9 @@ public class AsyncChmodExecutor extends Logger {
                     logInfo("chmod执行成功, 命令内容: " + chmodCmd + ", 尝试: " + attempt);
                     return true;
                 } else {
-                    int exitCode = result.exitCode;
-                    String stdout = result.stdout;
-                    String stderr = result.stderr;
+                    int exitCode = result.exitCode();
+                    String stdout = result.stdout();
+                    String stderr = result.stderr();
                     
                     if (exitCode == 10 && attempt < maxRetries) {
                         logWarn("chmod尝试 " + attempt + " 失败 (权限问题), 退出码: " + exitCode + 

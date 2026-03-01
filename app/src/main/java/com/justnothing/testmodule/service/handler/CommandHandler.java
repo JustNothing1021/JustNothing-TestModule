@@ -7,10 +7,8 @@ import android.util.Log;
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.output.IOutputHandler;
 import com.justnothing.testmodule.command.output.StreamOutputWriter;
-import com.justnothing.testmodule.utils.data.BootMonitor;
 import com.justnothing.testmodule.utils.data.DataDirectoryManager;
 import com.justnothing.testmodule.utils.functions.Logger;
-import com.justnothing.testmodule.utils.functions.CmdUtils;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
 import java.io.File;
@@ -22,12 +20,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public class CommandHandler {
-    private static final Logger logger = new Logger() {
-        @Override
-        public String getTag() {
-            return "CommandHandler";
-        }
-    };
+    private static final Logger logger = Logger.getLoggerForName("CommandHandler");
 
     private final CommandExecutor commandExecutor;
 

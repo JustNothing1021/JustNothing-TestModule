@@ -1,5 +1,8 @@
 package com.justnothing.testmodule.command.functions.exportcontext;
 
+import static com.justnothing.testmodule.constants.CommandServer.CMD_EXPORT_CONTEXT_VER;
+
+import android.annotation.SuppressLint;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.database.Cursor;
@@ -29,7 +32,7 @@ public class ExportContextMain extends CommandBase {
 
     @Override
     public String getHelpText() {
-        return """
+        return String.format(Locale.getDefault(), """
                 语法: export-context
                 
                 导出设备上下文信息为JSON格式，包括：
@@ -39,8 +42,8 @@ public class ExportContextMain extends CommandBase {
                 示例:
                     export-context
                 
-                (Submodule export-context)
-                """;
+                (Submodule export-context %s)
+                """, CMD_EXPORT_CONTEXT_VER);
     }
 
     @Override
@@ -142,6 +145,7 @@ public class ExportContextMain extends CommandBase {
 
     private Context getApplicationContext() {
         try {
+            @SuppressLint("PrivateApi")
             Class<?> activityThreadClass = Class.forName("android.app.ActivityThread");
             Method currentActivityThreadMethod = activityThreadClass.getMethod("currentActivityThread");
             Object activityThread = currentActivityThreadMethod.invoke(null);
@@ -160,6 +164,7 @@ public class ExportContextMain extends CommandBase {
 
     private String getSystemProperty(String key, String defaultValue) {
         try {
+            @SuppressLint("PrivateApi")
             Class<?> c = Class.forName("android.os.SystemProperties");
             Method get = c.getMethod("get", String.class, String.class);
             return (String) get.invoke(c, key, defaultValue);

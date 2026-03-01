@@ -38,8 +38,8 @@ public class MemoryMain extends CommandBase {
 
     @Override
     public String getHelpText() {
-        if (commandName.equals("minfo")) {
-            return String.format("""
+        return switch (commandName) {
+            case "minfo" -> String.format("""
                     语法: minfo [options]
                     
                     显示详细的内存使用情况.
@@ -55,8 +55,7 @@ public class MemoryMain extends CommandBase {
                     
                     (Submodule memory %s)
                     """, CMD_MEMORY_VER);
-        } else if (commandName.equals("mgc")) {
-            return String.format("""
+            case "mgc" -> String.format("""
                     语法: mgc [options]
                     
                     手动触发垃圾回收.
@@ -72,8 +71,7 @@ public class MemoryMain extends CommandBase {
                     
                     (Submodule memory %s)
                     """, CMD_MEMORY_VER);
-        } else if (commandName.equals("mdump")) {
-            return String.format("""
+            case "mdump" -> String.format("""
                     语法: mdump [options] [file]
                     
                     导出堆信息和系统状态.
@@ -91,15 +89,14 @@ public class MemoryMain extends CommandBase {
                     
                     (Submodule memory %s)
                     """, CMD_MEMORY_VER);
-        } else {
-            return String.format("""
+            default -> String.format("""
                     语法: memory <subcmd> [args...]
                     
                     内存调试和管理工具.
                     
                     子命令:
                         info [options]                     - 显示详细的内存使用情况
-                        gc [options]                       - 手动触发垃圾回收
+                        gc [options]                       - 手动触发垃圾回收 (建议开full)
                         dump [options]                     - 导出堆信息和系统状态
                     
                     info 选项:
@@ -133,7 +130,7 @@ public class MemoryMain extends CommandBase {
                     
                     (Submodule memory %s)
                     """, CMD_MEMORY_VER);
-        }
+        };
     }
 
     @Override
@@ -147,22 +144,24 @@ public class MemoryMain extends CommandBase {
 
         String subCommand;
         String[] subArgs;
-        
-        if (cmdName.equals("minfo")) {
-            subCommand = "info";
-            subArgs = args;
-        } else if (cmdName.equals("mgc")) {
-            subCommand = "gc";
-            subArgs = args;
-        } else if (cmdName.equals("mdump")) {
-            subCommand = "dump";
-            subArgs = args;
-        } else {
-            if (args.length < 1) {
-                return getHelpText();
+
+        switch (cmdName) {
+            case "minfo" -> {
+                subCommand = "info";
+                subArgs = args;
             }
-            subCommand = args[0];
-            subArgs = java.util.Arrays.copyOfRange(args, 1, args.length);
+            case "mgc" -> {
+                subCommand = "gc";
+                subArgs = args;
+            }
+            case "mdump" -> {
+                subCommand = "dump";
+                subArgs = args;
+            }
+            default -> {
+                subCommand = args[0];
+                subArgs = java.util.Arrays.copyOfRange(args, 1, args.length);
+            }
         }
 
         try {
@@ -180,14 +179,11 @@ public class MemoryMain extends CommandBase {
 
     private String handleInfo(String[] args) {
         boolean showHeapOnly = false;
-        boolean showDetailed = true;
-        
+
         for (String arg : args) {
             if (arg.equals("-h") || arg.equals("--heap")) {
                 showHeapOnly = true;
-                showDetailed = false;
             } else if (arg.equals("-d") || arg.equals("--detailed")) {
-                showDetailed = true;
                 showHeapOnly = false;
             }
         }
@@ -433,7 +429,7 @@ public class MemoryMain extends CommandBase {
             File outputFile = new File(filePath);
             File parentDir = outputFile.getParentFile();
             if (parentDir != null && !parentDir.exists()) {
-                parentDir.mkdirs();
+                if (!parentDir.mkdirs()) logger.warn("创建目录失败: " + parentDir.getAbsolutePath());
             }
             
             try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile))) {

@@ -147,22 +147,22 @@ public class HookInfo {
         sb.append("启用: ").append(enabled ? "是" : "否").append("\n");
         
         if (beforeCode != null && !beforeCode.isEmpty()) {
-            sb.append("Before Code: ").append(truncateCode(beforeCode)).append("\n");
+            sb.append("before阶段代码: ").append(truncateCode(beforeCode)).append("\n");
         }
         if (beforeCodebase != null && !beforeCodebase.isEmpty()) {
-            sb.append("Before Codebase: ").append(beforeCodebase).append("\n");
+            sb.append("before阶段代码文件: ").append(beforeCodebase).append("\n");
         }
         if (afterCode != null && !afterCode.isEmpty()) {
-            sb.append("After Code: ").append(truncateCode(afterCode)).append("\n");
+            sb.append("after阶段代码: ").append(truncateCode(afterCode)).append("\n");
         }
         if (afterCodebase != null && !afterCodebase.isEmpty()) {
-            sb.append("After Codebase: ").append(afterCodebase).append("\n");
+            sb.append("after阶段代码文件: ").append(afterCodebase).append("\n");
         }
         if (replaceCode != null && !replaceCode.isEmpty()) {
-            sb.append("Replace Code: ").append(truncateCode(replaceCode)).append("\n");
+            sb.append("replace代码: ").append(truncateCode(replaceCode)).append("\n");
         }
         if (replaceCodebase != null && !replaceCodebase.isEmpty()) {
-            sb.append("Replace Codebase: ").append(replaceCodebase).append("\n");
+            sb.append("replace代码文件: ").append(replaceCodebase).append("\n");
         }
         
         return sb.toString();

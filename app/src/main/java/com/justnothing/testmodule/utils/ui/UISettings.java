@@ -1,7 +1,10 @@
 package com.justnothing.testmodule.utils.ui;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.res.Configuration;
+import android.util.DisplayMetrics;
 
 import com.justnothing.testmodule.utils.functions.Logger;
 
@@ -16,7 +19,7 @@ public class UISettings extends Logger {
     private static final float SCALE_FACTOR = 0.8f;
     
     private static UISettings instance;
-    private SharedPreferences prefs;
+    private final SharedPreferences prefs;
     private float currentScale;
     
     private UISettings(Context context) {
@@ -53,10 +56,9 @@ public class UISettings extends Logger {
     public void applyUIScale(Context context) {
         debug("应用UI缩放: " + currentScale);
         
-        if (context instanceof android.app.Activity) {
-            android.app.Activity activity = (android.app.Activity) context;
-            android.content.res.Configuration config = new android.content.res.Configuration(activity.getResources().getConfiguration());
-            android.util.DisplayMetrics metrics = activity.getResources().getDisplayMetrics();
+        if (context instanceof Activity activity) {
+            Configuration config = new Configuration(activity.getResources().getConfiguration());
+            DisplayMetrics metrics = activity.getResources().getDisplayMetrics();
             
             float effectiveScale = currentScale * SCALE_FACTOR;
             

@@ -32,8 +32,8 @@ public class ContextManager {
     private String hardware = "qcom"; // ro.hardware
     private String caremeOsVersion; // ro.product.careme.version
     private String showModel; // ro.product.showmodel
-    private String timeZone = "GMT+08:00"; // TODO: 原逻辑为elt.a();
-    private String dataCenterCode = "CN-BJ"; // TODO: 原逻辑为byk.a(this.f5323a).m2760a();
+    private String timeZone = "GMT+08:00";
+    private String dataCenterCode = "CN-BJ";
     private String chipId; // ro.boot.xtc.chipid
     private String buildRelease; // ro.build.version.release
     private String softVersion; // ro.product.current.softversion

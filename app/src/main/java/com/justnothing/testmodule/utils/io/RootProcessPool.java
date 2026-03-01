@@ -5,6 +5,7 @@ import com.justnothing.testmodule.utils.data.BootMonitor;
 import com.justnothing.testmodule.utils.functions.Logger;
 
 import java.io.*;
+import java.util.Locale;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -19,7 +20,6 @@ public class RootProcessPool extends Logger {
     private static final int MAX_POOL_SIZE = 5;
     private static final long PROCESS_IDLE_TIMEOUT = 30000;
     private static final long COMMAND_TIMEOUT_MS = 30000;
-    private static final int MAX_RETRIES = 2;
 
     private static final ExecutorService IO_THREAD_POOL = Executors.newCachedThreadPool(r -> {
         Thread t = new Thread(r, "RootProcess-IO");
@@ -68,10 +68,8 @@ public class RootProcessPool extends Logger {
         for (int i = 0; i < MIN_POOL_SIZE; i++) {
             try {
                 RootProcess process = createRootProcess();
-                if (process != null) {
-                    availableProcesses.offer(process);
-                    totalProcesses.incrementAndGet();
-                }
+                availableProcesses.offer(process);
+                totalProcesses.incrementAndGet();
             } catch (Exception e) {
                 error("初始化Root进程失败", e);
             }
@@ -99,10 +97,8 @@ public class RootProcessPool extends Logger {
                 for (int i = 0; i < toCreate; i++) {
                     try {
                         RootProcess process = createRootProcess();
-                        if (process != null) {
-                            availableProcesses.offer(process);
-                            totalProcesses.incrementAndGet();
-                        }
+                        availableProcesses.offer(process);
+                        totalProcesses.incrementAndGet();
                     } catch (Exception e) {
                         error("维护任务：创建Root进程失败", e);
                     }
@@ -175,15 +171,12 @@ public class RootProcessPool extends Logger {
         RootProcess process = null;
         try {
             process = pool.acquireProcess(timeoutMs);
-            if (process == null) {
-                throw new IOException("无法获取Root进程");
-            }
 
             IOManager.ProcessResult result = process.executeCommand(command, timeoutMs);
 
             if (result.isSuccess()) {
                 pool.totalCommands.incrementAndGet();
-                pool.totalCommandTime.addAndGet(result.executionTime);
+                pool.totalCommandTime.addAndGet(result.executionTime());
             } else {
                 pool.failedCommands.incrementAndGet();
             }
@@ -210,11 +203,9 @@ public class RootProcessPool extends Logger {
             if (totalProcesses.get() < MAX_POOL_SIZE) {
                 try {
                     RootProcess newProcess = createRootProcess();
-                    if (newProcess != null) {
-                        availableProcesses.offer(newProcess);
-                        totalProcesses.incrementAndGet();
-                        return newProcess;
-                    }
+                    availableProcesses.offer(newProcess);
+                    totalProcesses.incrementAndGet();
+                    return newProcess;
                 } catch (Exception e) {
                     error("创建新Root进程失败", e);
                 }
@@ -295,6 +286,7 @@ public class RootProcessPool extends Logger {
             return "RootProcessPool[未初始化]";
         }
         return String.format(
+                Locale.getDefault(),
                 "RootProcessPool[total=%d, available=%d, active=%d, totalCommands=%d, failed=%d, avgTime=%dms]",
                 pool.totalProcesses.get(),
                 pool.availableProcesses.size(),
@@ -313,7 +305,7 @@ public class RootProcessPool extends Logger {
         private volatile long lastUsedTime;
         private volatile boolean healthy;
 
-        RootProcess(Process process) throws IOException {
+        RootProcess(Process process) {
             this.process = process;
             this.stdoutReader = new BufferedReader(
                     new InputStreamReader(process.getInputStream(), java.nio.charset.StandardCharsets.UTF_8));
@@ -449,35 +441,35 @@ public class RootProcessPool extends Logger {
                     outputStream.writeBytes("exit\n");
                     outputStream.flush();
                 }
-            } catch (Exception e) {
+            } catch (Exception ignored) {
             }
 
             try {
                 if (stdoutReader != null) {
                     stdoutReader.close();
                 }
-            } catch (Exception e) {
+            } catch (Exception ignored) {
             }
 
             try {
                 if (stderrReader != null) {
                     stderrReader.close();
                 }
-            } catch (Exception e) {
+            } catch (Exception ignored) {
             }
 
             try {
                 if (outputStream != null) {
                     outputStream.close();
                 }
-            } catch (Exception e) {
+            } catch (Exception ignored) {
             }
 
             try {
                 if (process != null) {
                     process.destroyForcibly();
                 }
-            } catch (Exception e) {
+            } catch (Exception ignored) {
             }
 
             healthy = false;

@@ -12,7 +12,7 @@ public class ThemeSettings extends Logger {
     private static final String KEY_THEME_MODE = "theme_mode";
     
     private static ThemeSettings instance;
-    private SharedPreferences prefs;
+    private final SharedPreferences prefs;
     private int currentThemeMode;
     
     public static final int MODE_LIGHT = 1;
@@ -76,16 +76,13 @@ public class ThemeSettings extends Logger {
     }
     
     public String getThemeModeName(int mode) {
-        switch (mode) {
-            case MODE_LIGHT:
-                return "浅色模式";
-            case MODE_DARK:
-                return "深色模式";
-            case MODE_AUTO:
-                return "跟随系统";
-            default:
-                return "未知";
-        }
+        // TODO: i18n
+        return switch (mode) {
+            case MODE_LIGHT -> "浅色模式";
+            case MODE_DARK -> "深色模式";
+            case MODE_AUTO -> "跟随系统";
+            default -> "未知";
+        };
     }
     
     public void resetToDefault() {

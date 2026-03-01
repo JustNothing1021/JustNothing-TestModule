@@ -3,7 +3,19 @@ package com.justnothing.testmodule.utils.concurrent;
 import com.justnothing.testmodule.utils.data.BootMonitor;
 import com.justnothing.testmodule.utils.functions.Logger;
 
-import java.util.concurrent.*;
+import java.util.Locale;
+import java.util.concurrent.RejectedExecutionHandler;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.Future;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ThreadPoolManager extends Logger {
@@ -100,10 +112,10 @@ public class ThreadPoolManager extends Logger {
 
         initialized = true;
         info("ThreadPoolManager初始化完成");
-        info("设备信息 - CPU核心数: " + CPU_CORES + 
+        info("设备信息: CPU核心数: " + CPU_CORES + 
                 ", 低端设备: " + IS_LOW_END_DEVICE +
                 ", 最大内存: " + (Runtime.getRuntime().maxMemory() / 1024 / 1024) + "MB");
-        info("线程池配置 - IO池: " + IO_POOL_SIZE + "/" + IO_QUEUE_CAPACITY + 
+        info("线程池配置: IO池: " + IO_POOL_SIZE + "/" + IO_QUEUE_CAPACITY + 
                 ", CPU池: " + CPU_POOL_SIZE + "/" + CPU_QUEUE_CAPACITY +
                 ", 快速池: " + FAST_POOL_SIZE + "/" + FAST_QUEUE_CAPACITY +
                 ", Socket池: " + SOCKET_POOL_SIZE + "/" + SOCKET_QUEUE_CAPACITY);
@@ -255,7 +267,7 @@ public class ThreadPoolManager extends Logger {
         if (mgr == null) {
             return null;
         }
-        return mgr.scheduledExecutor.scheduleAtFixedRate(mgr.wrapTask(command), initialDelay, period, unit);
+        return mgr.scheduledExecutor.scheduleWithFixedDelay(mgr.wrapTask(command), initialDelay, period, unit);
     }
 
     public static ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
@@ -373,11 +385,14 @@ public class ThreadPoolManager extends Logger {
         ThreadPoolExecutor socketPool = (ThreadPoolExecutor) mgr.socketExecutor;
         
         return String.format(
-                "ThreadPoolManager[active=%d, completed=%d, rejected=%d, shutdown=%s]\n" +
-                "  IO池: active=%d, queued=%d, completed=%d\n" +
-                "  CPU池: active=%d, queued=%d, completed=%d\n" +
-                "  快速池: active=%d, queued=%d, completed=%d\n" +
-                "  Socket池: active=%d, queued=%d, completed=%d",
+                Locale.getDefault(),
+                """
+                        ThreadPoolManager[active=%d, completed=%d, rejected=%d, shutdown=%s]
+                          IO池: active=%d, queued=%d, completed=%d
+                          CPU池: active=%d, queued=%d, completed=%d
+                          快速池: active=%d, queued=%d, completed=%d
+                          Socket池: active=%d, queued=%d, completed=%d
+                        """,
                 mgr.activeTasks.get(),
                 mgr.completedTasks.get(),
                 mgr.rejectedTasks.get(),

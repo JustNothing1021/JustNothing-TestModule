@@ -11,12 +11,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class SocketServer {
-    private static final Logger logger = new Logger() {
-        @Override
-        public String getTag() {
-            return "SocketServer";
-        }
-    };
+    private static final Logger logger = Logger.getLoggerForName("SocketServer");
 
     private final ServerPortManager serverPortManager;
     private final SocketClientHandler clientHandler;

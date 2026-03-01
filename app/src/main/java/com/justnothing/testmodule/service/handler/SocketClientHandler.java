@@ -21,19 +21,13 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class SocketClientHandler {
-    private static final Logger logger = new Logger() {
-        @Override
-        public String getTag() {
-            return "SocketClientHandler";
-        }
-    };
+    private static final Logger logger = Logger.getLoggerForName("SocketClientHandler");
+
 
     private static final long PING_CLIENT_INTERVAL = 5000;
     public static final int PROTOCOL_REQUEST_TIMEOUT = 30000;

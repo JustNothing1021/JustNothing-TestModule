@@ -19,14 +19,7 @@ public class ClientHookConfig {
     private static boolean isRefreshing = false;
     private static long lastRefreshTime = 0;
     private static final long REFRESH_INTERVAL = 5000;
-
-    private static final class HookConfigLogger extends Logger {
-        @Override
-        public String getTag() {
-            return TAG;
-        }
-    }
-    private static final HookConfigLogger logger = new HookConfigLogger();
+    private static final Logger logger = Logger.getLoggerForName(TAG);
 
     private static void refreshData() {
         long currentTime = System.currentTimeMillis();

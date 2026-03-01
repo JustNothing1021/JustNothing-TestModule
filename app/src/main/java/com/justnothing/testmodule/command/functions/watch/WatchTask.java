@@ -1,5 +1,7 @@
 package com.justnothing.testmodule.command.functions.watch;
 
+import androidx.annotation.NonNull;
+
 import com.justnothing.testmodule.hooks.XposedBasicHook;
 import com.justnothing.testmodule.utils.functions.Logger;
 
@@ -11,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -24,14 +27,10 @@ public class WatchTask implements Runnable {
         METHOD
     }
 
-    public static class WatchLogger extends Logger {
-        @Override
-        public String getTag() {
-            return "WatchTask";
-        }
-    }
 
-    private static final WatchLogger logger = new WatchLogger();
+
+    private static final Logger logger = Logger.getLoggerForName("WatchTask");
+
     private final int id;
     private final WatchType type;
     private final Class<?> targetClass;
@@ -47,7 +46,7 @@ public class WatchTask implements Runnable {
     private final List<XC_MethodHook.Unhook> methodHooks = new ArrayList<>();
     private Object lastValue;
     private Field targetField;
-    private List<String> imports = new ArrayList<>(Arrays.asList("java.lang.*", "java.util.*"));
+    private final List<String> imports = new ArrayList<>(Arrays.asList("java.lang.*", "java.util.*"));
 
     public WatchTask(int id, WatchType type, Class<?> targetClass, String memberName, String signature, long interval,
             int maxOutputSize, ClassLoader classLoader) {
@@ -240,7 +239,6 @@ public class WatchTask implements Runnable {
 
     private Method[] findMethod(Class<?> clazz, String methodName, String signature)
             throws NoSuchMethodException, ClassNotFoundException {
-        WatchLogger logger = new WatchLogger();
         logger.debug("在类 " + clazz.getName() + " 中查找方法: " + methodName
                 + (signature != null ? " (签名: " + signature + ")" : ""));
 
@@ -261,9 +259,9 @@ public class WatchTask implements Runnable {
                 return findMethod(superClass, methodName, signature);
             }
 
-            String availableMethods = "可用方法:\n";
+            StringBuilder availableMethods = new StringBuilder("可用方法:\n");
             for (Method m : clazz.getDeclaredMethods()) {
-                availableMethods += "  " + m + "\n";
+                availableMethods.append("  ").append(m).append("\n");
             }
             logger.error("未找到方法 " + methodName + "\n" + availableMethods);
             throw new NoSuchMethodException(
@@ -273,8 +271,6 @@ public class WatchTask implements Runnable {
         if (signature == null || signature.isEmpty()) {
             logger.debug("未指定签名，返回所有方法");
             return candidates.toArray(new Method[0]);
-        } else {
-
         }
 
         for (Method method : candidates) {
@@ -283,19 +279,18 @@ public class WatchTask implements Runnable {
             }
         }
 
-        String errorMsg = "未找到匹配签名的方法: " + methodName + " (签名: " + signature + ")\n";
-        errorMsg += "候选方法:\n";
+        StringBuilder errorMsg = new StringBuilder("未找到匹配签名的方法: " + methodName + " (签名: " + signature + ")\n");
+        errorMsg.append("候选方法:\n");
         for (Method m : candidates) {
-            errorMsg += "  " + m + "\n";
+            errorMsg.append("  ").append(m).append("\n");
         }
-        logger.error(errorMsg);
-        throw new NoSuchMethodException(errorMsg);
+        logger.error(errorMsg.toString());
+        throw new NoSuchMethodException(errorMsg.toString());
     }
 
     @Override
     public void run() {
         running.set(true);
-        WatchLogger logger = new WatchLogger();
         logger.info("Watch任务 " + id + " 开始运行");
 
         try {
@@ -329,15 +324,15 @@ public class WatchTask implements Runnable {
 
     private void hookMethod() {
         try {
-            WatchLogger logger = new WatchLogger();
             logger.info("Hook方法: " + targetClass.getName() + "." + memberName);
 
             for (Method method : targetMethods) {
                 Class<?>[] paramTypes = method.getParameterTypes();
                 XposedHelpers.findAndHookMethod(targetClass, memberName, paramTypes, new XC_MethodHook() {
                     @Override
-                    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                        String timestamp = new SimpleDateFormat("HH:mm:ss.SSS").format(new java.util.Date());
+                    protected void beforeHookedMethod(MethodHookParam param) {
+                        String timestamp = new SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault())
+                                .format(new java.util.Date());
                         String output = String.format("[%s] 方法 %s.%s 被调用",
                                 timestamp,
                                 targetClass.getSimpleName(),
@@ -356,8 +351,9 @@ public class WatchTask implements Runnable {
                     }
 
                     @Override
-                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                        String timestamp = new SimpleDateFormat("HH:mm:ss.SSS").format(new java.util.Date());
+                    protected void afterHookedMethod(MethodHookParam param) {
+                        String timestamp = new SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault())
+                                .format(new java.util.Date());
                         Object result = param.getResult();
                         String output = String.format("[%s] 方法 %s.%s 返回: %s",
                                 timestamp,
@@ -370,26 +366,21 @@ public class WatchTask implements Runnable {
                 logger.info("方法hook成功: " + method);
             }
         } catch (Exception e) {
-            WatchLogger logger = new WatchLogger();
             logger.error("Hook方法失败: " + memberName, e);
             addOutput("警告: Hook方法失败，将使用轮询模式: " + e.getMessage());
         }
     }
 
     private void cleanup() {
-        if (methodHooks != null) {
-            try {
-                for (XC_MethodHook.Unhook methodHook : methodHooks) {
-                    methodHook.unhook();
-                    logger.info("取消hook方法" + methodHook.getHookedMethod());
-                }
-                methodHooks.clear();
-                WatchLogger logger = new WatchLogger();
-                logger.info("取消方法hook完成: " + memberName);
-            } catch (Exception e) {
-                WatchLogger logger = new WatchLogger();
-                logger.error("取消方法hook失败", e);
+        try {
+            for (XC_MethodHook.Unhook methodHook : methodHooks) {
+                methodHook.unhook();
+                logger.info("取消hook方法" + methodHook.getHookedMethod());
             }
+            methodHooks.clear();
+            logger.info("取消方法hook完成: " + memberName);
+        } catch (Exception e) {
+            logger.error("取消方法hook失败", e);
         }
     }
 
@@ -406,7 +397,8 @@ public class WatchTask implements Runnable {
         }
 
         if (lastValue == null || !lastValue.equals(currentValue)) {
-            String timestamp = new SimpleDateFormat("HH:mm:ss.SSS").format(new java.util.Date());
+            String timestamp = new SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault())
+                    .format(new java.util.Date());
             String output = String.format("[%s] %s.%s: %s -> %s",
                     timestamp,
                     targetClass.getSimpleName(),
@@ -485,9 +477,12 @@ public class WatchTask implements Runnable {
         }
     }
 
+    @NonNull
     @Override
     public String toString() {
-        return String.format("Watch[%d] %s.%s%s (%s, 间隔=%dms, 输出=%d条)",
+        return String.format(
+                Locale.getDefault(),
+                "Watch[%d] %s.%s%s (%s, 间隔=%dms, 输出=%d条)",
                 id,
                 targetClass.getSimpleName(),
                 memberName,

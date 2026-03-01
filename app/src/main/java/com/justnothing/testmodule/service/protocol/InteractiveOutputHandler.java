@@ -1,5 +1,7 @@
 package com.justnothing.testmodule.service.protocol;
 
+import androidx.annotation.NonNull;
+
 import com.justnothing.testmodule.command.output.IOutputHandler;
 import com.justnothing.testmodule.utils.functions.Logger;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
@@ -21,15 +23,9 @@ public class InteractiveOutputHandler implements IOutputHandler {
     public static final int PING_PONG_TIMEOUT = 30000;
     public static final int INPUT_PING_PONG_INTERVAL = 5000;
 
-    private static class BinaryLogger extends Logger {
-        @Override
-        public String getTag() {
-            return "BinaryInteractiveOutput";
-        }
-    }
     public static AtomicLong lastResponseTime = new AtomicLong(0);
 
-    private static final BinaryLogger logger = new BinaryLogger();
+    private static final Logger logger = Logger.getLoggerForName("InteractiveOutputHandler");
 
     private final StringBuilder buffer = new StringBuilder();
     private final OutputStream outputStream;
@@ -67,7 +63,7 @@ public class InteractiveOutputHandler implements IOutputHandler {
         }
     }
 
-    // 修改 readLine 方法，同步超时时间
+
     @Override
     public String readLineFromClient(String prompt) {
         if (closed.get()) {
@@ -116,6 +112,7 @@ public class InteractiveOutputHandler implements IOutputHandler {
                 String response = inputQueue.poll(500, TimeUnit.MILLISECONDS);
                 if (response != null) {
                     logger.debug("收到输入响应: " + requestId + " - " + response);
+                    assert pingThreadFuture != null;
                     pingThreadFuture.cancel(true);
                     try {
                         pingThreadFuture.get(1000, TimeUnit.MILLISECONDS);
@@ -190,32 +187,7 @@ public class InteractiveOutputHandler implements IOutputHandler {
             }
 
             long startTime = System.currentTimeMillis();
-            Thread pingThread = new Thread(() -> {
-                while (!Thread.currentThread().isInterrupted() &&
-                        !closed.get() &&
-                        (System.currentTimeMillis() - startTime) < 60000) {
-                    try {
-                        Thread.sleep(5000);
-
-                        synchronized (writeLock) {
-                            InteractiveProtocol.writeMessage(outputStream,
-                                    InteractiveProtocol.TYPE_SERVER_PING,
-                                    null);
-                        }
-                        logger.debug("发送心跳包");
-
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                        break;
-                    } catch (IOException e) {
-                        logger.warn("发送心跳失败", e);
-                        break;
-                    }
-                }
-            }, "InteractiveOutputHandler-pingThread");
-
-            pingThread.setDaemon(true);
-            pingThread.start();
+            Thread pingThread = getPingThread(startTime);
             pingThreadRef.set(pingThread);
 
             while (!closed.get() && (System.currentTimeMillis() - startTime) < 60000) {
@@ -238,13 +210,43 @@ public class InteractiveOutputHandler implements IOutputHandler {
         }
     }
 
+    @NonNull
+    private Thread getPingThread(long startTime) {
+        Thread pingThread = new Thread(() -> {
+            while (!Thread.currentThread().isInterrupted() &&
+                    !closed.get() &&
+                    (System.currentTimeMillis() - startTime) < 60000) {
+                try {
+                    Thread.sleep(5000);
+
+                    synchronized (writeLock) {
+                        InteractiveProtocol.writeMessage(outputStream,
+                                InteractiveProtocol.TYPE_SERVER_PING,
+                                null);
+                    }
+                    logger.debug("发送心跳包");
+
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                } catch (IOException e) {
+                    logger.warn("发送心跳失败", e);
+                    break;
+                }
+            }
+        }, "InteractiveOutputHandler-pingThread");
+
+        pingThread.setDaemon(true);
+        pingThread.start();
+        return pingThread;
+    }
+
 
     @Override
     public boolean isInteractive() {
         return true;
     }
 
-    // 处理客户端发送的输入响应
     public void handleInputResponse(String requestId, String response) {
         logger.debug("处理输入响应: " + requestId);
         inputQueue.offer(response);

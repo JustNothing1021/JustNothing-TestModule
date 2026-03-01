@@ -12,11 +12,7 @@ import java.util.Map;
 // 这个全是AI写的
 public class BeanShellExecutor {
 
-    public static class BeanShellLogger extends Logger {
-        @Override public String getTag() { return "BeanShellExecutor"; }
-    }
-
-    public static final BeanShellLogger logger = new BeanShellLogger();
+    private static final Logger logger = Logger.getLoggerForName("BeanShellExecutor");
 
     private final Interpreter interpreter;
     private final Map<String, Object> persistentVariables = new HashMap<>();

@@ -15,8 +15,6 @@ public interface IOutputHandler {
     boolean isClosed();
     void clear();
     String getString();
-
-    // 新增的输入相关方法
     String readLineFromClient(String prompt);
     String readPasswordFromClient(String prompt);
     boolean isInteractive();

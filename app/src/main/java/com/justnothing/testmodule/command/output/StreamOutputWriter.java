@@ -19,14 +19,7 @@ public class StreamOutputWriter implements IOutputHandler {
     private final Thread writerThread;
     private final StringBuilder outputBuilder;
 
-    public static class StreamOutputLogger extends Logger {
-        @Override
-        public String getTag() {
-            return "StreamOutputWriter";
-        }
-    }
-
-    public static final StreamOutputLogger logger = new StreamOutputLogger();
+    public static final Logger logger = Logger.getLoggerForName("StreamOutputWriter");
 
     public StreamOutputWriter(OutputStream outputStream) {
         if (outputStream == null) {
@@ -94,9 +87,7 @@ public class StreamOutputWriter implements IOutputHandler {
         try {
             // 添加换行符并放入队列
             String outputLine = line + "\n";
-            if (!outputQueue.offer(outputLine, 1, TimeUnit.SECONDS)) {
-                // 队列已满，丢弃输出
-            }
+            outputQueue.offer(outputLine, 1, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }

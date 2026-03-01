@@ -3,7 +3,6 @@ package com.justnothing.testmodule.utils.hooks;
 import static com.justnothing.testmodule.constants.HookConfig.KEY_ENABLED;
 
 import com.justnothing.testmodule.utils.data.DataBridge;
-import com.justnothing.testmodule.utils.functions.Logger;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -12,15 +11,7 @@ public class ServerHookConfig {
 
     public static final String TAG = "ServerHookConfig";
 
-    public static class ServerHookConfigLogger extends Logger {
 
-        @Override
-        public String getTag() {
-            return TAG;
-        }
-    }
-    private static final ServerHookConfigLogger logger = new ServerHookConfigLogger();
-    
     private static JSONObject cachedServerHookConfig = null;
     private static long serverConfigCacheTime = 0;
     private static final long SERVER_CONFIG_CACHE_TTL = 5000;

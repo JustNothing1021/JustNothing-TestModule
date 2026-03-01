@@ -11,15 +11,9 @@ import de.robv.android.xposed.XposedHelpers;
 
 public class WatchManager {
     
-    public static class WatchManagerLogger extends Logger {
-        @Override
-        public String getTag() {
-            return "WatchManager";
-        }
-    }
-    
+
     private static final WatchManager instance = new WatchManager();
-    private static final WatchManagerLogger logger = new WatchManagerLogger();
+    private static final Logger logger = Logger.getLoggerForName("WatchManager");
     
     private final ConcurrentHashMap<Integer, WatchTask> watchTasks;
     private final AtomicInteger nextId;

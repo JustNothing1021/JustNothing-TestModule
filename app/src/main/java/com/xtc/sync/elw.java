@@ -12,12 +12,8 @@ public class elw {
 
 
     /* renamed from: a, reason: collision with other field name */
-    private static final Logger logger = new Logger() {
-        @Override
-        public String getTag() {
-            return "com.xtc.sync.elw";
-        }
-    };
+    private static final Logger logger = Logger.getLoggerForName("com.xtc.sync.elw");
+
 
     /* renamed from: b, reason: collision with root package name */
     private static String f26092b = "";

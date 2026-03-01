@@ -5,23 +5,15 @@ import static com.justnothing.testmodule.constants.FileDirectory.PORT_FILE;
 
 import com.justnothing.testmodule.utils.data.DataDirectoryManager;
 import com.justnothing.testmodule.utils.functions.Logger;
-import com.justnothing.testmodule.utils.functions.CmdUtils;
 import com.justnothing.testmodule.utils.io.IOManager;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.net.ServerSocket;
 
 public class ServerPortManager {
-    private static final Logger logger = new Logger() {
-        @Override
-        public String getTag() {
-            return "ServerPortManager";
-        }
-    };
+    private static final Logger logger = Logger.getLoggerForName("ServerPortManager");
+
 
     private int currentSocketPort = DEFAULT_SOCKET_PORT;
 

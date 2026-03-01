@@ -6,14 +6,8 @@ import java.nio.ByteBuffer;
 
 public class InteractiveProtocol {
 
-    public static class ProtocolLogger extends Logger {
-        @Override
-        public String getTag() {
-            return "InteractiveProtocol";
-        }
-    }
 
-    public static final ProtocolLogger logger = new ProtocolLogger();
+    public static final Logger logger = Logger.getLoggerForName("InteractiveProtocol");
 
     // 协议常量
     public static final byte[] START_MARKER = {0x00, 0x11, 0x45, 0x14};

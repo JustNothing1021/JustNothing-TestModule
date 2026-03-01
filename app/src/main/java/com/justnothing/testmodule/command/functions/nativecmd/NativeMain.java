@@ -33,7 +33,6 @@ public class NativeMain extends CommandBase {
                     list [pattern]                          - 列出已加载的native库
                     info <lib_name>                         - 查看native库的详细信息
                     functions <class_name>                  - 列出类的native方法
-                    disasm <class_name> <method_name>       - 反汇编native方法
                     symbols <lib_name>                      - 查看库的符号表
                     memory                                  - 查看native内存使用情况
                     heap                                    - 查看native堆内存
@@ -43,8 +42,6 @@ public class NativeMain extends CommandBase {
                 
                 选项:
                     -v, --verbose                           - 详细输出
-                    -h, --hex                               - 以十六进制格式显示
-                    -o, --output <path>                     - 指定输出文件路径
                     -t, --thread <tid>                      - 指定线程ID
                 
                 示例:
@@ -52,7 +49,6 @@ public class NativeMain extends CommandBase {
                     native list libart.so
                     native info libc.so
                     native functions java.lang.System
-                    native disasm java.lang.System arraycopy
                     native symbols libc.so
                     native memory
                     native heap
@@ -61,9 +57,6 @@ public class NativeMain extends CommandBase {
                     native search malloc
                 
                 注意:
-                    - 需要root权限才能访问某些信息
-                    - 反汇编需要objdump或其他工具
-                    - native调试需要理解ARM/x86汇编
                     - 内存映射信息来自/proc/self/maps
                 
                 (Submodule native %s)
@@ -80,23 +73,16 @@ public class NativeMain extends CommandBase {
 
         String subcmd = args[0];
         boolean verbose = false;
-        boolean hexFormat = false;
-        String outputPath = null;
         String threadId = null;
         
         for (int i = 1; i < args.length; i++) {
             String arg = args[i];
-            if (arg.equals("-v") || arg.equals("--verbose")) {
-                verbose = true;
-            } else if (arg.equals("-h") || arg.equals("--hex")) {
-                hexFormat = true;
-            } else if (arg.equals("-o") || arg.equals("--output")) {
-                if (i + 1 < args.length) {
-                    outputPath = args[++i];
-                }
-            } else if (arg.equals("-t") || arg.equals("--thread")) {
-                if (i + 1 < args.length) {
-                    threadId = args[++i];
+            switch (arg) {
+                case "-v", "--verbose" -> verbose = true;
+                case "-t", "--thread" -> {
+                    if (i + 1 < args.length) {
+                        threadId = args[++i];
+                    }
                 }
             }
         }
@@ -105,13 +91,12 @@ public class NativeMain extends CommandBase {
             case "list" -> handleList(args, verbose);
             case "info" -> handleInfo(args, verbose);
             case "functions" -> handleFunctions(args, verbose);
-            case "disasm" -> handleDisasm(args, hexFormat);
-            case "symbols" -> handleSymbols(args, verbose);
-            case "memory" -> handleMemory(verbose);
+            case "symbols" -> handleSymbols(args);
+            case "memory" -> handleMemory();
             case "heap" -> handleHeap(verbose);
             case "stack" -> handleStack(threadId);
             case "maps" -> handleMaps(verbose);
-            case "search" -> handleSearch(args, verbose);
+            case "search" -> handleSearch(args);
             default -> "未知子命令: " + subcmd + "\n" + getHelpText();
         };
     }
@@ -226,47 +211,8 @@ public class NativeMain extends CommandBase {
             return "错误: " + e.getMessage() + "\n堆栈: " + getStackTrace(e);
         }
     }
-    
-    private String handleDisasm(String[] args, boolean hexFormat) {
-        if (args.length < 3) {
-            return "参数不足，需要指定类名和方法名";
-        }
-        
-        String className = args[1];
-        String methodName = args[2];
-        
-        try {
-            Class<?> targetClass = Class.forName(className);
-            
-            Method[] methods = targetClass.getDeclaredMethods();
-            Method targetMethod = null;
-            
-            for (Method method : methods) {
-                if (method.getName().equals(methodName) && Modifier.isNative(method.getModifiers())) {
-                    targetMethod = method;
-                    break;
-                }
-            }
-            
-            if (targetMethod == null) {
-                return "找不到native方法: " + methodName;
-            }
 
-            return "反汇编: " + className + "." + methodName + "\n\n" +
-                    "你不会以为我真的做了吧 (雾)\n\n" +
-                    "方法信息:\n" +
-                    "  修饰符: " + Modifier.toString(targetMethod.getModifiers()) + "\n" +
-                    "  返回类型: " + targetMethod.getReturnType().getName() + "\n" +
-                    "  参数类型: " + Arrays.toString(targetMethod.getParameterTypes()) + "\n" +
-                    "  JNI签名: " + getNativeSignature(targetMethod) + "\n";
-            
-        } catch (Exception e) {
-            logger.error("反汇编命令执行失败", e);
-            return "错误: " + e.getMessage() + "\n堆栈: " + getStackTrace(e);
-        }
-    }
-    
-    private String handleSymbols(String[] args, boolean verbose) {
+    private String handleSymbols(String[] args) {
         if (args.length < 2) {
             return "参数不足，需要指定库名";
         }
@@ -292,7 +238,7 @@ public class NativeMain extends CommandBase {
         }
     }
     
-    private String handleMemory(boolean verbose) {
+    private String handleMemory() {
         try {
             Map<String, String> memoryInfo = getNativeMemoryInfo();
             
@@ -303,14 +249,7 @@ public class NativeMain extends CommandBase {
                 sb.append("  ").append(entry.getKey()).append(": ").append(entry.getValue()).append("\n");
             }
             
-            if (verbose) {
-                sb.append("\n详细信息:\n");
-                sb.append("  注意: 完整的native内存分析需要:\n");
-                sb.append("    - /proc/self/maps 解析\n");
-                sb.append("    - /proc/self/smaps 解析\n");
-                sb.append("    - malloc_info 或类似工具\n");
-            }
-            
+
             return sb.toString();
             
         } catch (Exception e) {
@@ -394,7 +333,7 @@ public class NativeMain extends CommandBase {
         }
     }
     
-    private String handleSearch(String[] args, boolean verbose) {
+    private String handleSearch(String[] args) {
         if (args.length < 2) {
             return "参数不足，需要指定搜索模式";
         }

@@ -1,22 +1,26 @@
 package com.justnothing.testmodule.utils.io;
 
+import androidx.annotation.NonNull;
+
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 import com.justnothing.testmodule.utils.data.BootMonitor;
 import com.justnothing.testmodule.utils.functions.Logger;
 
 import java.io.*;
 import java.nio.channels.FileChannel;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.util.concurrent.CompletableFuture;
+import java.util.Locale;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Stream;
 
 public class IOManager extends Logger {
     private static final String TAG = "IOManager";
@@ -35,7 +39,7 @@ public class IOManager extends Logger {
     private final AtomicLong totalReadTime = new AtomicLong(0);
     private final AtomicLong totalWriteTime = new AtomicLong(0);
 
-    private volatile boolean initialized = false;
+    private volatile boolean initialized;
 
     private IOManager() {
         super();
@@ -88,7 +92,7 @@ public class IOManager extends Logger {
         return readFile(filePath, charset, maxSize, -1);
     }
 
-    public static String readFile(String filePath, java.nio.charset.Charset charset, long maxSize, int maxLines) throws IOException {
+    public static String readFile(String filePath, Charset charset, long maxSize, int maxLines) throws IOException {
         if (BootMonitor.isZygotePhase()) {
             return null;
         }
@@ -132,24 +136,22 @@ public class IOManager extends Logger {
         return content;
     }
 
-    private static byte[] readLastLines(Path path, java.nio.charset.Charset charset, int maxLines) throws IOException {
-        java.io.RandomAccessFile raf = null;
-        try {
-            raf = new java.io.RandomAccessFile(path.toFile(), "r");
-            
+    private static byte[] readLastLines(Path path, Charset charset, int maxLines) throws IOException {
+        try (RandomAccessFile raf = new RandomAccessFile(path.toFile(), "r")) {
+
             long fileLength = raf.length();
             if (fileLength == 0) {
                 logger.debug("日志文件为空");
                 return new byte[0];
             }
-            
+
             long filePointer = fileLength - 1;
             int lineCount = 0;
-            
+
             while (filePointer >= 0 && lineCount < maxLines) {
                 raf.seek(filePointer);
                 byte b = raf.readByte();
-                
+
                 if (b == '\n') {
                     lineCount++;
                     if (lineCount >= maxLines) {
@@ -157,21 +159,21 @@ public class IOManager extends Logger {
                         break;
                     }
                 }
-                
+
                 filePointer--;
             }
-            
+
             if (filePointer < 0) {
                 filePointer = 0;
             }
-            
+
             logger.debug("从位置 " + filePointer + " 开始读取，共 " + lineCount + " 行");
-            
+
             raf.seek(filePointer);
-            
-            java.io.BufferedReader reader = new java.io.BufferedReader(
-                new java.io.InputStreamReader(new java.io.FileInputStream(raf.getFD()), charset));
-            
+
+            BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(new FileInputStream(raf.getFD()), charset));
+
             StringBuilder sb = new StringBuilder();
             String line;
             int linesRead = 0;
@@ -182,17 +184,10 @@ public class IOManager extends Logger {
                 sb.append(line);
                 linesRead++;
             }
-            
+
             reader.close();
             logger.debug("实际读取 " + linesRead + " 行，总长度: " + sb.length());
             return sb.toString().getBytes(charset);
-        } finally {
-            if (raf != null) {
-                try {
-                    raf.close();
-                } catch (Exception e) {
-                }
-            }
         }
     }
 
@@ -399,15 +394,16 @@ public class IOManager extends Logger {
         try {
             Path path = Paths.get(dirPath);
             if (Files.exists(path)) {
-                Files.walk(path)
-                        .sorted(java.util.Comparator.reverseOrder())
-                        .forEach(p -> {
-                            try {
-                                Files.delete(p);
-                            } catch (IOException e) {
-                                logger.error("删除失败: " + p, e);
-                            }
-                        });
+                try (Stream<Path> files = Files.walk(path)
+                        .sorted(java.util.Comparator.reverseOrder())) {
+                    files.forEach(p -> {
+                        try {
+                            Files.delete(p);
+                        } catch (IOException e) {
+                            logger.error("删除失败: " + p, e);
+                        }
+                    });
+                }
             }
             return true;
         } catch (IOException e) {
@@ -484,7 +480,7 @@ public class IOManager extends Logger {
         }
     }
 
-    private static ProcessResult readProcessOutput(Process process, long timeoutMs) throws InterruptedException, IOException {
+    private static ProcessResult readProcessOutput(Process process, long timeoutMs) throws InterruptedException {
         StringBuilder stdout = new StringBuilder();
         StringBuilder stderr = new StringBuilder();
 
@@ -527,6 +523,7 @@ public class IOManager extends Logger {
                 });
                 
                 try {
+                    assert exitCodeFuture != null;
                     exitCode = exitCodeFuture.get(timeoutMs, TimeUnit.MILLISECONDS);
                 } catch (TimeoutException e) {
                     exitCodeFuture.cancel(true);
@@ -546,6 +543,8 @@ public class IOManager extends Logger {
         }
 
         try {
+            assert stdoutFuture != null;
+            assert stderrFuture != null;
             stdoutFuture.get(1000, TimeUnit.MILLISECONDS);
             stderrFuture.get(1000, TimeUnit.MILLISECONDS);
         } catch (Exception e) {
@@ -567,6 +566,7 @@ public class IOManager extends Logger {
             return "IOManager[未初始化]";
         }
         return String.format(
+                Locale.getDefault(),
                 "IOManager[readBytes=%d, writeBytes=%d, readTime=%dms, writeTime=%dms]",
                 mgr.totalBytesRead.get(),
                 mgr.totalBytesWritten.get(),
@@ -575,39 +575,30 @@ public class IOManager extends Logger {
         );
     }
 
-    public static class ProcessResult {
-        public final int exitCode;
-        public final String stdout;
-        public final String stderr;
-        public final long executionTime;
-
-        public ProcessResult(int exitCode, String stdout, String stderr) {
-            this(exitCode, stdout, stderr, 0);
-        }
-
-        public ProcessResult(int exitCode, String stdout, String stderr, long executionTime) {
-            this.exitCode = exitCode;
-            this.stdout = stdout;
-            this.stderr = stderr;
-            this.executionTime = executionTime;
-        }
+    public record ProcessResult(int exitCode, String stdout, String stderr, long executionTime) {
+            public ProcessResult(int exitCode, String stdout, String stderr) {
+                this(exitCode, stdout, stderr, 0);
+            }
 
         public boolean isSuccess() {
-            return exitCode == 0;
-        }
+                return exitCode == 0;
+            }
 
-        public String getOutput() {
-            return stdout;
-        }
+            public String getOutput() {
+                return stdout;
+            }
 
-        public String getError() {
-            return stderr;
-        }
+            public String getError() {
+                return stderr;
+            }
 
-        @Override
-        public String toString() {
-            return String.format("ProcessResult[exitCode=%d, stdout=%s, stderr=%s, executionTime=%dms]",
-                    exitCode, stdout, stderr, executionTime);
+            @NonNull
+            @Override
+            public String toString() {
+                return String.format(
+                        Locale.getDefault(),
+                        "ProcessResult[exitCode=%d, stdout=%s, stderr=%s, executionTime=%dms]",
+                        exitCode, stdout, stderr, executionTime);
+            }
         }
-    }
 }

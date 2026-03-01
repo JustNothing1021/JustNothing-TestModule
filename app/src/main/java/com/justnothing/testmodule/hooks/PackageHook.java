@@ -3,6 +3,7 @@ package com.justnothing.testmodule.hooks;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.Locale;
 
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedHelpers;
@@ -159,7 +160,8 @@ public abstract class PackageHook extends XposedBasicHook<XC_LoadPackage.LoadPac
         if (hasFailures) hookFailurePackages++;
         else hookSucceedPackages++;
 
-        info(String.format("执行完成，结果: 成功: %d, 失败: %d, 总计: %d",
+        info(String.format(Locale.getDefault(),
+                "执行完成，结果: 成功: %d, 失败: %d, 总计: %d",
                 hookSucceedMethods, hookFailureMethods, getHookCount()));
 
         return !hasFailures;

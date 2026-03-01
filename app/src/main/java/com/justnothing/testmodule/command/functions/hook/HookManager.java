@@ -1,10 +1,12 @@
 package com.justnothing.testmodule.command.functions.hook;
 
 
+import android.util.Log;
+
+import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.script.ScriptModels;
 import com.justnothing.testmodule.command.functions.script.ScriptRunner;
 import com.justnothing.testmodule.command.functions.script.ScriptModels.*;
-import com.justnothing.testmodule.command.functions.script.ASTNodes.*;
 import com.justnothing.testmodule.command.output.IOutputHandler;
 import com.justnothing.testmodule.command.output.OutputHandler;
 import com.justnothing.testmodule.hooks.XposedBasicHook;
@@ -33,16 +35,10 @@ public class HookManager {
     private static final ConcurrentHashMap<String, ScriptRunner> scriptRunners = new ConcurrentHashMap<>();
     
     private static XC_LoadPackage.LoadPackageParam currentLoadPackageParam;
-    private static List<String> imports = new ArrayList<>(Arrays.asList("java.lang.*", "java.util.*"));
-    
-    public static class HookManagerLogger extends Logger {
-        @Override
-        public String getTag() {
-            return TAG;
-        }
-    }
-    
-    private static final HookManagerLogger logger = new HookManagerLogger();
+    private static final List<String> imports = new ArrayList<>(Arrays.asList("java.lang.*", "java.util.*"));
+
+    private static final Logger logger = Logger.getLoggerForName(TAG);
+
 
     public static void setLoadPackageParam(XC_LoadPackage.LoadPackageParam param) {
         currentLoadPackageParam = param;
@@ -124,82 +120,88 @@ public class HookManager {
     }
 
     public static String addHook(String className, String methodName, String signature,
-                                String beforeCode, String afterCode, String replaceCode,
-                                String beforeCodebase, String afterCodebase, String replaceCodebase,
-                                ClassLoader classLoader) {
+                                 String beforeCode, String afterCode, String replaceCode,
+                                 String beforeCodebase, String afterCodebase, String replaceCodebase,
+                                 CommandExecutor.CmdExecContext context) {
+        ClassLoader classLoader = context.classLoader();
         HookInfo hookInfo = new HookInfo(className, methodName, signature, 
                                         beforeCode, afterCode, replaceCode, 
                                         beforeCodebase, afterCodebase, replaceCodebase, classLoader);
         
         try {
-            logger.info("验证 Hook 代码: " + hookInfo.getId());
+            logger.info("验证Hook代码: " + hookInfo.getId());
+            context.output().println("[INFO]  验证Hook代码...");
             validateHookCode(hookInfo, classLoader);
             logger.info("Hook 代码验证成功: " + hookInfo.getId());
         } catch (Exception e) {
-            logger.error("Hook 代码验证失败", e);
-            return "Hook 代码验证失败: " + e.getMessage() + "\n" + 
-                   "堆栈追踪:\n" + android.util.Log.getStackTraceString(e);
+            logger.error("Hook代码验证失败", e);
+            context.output().println("[ERROR] Hook代码验证失败... 信息: " + e + "\n\n");
+            return "Hook 码验证失败: " + e.getMessage() + "\n" +
+                   "堆栈追踪:\n" + Log.getStackTraceString(e);
         }
         
         hooks.put(hookInfo.getId(), hookInfo);
         
         try {
-            logger.info("开始应用 Hook: " + hookInfo.getId() + 
+            logger.info("开始应用Hook: " + hookInfo.getId() +
                       " 类名: " + className + 
                       " 方法名: " + methodName + 
                       " 签名: " + (signature != null ? signature : "默认"));
+            context.output().println("[INFO]  开始应用Hook: " + className + "." + methodName
+                                        + ", signature = " + signature);
             applyHook(hookInfo);
-            logger.info("Hook 添加成功: " + hookInfo.getId());
-            return "Hook 添加成功\nID: " + hookInfo.getId() + "\n" + hookInfo.getDisplayInfo();
+            logger.info("Hook添加成功: " + hookInfo.getId());
+            context.output().println("[INFO]  Hook添加成功!\n\n");
+            return "Hook添加成功\nID: " + hookInfo.getId() + "\n" + hookInfo.getDisplayInfo();
         } catch (Exception e) {
-            logger.error("Hook 添加失败", e);
+            logger.error("Hook添加失败", e);
+            context.output().println("[ERROR] Hook添加失败... 信息: " + e + "\n\n");
             hooks.remove(hookInfo.getId());
-            return "Hook 添加失败: " + e.getMessage() + "\n" + 
+            return "Hook添加失败: " + e.getMessage() + "\n" +
                    "堆栈追踪:\n" + android.util.Log.getStackTraceString(e);
         }
     }
 
     private static void validateHookCode(HookInfo hookInfo, ClassLoader classLoader) throws Exception {
         ScriptRunner runner = new ScriptRunner(classLoader);
-        
         if (hookInfo.getBeforeCode() != null && !hookInfo.getBeforeCode().isEmpty()) {
-            logger.info("验证 before 代码");
+            logger.info("验证before代码");
             validateCode(runner, hookInfo.getBeforeCode(), "before");
         }
         
         if (hookInfo.getAfterCode() != null && !hookInfo.getAfterCode().isEmpty()) {
-            logger.info("验证 after 代码");
+            logger.info("验证after代码");
             validateCode(runner, hookInfo.getAfterCode(), "after");
         }
         
         if (hookInfo.getReplaceCode() != null && !hookInfo.getReplaceCode().isEmpty()) {
-            logger.info("验证 replace 代码");
+            logger.info("验证replace代码");
             validateCode(runner, hookInfo.getReplaceCode(), "replace");
         }
         
         if (hookInfo.getBeforeCodebase() != null && !hookInfo.getBeforeCodebase().isEmpty()) {
-            logger.info("验证 before codebase");
+            logger.info("验证before codebase");
             String code = loadCodeFromCodebase(hookInfo.getBeforeCodebase());
             if (code == null) {
-                throw new IllegalArgumentException("无法加载 codebase 文件: " + hookInfo.getBeforeCodebase());
+                throw new IllegalArgumentException("无法加载codebase文件: " + hookInfo.getBeforeCodebase());
             }
             validateCode(runner, code, "before");
         }
         
         if (hookInfo.getAfterCodebase() != null && !hookInfo.getAfterCodebase().isEmpty()) {
-            logger.info("验证 after codebase");
+            logger.info("验证after codebase");
             String code = loadCodeFromCodebase(hookInfo.getAfterCodebase());
             if (code == null) {
-                throw new IllegalArgumentException("无法加载 codebase 文件: " + hookInfo.getAfterCodebase());
+                throw new IllegalArgumentException("无法加载codebase文件: " + hookInfo.getAfterCodebase());
             }
             validateCode(runner, code, "after");
         }
         
         if (hookInfo.getReplaceCodebase() != null && !hookInfo.getReplaceCodebase().isEmpty()) {
-            logger.info("验证 replace codebase");
+            logger.info("验证replace codebase");
             String code = loadCodeFromCodebase(hookInfo.getReplaceCodebase());
             if (code == null) {
-                throw new IllegalArgumentException("无法加载 codebase 文件: " + hookInfo.getReplaceCodebase());
+                throw new IllegalArgumentException("无法加载codebase文件: " + hookInfo.getReplaceCodebase());
             }
             validateCode(runner, code, "replace");
         }
@@ -207,7 +209,7 @@ public class HookManager {
 
     private static void validateCode(ScriptRunner runner, String code, String phase) throws Exception {
         try {
-            runner.execute(code);
+            runner.tryParse(code);
         } catch (Exception e) {
             throw new Exception(phase + " 代码验证失败: " + e.getMessage(), e);
         }
@@ -222,7 +224,7 @@ public class HookManager {
         boolean isStaticInitializer = hookInfo.getMethodName().equals("<clinit>");
         
         if (isStaticInitializer) {
-            throw new UnsupportedOperationException("不支持 hook 静态初始化块 <clinit>，因为它们在类加载时就执行了");
+            throw new UnsupportedOperationException("不支持hook静态初始化块<clinit>，因为它们在类加载时就执行了");
         }
         
         logger.info("是否为构造函数: " + isConstructor);
@@ -248,7 +250,7 @@ public class HookManager {
         boolean hasReplace = hookInfo.hasReplace();
         
         if (!hasBefore && !hasAfter && !hasReplace) {
-            throw new IllegalArgumentException("Hook 必须指定至少一个阶段（before/after/replace）");
+            throw new IllegalArgumentException("Hook必须指定至少一个阶段（before/after/replace）");
         }
         
         if (hasReplace) {
@@ -399,7 +401,7 @@ public class HookManager {
             ClassLoader cl = hookInfo.getClassLoader();
             ScriptRunner runner = scriptRunners.computeIfAbsent(
                 hookInfo.getId(), k -> new ScriptRunner(cl));
-
+            logger.debug("运行代码, hook id = " + hookInfo.getId() + "\n" + code);
             String prefix = "[" + hookInfo.getId() + "][" + phase + "] ";
             IOutputHandler outputHandler = new OutputHandler(logger, prefix);
             IOutputHandler errorHandler = new OutputHandler(logger, prefix);
@@ -419,9 +421,7 @@ public class HookManager {
             
             File scriptsDir = DataBridge.getScriptsDirectory();
             
-            // 检查是否是脚本名称（不包含路径分隔符）
             if (!codebase.contains("/") && !codebase.contains("\\")) {
-                // 直接在 scripts/codebase 目录查找
                 scriptFile = new File(scriptsDir, codebase);
                 
                 if (scriptFile.exists()) {
@@ -448,11 +448,6 @@ public class HookManager {
                     }
                 }
             }
-            
-            // 使用IOManager读取文件
-
-            // 简化处理：直接返回整个文件内容
-            // 不再分析HOOK_PHASE标记，每个脚本文件对应一个代码块
             return IOManager.readFile(scriptFile.getAbsolutePath());
         } catch (Exception e) {
             logger.error("加载脚本失败: " + codebase, e);
@@ -616,7 +611,7 @@ public class HookManager {
     public static String removeHook(String hookId) {
         HookInfo hookInfo = hooks.get(hookId);
         if (hookInfo == null) {
-            return "Hook 不存在: " + hookId;
+            return "Hook不存在: " + hookId;
         }
         
         XC_MethodHook.Unhook unhook = activeHooks.remove(hookId);
@@ -632,24 +627,24 @@ public class HookManager {
             runner.clearVariables();
         }
         
-        logger.info("Hook 移除成功: " + hookId);
-        return "Hook 移除成功: " + hookId;
+        logger.info("Hook移除成功: " + hookId);
+        return "Hook移除成功: " + hookId;
     }
 
     public static String listHooks() {
         if (hooks.isEmpty()) {
-            return "没有活动的 Hook";
+            return "没有活动的Hook";
         }
         
         StringBuilder sb = new StringBuilder();
-        sb.append("===== Hook 列表 =====\n\n");
+        sb.append("===== Hook列表 =====\n\n");
         
         for (HookInfo hookInfo : hooks.values()) {
             sb.append(hookInfo.getDisplayInfo()).append("\n");
             sb.append("------------------------\n\n");
         }
         
-        sb.append("总计: ").append(hooks.size()).append(" 个 Hook");
+        sb.append("总计: ").append(hooks.size()).append(" 个Hook");
         return sb.toString();
     }
 
@@ -669,24 +664,24 @@ public class HookManager {
         }
         
         hookInfo.setEnabled(true);
-        logger.info("Hook 启用: " + hookId);
-        return "Hook 已启用: " + hookId;
+        logger.info("启用Hook: " + hookId);
+        return "Hook已启用: " + hookId;
     }
 
     public static String disableHook(String hookId) {
         HookInfo hookInfo = hooks.get(hookId);
         if (hookInfo == null) {
-            return "Hook 不存在: " + hookId;
+            return "Hook不存在: " + hookId;
         }
         
         hookInfo.setEnabled(false);
-        logger.info("Hook 禁用: " + hookId);
-        return "Hook 已禁用: " + hookId;
+        logger.info("禁用Hook: " + hookId);
+        return "Hook已禁用: " + hookId;
     }
 
     public static String getHookOutput(String hookId, int count) {
         return "Hook 输出功能待实现\n" +
-               "Hook ID: " + hookId + "\n" +
+               "HookID: " + hookId + "\n" +
                "调用次数: " + (hooks.get(hookId) != null ? Objects.requireNonNull(hooks.get(hookId)).getCallCount() : "N/A");
     }
 
@@ -702,6 +697,6 @@ public class HookManager {
         for (String hookId : hooks.keySet()) {
             removeHook(hookId);
         }
-        logger.info("所有 Hook 已清除");
+        logger.info("所有Hook已清除");
     }
 }

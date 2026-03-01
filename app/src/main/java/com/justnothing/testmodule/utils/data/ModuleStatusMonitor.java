@@ -13,14 +13,12 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 
+
+// 这个是纯AI写的，我一点印象都没有了
 public class ModuleStatusMonitor extends Logger {
     private static final String TAG = "ModuleStatusMonitor";
-    
-    private final Context context;
 
-    public ModuleStatusMonitor(Context ctx) {
-        this.context = ctx.getApplicationContext();
-    }
+    public ModuleStatusMonitor(Context ctx) {}
     
     @Override
     public String getTag() {
@@ -175,14 +173,6 @@ public class ModuleStatusMonitor extends Logger {
         }
     }
 
-    private boolean isXposedModuleActive() {
-        try {
-            context.getPackageManager().getPackageInfo("de.robv.android.xposed.installer", 0);
-            return true;
-        } catch (PackageManager.NameNotFoundException e) {
-            return false;
-        }
-    }
 
     public static class ModuleStatus {
         public boolean isModuleActive;

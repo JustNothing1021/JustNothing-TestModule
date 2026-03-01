@@ -22,8 +22,6 @@ public abstract class XposedBasicHook<ParamType> extends Logger {
     private Boolean initialized = false;
     private final List<BaseHook> hooks;
     private HookCondition<ParamType> hookCondition = null;
-    protected static DefaultHookLogger defaultLogger = new DefaultHookLogger();
-
 
     private String hookName;
     private boolean enableCheckEnabled;
@@ -31,13 +29,6 @@ public abstract class XposedBasicHook<ParamType> extends Logger {
     protected String hookDescription;
     protected boolean defaultEnable = true;
 
-    public static class DefaultHookLogger extends Logger {
-        public static final String TAG = "XposedBasicHook";
-        @Override
-        public String getTag() {
-            return TAG;
-        }
-    }
 
     protected XposedBasicHook() {
         this.hooks = new ArrayList<>();

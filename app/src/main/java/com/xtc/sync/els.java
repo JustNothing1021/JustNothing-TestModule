@@ -11,13 +11,8 @@ import java.util.Objects;
 /* loaded from: classes.dex */
 public class els {
 
-    public static Logger logger = new Logger() {
+    private static final Logger logger = Logger.getLoggerForName("com.xtc.sync.els");
 
-        @Override
-        public String getTag() {
-            return "xtc.sync.els";
-        }
-    };
 
     /* renamed from: a, reason: collision with root package name */
     @Deprecated

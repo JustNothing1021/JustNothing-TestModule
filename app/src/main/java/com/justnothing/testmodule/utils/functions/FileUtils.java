@@ -130,8 +130,8 @@ public class FileUtils {
     public static Pair<Boolean, CmdUtils.CommandOutput> createFileBySuShell(File dst) {
         try {
             IOManager.ProcessResult res = RootProcessPool.executeCommand("touch " + CmdUtils.quoted(dst.getPath()));
-            CmdUtils.CommandOutput cmdOutput = new CmdUtils.CommandOutput(res.exitCode, res.stdout, res.stderr, res.stdout + res.stderr);
-            return new Pair<>(res.exitCode == 0, cmdOutput);
+            CmdUtils.CommandOutput cmdOutput = new CmdUtils.CommandOutput(res.exitCode(), res.stdout(), res.stderr(), res.stdout() + res.stderr());
+            return new Pair<>(res.exitCode() == 0, cmdOutput);
         } catch (Exception e) {
             return new Pair<>(false, null);
         }
@@ -140,9 +140,9 @@ public class FileUtils {
     public static Pair<Boolean, CmdUtils.CommandOutput> mkdirBySuShell(File dst) {
         try {
             IOManager.ProcessResult res = RootProcessPool.executeCommand("mkdir " + CmdUtils.quoted(dst.getPath()));
-            CmdUtils.CommandOutput cmdOutput = new CmdUtils.CommandOutput(res.exitCode, res.stdout, res.stderr, res.stdout + res.stderr);
-            if (res.exitCode == 0) return new Pair<>(true, cmdOutput);
-            Boolean succeed = res.stdout.toLowerCase().contains("file exists") && dst.isDirectory();
+            CmdUtils.CommandOutput cmdOutput = new CmdUtils.CommandOutput(res.exitCode(), res.stdout(), res.stderr(), res.stdout() + res.stderr());
+            if (res.exitCode() == 0) return new Pair<>(true, cmdOutput);
+            Boolean succeed = res.stdout().toLowerCase().contains("file exists") && dst.isDirectory();
             return new Pair<>(succeed, cmdOutput);
         } catch (Exception e) {
             return new Pair<>(false, null);

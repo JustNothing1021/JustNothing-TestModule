@@ -50,11 +50,11 @@ public class HookMain extends CommandBase {
                 选项:
                     sig              - 指定方法签名，如 "String,int" 表示(String, int)参数的方法
                     before code      - 在方法调用前执行的代码
-                    before codebase  - 包含 before 代码的文件, 可以是文件路径或script脚本名称
+                    before codebase  - 包含before代码的文件, 可以是文件路径或script脚本名称
                     after code       - 在方法调用后执行的代码
-                    after codebase   - 包含 after 代码的文件, 可以是文件路径或script脚本名称
+                    after codebase   - 包含after代码的文件, 可以是文件路径或script脚本名称
                     replace code     - 替换方法执行的代码, 会覆盖原方法
-                    replace codebase - 包含 replace 代码的文件, 可以是文件路径或script脚本名称
+                    replace codebase - 包含replace代码的文件, 可以是文件路径或script脚本名称
                 
                 示例:
                     hook add com.example.MainActivity onCreate before code 'println("onCreate called");'
@@ -74,7 +74,7 @@ public class HookMain extends CommandBase {
                     - codebase参数支持两种方式：
                         1. 脚本名称, 如activity_lifecycle_before, 会自动查找scripts目录
                         2. 完整文件路径, 如/sdcard/my_test_script.java
-                    - 默认 scripts 目录位于: %s
+                    - 默认scripts目录位于 %s
                     - Hook在后台运行, 不会阻塞其他命令执行
                     - 每个阶段只能指定一次, 不能重复
                     - 每个Hook会记录调用次数和详细信息
@@ -116,7 +116,7 @@ public class HookMain extends CommandBase {
                 default -> "未知子命令: " + subCommand + "\n" + getHelpText();
             };
         } catch (Exception e) {
-            logger.error("Hook 命令执行失败", e);
+            logger.error("Hook命令执行失败", e);
             return "Hook 命令执行失败: " + e.getMessage() + "\n" + 
                     "堆栈追踪:\n" + android.util.Log.getStackTraceString(e);
         }
@@ -146,7 +146,7 @@ public class HookMain extends CommandBase {
                 i += 2;
             } else if (arg.equals("before") && i + 2 < args.length) {
                 if (beforeCode != null || beforeCodebase != null) {
-                    return "错误: before 阶段已经指定过，不能重复指定";
+                    return "错误: before阶段已经指定过，不能重复指定";
                 }
                 String type = args[i + 1];
                 String value = args[i + 2];
@@ -155,12 +155,12 @@ public class HookMain extends CommandBase {
                 } else if (type.equals("codebase")) {
                     beforeCodebase = value;
                 } else {
-                    return "错误: before 参数必须为 'code' 或 'codebase'";
+                    return "错误: before参数必须为 'code' 或 'codebase'";
                 }
                 i += 3;
             } else if (arg.equals("after") && i + 2 < args.length) {
                 if (afterCode != null || afterCodebase != null) {
-                    return "错误: after 阶段已经指定过，不能重复指定";
+                    return "错误: after阶段已经指定过，不能重复指定";
                 }
                 String type = args[i + 1];
                 String value = args[i + 2];
@@ -169,12 +169,12 @@ public class HookMain extends CommandBase {
                 } else if (type.equals("codebase")) {
                     afterCodebase = value;
                 } else {
-                    return "错误: after 参数必须为 'code' 或 'codebase'";
+                    return "错误: after参数必须为 'code' 或 'codebase'";
                 }
                 i += 3;
             } else if (arg.equals("replace") && i + 2 < args.length) {
                 if (replaceCode != null || replaceCodebase != null) {
-                    return "错误: replace 阶段已经指定过，不能重复指定";
+                    return "错误: replace阶段已经指定过，不能重复指定";
                 }
                 String type = args[i + 1];
                 String value = args[i + 2];
@@ -183,7 +183,7 @@ public class HookMain extends CommandBase {
                 } else if (type.equals("codebase")) {
                     replaceCodebase = value;
                 } else {
-                    return "错误: replace 参数必须为 'code' 或 'codebase'";
+                    return "错误: replace参数必须为 'code' 或 'codebase'";
                 }
                 i += 3;
             } else {
@@ -193,18 +193,18 @@ public class HookMain extends CommandBase {
 
         if (beforeCode == null && afterCode == null && replaceCode == null && 
             beforeCodebase == null && afterCodebase == null && replaceCodebase == null) {
-            return "错误: 需要指定至少一个 Hook 阶段（before/after/replace）";
+            return "错误: 需要指定至少一个Hook阶段（before/after/replace）";
         }
 
         return HookManager.addHook(className, methodName, signature, 
                                   beforeCode, afterCode, replaceCode,
                                   beforeCodebase, afterCodebase, replaceCodebase,
-                                  context.classLoader());
+                                  context);
     }
 
     private String handleRemove(String[] args) {
         if (args.length < 2) {
-            return "错误: 需要指定 Hook ID\n用法: hook remove <id>";
+            return "错误: 需要指定Hook ID\n用法: hook remove <id>";
         }
 
         String hookId = args[1];
@@ -217,7 +217,7 @@ public class HookMain extends CommandBase {
 
     private String handleInfo(String[] args) {
         if (args.length < 2) {
-            return "错误: 需要指定 Hook ID\n用法: hook info <id>";
+            return "错误: 需要指定Hook ID\n用法: hook info <id>";
         }
 
         String hookId = args[1];
@@ -226,7 +226,7 @@ public class HookMain extends CommandBase {
 
     private String handleOutput(String[] args) {
         if (args.length < 2) {
-            return "错误: 需要指定 Hook ID\n用法: hook output <id> [count]";
+            return "错误: 需要指定Hook ID\n用法: hook output <id> [count]";
         }
 
         String hookId = args[1];
@@ -236,7 +236,7 @@ public class HookMain extends CommandBase {
             try {
                 count = Integer.parseInt(args[2]);
             } catch (NumberFormatException e) {
-                return "错误: count 必须是数字";
+                return "错误: count必须是数字";
             }
         }
 
@@ -245,7 +245,7 @@ public class HookMain extends CommandBase {
 
     private String handleEnable(String[] args) {
         if (args.length < 2) {
-            return "错误: 需要指定 Hook ID\n用法: hook enable <id>";
+            return "错误: 需要指定Hook ID\n用法: hook enable <id>";
         }
 
         String hookId = args[1];
@@ -254,7 +254,7 @@ public class HookMain extends CommandBase {
 
     private String handleDisable(String[] args) {
         if (args.length < 2) {
-            return "错误: 需要指定 Hook ID\n用法: hook disable <id>";
+            return "错误: 需要指定Hook ID\n用法: hook disable <id>";
         }
 
         String hookId = args[1];
@@ -264,6 +264,6 @@ public class HookMain extends CommandBase {
     private String handleClear() {
         int count = HookManager.getHookCount();
         HookManager.clearAllHooks();
-        return "已清除 " + count + " 个 Hook";
+        return "已清除" + count + "个Hook";
     }
 }

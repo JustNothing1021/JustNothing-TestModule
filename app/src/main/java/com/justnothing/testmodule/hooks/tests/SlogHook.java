@@ -1,6 +1,5 @@
 package com.justnothing.testmodule.hooks.tests;
 
-import com.justnothing.testmodule.hooks.XposedBasicHook;
 import com.justnothing.testmodule.hooks.ZygoteHook;
 
 import de.robv.android.xposed.XC_MethodHook;

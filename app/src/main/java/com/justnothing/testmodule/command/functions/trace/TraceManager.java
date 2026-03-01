@@ -10,16 +10,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import de.robv.android.xposed.XposedHelpers;
 
 public class TraceManager {
-    
-    public static class TraceManagerLogger extends Logger {
-        @Override
-        public String getTag() {
-            return "TraceManager";
-        }
-    }
-    
+
     private static final TraceManager instance = new TraceManager();
-    private static final TraceManagerLogger logger = new TraceManagerLogger();
+    private static final Logger logger = Logger.getLoggerForName("TraceManager");
     
     private final ConcurrentHashMap<Integer, TraceTask> traceTasks;
     private final AtomicInteger nextId;

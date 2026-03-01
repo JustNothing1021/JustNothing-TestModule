@@ -15,7 +15,6 @@ public class CommandServer {
     public static final String CMD_PACKAGES_VER = "v0.1.0";
     public static final String CMD_HELP_VER = "v0.1.1";
     public static final String CMD_HOOK_VER = "v0.1.1";
-    public static final String CMD_REFLECT_VER = "v0.1.0";
     public static final String CMD_BYTECODE_VER = "v0.1.1";
     public static final String CMD_NATIVE_VER = "v0.1.0";
     public static final int DEFAULT_SOCKET_PORT = 11451;

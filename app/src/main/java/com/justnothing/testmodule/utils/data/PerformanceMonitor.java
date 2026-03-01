@@ -9,6 +9,7 @@ import org.json.JSONObject;
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public class PerformanceMonitor extends Logger {
     private static final String TAG = "PerformanceMonitor";
@@ -51,7 +52,7 @@ public class PerformanceMonitor extends Logger {
             } finally {
                 loadConfigPending = false;
             }
-        }, WRITE_DELAY, java.util.concurrent.TimeUnit.MILLISECONDS);
+        }, WRITE_DELAY, TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -89,9 +90,11 @@ public class PerformanceMonitor extends Logger {
     }
 
     private void scheduleDelayedWrite() {
-        ThreadPoolManager.schedule(() -> {
-            flushPendingUpdates();
-        }, WRITE_DELAY, java.util.concurrent.TimeUnit.MILLISECONDS);
+        ThreadPoolManager.schedule(
+                this::flushPendingUpdates,
+                WRITE_DELAY,
+                TimeUnit.MILLISECONDS
+        );
     }
     
     private void flushPendingUpdates() {
@@ -318,9 +321,11 @@ public class PerformanceMonitor extends Logger {
     }
 
     private void scheduleConfigSave() {
-        ThreadPoolManager.schedule(() -> {
-            saveConfig();
-        }, WRITE_DELAY, java.util.concurrent.TimeUnit.MILLISECONDS);
+        ThreadPoolManager.schedule(
+                this::saveConfig,
+                WRITE_DELAY,
+                TimeUnit.MILLISECONDS
+        );
     }
 
     private void saveConfig() {

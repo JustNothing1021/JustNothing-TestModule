@@ -15,6 +15,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -24,14 +25,9 @@ import de.robv.android.xposed.XposedHelpers;
 
 public class TraceTask implements Runnable {
 
-    public static class TraceLogger extends Logger {
-        @Override
-        public String getTag() {
-            return "TraceTask";
-        }
-    }
 
-    private static final TraceLogger logger = new TraceLogger();
+    private static final Logger logger = Logger.getLoggerForName("TraceTask");
+
     private final int id;
     private final Class<?> targetClass;
     private final String methodName;
@@ -44,7 +40,7 @@ public class TraceTask implements Runnable {
     private final List<Method> targetMethods = new ArrayList<>();
     private final List<XC_MethodHook.Unhook> methodHooks = new ArrayList<>();
     private final Map<String, CallNode> callTree = new HashMap<>();
-    private List<String> imports = new ArrayList<>(Arrays.asList("java.lang.*", "java.util.*"));
+    private final List<String> imports = new ArrayList<>(Arrays.asList("java.lang.*", "java.util.*"));
 
     public TraceTask(int id, Class<?> targetClass, String methodName, String signature,
             int maxCallRecords, ClassLoader classLoader) {
@@ -223,7 +219,6 @@ public class TraceTask implements Runnable {
 
     private Method[] findMethod(Class<?> clazz, String methodName, String signature)
             throws NoSuchMethodException, ClassNotFoundException {
-        TraceLogger logger = new TraceLogger();
         logger.debug("在类 " + clazz.getName() + " 中查找方法: " + methodName
                 + (signature != null ? " (签名: " + signature + ")" : ""));
 
@@ -244,9 +239,9 @@ public class TraceTask implements Runnable {
                 return findMethod(superClass, methodName, signature);
             }
 
-            String availableMethods = "可用方法:\n";
+            StringBuilder availableMethods = new StringBuilder("可用方法:\n");
             for (Method m : clazz.getDeclaredMethods()) {
-                availableMethods += "  " + m + "\n";
+                availableMethods.append("  ").append(m).append("\n");
             }
             logger.error("未找到方法 " + methodName + "\n" + availableMethods);
             throw new NoSuchMethodException(
@@ -276,7 +271,6 @@ public class TraceTask implements Runnable {
     @Override
     public void run() {
         running.set(true);
-        TraceLogger logger = new TraceLogger();
         logger.info("Trace任务 " + id + " 开始运行");
 
         try {
@@ -322,65 +316,69 @@ public class TraceTask implements Runnable {
 
     private void hookMethod() {
         try {
-            TraceLogger logger = new TraceLogger();
             logger.info("Hook方法: " + targetClass.getName() + "." + methodName);
 
             for (Method method : targetMethods) {
                 Class<?>[] paramTypes = method.getParameterTypes();
-                XC_MethodHook.Unhook unhook = XposedHelpers.findAndHookMethod(targetClass, methodName, paramTypes, new XC_MethodHook() {
-                    private long startTime;
+                XC_MethodHook.Unhook unhook = XposedHelpers.findAndHookMethod(
+                    targetClass,
+                    methodName,
+                    paramTypes,
+                    new XC_MethodHook() {
+                        private long startTime;
 
-                    @Override
-                    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                        startTime = System.currentTimeMillis();
-                        String timestamp = new SimpleDateFormat("HH:mm:ss.SSS").format(new java.util.Date());
-                        
-                        int depth = calculateCallDepth();
-                        
-                        CallRecord record = new CallRecord(
-                            timestamp,
-                            targetClass.getName(),
-                            methodName,
-                            depth,
-                            param.args,
-                            null,
-                            null,
-                            0
-                        );
-                        
-                        addCallRecord(record);
-                        updateCallTree(record);
-                        
-                        callCount.incrementAndGet();
-                    }
+                        @Override
+                        protected void beforeHookedMethod(MethodHookParam param) {
+                            startTime = System.currentTimeMillis();
+                            String timestamp = new SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault())
+                                    .format(new java.util.Date());
 
-                    @Override
-                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                        long endTime = System.currentTimeMillis();
-                        long duration = endTime - startTime;
-                        String timestamp = new SimpleDateFormat("HH:mm:ss.SSS").format(new java.util.Date());
-                        
-                        int depth = calculateCallDepth();
-                        
-                        CallRecord record = new CallRecord(
-                            timestamp,
-                            targetClass.getName(),
-                            methodName,
-                            depth,
-                            param.args,
-                            param.getResult(),
-                            param.getThrowable(),
-                            duration
-                        );
-                        
-                        addCallRecord(record);
+                            int depth = calculateCallDepth();
+                            CallRecord record = new CallRecord(
+                                timestamp,
+                                targetClass.getName(),
+                                methodName,
+                                depth,
+                                param.args,
+                                null,
+                                null,
+                                0
+                            );
+
+                            addCallRecord(record);
+                            updateCallTree(record);
+
+                            callCount.incrementAndGet();
+                        }
+
+                        @Override
+                        protected void afterHookedMethod(MethodHookParam param) {
+                            long endTime = System.currentTimeMillis();
+                            long duration = endTime - startTime;
+                            String timestamp = new SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault())
+                                    .format(new java.util.Date());
+
+                            int depth = calculateCallDepth();
+
+                            CallRecord record = new CallRecord(
+                                timestamp,
+                                targetClass.getName(),
+                                methodName,
+                                depth,
+                                param.args,
+                                param.getResult(),
+                                param.getThrowable(),
+                                duration
+                            );
+
+                            addCallRecord(record);
+                        }
                     }
-                });
+                );
                 methodHooks.add(unhook);
                 logger.info("方法hook成功: " + method);
             }
         } catch (Exception e) {
-            TraceLogger logger = new TraceLogger();
             logger.error("Hook方法失败: " + methodName, e);
             throw new RuntimeException("Hook方法失败: " + e.getMessage(), e);
         }
@@ -393,10 +391,8 @@ public class TraceTask implements Runnable {
                 logger.info("取消hook方法" + methodHook.getHookedMethod());
             }
             methodHooks.clear();
-            TraceLogger logger = new TraceLogger();
             logger.info("取消方法hook完成: " + methodName);
         } catch (Exception e) {
-            TraceLogger logger = new TraceLogger();
             logger.error("取消方法hook失败", e);
         }
     }
@@ -489,7 +485,8 @@ public class TraceTask implements Runnable {
                 writer.write("目标方法: " + targetClass.getName() + "." + methodName + "\n");
                 writer.write("签名: " + (signature != null ? signature : "所有") + "\n");
                 writer.write("总调用次数: " + callCount.get() + "\n");
-                writer.write("记录时间: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date()) + "\n\n");
+                writer.write("记录时间: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+                        .format(new java.util.Date()) + "\n\n");
                 
                 writer.write("=== 调用树 ===\n");
                 for (CallNode node : callTree.values()) {
@@ -510,61 +507,43 @@ public class TraceTask implements Runnable {
         }
     }
 
-    public static class CallRecord {
-        private final String timestamp;
-        private final String className;
-        private final String methodName;
-        private final int depth;
-        private final Object[] args;
-        private final Object returnValue;
-        private final Throwable exception;
-        private final long duration;
-
-        public CallRecord(String timestamp, String className, String methodName, int depth, 
-                         Object[] args, Object returnValue, Throwable exception, long duration) {
-            this.timestamp = timestamp;
-            this.className = className;
-            this.methodName = methodName;
-            this.depth = depth;
-            this.args = args;
-            this.returnValue = returnValue;
-            this.exception = exception;
-            this.duration = duration;
-        }
+    public record CallRecord(String timestamp, String className, String methodName, int depth,
+                             Object[] args, Object returnValue, Throwable exception,
+                             long duration) {
 
         @NonNull
-        @Override
-        public String toString() {
-            StringBuilder sb = new StringBuilder();
-            sb.append("[").append(timestamp).append("] ");
-            sb.append(className).append(".").append(methodName);
-            sb.append(" (深度: ").append(depth).append(")");
-            
+            @Override
+            public String toString() {
+                StringBuilder sb = new StringBuilder();
+                sb.append("[").append(timestamp).append("] ");
+                sb.append(className).append(".").append(methodName);
+                sb.append(" (深度: ").append(depth).append(")");
+
             if (args != null && args.length > 0) {
-                sb.append(" 参数: [");
-                for (int i = 0; i < args.length; i++) {
-                    sb.append(args[i] != null ? args[i].toString() : "null");
-                    if (i < args.length - 1) {
-                        sb.append(", ");
+                    sb.append(" 参数: [");
+                    for (int i = 0; i < args.length; i++) {
+                        sb.append(args[i] != null ? args[i].toString() : "null");
+                        if (i < args.length - 1) {
+                            sb.append(", ");
+                        }
                     }
+                    sb.append("]");
                 }
-                sb.append("]");
-            }
-            
+
             if (exception != null) {
-                sb.append(" 异常: ").append(exception.getClass().getSimpleName())
-                  .append(": ").append(exception.getMessage());
-            } else if (returnValue != null) {
-                sb.append(" 返回值: ").append(returnValue);
-            }
-            
+                    sb.append(" 异常: ").append(exception.getClass().getSimpleName())
+                            .append(": ").append(exception.getMessage());
+                } else if (returnValue != null) {
+                    sb.append(" 返回值: ").append(returnValue);
+                }
+
             if (duration > 0) {
-                sb.append(" 耗时: ").append(duration).append("ms");
-            }
-            
+                    sb.append(" 耗时: ").append(duration).append("ms");
+                }
+
             return sb.toString();
+            }
         }
-    }
 
     public static class CallNode {
         private final String className;

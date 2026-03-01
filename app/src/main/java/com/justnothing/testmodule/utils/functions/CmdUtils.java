@@ -2,7 +2,6 @@ package com.justnothing.testmodule.utils.functions;
 
 import androidx.annotation.NonNull;
 import java.io.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -161,6 +160,7 @@ public class CmdUtils {
                 });
                 
                 try {
+                    assert exitCodeFuture != null;
                     exitCode = exitCodeFuture.get(timeoutMs, TimeUnit.MILLISECONDS);
                 } catch (TimeoutException e) {
                     exitCodeFuture.cancel(true);
@@ -226,6 +226,7 @@ public class CmdUtils {
                 });
                 
                 try {
+                    assert exitCodeFuture != null;
                     exitCode = exitCodeFuture.get(timeoutMs, TimeUnit.MILLISECONDS);
                 } catch (TimeoutException e) {
                     exitCodeFuture.cancel(true);

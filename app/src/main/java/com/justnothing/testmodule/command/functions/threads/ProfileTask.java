@@ -15,14 +15,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ProfileTask implements Runnable {
 
-    public static class ProfileTaskLogger extends Logger {
-        @Override
-        public String getTag() {
-            return "ProfileTask";
-        }
-    }
 
-    private static final ProfileTaskLogger logger = new ProfileTaskLogger();
+
+    private static final Logger logger = Logger.getLoggerForName("ProfileTask");
+
     private final int duration;
     private final ProfileManager manager;
     private final AtomicBoolean running;

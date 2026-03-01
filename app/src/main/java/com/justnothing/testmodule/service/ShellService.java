@@ -29,14 +29,7 @@ import java.util.zip.ZipFile;
 public class ShellService extends Binder {
 
 
-    public static final class ServiceLogger extends Logger {
-        @Override
-        public String getTag() {
-            return "ShellService";
-        }
-    }
-
-    public static final ServiceLogger logger = new ServiceLogger();
+    public static final Logger logger = Logger.getLoggerForName("ShellService");
 
     private final ServerPortManager serverPortManager;
     private final CommandExecutor commandExecutor;
@@ -115,8 +108,8 @@ public class ShellService extends Binder {
             try {
                 logger.info("chmod尝试 " + attempt + "/" + maxRetries + " (超时: " + timeoutMs + "ms)");
                 CmdUtils.CommandOutput result = CmdUtils.runRootCommand("chmod -R 777 " + dataDir, timeoutMs);
-                
-                logger.info("chmod命令执行结果 - 退出码: " + result.stat() + 
+
+                logger.info("chmod命令执行结果 - 退出码: " + result.stat() +
                             ", stdout: " + (result.stdout() != null ? result.stdout() : "(空)") + 
                             ", stderr: " + (result.stderr() != null ? result.stderr() : "(空)"));
                 

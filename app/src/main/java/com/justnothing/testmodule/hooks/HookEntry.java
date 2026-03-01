@@ -32,7 +32,6 @@ import com.justnothing.testmodule.utils.data.BootMonitor;
 import com.justnothing.testmodule.utils.functions.Logger;
 import com.justnothing.testmodule.utils.data.PerformanceMonitor;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
-import com.justnothing.testmodule.utils.io.IOManager;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -45,6 +44,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -53,7 +53,8 @@ import de.robv.android.xposed.IXposedHookZygoteInit;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
 public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygoteInit {
-
+    public static final String TAG = "HookEntry";
+    private static final Logger logger = Logger.getLoggerForName(TAG);
     public static List<PackageHook> packageHooks = new ArrayList<>();
     public static List<ZygoteHook> zygoteHooks = new ArrayList<>();
     public static ShellService mService;
@@ -63,21 +64,12 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
     private static final ConcurrentHashMap<String, ClassLoader>
             classLoaders = new ConcurrentHashMap<>();
 
-    public static final String TAG = "HookEntry";
     private PerformanceMonitor performanceMonitor = null;
-    private static final HookEntryLogger logger = new HookEntryLogger();
     private static final long FILE_OPERATION_DELAY = 1000;
     private static final long FILE_OPERATION_THROTTLE = 10000;
     private static long lastFileOperationTime = 0;
     private static final long HOOK_TIMEOUT_MS = 3000;
     private static final long HOOK_WARNING_MS = 500;
-    public static class HookEntryLogger extends Logger {
-        @Override
-        public String getTag() {
-            return TAG;
-        }
-    }
-    
 
     static {
         packageHooks.add(new AppInfoProviderHook());
@@ -210,7 +202,8 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
                     detail.put(KEY_HOOK_COUNT, hook.getHookCount());
                     String hookName = hook.getHookName();
                     int currentProcessed = hook.hookSucceedPackages + hook.hookFailurePackages;
-                    int existingProcessed = existingProcessedCounts.getOrDefault(hookName, 0);
+                    // 按道理来说其实根本不需要requireNonNull，这里以防万一吧
+                    int existingProcessed = Objects.requireNonNull(existingProcessedCounts.getOrDefault(hookName, 0));
                     detail.put(KEY_PROCESSED_PACKAGE_COUNT, existingProcessed + currentProcessed);
                     hookDetails.put(detail);
                 }
