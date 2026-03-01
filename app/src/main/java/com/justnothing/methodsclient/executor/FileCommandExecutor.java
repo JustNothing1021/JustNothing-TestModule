@@ -5,8 +5,6 @@ import static com.justnothing.testmodule.hooks.tests.ShellServiceHook.SERVICE_NA
 import static com.justnothing.testmodule.service.handler.TransactionHandler.TRANSACTION_EXECUTE_FILE;
 import static com.justnothing.testmodule.service.handler.TransactionHandler.TRANSACTION_WRITE_HOOK_DATA;
 
-import java.lang.Process;
-
 import com.justnothing.methodsclient.StreamClient;
 import com.justnothing.methodsclient.monitor.PerformanceMonitor;
 import com.justnothing.testmodule.constants.AppEnvironment;
@@ -15,17 +13,8 @@ import com.justnothing.testmodule.hooks.HookEntry;
 import com.justnothing.testmodule.utils.functions.CmdUtils;
 import com.justnothing.testmodule.utils.io.IOManager;
 import com.justnothing.testmodule.utils.io.RootProcessPool;
-import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
-
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.nio.charset.StandardCharsets;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 public class FileCommandExecutor {
 

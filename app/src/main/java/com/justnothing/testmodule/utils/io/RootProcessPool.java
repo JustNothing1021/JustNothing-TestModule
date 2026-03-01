@@ -74,7 +74,7 @@ public class RootProcessPool extends Logger {
                 availableProcesses.offer(process);
                 totalProcesses.incrementAndGet();
             } catch (Exception e) {
-                error("初始化Root进程失败", e);
+                warn("初始化Root进程失败，将在后台重试: " + e.getMessage());
             }
         }
         
@@ -89,6 +89,11 @@ public class RootProcessPool extends Logger {
         }
         
         info("Root进程池初始化完成，当前Root进程数: " + totalProcesses.get() + ", 非Root进程数: " + totalNonRootProcesses.get());
+        
+        if (totalProcesses.get() == 0) {
+            info("Root进程池为空，将在后台尝试创建Root进程");
+            startRootProcessRetryTask();
+        }
     }
 
     private void startMaintenanceTask() {
@@ -98,6 +103,31 @@ public class RootProcessPool extends Logger {
             }
             maintainPool();
         }, 10000, 10000, TimeUnit.MILLISECONDS);
+    }
+
+    private void startRootProcessRetryTask() {
+        ThreadPoolManager.scheduleAtFixedRate(() -> {
+            if (shutdown) {
+                return;
+            }
+            
+            int currentSize = totalProcesses.get();
+            if (currentSize >= MIN_POOL_SIZE) {
+                return;
+            }
+            
+            int toCreate = MIN_POOL_SIZE - currentSize;
+            for (int i = 0; i < toCreate; i++) {
+                try {
+                    RootProcess process = createRootProcess();
+                    availableProcesses.offer(process);
+                    totalProcesses.incrementAndGet();
+                    info("后台重试：成功创建Root进程，当前进程数: " + totalProcesses.get());
+                } catch (Exception e) {
+                    debug("后台重试：创建Root进程失败 - " + e.getMessage());
+                }
+            }
+        }, 5000, 5000, TimeUnit.MILLISECONDS);
     }
 
     private void maintainPool() {
@@ -145,7 +175,7 @@ public class RootProcessPool extends Logger {
         }
     }
 
-    private RootProcess createRootProcess() throws IOException {
+    private RootProcess createRootProcess() throws IOException, InterruptedException {
         if (BootMonitor.isZygotePhase()) {
             throw new IOException("Zygote阶段，无法创建Root进程");
         }
@@ -157,7 +187,7 @@ public class RootProcessPool extends Logger {
         return rootProcess;
     }
 
-    private RootProcess createNonRootProcess() throws IOException {
+    private RootProcess createNonRootProcess() throws IOException, InterruptedException {
         if (BootMonitor.isZygotePhase()) {
             throw new IOException("Zygote阶段，无法创建非Root进程");
         }
@@ -249,7 +279,7 @@ public class RootProcessPool extends Logger {
         }
     }
 
-    private RootProcess acquireProcess(long timeoutMs, boolean useRoot) throws InterruptedException {
+    private RootProcess acquireProcess(long timeoutMs, boolean useRoot) throws IOException, InterruptedException {
         activeCommands.incrementAndGet();
 
         BlockingQueue<RootProcess> queue = useRoot ? availableProcesses : availableNonRootProcesses;
@@ -257,7 +287,7 @@ public class RootProcessPool extends Logger {
         String processType = useRoot ? "Root" : "非Root";
 
         RootProcess process = queue.poll(100, TimeUnit.MILLISECONDS);
-        if (process != null) {
+        if (process != null && process.isHealthy()) {
             return process;
         }
 
@@ -268,21 +298,23 @@ public class RootProcessPool extends Logger {
                     RootProcess newProcess = useRoot ? createRootProcess() : createNonRootProcess();
                     queue.offer(newProcess);
                     totalCounter.incrementAndGet();
+                    info("按需创建" + processType + "进程，当前进程数: " + totalCounter.get());
                     return newProcess;
                 } catch (Exception e) {
-                    error("创建新" + processType + "进程失败", e);
+                    warn("按需创建" + processType + "进程失败: " + e.getMessage());
                 }
             }
         } finally {
             poolLock.unlock();
         }
 
-        process = queue.poll(timeoutMs - 100, TimeUnit.MILLISECONDS);
-        if (process == null) {
-            throw new InterruptedException("获取" + processType + "进程超时");
+        process = queue.poll(100, TimeUnit.MILLISECONDS);
+        if (process != null && process.isHealthy()) {
+            return process;
         }
 
-        return process;
+        activeCommands.decrementAndGet();
+        throw new IOException("没有可用的" + processType + "进程，请稍后重试");
     }
 
     private void releaseProcess(RootProcess process, boolean useRoot) {
@@ -382,13 +414,28 @@ public class RootProcessPool extends Logger {
             this.healthy = true;
         }
 
-        void initialize() throws IOException {
+        void initialize() throws IOException, InterruptedException {
             outputStream.writeBytes("echo 'ROOT_READY'\n");
             outputStream.flush();
 
-            String line = stdoutReader.readLine();
-            if (!"ROOT_READY".equals(line)) {
-                throw new IOException("Root进程初始化失败");
+            Future<String> initFuture = CompletableFuture.supplyAsync(() -> {
+                try {
+                    return stdoutReader.readLine();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }, IO_THREAD_POOL);
+
+            try {
+                String line = initFuture.get(5000, TimeUnit.MILLISECONDS);
+                if (!"ROOT_READY".equals(line)) {
+                    throw new IOException("Root进程初始化失败，收到: " + line);
+                }
+            } catch (TimeoutException e) {
+                initFuture.cancel(true);
+                throw new IOException("Root进程初始化超时（5秒），可能需要手动授权");
+            } catch (ExecutionException e) {
+                throw new IOException("Root进程初始化失败: " + e.getCause().getMessage());
             }
         }
 
@@ -455,8 +502,8 @@ public class RootProcessPool extends Logger {
             }, IO_THREAD_POOL);
 
             try {
-                stdoutFuture.get(timeoutMs, TimeUnit.MILLISECONDS);
-                stderrFuture.get(timeoutMs, TimeUnit.MILLISECONDS);
+                CompletableFuture<Void> allFutures = CompletableFuture.allOf(stdoutFuture, stderrFuture);
+                allFutures.get(timeoutMs, TimeUnit.MILLISECONDS);
             } catch (TimeoutException e) {
                 healthy = false;
                 stdoutFuture.cancel(true);

@@ -182,13 +182,12 @@ public class ScriptModels {
             runtimeFlags.put(key, value);
         }
 
-        public void setVariable(String name, Object value) {
+        public void setVariable(String name, Object value, Class<?> type) {
             if (scopeStack.isEmpty()) {
                 enterScope();
             }
-
             Map<String, Variable> currentScope = scopeStack.get(scopeStack.size() - 1);
-            currentScope.put(name, new Variable(value));
+            currentScope.put(name, new Variable(value, type));
         }
 
         public Variable getVariable(String name) {
@@ -2551,6 +2550,11 @@ public class ScriptModels {
             return type;
         }
 
+
+        public Class<?> getTypeClass(ExecutionContext context) throws ClassNotFoundException {
+            return context.findClass(type);
+        }
+
         public String getName() {
             return name;
         }
@@ -2741,14 +2745,14 @@ public class ScriptModels {
             context.enterScope();
 
             // 设置this引用
-            context.setVariable("this", instance);
+            context.setVariable("this", instance, instance.getClass());
 
             // 设置方法参数
             List<Parameter> parameters = methodDef.getParameters();
             for (int i = 0; i < parameters.size(); i++) {
                 Parameter param = parameters.get(i);
                 Object argValue = args[i];
-                context.setVariable(param.getName(), argValue);
+                context.setVariable(param.getName(), argValue, param.getTypeClass(context));
             }
 
             // 执行方法体

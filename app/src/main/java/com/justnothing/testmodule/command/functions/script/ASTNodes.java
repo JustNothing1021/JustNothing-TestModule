@@ -864,14 +864,14 @@ public class ASTNodes {
                         context.enterScope();
 
                         // 设置this引用
-                        context.setVariable("this", customInstance);
+                        context.setVariable("this", customInstance, CustomClassInstance.class);
 
                         // 设置方法参数
                         List<Parameter> parameters = methodDef.getParameters();
                         for (int i = 0; i < parameters.size(); i++) {
                             Parameter param = parameters.get(i);
                             Object argValue = argsList.get(i);
-                            context.setVariable(param.getName(), argValue);
+                            context.setVariable(param.getName(), argValue, param.getTypeClass(context));
                         }
 
                         // 执行方法体
@@ -1040,11 +1040,11 @@ public class ASTNodes {
 
                             constructorContext.customClasses.putAll(context.customClasses);
 
-                            constructorContext.setVariable("this", instance);
+                            constructorContext.setVariable("this", instance, CustomClassInstance.class);
 
                             List<Parameter> params = constructorDef.getParameters();
                             for (int i = 0; i < params.size() && i < args.length; i++) {
-                                constructorContext.setVariable(params.get(i).getName(), args[i]);
+                                constructorContext.setVariable(params.get(i).getName(), args[i], params.get(i).getTypeClass(context));
                             }
 
                             if (constructorDef.getBody() != null) {
@@ -1734,7 +1734,7 @@ public class ASTNodes {
                 throw new RuntimeException("Variable not declared: " + variableName);
             }
             try {
-                context.setVariable(variableName, context.castObject(val, context.getVariableType(variableName)));
+                context.setVariable(variableName, context.castObject(val, context.getVariableType(variableName)), context.getVariableType(variableName));
             } catch (ClassCastException e) {
                 logger.error("变量" + variableName + "的类型与赋值类型不匹配也不兼容, "
                         + val.getClass().getName() + " != " + context.getVariableType(variableName).getName());
@@ -1742,7 +1742,7 @@ public class ASTNodes {
                         "(" + context.getVariableType(variableName).getName() + " vs " + val.getClass().getName()
                         + ")");
             }
-            context.setVariable(variableName, val);
+            context.setVariable(variableName, val, context.getVariableType(variableName));
             return val;
         }
 
@@ -2026,7 +2026,7 @@ public class ASTNodes {
                         ", got " + s + ") for variable declaration: " + variableName);
             }
 
-            context.setVariable(variableName, value);
+            context.setVariable(variableName, value, clazz);
             return value;
         }
 
@@ -2334,7 +2334,7 @@ public class ASTNodes {
                             item = context.castObject(item, clazz);
                         }
 
-                        context.setVariable(itemName, item);
+                        context.setVariable(itemName, item, clazz);
 
                         lastResult = body.evaluate(context);
 
@@ -2359,7 +2359,7 @@ public class ASTNodes {
                             break;
 
                         item = context.castObject(item, clazz);
-                        context.setVariable(itemName, item);
+                        context.setVariable(itemName, item, clazz);
                         lastResult = body.evaluate(context);
 
                         if (context.shouldBreak) {
@@ -2382,7 +2382,7 @@ public class ASTNodes {
                         if (loopCount >= MAX_LOOPS)
                             break;
 
-                        context.setVariable(itemName, ch);
+                        context.setVariable(itemName, ch, Character.class);
                         lastResult = body.evaluate(context);
 
                         if (context.shouldBreak) {
@@ -2732,7 +2732,7 @@ public class ASTNodes {
                         if (exceptionClass != null && exceptionClass.isAssignableFrom(e.getClass())) {
                                 matchedCatch = true;
 
-                                context.setVariable(catchBlock.getExceptionName(), e);
+                                context.setVariable(catchBlock.getExceptionName(), e, exceptionClass);
 
                                 Object catchResult = catchBlock.getCatchBlock().evaluate(context);
 
@@ -2937,7 +2937,7 @@ public class ASTNodes {
                 throw new RuntimeException("Unsupported numeric type: " + var.value.getClass());
             }
 
-            context.setVariable(variableName, newValue);
+            context.setVariable(variableName, newValue, var.type);
             return isPre ? newValue : oldValue;
         }
 
@@ -3333,7 +3333,7 @@ public class ASTNodes {
                                 "This lambda call requires " + parameters.size() + " args, provided " + args.length);
                     } else {
                         for (int i = 0; i < parameters.size(); i++) {
-                            context.setVariable(parameters.get(i), args[i]);
+                            context.setVariable(parameters.get(i), args[i], context.getVariableType(parameters.get(i)));
                         }
                         result = body.evaluate(context);
                         context.exitScope();
