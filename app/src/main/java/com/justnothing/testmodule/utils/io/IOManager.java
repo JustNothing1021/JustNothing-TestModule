@@ -19,15 +19,9 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
-public class IOManager extends Logger {
+public class IOManager {
     private static final String TAG = "IOManager";
-    private static final Logger logger = new Logger() {
-        @Override
-        public String getTag() {
-            return TAG;
-        }
-    };
-
+    private static final Logger logger = Logger.getLoggerForName(TAG);
     private static volatile IOManager instance = null;
 
 
@@ -36,18 +30,12 @@ public class IOManager extends Logger {
     private final AtomicLong totalReadTime = new AtomicLong(0);
     private final AtomicLong totalWriteTime = new AtomicLong(0);
 
-    private volatile boolean initialized;
 
     private IOManager() {
         super();
-        initialized = true;
-        info("IOManager初始化完成");
+        logger.info("IOManager初始化完成");
     }
 
-    @Override
-    public String getTag() {
-        return TAG;
-    }
 
     public static IOManager getInstance() {
         if (instance == null) {
@@ -63,17 +51,11 @@ public class IOManager extends Logger {
         return instance;
     }
 
-    public static void initialize() {
-        if (!instance.initialized) {
-            logger.warn("IOManager未初始化");
-        }
-    }
-
     public static Future<String> readFileAsync(String filePath) {
         return readFileAsync(filePath, StandardCharsets.UTF_8);
     }
 
-    public static Future<String> readFileAsync(String filePath, java.nio.charset.Charset charset) {
+    public static Future<String> readFileAsync(String filePath, Charset charset) {
         return ThreadPoolManager.submitIOCallable(() -> readFile(filePath, charset));
     }
 
@@ -81,11 +63,11 @@ public class IOManager extends Logger {
         return readFile(filePath, StandardCharsets.UTF_8);
     }
 
-    public static String readFile(String filePath, java.nio.charset.Charset charset) throws IOException {
+    public static String readFile(String filePath, Charset charset) throws IOException {
         return readFile(filePath, charset, 10 * 1024 * 1024);
     }
 
-    public static String readFile(String filePath, java.nio.charset.Charset charset, long maxSize) throws IOException {
+    public static String readFile(String filePath, Charset charset, long maxSize) throws IOException {
         return readFile(filePath, charset, maxSize, -1);
     }
 
@@ -126,7 +108,7 @@ public class IOManager extends Logger {
             logger.debug("文件读取完成: " + filePath + ", 耗时: " + duration + "ms, 字节数: " + bytes.length);
             
             if (duration > 1000) {
-                mgr.warn("读取文件耗时过长: " + filePath + " (" + duration + "ms, " + bytes.length + " bytes)");
+                logger.warn("读取文件耗时过长: " + filePath + " (" + duration + "ms, " + bytes.length + " bytes)");
             }
         }
 
@@ -196,7 +178,7 @@ public class IOManager extends Logger {
         return writeFileAsync(filePath, content, StandardCharsets.UTF_8, append);
     }
 
-    public static Future<Void> writeFileAsync(String filePath, String content, java.nio.charset.Charset charset, boolean append) {
+    public static Future<Void> writeFileAsync(String filePath, String content, Charset charset, boolean append) {
         return ThreadPoolManager.submitIOCallable(() -> {
             writeFile(filePath, content, charset, append);
             return null;
@@ -211,7 +193,7 @@ public class IOManager extends Logger {
         writeFile(filePath, content, StandardCharsets.UTF_8, append);
     }
 
-    public static void writeFile(String filePath, String content, java.nio.charset.Charset charset, boolean append) throws IOException {
+    public static void writeFile(String filePath, String content, Charset charset, boolean append) throws IOException {
         if (BootMonitor.isZygotePhase()) {
             return;
         }
@@ -239,7 +221,7 @@ public class IOManager extends Logger {
             logger.debug("文件写入完成: " + filePath + ", 耗时: " + duration + "ms");
             
             if (duration > 1000) {
-                mgr.warn("写入文件耗时过长: " + filePath + " (" + duration + "ms, " + bytes.length + " bytes)");
+                logger.warn("写入文件耗时过长: " + filePath + " (" + duration + "ms, " + bytes.length + " bytes)");
             }
         }
     }
@@ -248,7 +230,7 @@ public class IOManager extends Logger {
         return appendFileAsync(filePath, content, StandardCharsets.UTF_8);
     }
 
-    public static Future<Void> appendFileAsync(String filePath, String content, java.nio.charset.Charset charset) {
+    public static Future<Void> appendFileAsync(String filePath, String content, Charset charset) {
         return ThreadPoolManager.submitIOCallable(() -> {
             appendFile(filePath, content, charset);
             return null;
@@ -259,7 +241,7 @@ public class IOManager extends Logger {
         appendFile(filePath, content, StandardCharsets.UTF_8);
     }
 
-    public static void appendFile(String filePath, String content, java.nio.charset.Charset charset) throws IOException {
+    public static void appendFile(String filePath, String content, Charset charset) throws IOException {
         writeFile(filePath, content, charset, true);
     }
 

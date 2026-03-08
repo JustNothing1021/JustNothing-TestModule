@@ -18,7 +18,6 @@ import java.io.PrintWriter;
 public class TransactionHandler {
     private static final Logger logger = Logger.getLoggerForName("TransactionHandler");
 
-
     public static final String DESCRIPTOR = "com.justnothing.testmodule.ShellService";
     public static final int TRANSACTION_EXECUTE_FILE = IBinder.FIRST_CALL_TRANSACTION + 1;
     public static final int TRANSACTION_EXECUTE_STREAM = IBinder.FIRST_CALL_TRANSACTION + 2;

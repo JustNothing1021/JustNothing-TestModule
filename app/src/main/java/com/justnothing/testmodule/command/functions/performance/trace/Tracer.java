@@ -85,7 +85,7 @@ public class Tracer {
             section.name,
             section.startTime,
             section.duration,
-            (int) Thread.currentThread().threadId(),
+            (int) Thread.currentThread().getId(),
             Thread.currentThread().getName()
         );
         

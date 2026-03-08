@@ -31,11 +31,7 @@ public class ShellService extends Binder {
 
     public static final Logger logger = Logger.getLoggerForName("ShellService");
 
-    private final ServerPortManager serverPortManager;
-    private final CommandExecutor commandExecutor;
-    private final SocketClientHandler clientHandler;
     private final SocketServer socketServer;
-    private final CommandHandler commandHandler;
     private final TransactionHandler transactionHandler;
 
     private static boolean setupDirectoryPermissions() {
@@ -173,25 +169,28 @@ public class ShellService extends Binder {
         if (!permissionsSet) {
             logger.error("目录权限设置失败，服务可能无法正常工作");
         }
-        
+
+        ServerPortManager serverPortManager;
         try {
-            this.serverPortManager = new ServerPortManager();
+            serverPortManager = new ServerPortManager();
             logger.info("ServerPortManager创建成功");
         } catch (Exception e) {
             logger.error("创建ServerPortManager失败: " + e.getMessage(), e);
             throw new RuntimeException("ShellService初始化失败: ServerPortManager创建失败", e);
         }
-        
+
+        CommandExecutor commandExecutor;
         try {
-            this.commandExecutor = new CommandExecutor();
+            commandExecutor = new CommandExecutor();
             logger.info("CommandExecutor创建成功");
         } catch (Exception e) {
             logger.error("创建CommandExecutor失败: " + e.getMessage(), e);
             throw new RuntimeException("ShellService初始化失败: CommandExecutor创建失败", e);
         }
-        
+
+        SocketClientHandler clientHandler;
         try {
-            this.clientHandler = new SocketClientHandler(commandExecutor);
+            clientHandler = new SocketClientHandler(commandExecutor);
             logger.info("SocketClientHandler创建成功");
         } catch (Exception e) {
             logger.error("创建SocketClientHandler失败: " + e.getMessage(), e);
@@ -205,9 +204,10 @@ public class ShellService extends Binder {
             logger.error("创建SocketServer失败: " + e.getMessage(), e);
             throw new RuntimeException("ShellService初始化失败: SocketServer创建失败", e);
         }
-        
+
+        CommandHandler commandHandler;
         try {
-            this.commandHandler = new CommandHandler(commandExecutor);
+            commandHandler = new CommandHandler(commandExecutor);
             logger.info("CommandHandler创建成功");
         } catch (Exception e) {
             logger.error("创建CommandHandler失败: " + e.getMessage(), e);

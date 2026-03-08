@@ -140,7 +140,7 @@ public class CommandHandler {
         String command;
         try {
             java.nio.file.Path inputPath = java.nio.file.Paths.get(inputFile);
-            command = new String(java.nio.file.Files.readAllBytes(inputPath), "UTF-8");
+            command = new String(java.nio.file.Files.readAllBytes(inputPath), StandardCharsets.UTF_8);
             logger.info("从文件读取命令: " + (command.length() > 100 ? command.substring(0, 100) + "..." : command));
         } catch (Exception e) {
             logger.error("读取输入文件时遇到错误: " + inputFile, e);

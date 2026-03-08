@@ -2,8 +2,8 @@ package com.justnothing.testmodule.command.functions.trace;
 
 import androidx.annotation.NonNull;
 
-import com.justnothing.testmodule.utils.data.ClassResolver;
 import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.reflect.ReflectionUtils;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -40,7 +40,6 @@ public class TraceTask implements Runnable {
     private final List<Method> targetMethods = new ArrayList<>();
     private final List<XC_MethodHook.Unhook> methodHooks = new ArrayList<>();
     private final Map<String, CallNode> callTree = new HashMap<>();
-    private final List<String> imports = new ArrayList<>(Arrays.asList("java.lang.*", "java.util.*"));
 
     public TraceTask(int id, Class<?> targetClass, String methodName, String signature,
             int maxCallRecords, ClassLoader classLoader) {
@@ -72,189 +71,9 @@ public class TraceTask implements Runnable {
         }
     }
 
-
-    public Class<?> findClassInternal(String className) throws ClassNotFoundException {
-        if (className.contains("<")) {
-            logger.warn("目前不支持泛型类，将会擦除类型信息");
-            className = className.substring(0, className.indexOf("<"));
-            logger.warn("经过擦除过的类型名称为" + className);
-        }
-
-        switch (className) {
-            case "int":
-                logger.debug("基本类型: int");
-                return int.class;
-            case "long":
-                logger.debug("基本类型: long");
-                return long.class;
-            case "float":
-                logger.debug("基本类型: float");
-                return float.class;
-            case "double":
-                logger.debug("基本类型: double");
-                return double.class;
-            case "boolean":
-                logger.debug("基本类型: boolean");
-                return boolean.class;
-            case "char":
-                logger.debug("基本类型: char");
-                return char.class;
-            case "byte":
-                logger.debug("基本类型: byte");
-                return byte.class;
-            case "short":
-                logger.debug("基本类型: short");
-                return short.class;
-            case "void":
-                logger.debug("基本类型: void");
-                return void.class;
-        }
-
-        Class<?> clazz;
-        if (className.contains(".")) {
-            logger.debug("尝试完整类名: " + className);
-            clazz = ClassResolver.findClass(className, classLoader);
-
-            if (clazz != null) {
-                logger.debug("通过完整类名找到类: " + clazz.getName());
-                return clazz;
-            }
-        }
-
-        for (String importStmt : imports) {
-            String fullClassName;
-            if (importStmt.endsWith(".*")) {
-                String packageName = importStmt.substring(0, importStmt.length() - 2);
-                fullClassName = packageName + "." + className;
-            } else {
-                fullClassName = importStmt;
-                String lastName = fullClassName.substring(fullClassName.lastIndexOf('.') + 1);
-                if (!lastName.equals(className)) {
-                    continue;
-                }
-            }
-            clazz = ClassResolver.findClass(fullClassName, classLoader);
-            if (clazz != null) {
-                logger.debug("通过导入找到类: " + clazz.getName());
-                return clazz;
-            }
-        }
-        throw new ClassNotFoundException("Class not found: " + className);
-    }
-
-    private static boolean isPrimitiveWrapperMatch(Class<?> target, Class<?> source) {
-        if (target == int.class && source == Integer.class)
-            return true;
-        if (target == Integer.class && source == int.class)
-            return true;
-        if (target == long.class && source == Long.class)
-            return true;
-        if (target == Long.class && source == long.class)
-            return true;
-        if (target == float.class && source == Float.class)
-            return true;
-        if (target == Float.class && source == float.class)
-            return true;
-        if (target == double.class && source == Double.class)
-            return true;
-        if (target == Double.class && source == double.class)
-            return true;
-        if (target == boolean.class && source == Boolean.class)
-            return true;
-        if (target == Boolean.class && source == boolean.class)
-            return true;
-        if (target == char.class && source == Character.class)
-            return true;
-        if (target == Character.class && source == char.class)
-            return true;
-        if (target == byte.class && source == Byte.class)
-            return true;
-        if (target == Byte.class && source == byte.class)
-            return true;
-        if (target == short.class && source == Short.class)
-            return true;
-        return target == Short.class && source == short.class;
-    }
-
-    public static boolean isApplicableArgs(Class<?>[] methodArgsTypes, List<Class<?>> usingArgTypes) {
-        if (methodArgsTypes.length != usingArgTypes.size())
-            return false;
-        for (int i = 0; i < methodArgsTypes.length; i++)
-            if (!methodArgsTypes[i].isAssignableFrom(usingArgTypes.get(i))
-                    && !isPrimitiveWrapperMatch(methodArgsTypes[i], usingArgTypes.get(i))
-                    && Void.class != usingArgTypes.get(i))
-                return false;
-        return true;
-    }
-
-    public static boolean isApplicableArgs(Class<?>[] methodArgsTypes, Class<?>[] usingArgTypes) {
-        return isApplicableArgs(methodArgsTypes, Arrays.asList(usingArgTypes));
-    }
-
-    public Class<?>[] getSignatureFromString(String signature) throws ClassNotFoundException {
-        if (signature == null || signature.isEmpty()) {
-            return new Class<?>[0];
-        }
-        String[] parts = signature.split(",");
-        for (int i = 0; i < parts.length; i++) {
-            parts[i] = parts[i].trim();
-        }
-        Class<?>[] types = new Class<?>[parts.length];
-        for (int i = 0; i < parts.length; i++) {
-            types[i] = findClassInternal(parts[i].trim());
-        }
-        return types;
-    }
-
     private Method[] findMethod(Class<?> clazz, String methodName, String signature)
             throws NoSuchMethodException, ClassNotFoundException {
-        logger.debug("在类 " + clazz.getName() + " 中查找方法: " + methodName
-                + (signature != null ? " (签名: " + signature + ")" : ""));
-
-        Method[] methods = clazz.getDeclaredMethods();
-        List<Method> candidates = new ArrayList<>();
-
-        for (Method method : methods) {
-            if (method.getName().equals(methodName)) {
-                candidates.add(method);
-                logger.debug("找到候选方法: " + method + " (参数: " + Arrays.toString(method.getParameterTypes()) + ")");
-            }
-        }
-
-        if (candidates.isEmpty()) {
-            Class<?> superClass = clazz.getSuperclass();
-            if (superClass != null) {
-                logger.debug("在父类 " + superClass.getName() + " 中继续查找");
-                return findMethod(superClass, methodName, signature);
-            }
-
-            StringBuilder availableMethods = new StringBuilder("可用方法:\n");
-            for (Method m : clazz.getDeclaredMethods()) {
-                availableMethods.append("  ").append(m).append("\n");
-            }
-            logger.error("未找到方法 " + methodName + "\n" + availableMethods);
-            throw new NoSuchMethodException(
-                    "未找到方法: " + methodName + " 在类 " + clazz.getName() + "\n" + availableMethods);
-        }
-
-        if (signature == null || signature.isEmpty()) {
-            logger.debug("未指定签名，返回所有方法");
-            return candidates.toArray(new Method[0]);
-        }
-
-        for (Method method : candidates) {
-            if (isApplicableArgs(method.getParameterTypes(), getSignatureFromString(signature))) {
-                return new Method[] { method };
-            }
-        }
-
-        StringBuilder errorMsg = new StringBuilder("未找到匹配签名的方法: " + methodName + " (签名: " + signature + ")\n");
-        errorMsg.append("候选方法:\n");
-        for (Method m : candidates) {
-            errorMsg.append("  ").append(m).append("\n");
-        }
-        logger.error(errorMsg.toString());
-        throw new NoSuchMethodException(errorMsg.toString());
+        return ReflectionUtils.findMethod(clazz, methodName, signature, classLoader);
     }
 
     @Override

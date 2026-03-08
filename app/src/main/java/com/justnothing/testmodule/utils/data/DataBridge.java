@@ -27,14 +27,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class DataBridge {
 
-    private static final class DataBridgeLogger extends Logger {
-        @Override
-        public String getTag() {
-            return "DataBridge";
-        }
-    }
-
-    private static final DataBridgeLogger logger = new DataBridgeLogger();
+    public static final String TAG = "DataBridge";
+    private static final Logger logger = Logger.getLoggerForName(TAG);
 
     private static final ReadWriteLock lock = new ReentrantReadWriteLock();
 

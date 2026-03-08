@@ -9,11 +9,11 @@ import com.justnothing.testmodule.command.functions.script.ScriptRunner;
 import com.justnothing.testmodule.command.functions.script.ScriptModels.*;
 import com.justnothing.testmodule.command.output.IOutputHandler;
 import com.justnothing.testmodule.command.output.OutputHandler;
-import com.justnothing.testmodule.hooks.XposedBasicHook;
-import com.justnothing.testmodule.utils.data.ClassResolver;
+import com.justnothing.testmodule.utils.reflect.ClassResolver;
 import com.justnothing.testmodule.utils.data.DataBridge;
 import com.justnothing.testmodule.utils.io.IOManager;
 import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.reflect.SignatureUtils;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -246,7 +246,7 @@ public class HookManager {
         
         logger.info("是否为构造函数: " + isConstructor);
         
-        Class<?>[] paramTypes = parseSignature(hookInfo.getSignature());
+        Class<?>[] paramTypes = SignatureUtils.parseSignature(hookInfo.getSignature(), hookInfo.getClassLoader());
         logger.info("参数类型: " + Arrays.toString(paramTypes));
         
         if (paramTypes.length == 0) {
@@ -472,101 +472,6 @@ public class HookManager {
         }
     }
 
-    private static Class<?> findClassInternal(String className) throws ClassNotFoundException {
-        if (className.contains("<")) {
-            logger.warn("目前不支持泛型类，将会擦除类型信息");
-            className = className.substring(0, className.indexOf("<"));
-            logger.warn("经过擦除过的类型名称为" + className);
-        }
-
-        switch (className) {
-            case "int":
-                logger.debug("基本类型: int");
-                return int.class;
-            case "long":
-                logger.debug("基本类型: long");
-                return long.class;
-            case "float":
-                logger.debug("基本类型: float");
-                return float.class;
-            case "double":
-                logger.debug("基本类型: double");
-                return double.class;
-            case "boolean":
-                logger.debug("基本类型: boolean");
-                return boolean.class;
-            case "char":
-                logger.debug("基本类型: char");
-                return char.class;
-            case "byte":
-                logger.debug("基本类型: byte");
-                return byte.class;
-            case "short":
-                logger.debug("基本类型: short");
-                return short.class;
-            case "void":
-                logger.debug("基本类型: void");
-                return void.class;
-        }
-
-        Class<?> clazz;
-        if (className.contains(".")) {
-            logger.debug("尝试完整类名: " + className);
-            try {
-                clazz = XposedBasicHook.ClassFinder.withClassLoader(null).find(className);
-                if (clazz != null) {
-                    logger.debug("通过完整类名找到类: " + clazz.getName());
-                    return clazz;
-                }
-            } catch (Exception e) {
-                logger.debug("通过完整类名查找失败: " + e.getMessage());
-            }
-        }
-
-        for (String importStmt : imports) {
-            String fullClassName;
-            if (importStmt.endsWith(".*")) {
-                String packageName = importStmt.substring(0, importStmt.length() - 2);
-                fullClassName = packageName + "." + className;
-            } else {
-                fullClassName = importStmt;
-                String lastName = fullClassName.substring(fullClassName.lastIndexOf('.') + 1);
-                if (!lastName.equals(className)) {
-                    continue;
-                }
-            }
-            try {
-                clazz = XposedBasicHook.ClassFinder.withClassLoader(null).find(fullClassName);
-                if (clazz != null) {
-                    logger.debug("通过导入找到类: " + clazz.getName());
-                    return clazz;
-                }
-            } catch (Exception e) {
-                logger.debug("通过导入查找失败: " + fullClassName + ", " + e.getMessage());
-            }
-        }
-        throw new ClassNotFoundException("Class not found: " + className);
-    }
-
-    private static Class<?>[] parseSignature(String signature) {
-        if (signature == null || signature.isEmpty()) {
-            return new Class<?>[0];
-        }
-        
-        try {
-            String[] types = signature.split(",");
-            Class<?>[] paramTypes = new Class<?>[types.length];
-            
-            for (int i = 0; i < types.length; i++) {
-                paramTypes[i] = findClassInternal(types[i].trim());
-            }
-            
-            return paramTypes;
-        } catch (Exception e) {
-            logger.error("解析签名失败: " + signature, e);
-            return new Class<?>[0];
-        }
-    }
 
     private static Class<?>[] findMethodParameters(Class<?> targetClass, String methodName) {
         try {

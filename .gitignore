@@ -33,4 +33,11 @@ testmodule-keystore.jks
 /logs
 /report
 
+# 有的时候我会让AI写一些MD
+/*.md
+
+# 但是Readme还是要提交的
+!/README.MD
+
+
 

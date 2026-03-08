@@ -1,7 +1,7 @@
 package com.justnothing.testmodule.command.functions.watch;
 
 import com.justnothing.testmodule.utils.functions.Logger;
-import com.justnothing.testmodule.utils.data.ClassResolver;
+import com.justnothing.testmodule.utils.reflect.ClassResolver;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;

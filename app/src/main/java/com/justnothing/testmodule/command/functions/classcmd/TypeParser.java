@@ -1,18 +1,19 @@
 package com.justnothing.testmodule.command.functions.classcmd;
 
-import com.justnothing.testmodule.utils.data.ClassResolver;
+import com.justnothing.testmodule.utils.reflect.ClassResolver;
 import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.reflect.ReflectionUtils;
+import com.justnothing.testmodule.utils.reflect.SignatureUtils;
+
 import java.lang.reflect.Method;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
 
+
 public class TypeParser {
-
-
     private static final Logger logger = Logger.getLoggerForName("TypeParser");
-
 
     public static Object parse(String typeName, String expression, ClassLoader classLoader) throws Exception {
         if (typeName == null || typeName.trim().isEmpty()) {
@@ -86,7 +87,7 @@ public class TypeParser {
             targetClass = ClassResolver.findClassOrFail(typeName, classLoader);
         } catch (Throwable e) {
             logger.error("找不到类: " + typeName, e);
-            throw new IllegalArgumentException("Class not found: " + typeName + ", 原因: " + e.getMessage());
+            throw new IllegalArgumentException("找不到类: " + typeName + ", 原因: " + e.getMessage());
         }
 
         try {
@@ -100,7 +101,7 @@ public class TypeParser {
 
             if (expression.startsWith("FIELD:")) {
                 String fieldName = expression.substring(6);
-                Object result = ClassResolver.getStaticField(typeName, fieldName, classLoader);
+                Object result = ClassResolver.findStaticField(typeName, fieldName, classLoader);
                 if (result == null) {
                     throw new IllegalArgumentException("无法获取静态字段: " + typeName + "." + fieldName);
                 }
@@ -161,7 +162,7 @@ public class TypeParser {
         List<Class<?>> paramTypes = new ArrayList<>();
 
         if (!paramStr.trim().isEmpty()) {
-            String[] paramStrings = splitParams(paramStr);
+            String[] paramStrings = SignatureUtils.splitParams(paramStr);
             for (String param : paramStrings) {
                 param = param.trim();
                 if (param.isEmpty()) continue;
@@ -218,7 +219,7 @@ public class TypeParser {
         List<Class<?>> paramTypes = new ArrayList<>();
 
         if (!paramStr.trim().isEmpty()) {
-            String[] paramStrings = splitParams(paramStr);
+            String[] paramStrings = SignatureUtils.splitParams(paramStr);
             for (String param : paramStrings) {
                 param = param.trim();
                 if (param.isEmpty()) continue;
@@ -240,7 +241,7 @@ public class TypeParser {
         }
 
         // 查找构造函数
-        Constructor<?> constructor = findConstructor(targetClass,
+        Constructor<?> constructor = ReflectionUtils.findConstructor(targetClass,
                 paramTypes.toArray(new Class<?>[0]));
 
         if (constructor == null) {
@@ -276,59 +277,6 @@ public class TypeParser {
         return null;
     }
 
-    private static Constructor<?> findConstructor(Class<?> clazz, Class<?>[] paramTypes) {
-        for (Constructor<?> constructor : clazz.getDeclaredConstructors()) {
-            if (constructor.getParameterCount() == paramTypes.length) {
-                Class<?>[] constructorParams = constructor.getParameterTypes();
-                boolean compatible = true;
-
-                for (int i = 0; i < paramTypes.length; i++) {
-                    if (!constructorParams[i].isAssignableFrom(paramTypes[i])) {
-                        compatible = false;
-                        break;
-                    }
-                }
-
-                if (compatible) {
-                    constructor.setAccessible(true);
-                    return constructor;
-                }
-            }
-        }
-        return null;
-    }
-
-    private static String[] splitParams(String paramStr) {
-        List<String> params = new ArrayList<>();
-        StringBuilder current = new StringBuilder();
-        int parenDepth = 0;
-        boolean inQuotes = false;
-
-        for (char c : paramStr.toCharArray()) {
-            if (c == '"' && (current.length() == 0 || current.charAt(current.length() - 1) != '\\')) {
-                inQuotes = !inQuotes;
-                current.append(c);
-            } else if (c == '(' && !inQuotes) {
-                parenDepth++;
-                current.append(c);
-            } else if (c == ')' && !inQuotes) {
-                parenDepth--;
-                current.append(c);
-            } else if (c == ',' && parenDepth == 0 && !inQuotes) {
-                params.add(current.toString());
-                current = new StringBuilder();
-            } else {
-                current.append(c);
-            }
-        }
-
-        // 使用 length() > 0 替代 isEmpty()
-        if (current.length() > 0) {
-            params.add(current.toString());
-        }
-
-        return params.toArray(new String[0]);
-    }
 
     private static Object inferType(String value) {
         value = value.trim();

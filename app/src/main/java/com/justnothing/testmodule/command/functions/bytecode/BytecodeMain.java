@@ -5,7 +5,7 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_BYTECODE_VE
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
-import com.justnothing.testmodule.utils.data.ClassResolver;
+import com.justnothing.testmodule.utils.reflect.ClassResolver;
 
 import org.benf.cfr.reader.api.CfrDriver;
 import org.benf.cfr.reader.api.OutputSinkFactory;

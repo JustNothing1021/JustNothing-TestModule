@@ -25,7 +25,7 @@ import com.justnothing.testmodule.command.output.StringBuilderCollector;
 import com.justnothing.testmodule.command.output.IOutputHandler;
 import com.justnothing.testmodule.command.output.SystemOutputRedirector;
 import com.justnothing.testmodule.command.utils.CommandArgumentParser;
-import com.justnothing.testmodule.utils.data.ClassLoaderManager;
+import com.justnothing.testmodule.utils.reflect.ClassLoaderManager;
 import com.justnothing.testmodule.utils.functions.Logger;
 
 import java.util.HashMap;
@@ -86,6 +86,8 @@ public class CommandExecutor {
         registerCommand("cinvoke", classExecutor);
         registerCommand("cfield", classExecutor);
         registerCommand("csearch", classExecutor);
+        registerCommand("cconstructor", classExecutor);
+        registerCommand("creflect", classExecutor);
         
         BeanShellExecutorMain beanShellExecutor = new BeanShellExecutorMain("bsh");
         registerCommand("bsh", beanShellExecutor);
@@ -351,6 +353,8 @@ public class CommandExecutor {
                 cinvoke                        - 调用类中的方法 (快捷方式)
                 cfield                         - 查看或操作字段 (快捷方式)
                 csearch                        - 搜索类、方法、字段或注解 (快捷方式)
+                cconstructor                   - 创建类的实例 (快捷方式)
+                creflect                      - 使用反射访问和操作类的私有成员 (快捷方式)
             
               script                            - 脚本管理系统
                 srun                            - 快捷执行脚本代码

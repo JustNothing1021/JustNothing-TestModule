@@ -13,12 +13,7 @@ public class TipSystem {
     private final Random random;
     private final String language;
     
-    private final Logger logger = new Logger() {
-        @Override
-        public String getTag() {
-            return TAG;
-        }
-    };
+    private final Logger logger = Logger.getLoggerForName(TAG);
     
     public TipSystem() {
         this.tipMap = new HashMap<>();

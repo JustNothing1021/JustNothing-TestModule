@@ -8,6 +8,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
+import com.justnothing.testmodule.utils.reflect.ReflectionUtils;
+
 public class ScriptUtils {
 
 
@@ -53,40 +55,6 @@ public class ScriptUtils {
     }
 
 
-    static boolean isPrimitiveWrapperMatch(Class<?> target, Class<?> source) {
-        if (target == int.class && source == Integer.class)
-            return true;
-        if (target == Integer.class && source == int.class)
-            return true;
-        if (target == long.class && source == Long.class)
-            return true;
-        if (target == Long.class && source == long.class)
-            return true;
-        if (target == float.class && source == Float.class)
-            return true;
-        if (target == Float.class && source == float.class)
-            return true;
-        if (target == double.class && source == Double.class)
-            return true;
-        if (target == Double.class && source == double.class)
-            return true;
-        if (target == boolean.class && source == Boolean.class)
-            return true;
-        if (target == Boolean.class && source == boolean.class)
-            return true;
-        if (target == char.class && source == Character.class)
-            return true;
-        if (target == Character.class && source == char.class)
-            return true;
-        if (target == byte.class && source == Byte.class)
-            return true;
-        if (target == Byte.class && source == byte.class)
-            return true;
-        if (target == short.class && source == Short.class)
-            return true;
-        return target == Short.class && source == short.class;
-    }
-
     static boolean isExactTypeMatch(Class<?> expected, Class<?> actual) {
         return expected == actual;
     }
@@ -99,7 +67,7 @@ public class ScriptUtils {
             return !expected.isPrimitive();
 
         if (expected.isPrimitive())
-            return isPrimitiveWrapperMatch(expected, actual);
+            return ReflectionUtils.isPrimitiveWrapperMatch(expected, actual);
 
         return expected.isAssignableFrom(actual);
     }

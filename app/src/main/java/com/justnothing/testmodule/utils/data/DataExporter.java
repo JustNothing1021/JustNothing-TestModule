@@ -1,6 +1,5 @@
 package com.justnothing.testmodule.utils.data;
 
-import android.content.Context;
 import android.os.Environment;
 
 import com.justnothing.testmodule.constants.HookConfig;
@@ -25,10 +24,8 @@ import java.util.Objects;
 public class DataExporter extends Logger {
     private static final String TAG = "DataExporter";
 
-    private final Context context;
 
-    public DataExporter(Context ctx) {
-        this.context = ctx.getApplicationContext();
+    public DataExporter() {
     }
     
     @Override
@@ -66,7 +63,7 @@ public class DataExporter extends Logger {
 
     public String exportModuleStatus() throws JSONException {
         JSONObject statusData = new JSONObject();
-        ModuleStatusMonitor monitor = new ModuleStatusMonitor(context);
+        ModuleStatusMonitor monitor = new ModuleStatusMonitor();
         ModuleStatusMonitor.ModuleStatus status = monitor.getModuleStatus();
 
         statusData.put(HookConfig.KEY_IS_MODULE_ACTIVE, status.isModuleActive);
@@ -113,7 +110,7 @@ public class DataExporter extends Logger {
 
     public String exportProcessedPackages() throws JSONException {
         JSONObject packagesData = new JSONObject();
-        ModuleStatusMonitor monitor = new ModuleStatusMonitor(context);
+        ModuleStatusMonitor monitor = new ModuleStatusMonitor();
         ModuleStatusMonitor.ModuleStatus status = monitor.getModuleStatus();
         List<String> packages = status.processedPackages;
 

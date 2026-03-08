@@ -9,6 +9,7 @@ import com.justnothing.testmodule.utils.io.IOManager;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 
 public class ServerPortManager {
@@ -218,7 +219,7 @@ public class ServerPortManager {
             int port = Integer.parseInt(portStr.trim());
 
             try (java.net.Socket socket = new java.net.Socket()) {
-                socket.connect(new java.net.InetSocketAddress("localhost", port), 1000);
+                socket.connect(new InetSocketAddress("localhost", port), 1000);
                 return true;
             } catch (Exception e) {
                 return false;

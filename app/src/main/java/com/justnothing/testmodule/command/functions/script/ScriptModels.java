@@ -32,7 +32,8 @@ import com.justnothing.testmodule.command.functions.script.ASTNodes.*;
 import com.justnothing.testmodule.command.functions.script.ScriptLogger.StandaloneLogger;
 import com.justnothing.testmodule.command.output.IOutputHandler;
 import com.justnothing.testmodule.command.output.SystemOutputCollector;
-import com.justnothing.testmodule.utils.data.ClassResolver;
+import com.justnothing.testmodule.utils.reflect.ClassResolver;
+import com.justnothing.testmodule.utils.reflect.ReflectionUtils;
 import static com.justnothing.testmodule.command.functions.script.ScriptLogger.*;
 import static com.justnothing.testmodule.command.functions.script.ScriptUtils.*;
 
@@ -2528,7 +2529,7 @@ public class ScriptModels {
                 Class<?> expectedType = context.findClass(parameters.get(i).getType());
                 Class<?> actualType = paramTypes.get(i);
                 if (!expectedType.isAssignableFrom(actualType) &&
-                        !isPrimitiveWrapperMatch(expectedType, actualType)) {
+                        !ReflectionUtils.isPrimitiveWrapperMatch(expectedType, actualType)) {
                     return false;
                 }
             }

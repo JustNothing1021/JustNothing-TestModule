@@ -20,11 +20,6 @@ public class byw implements byy {
     private static final String c = "US_CA";
     private static final String d = "DE_FRA";
     private static final String e = "VN_VN";
-    private static final String f = "正式环境";
-    private static final String g = "东南亚正式环境";
-    private static final String h = "美国正式环境";
-    private static final String i = "欧洲正式环境";
-    private static final String j = "越南正式环境";
     private static final String k = elw.d();
 
     /* renamed from: a, reason: collision with other field name */

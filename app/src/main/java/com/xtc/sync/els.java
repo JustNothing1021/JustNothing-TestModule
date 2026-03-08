@@ -18,9 +18,6 @@ public class els {
     @Deprecated
     public static final long f26089a = -1;
 
-    /* renamed from: a, reason: collision with other field name */
-    private static final String f8964a = "SystemPropertyUtil";
-
     @Deprecated
     public static void a(String str, boolean z) {
         try {

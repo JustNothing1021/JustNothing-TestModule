@@ -8,6 +8,7 @@ import com.justnothing.testmodule.hooks.HookEntry;
 import com.justnothing.testmodule.hooks.PackageHook;
 import com.justnothing.testmodule.utils.functions.CmdUtils;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
+import com.justnothing.testmodule.utils.reflect.ClassResolver;
 
 import java.lang.reflect.Method;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -23,7 +24,7 @@ public class ShellServiceHook extends PackageHook {
             info("testServiceManager: 开始测试服务管理器");
 
             try {
-                Method checkService = MethodFinder.find(
+                Method checkService = ClassResolver.findMethod(
                         "android.os.ServiceManager",
                         "checkService", String.class);
 
@@ -45,7 +46,7 @@ public class ShellServiceHook extends PackageHook {
 
             // 方法2：尝试调用getService
             try {
-                Method getService = MethodFinder.find(
+                Method getService = ClassResolver.findMethod(
                         "android.os.ServiceManager",
                         "getService", String.class);
 
@@ -111,7 +112,7 @@ public class ShellServiceHook extends PackageHook {
                 boolean registered = false;
 
                 try {
-                    Method addServiceMethod = MethodFinder.find(
+                    Method addServiceMethod = ClassResolver.findMethod(
                             "android.os.ServiceManager", "addService",
                             String.class, IBinder.class);
 
@@ -128,12 +129,12 @@ public class ShellServiceHook extends PackageHook {
 
                 if (!registered) {
                     try {
-                        Class<?> serviceManagerClass = ClassFinder.find("android.os.ServiceManager");
+                        Class<?> serviceManagerClass = ClassResolver.findClass("android.os.ServiceManager");
                         Object serviceManagerInstance = XposedHelpers.getStaticObjectField(
                                 serviceManagerClass, "sServiceManager");
 
                         if (serviceManagerInstance != null) {
-                            Method addServiceProxy = MethodFinder.find(
+                            Method addServiceProxy = ClassResolver.findMethod(
                                     "android.os.ServiceManager", "addService",
                                     String.class, IBinder.class);
 

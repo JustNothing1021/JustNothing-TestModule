@@ -51,7 +51,7 @@ public class SystraceRunner {
             command.append(" --time=").append(duration);
             command.append(" -o ").append(outputFile);
             
-            if (categories != null && categories.length > 0) {
+            if (categories != null) {
                 for (String category : categories) {
                     command.append(" ").append(category);
                 }

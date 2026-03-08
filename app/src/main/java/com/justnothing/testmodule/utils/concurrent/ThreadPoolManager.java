@@ -18,21 +18,12 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class ThreadPoolManager extends Logger {
-
-    private static final Logger logger = new Logger() {
-        @Override
-        public String getTag() {
-            return TAG;
-        }
-    };
-
+public class ThreadPoolManager {
     private static final String TAG = "ThreadPoolManager";
+    private static final Logger logger = Logger.getLoggerForName(TAG);
     private static volatile ThreadPoolManager instance = null;
-
     private static final int CPU_CORES = Runtime.getRuntime().availableProcessors();
     private static final boolean IS_LOW_END_DEVICE = CPU_CORES <= 4 || Runtime.getRuntime().maxMemory() < 128 * 1024 * 1024;
-
     private static final int IO_POOL_SIZE = Math.max(1, IS_LOW_END_DEVICE ? 1 : Math.max(2, CPU_CORES));
     private static final int CPU_POOL_SIZE = Math.max(1, IS_LOW_END_DEVICE ? 1 : Math.max(1, CPU_CORES / 2));
     private static final int FAST_POOL_SIZE = Math.max(2, IS_LOW_END_DEVICE ? 2 : Math.max(3, CPU_CORES));
@@ -54,15 +45,14 @@ public class ThreadPoolManager extends Logger {
     private final AtomicInteger activeTasks = new AtomicInteger(0);
     private final AtomicInteger completedTasks = new AtomicInteger(0);
     private final AtomicInteger rejectedTasks = new AtomicInteger(0);
-
-    private volatile boolean initialized = false;
+    private static boolean initialized = false;
     private volatile boolean shutdown = false;
 
     private ThreadPoolManager() {
         super();
 
         ThreadFactory ioThreadFactory = new NamedThreadFactory("IO-Pool", Thread.NORM_PRIORITY - 1);
-        ThreadFactory cpuThreadFactory = new NamedThreadFactory("CPU-Pool", Thread.NORM_PRIORITY);
+        ThreadFactory cpuThreadFactory = new NamedThreadFactory("CPU-Pool", Thread.NORM_PRIORITY + 1);
         ThreadFactory fastThreadFactory = new NamedThreadFactory("Fast-Pool", Thread.NORM_PRIORITY);
         ThreadFactory socketThreadFactory = new NamedThreadFactory("Socket-Pool", Thread.NORM_PRIORITY - 1);
         ThreadFactory scheduledThreadFactory = new NamedThreadFactory("Scheduled-Pool", Thread.NORM_PRIORITY);
@@ -110,21 +100,16 @@ public class ThreadPoolManager extends Logger {
                 scheduledThreadFactory
         );
 
-        initialized = true;
-        info("ThreadPoolManager初始化完成");
-        info("设备信息: CPU核心数: " + CPU_CORES + 
+        logger.info("ThreadPoolManager初始化完成");
+        logger.info("设备信息: CPU核心数: " + CPU_CORES +
                 ", 低端设备: " + IS_LOW_END_DEVICE +
                 ", 最大内存: " + (Runtime.getRuntime().maxMemory() / 1024 / 1024) + "MB");
-        info("线程池配置: IO池: " + IO_POOL_SIZE + "/" + IO_QUEUE_CAPACITY + 
+        logger.info("线程池配置: IO池: " + IO_POOL_SIZE + "/" + IO_QUEUE_CAPACITY +
                 ", CPU池: " + CPU_POOL_SIZE + "/" + CPU_QUEUE_CAPACITY +
                 ", 快速池: " + FAST_POOL_SIZE + "/" + FAST_QUEUE_CAPACITY +
                 ", Socket池: " + SOCKET_POOL_SIZE + "/" + SOCKET_QUEUE_CAPACITY);
     }
 
-    @Override
-    public String getTag() {
-        return TAG;
-    }
 
     public static ThreadPoolManager getInstance() {
         if (instance == null) {
@@ -141,17 +126,17 @@ public class ThreadPoolManager extends Logger {
         return instance;
     }
 
-    public static void initialize() {
-        getInstance();
-        if (instance != null && !instance.initialized) {
-            logger.warn("ThreadPoolManager未初始化");
-        }
-    }
-
     public static void shutdown() {
         ThreadPoolManager mgr = getInstance();
         if (mgr != null) {
             mgr.shutdownInternal();
+        }
+    }
+
+    public static void initialize() {
+        if (!initialized) {
+            getInstance();
+            initialized = true;
         }
     }
 
@@ -161,7 +146,7 @@ public class ThreadPoolManager extends Logger {
         }
 
         shutdown = true;
-        info("开始关闭ThreadPoolManager...");
+        logger.info("开始关闭ThreadPoolManager...");
 
         shutdownExecutor(ioExecutor, "IO");
         shutdownExecutor(cpuExecutor, "CPU");
@@ -169,24 +154,24 @@ public class ThreadPoolManager extends Logger {
         shutdownExecutor(socketExecutor, "Socket");
         shutdownExecutor(scheduledExecutor, "Scheduled");
 
-        info("ThreadPoolManager已关闭");
+        logger.info("ThreadPoolManager已关闭");
     }
 
     private void shutdownExecutor(ExecutorService executor, String name) {
         try {
             executor.shutdown();
             if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
-                warn(name + "线程池未在5秒内关闭，强制关闭");
+                logger.warn(name + "线程池未在5秒内关闭，强制关闭");
                 executor.shutdownNow();
                 if (!executor.awaitTermination(3, TimeUnit.SECONDS)) {
-                    error(name + "线程池强制关闭失败");
+                    logger.error(name + "线程池强制关闭失败");
                 }
             }
-            info(name + "线程池已关闭");
+            logger.info(name + "线程池已关闭");
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             executor.shutdownNow();
-            warn(name + "线程池关闭被中断");
+            logger.warn(name + "线程池关闭被中断");
         }
     }
 
@@ -321,12 +306,12 @@ public class ThreadPoolManager extends Logger {
                 task.run();
                 completedTasks.incrementAndGet();
             } catch (Throwable e) {
-                error("任务执行异常", e);
+                logger.error("任务执行异常", e);
             } finally {
                 activeTasks.decrementAndGet();
                 long duration = System.currentTimeMillis() - startTime;
                 if (duration > 5000) {
-                    warn("任务执行时间过长: " + duration + "ms");
+                    logger.warn("任务执行时间过长: " + duration + "ms");
                 }
             }
         };
@@ -347,7 +332,7 @@ public class ThreadPoolManager extends Logger {
                 activeTasks.decrementAndGet();
                 long duration = System.currentTimeMillis() - startTime;
                 if (duration > 5000) {
-                    warn("任务执行时间过长: " + duration + "ms");
+                    logger.warn("任务执行时间过长: " + duration + "ms");
                 }
             }
         };
@@ -469,7 +454,7 @@ public class ThreadPoolManager extends Logger {
         @Override
         public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
             rejectedTasks.incrementAndGet();
-            error("任务被拒绝执行，活跃线程: " + executor.getActiveCount() +
+            logger.error("任务被拒绝执行，活跃线程: " + executor.getActiveCount() +
                     ", 队列大小: " + executor.getQueue().size() +
                     ", 已完成任务: " + executor.getCompletedTaskCount());
 
@@ -477,7 +462,7 @@ public class ThreadPoolManager extends Logger {
                 try {
                     r.run();
                 } catch (Throwable e) {
-                    error("在调用线程中执行被拒绝的任务失败", e);
+                    logger.error("在调用线程中执行被拒绝的任务失败", e);
                 }
             }
         }

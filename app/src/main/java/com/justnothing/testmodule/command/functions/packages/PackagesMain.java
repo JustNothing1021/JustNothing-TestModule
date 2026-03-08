@@ -4,7 +4,7 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_PACKAGES_VE
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
-import com.justnothing.testmodule.utils.data.ClassLoaderManager;
+import com.justnothing.testmodule.utils.reflect.ClassLoaderManager;
 
 import java.util.List;
 import java.util.Locale;

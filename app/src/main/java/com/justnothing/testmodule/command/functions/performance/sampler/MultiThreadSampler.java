@@ -57,7 +57,7 @@ public class MultiThreadSampler {
                 continue;
             }
             
-            String threadKey = thread.getName() + " (ID: " + thread.threadId() + ")";
+            String threadKey = thread.getName() + " (ID: " + thread.getId() + ")";
             
             Map<String, AtomicInteger> methodCounts = threadMethodCounts.computeIfAbsent(
                 threadKey, k -> new ConcurrentHashMap<>());

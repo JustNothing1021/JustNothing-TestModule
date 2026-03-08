@@ -44,7 +44,7 @@ public class ModuleStatusActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_module_status);
 
-        monitor = new ModuleStatusMonitor(this);
+        monitor = new ModuleStatusMonitor();
         handler = new Handler(Looper.getMainLooper());
         logger.info("模块状态监控界面启动");
 

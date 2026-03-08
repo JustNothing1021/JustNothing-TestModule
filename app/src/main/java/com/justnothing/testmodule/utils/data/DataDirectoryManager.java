@@ -21,20 +21,13 @@ public class DataDirectoryManager {
     public static String dataDirectory;
     public static File defaultDataDir = new File(METHODS_DATA_DIR);
 
-    public static class DataDirectoryManagerLogger extends Logger {
-        @Override
-        public String getTag() {
-            return TAG;
-        }
-    }
+    private static final Logger logger = Logger.getLoggerForName(TAG);
 
     public static Context context;
 
     public static void setContext(Context ctx) {
         context = ctx;
     }
-
-    private static final DataDirectoryManagerLogger logger = new DataDirectoryManagerLogger();
 
     public static void deleteFallbackRecordFile() {
         File fallbackRecordFile = new File(FileDirectory.TEMP_FALLBACK_RECORD_FILE_DIR);

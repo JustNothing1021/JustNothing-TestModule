@@ -1,7 +1,5 @@
 package com.justnothing.testmodule.utils.data;
 
-import android.content.Context;
-
 import com.justnothing.testmodule.constants.HookConfig;
 import com.justnothing.testmodule.utils.functions.Logger;
 
@@ -17,7 +15,7 @@ import java.util.List;
 public class ModuleStatusMonitor extends Logger {
     private static final String TAG = "ModuleStatusMonitor";
 
-    public ModuleStatusMonitor(Context ctx) {}
+    public ModuleStatusMonitor() {}
     
     @Override
     public String getTag() {

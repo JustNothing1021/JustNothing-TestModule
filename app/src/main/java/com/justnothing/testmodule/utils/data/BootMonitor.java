@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class BootMonitor {
     private static final String TAG = "BootMonitor";
-    private static final BootMonitorLogger logger = new BootMonitorLogger();
+    private static final Logger logger = Logger.getLoggerForName(TAG);
     private static final AtomicBoolean zygoteInitStarted = new AtomicBoolean(false);
     private static final AtomicBoolean zygoteInitCompleted = new AtomicBoolean(false);
     private static final AtomicLong zygoteInitStartTime = new AtomicLong(0);
@@ -35,13 +35,6 @@ public class BootMonitor {
     private static int successfulPackageLoads = 0;
     private static int failedPackageLoads = 0;
 
-
-    public static class BootMonitorLogger extends Logger {
-        @Override
-        public String getTag() {
-            return TAG;
-        }
-    }
     
     public static void markZygoteInitStarted() {
         if (zygoteInitStarted.compareAndSet(false, true)) {

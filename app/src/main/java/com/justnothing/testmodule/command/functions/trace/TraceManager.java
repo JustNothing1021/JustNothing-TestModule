@@ -1,6 +1,6 @@
 package com.justnothing.testmodule.command.functions.trace;
 
-import com.justnothing.testmodule.utils.data.ClassResolver;
+import com.justnothing.testmodule.utils.reflect.ClassResolver;
 import com.justnothing.testmodule.utils.functions.Logger;
 
 import java.util.concurrent.ConcurrentHashMap;

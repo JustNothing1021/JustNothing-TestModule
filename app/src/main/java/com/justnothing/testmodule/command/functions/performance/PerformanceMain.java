@@ -19,7 +19,7 @@ import com.justnothing.testmodule.command.functions.performance.systrace.Systrac
 import com.justnothing.testmodule.command.functions.performance.systrace.SystraceRunner;
 import com.justnothing.testmodule.command.functions.performance.trace.TraceData;
 import com.justnothing.testmodule.command.functions.performance.trace.Tracer;
-import com.justnothing.testmodule.utils.data.ClassResolver;
+import com.justnothing.testmodule.utils.reflect.ClassResolver;
 import com.justnothing.testmodule.utils.functions.Logger;
 
 import java.io.File;
@@ -27,7 +27,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -62,27 +64,27 @@ public class PerformanceMain extends CommandBase {
                     sample stop <id>                       - 停止采样
                     sample report [id]                      - 查看采样报告
                     sample export <id> <file>              - 导出采样数据
-                    
+                
                     multithread start [rate]               - 开始多线程采样
                     multithread stop <id>                  - 停止多线程采样
                     multithread report [id]                - 查看多线程采样报告
                     multithread export <id> <file>         - 导出多线程采样数据
-                    
+                
                     hierarchical start [rate]              - 开始分层采样
                     hierarchical stop <id>                 - 停止分层采样
                     hierarchical report [id]               - 查看分层采样报告
                     hierarchical export <id> <file>        - 导出分层采样数据
-                    
+                
                     trace start                            - 开始 Trace
                     trace stop <id>                        - 停止 Trace
                     trace report [id]                       - 查看 Trace 报告
                     trace export <id> <file>                - 导出 Trace 数据
-                    
+                
                     systrace start [duration] [categories]  - 开始 Systrace
                     systrace stop <id>                      - 停止 Systrace
                     systrace report [id]                     - 查看 Systrace 报告
                     systrace export <id> <file>              - 导出 Systrace 数据
-                    
+                
                     hook <class> [method] [sig]            - Hook 方法
                     hook stop <id>                         - 停止 Hook
                     hook report [id]                        - 查看 Hook 报告
@@ -101,13 +103,13 @@ public class PerformanceMain extends CommandBase {
                     performance sample start 100
                     performance sample stop 1
                     performance sample report 1
-                    
+                
                     performance multithread start 100
                     performance multithread report 1
-                    
+                
                     performance hierarchical start 100
                     performance hierarchical report 1
-                    
+                
                     performance hook com.example.MyClass
                     performance hook com.example.MyClass myMethod
                     performance hook stop 1
@@ -251,25 +253,26 @@ public class PerformanceMain extends CommandBase {
             return "错误: 采样数据不存在 (ID: " + id + ")";
         }
 
-        if (data.methodCounts.isEmpty()) {
+        if (data.methodCounts().isEmpty()) {
             return "没有采样数据";
         }
 
         StringBuilder result = new StringBuilder();
         result.append("=== 采样报告 ===\n");
-        result.append("ID: ").append(data.id).append("\n");
-        result.append("采样频率: ").append(data.sampleRate).append(" Hz\n");
-        result.append("采样次数: ").append(data.totalSamples).append("\n");
+        result.append("ID: ").append(data.id()).append("\n");
+        result.append("采样频率: ").append(data.sampleRate()).append(" Hz\n");
+        result.append("采样次数: ").append(data.totalSamples()).append("\n");
         result.append("持续时间: ").append(data.getDurationString()).append("\n");
         result.append("\n");
         result.append("热点方法:\n");
 
-        data.methodCounts.entrySet().stream()
+        data.methodCounts().entrySet().stream()
             .sorted((a, b) -> b.getValue() - a.getValue())
             .forEach(entry -> {
                 int count = entry.getValue();
-                double percentage = (count * 100.0) / data.totalSamples;
-                result.append(String.format("  %-60s %6d 次 (%5.1f%%)%n", 
+                double percentage = (count * 100.0) / data.totalSamples();
+                result.append(String.format(Locale.getDefault(),
+                        "  %-60s %6d 次 (%5.1f%%)%n",
                     entry.getKey(), count, percentage));
             });
 
@@ -299,16 +302,16 @@ public class PerformanceMain extends CommandBase {
 
         StringBuilder json = new StringBuilder();
         json.append("{\n");
-        json.append("  \"id\": ").append(data.id).append(",\n");
-        json.append("  \"sampleRate\": ").append(data.sampleRate).append(",\n");
-        json.append("  \"startTime\": ").append(data.startTime).append(",\n");
-        json.append("  \"stopTime\": ").append(data.stopTime).append(",\n");
-        json.append("  \"totalSamples\": ").append(data.totalSamples).append(",\n");
+        json.append("  \"id\": ").append(data.id()).append(",\n");
+        json.append("  \"sampleRate\": ").append(data.sampleRate()).append(",\n");
+        json.append("  \"startTime\": ").append(data.startTime()).append(",\n");
+        json.append("  \"stopTime\": ").append(data.stopTime()).append(",\n");
+        json.append("  \"totalSamples\": ").append(data.totalSamples()).append(",\n");
         json.append("  \"duration\": ").append(data.getDuration()).append(",\n");
         json.append("  \"methodCounts\": {\n");
 
         boolean first = true;
-        for (Map.Entry<String, Integer> entry : data.methodCounts.entrySet()) {
+        for (Map.Entry<String, Integer> entry : data.methodCounts().entrySet()) {
             if (!first) {
                 json.append(",\n");
             }
@@ -329,7 +332,7 @@ public class PerformanceMain extends CommandBase {
         return "采样数据已导出\n" +
                 "ID: " + id + "\n" +
                 "文件: " + filePath + "\n" +
-                "采样次数: " + data.totalSamples;
+                "采样次数: " + data.totalSamples();
     }
 
     private String handleHook(String[] args, ClassLoader classLoader) {
@@ -416,7 +419,7 @@ public class PerformanceMain extends CommandBase {
         if (data != null) {
             MethodStats stats = PerformanceHook.getStats(id);
             if (stats != null) {
-                data = HookData.fromMethodStats(id, stats, data.startTime, System.currentTimeMillis());
+                data = HookData.fromMethodStats(id, stats, data.startTime(), System.currentTimeMillis());
                 hookDataMap.put(id, data);
             }
         }
@@ -448,10 +451,10 @@ public class PerformanceMain extends CommandBase {
 
             StringBuilder result = new StringBuilder();
             result.append("=== Hook 报告 ===\n");
-            result.append("ID: ").append(data.id).append("\n");
-            result.append("类: ").append(data.className).append("\n");
-            result.append("方法: ").append(data.methodName).append("\n");
-            result.append("签名: ").append(data.signature).append("\n");
+            result.append("ID: ").append(data.id()).append("\n");
+            result.append("类: ").append(data.className()).append("\n");
+            result.append("方法: ").append(data.methodName()).append("\n");
+            result.append("签名: ").append(data.signature()).append("\n");
             result.append("调用次数: ").append(stats.callCount.get()).append("\n");
             result.append("总耗时: ").append(data.getDurationStringNs(stats.totalDuration.get())).append("\n");
             result.append("平均耗时: ").append(data.getDurationStringNs((long) stats.getAverageDuration())).append("\n");
@@ -523,12 +526,12 @@ public class PerformanceMain extends CommandBase {
 
         StringBuilder json = new StringBuilder();
         json.append("{\n");
-        json.append("  \"id\": ").append(data.id).append(",\n");
-        json.append("  \"className\": \"").append(data.className).append("\",\n");
-        json.append("  \"methodName\": \"").append(data.methodName).append("\",\n");
-        json.append("  \"signature\": \"").append(data.signature).append("\",\n");
-        json.append("  \"startTime\": ").append(data.startTime).append(",\n");
-        json.append("  \"stopTime\": ").append(data.stopTime).append(",\n");
+        json.append("  \"id\": ").append(data.id()).append(",\n");
+        json.append("  \"className\": \"").append(data.className()).append("\",\n");
+        json.append("  \"methodName\": \"").append(data.methodName()).append("\",\n");
+        json.append("  \"signature\": \"").append(data.signature()).append("\",\n");
+        json.append("  \"startTime\": ").append(data.startTime()).append(",\n");
+        json.append("  \"stopTime\": ").append(data.stopTime()).append(",\n");
         json.append("  \"callCount\": ").append(stats.callCount.get()).append(",\n");
         json.append("  \"totalDuration\": ").append(stats.totalDuration.get()).append(",\n");
         json.append("  \"minDuration\": ").append(stats.minDuration.get()).append(",\n");
@@ -621,11 +624,11 @@ public class PerformanceMain extends CommandBase {
                 result.append("  ID: ").append(entry.getKey()).append("\n");
                 result.append("    类型: 单线程采样\n");
                 result.append("    状态: 已完成\n");
-                result.append("    采样频率: ").append(data.sampleRate).append(" Hz\n");
-                result.append("    采样次数: ").append(data.totalSamples).append("\n");
+                result.append("    采样频率: ").append(data.sampleRate()).append(" Hz\n");
+                result.append("    采样次数: ").append(data.totalSamples()).append("\n");
                 result.append("    持续时间: ").append(data.getDurationString()).append("\n");
-                result.append("    开始时间: ").append(new java.util.Date(data.startTime)).append("\n");
-                result.append("    结束时间: ").append(new java.util.Date(data.stopTime)).append("\n");
+                result.append("    开始时间: ").append(new java.util.Date(data.startTime())).append("\n");
+                result.append("    结束时间: ").append(new java.util.Date(data.stopTime())).append("\n");
                 result.append("\n");
             }
         }
@@ -637,12 +640,12 @@ public class PerformanceMain extends CommandBase {
                 result.append("  ID: ").append(entry.getKey()).append("\n");
                 result.append("    类型: 多线程采样\n");
                 result.append("    状态: 已完成\n");
-                result.append("    采样频率: ").append(data.sampleRate).append(" Hz\n");
-                result.append("    采样次数: ").append(data.totalSamples).append("\n");
-                result.append("    线程数量: ").append(data.threadCount).append("\n");
+                result.append("    采样频率: ").append(data.sampleRate()).append(" Hz\n");
+                result.append("    采样次数: ").append(data.totalSamples()).append("\n");
+                result.append("    线程数量: ").append(data.threadCount()).append("\n");
                 result.append("    持续时间: ").append(data.getDurationString()).append("\n");
-                result.append("    开始时间: ").append(new java.util.Date(data.startTime)).append("\n");
-                result.append("    结束时间: ").append(new java.util.Date(data.stopTime)).append("\n");
+                result.append("    开始时间: ").append(new java.util.Date(data.startTime())).append("\n");
+                result.append("    结束时间: ").append(new java.util.Date(data.stopTime())).append("\n");
                 result.append("\n");
             }
         }
@@ -654,12 +657,12 @@ public class PerformanceMain extends CommandBase {
                 result.append("  ID: ").append(entry.getKey()).append("\n");
                 result.append("    类型: 分层采样\n");
                 result.append("    状态: 已完成\n");
-                result.append("    采样频率: ").append(data.sampleRate).append(" Hz\n");
-                result.append("    采样次数: ").append(data.totalSamples).append("\n");
-                result.append("    方法数量: ").append(data.methodCount).append("\n");
+                result.append("    采样频率: ").append(data.sampleRate()).append(" Hz\n");
+                result.append("    采样次数: ").append(data.totalSamples()).append("\n");
+                result.append("    方法数量: ").append(data.methodCount()).append("\n");
                 result.append("    持续时间: ").append(data.getDurationString()).append("\n");
-                result.append("    开始时间: ").append(new java.util.Date(data.startTime)).append("\n");
-                result.append("    结束时间: ").append(new java.util.Date(data.stopTime)).append("\n");
+                result.append("    开始时间: ").append(new java.util.Date(data.startTime())).append("\n");
+                result.append("    结束时间: ").append(new java.util.Date(data.stopTime())).append("\n");
                 result.append("\n");
             }
         }
@@ -696,8 +699,8 @@ public class PerformanceMain extends CommandBase {
                 result.append("  ID: ").append(entry.getKey()).append("\n");
                 result.append("    类型: Systrace\n");
                 result.append("    状态: 已完成\n");
-                result.append("    文件: ").append(data.file).append("\n");
-                result.append("    持续时间: ").append(data.duration / 1000.0).append(" 秒\n");
+                result.append("    文件: ").append(data.file()).append("\n");
+                result.append("    持续时间: ").append(data.duration() / 1000.0).append(" 秒\n");
                 result.append("\n");
             }
         }
@@ -707,12 +710,12 @@ public class PerformanceMain extends CommandBase {
             for (Map.Entry<Integer, HookData> entry : hookDataMap.entrySet()) {
                 HookData data = entry.getValue();
                 result.append("  ID: ").append(entry.getKey()).append("\n");
-                result.append("    状态: ").append(data.stopTime == -1 ? "运行中" : "已停止").append("\n");
-                result.append("    类: ").append(data.className).append("\n");
-                result.append("    方法: ").append(data.methodName).append("\n");
-                result.append("    开始时间: ").append(new java.util.Date(data.startTime)).append("\n");
-                if (data.stopTime != -1) {
-                    result.append("    结束时间: ").append(new java.util.Date(data.stopTime)).append("\n");
+                result.append("    状态: ").append(data.stopTime() == -1 ? "运行中" : "已停止").append("\n");
+                result.append("    类: ").append(data.className()).append("\n");
+                result.append("    方法: ").append(data.methodName()).append("\n");
+                result.append("    开始时间: ").append(new java.util.Date(data.startTime())).append("\n");
+                if (data.stopTime() != -1) {
+                    result.append("    结束时间: ").append(new java.util.Date(data.stopTime())).append("\n");
                 }
                 result.append("\n");
             }
@@ -909,17 +912,17 @@ public class PerformanceMain extends CommandBase {
 
         StringBuilder result = new StringBuilder();
         result.append("=== 多线程采样报告 ===\n");
-        result.append("ID: ").append(data.id).append("\n");
-        result.append("采样频率: ").append(data.sampleRate).append(" Hz\n");
-        result.append("采样次数: ").append(data.totalSamples).append("\n");
-        result.append("线程数量: ").append(data.threadCount).append("\n");
+        result.append("ID: ").append(data.id()).append("\n");
+        result.append("采样频率: ").append(data.sampleRate()).append(" Hz\n");
+        result.append("采样次数: ").append(data.totalSamples()).append("\n");
+        result.append("线程数量: ").append(data.threadCount()).append("\n");
         result.append("持续时间: ").append(data.getDurationString()).append("\n");
         result.append("\n");
 
-        for (Map.Entry<String, Map<String, Integer>> threadEntry : data.threadMethodCounts.entrySet()) {
+        for (Map.Entry<String, Map<String, Integer>> threadEntry : data.threadMethodCounts().entrySet()) {
             String threadName = threadEntry.getKey();
             Map<String, Integer> methodCounts = threadEntry.getValue();
-            int threadSamples = data.threadSampleCounts.getOrDefault(threadName, 0);
+            int threadSamples = Objects.requireNonNull(data.threadSampleCounts().getOrDefault(threadName, 0));
 
             result.append("线程: ").append(threadName).append("\n");
             result.append("  采样次数: ").append(threadSamples).append("\n");
@@ -931,7 +934,9 @@ public class PerformanceMain extends CommandBase {
                 .forEach(entry -> {
                     int count = entry.getValue();
                     double percentage = (count * 100.0) / threadSamples;
-                    result.append(String.format("    %-60s %6d 次 (%5.1f%%)%n", 
+                    result.append(String.format(
+                            Locale.getDefault(),
+                            "    %-60s %6d 次 (%5.1f%%)%n",
                         entry.getKey(), count, percentage));
                 });
 
@@ -961,23 +966,23 @@ public class PerformanceMain extends CommandBase {
 
         StringBuilder json = new StringBuilder();
         json.append("{\n");
-        json.append("  \"id\": ").append(data.id).append(",\n");
-        json.append("  \"sampleRate\": ").append(data.sampleRate).append(",\n");
-        json.append("  \"startTime\": ").append(data.startTime).append(",\n");
-        json.append("  \"stopTime\": ").append(data.stopTime).append(",\n");
-        json.append("  \"totalSamples\": ").append(data.totalSamples).append(",\n");
-        json.append("  \"threadCount\": ").append(data.threadCount).append(",\n");
+        json.append("  \"id\": ").append(data.id()).append(",\n");
+        json.append("  \"sampleRate\": ").append(data.sampleRate()).append(",\n");
+        json.append("  \"startTime\": ").append(data.startTime()).append(",\n");
+        json.append("  \"stopTime\": ").append(data.stopTime()).append(",\n");
+        json.append("  \"totalSamples\": ").append(data.totalSamples()).append(",\n");
+        json.append("  \"threadCount\": ").append(data.threadCount()).append(",\n");
         json.append("  \"threads\": {\n");
 
         boolean firstThread = true;
-        for (Map.Entry<String, Map<String, Integer>> threadEntry : data.threadMethodCounts.entrySet()) {
+        for (Map.Entry<String, Map<String, Integer>> threadEntry : data.threadMethodCounts().entrySet()) {
             if (!firstThread) {
                 json.append(",\n");
             }
             firstThread = false;
             
             json.append("    \"").append(threadEntry.getKey()).append("\": {\n");
-            json.append("      \"sampleCount\": ").append(data.threadSampleCounts.get(threadEntry.getKey())).append(",\n");
+            json.append("      \"sampleCount\": ").append(data.threadSampleCounts().get(threadEntry.getKey())).append(",\n");
             json.append("      \"methods\": {\n");
 
             boolean firstMethod = true;
@@ -1006,7 +1011,7 @@ public class PerformanceMain extends CommandBase {
         return "多线程采样数据已导出\n" +
                 "ID: " + id + "\n" +
                 "文件: " + filePath + "\n" +
-                "采样次数: " + data.totalSamples;
+                "采样次数: " + data.totalSamples();
     }
 
     private String handleHierarchical(String[] args) {
@@ -1112,24 +1117,26 @@ public class PerformanceMain extends CommandBase {
 
         StringBuilder result = new StringBuilder();
         result.append("=== 分层采样报告 ===\n");
-        result.append("ID: ").append(data.id).append("\n");
-        result.append("采样频率: ").append(data.sampleRate).append(" Hz\n");
-        result.append("采样次数: ").append(data.totalSamples).append("\n");
-        result.append("方法数量: ").append(data.methodCount).append("\n");
+        result.append("ID: ").append(data.id()).append("\n");
+        result.append("采样频率: ").append(data.sampleRate()).append(" Hz\n");
+        result.append("采样次数: ").append(data.totalSamples()).append("\n");
+        result.append("方法数量: ").append(data.methodCount()).append("\n");
         result.append("持续时间: ").append(data.getDurationString()).append("\n");
         result.append("\n");
         result.append("热点方法:\n");
 
-        data.methodCallInfos.entrySet().stream()
+        data.methodCallInfos().entrySet().stream()
             .sorted((a, b) -> b.getValue().getSampleCount() - a.getValue().getSampleCount())
             .limit(20)
             .forEach(entry -> {
                 HierarchicalSampler.MethodCallInfo info = entry.getValue();
                 int count = info.getSampleCount();
-                double percentage = (count * 100.0) / data.totalSamples;
+                double percentage = (count * 100.0) / data.totalSamples();
                 double avgDepth = info.getAverageDepth();
                 
-                result.append(String.format("  %-60s %6d 次 (%5.1f%%), 平均深度: %.1f%n", 
+                result.append(String.format(
+                        Locale.getDefault(),
+                        "  %-60s %6d 次 (%5.1f%%), 平均深度: %.1f%n",
                     info.methodKey, count, percentage, avgDepth));
                 
                 Map<String, Integer> callers = info.getCallers();
@@ -1141,7 +1148,9 @@ public class PerformanceMain extends CommandBase {
                         .forEach(callerEntry -> {
                             int callerCount = callerEntry.getValue();
                             double callerPercentage = (callerCount * 100.0) / count;
-                            result.append(String.format("      %-60s %6d 次 (%5.1f%%)%n", 
+                            result.append(String.format(
+                                    Locale.getDefault(),
+                                    "      %-60s %6d 次 (%5.1f%%)%n",
                                 callerEntry.getKey(), callerCount, callerPercentage));
                         });
                 }
@@ -1171,16 +1180,16 @@ public class PerformanceMain extends CommandBase {
 
         StringBuilder json = new StringBuilder();
         json.append("{\n");
-        json.append("  \"id\": ").append(data.id).append(",\n");
-        json.append("  \"sampleRate\": ").append(data.sampleRate).append(",\n");
-        json.append("  \"startTime\": ").append(data.startTime).append(",\n");
-        json.append("  \"stopTime\": ").append(data.stopTime).append(",\n");
-        json.append("  \"totalSamples\": ").append(data.totalSamples).append(",\n");
-        json.append("  \"methodCount\": ").append(data.methodCount).append(",\n");
+        json.append("  \"id\": ").append(data.id()).append(",\n");
+        json.append("  \"sampleRate\": ").append(data.sampleRate()).append(",\n");
+        json.append("  \"startTime\": ").append(data.startTime()).append(",\n");
+        json.append("  \"stopTime\": ").append(data.stopTime()).append(",\n");
+        json.append("  \"totalSamples\": ").append(data.totalSamples()).append(",\n");
+        json.append("  \"methodCount\": ").append(data.methodCount()).append(",\n");
         json.append("  \"methods\": {\n");
 
         boolean firstMethod = true;
-        for (Map.Entry<String, HierarchicalSampler.MethodCallInfo> entry : data.methodCallInfos.entrySet()) {
+        for (Map.Entry<String, HierarchicalSampler.MethodCallInfo> entry : data.methodCallInfos().entrySet()) {
             if (!firstMethod) {
                 json.append(",\n");
             }
@@ -1218,7 +1227,7 @@ public class PerformanceMain extends CommandBase {
         return "分层采样数据已导出\n" +
                 "ID: " + id + "\n" +
                 "文件: " + filePath + "\n" +
-                "采样次数: " + data.totalSamples;
+                "采样次数: " + data.totalSamples();
     }
 
     private String handleTrace(String[] args) {
@@ -1306,8 +1315,10 @@ public class PerformanceMain extends CommandBase {
         result.append("Trace 段:\n");
 
         for (TraceData data : traceData) {
-            result.append(String.format("  %-40s %s (线程: %s, ID: %d)%n", 
-                data.name, data.getDurationString(), data.threadName, data.threadId));
+            result.append(String.format(
+                    Locale.getDefault(),
+                    "  %-40s %s (线程: %s, ID: %d)%n",
+                    data.name(), data.getDurationString(), data.threadName(), data.threadId()));
         }
 
         result.append("\n");
@@ -1351,11 +1362,11 @@ public class PerformanceMain extends CommandBase {
             first = false;
             
             json.append("    {\n");
-            json.append("      \"name\": \"").append(data.name).append("\",\n");
-            json.append("      \"startTime\": ").append(data.startTime).append(",\n");
-            json.append("      \"duration\": ").append(data.duration).append(",\n");
-            json.append("      \"threadId\": ").append(data.threadId).append(",\n");
-            json.append("      \"threadName\": \"").append(data.threadName).append("\"\n");
+            json.append("      \"name\": \"").append(data.name()).append("\",\n");
+            json.append("      \"startTime\": ").append(data.startTime()).append(",\n");
+            json.append("      \"duration\": ").append(data.duration()).append(",\n");
+            json.append("      \"threadId\": ").append(data.threadId()).append(",\n");
+            json.append("      \"threadName\": \"").append(data.threadName()).append("\"\n");
             json.append("    }");
         }
 
@@ -1521,7 +1532,7 @@ public class PerformanceMain extends CommandBase {
         return "Systrace 数据已导出\n" +
                 "ID: " + id + "\n" +
                 "文件: " + filePath + "\n" +
-                "原始文件: " + data.file;
+                "原始文件: " + data.file();
     }
 
     private boolean writeToFile(String filePath, String content) {

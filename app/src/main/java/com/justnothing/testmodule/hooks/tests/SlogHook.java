@@ -18,7 +18,7 @@ public class SlogHook extends ZygoteHook {
             String.class, String.class,
             new XC_MethodHook() {
                 @Override
-                protected void beforeHookedMethod(XC_MethodHook.MethodHookParam param) throws Throwable {
+                protected void beforeHookedMethod(XC_MethodHook.MethodHookParam param) {
                     try {
                         String tag = (String) param.args[0];
                         String msg = (String) param.args[1];

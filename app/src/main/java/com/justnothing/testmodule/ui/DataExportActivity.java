@@ -45,7 +45,7 @@ public class DataExportActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_data_export);
 
-        exporter = new DataExporter(this);
+        exporter = new DataExporter();
         logger.info("数据导出界面启动");
 
         setupRecyclerView();

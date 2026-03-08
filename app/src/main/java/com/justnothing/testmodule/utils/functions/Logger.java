@@ -20,7 +20,7 @@ public abstract class Logger {
     private static final LogWriter SHARED_LOG_WRITER = new LogWriter(!AppEnvironment.isHookEnv());
     public static final List<Logger> instances = new ArrayList<>();
 
-    private Context context;
+//    private Context context;
     private boolean bUseXPosedLog = false;
 
     public static class LoggerWrapper extends Logger {
@@ -49,18 +49,18 @@ public abstract class Logger {
     public abstract String getTag();
 
     public static void setContext(Context ctx) {
-        for (Logger logger : instances) logger.context = ctx;
+//        for (Logger logger : instances) logger.context = ctx;
     }
 
     private static void showToast(String message, int duration) {
-        try {
-            if (!instances.isEmpty()) {
-                Context context = instances.get(0).context;
-                if (context != null) {
-                    Toast.makeText(context, message, duration).show();
-                }
-            }
-        } catch (RuntimeException ignored) {}
+//        try {
+//            if (!instances.isEmpty()) {
+//                Context context = instances.get(0).context;
+//                if (context != null) {
+//                    Toast.makeText(context, message, duration).show();
+//                }
+//            }
+//        } catch (RuntimeException ignored) {}
     }
 
     public static void handleWarn(String s) {

@@ -8,6 +8,7 @@ import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class SystraceParser {
@@ -23,11 +24,11 @@ public class SystraceParser {
             Log.i(TAG, "解析 Systrace 文件: " + file);
 
             long duration = parseDuration(traceFile);
-            SystraceData.CpuData cpuData = parseCpuData(traceFile);
-            SystraceData.GpuData gpuData = parseGpuData(traceFile);
+            SystraceData.CPUData cpuData = parseCpuData(traceFile);
+            SystraceData.GPUData gpuData = parseGpuData(traceFile);
             SystraceData.MemoryData memoryData = parseMemoryData(traceFile);
             List<SystraceData.ThreadData> threadData = parseThreadData(traceFile);
-            List<SystraceData.IoData> ioData = parseIoData(traceFile);
+            List<SystraceData.IOData> ioData = parseIoData(traceFile);
 
             return new SystraceData(file, duration, cpuData, gpuData, memoryData, threadData, ioData);
 
@@ -40,56 +41,56 @@ public class SystraceParser {
     public static String generateReport(SystraceData data) {
         StringBuilder report = new StringBuilder();
         report.append("=== Systrace 报告 ===\n");
-        report.append("文件: ").append(data.file).append("\n");
-        report.append("持续时间: ").append(data.duration / 1000.0).append(" 秒\n");
+        report.append("文件: ").append(data.file()).append("\n");
+        report.append("持续时间: ").append(data.duration() / 1000.0).append(" 秒\n");
         report.append("\n");
 
-        if (data.cpuData != null) {
+        if (data.cpuData() != null) {
             report.append("CPU 数据:\n");
-            report.append("  平均使用率: ").append(String.format("%.2f%%", data.cpuData.averageUsage * 100)).append("\n");
-            if (!data.cpuData.cpuUsage.isEmpty()) {
+            report.append("  平均使用率: ").append(String.format(Locale.getDefault(), "%.2f%%", data.cpuData().averageUsage() * 100)).append("\n");
+            if (!data.cpuData().cpuUsage().isEmpty()) {
                 report.append("  各核心使用率:\n");
-                for (Map.Entry<Integer, Double> entry : data.cpuData.cpuUsage.entrySet()) {
+                for (Map.Entry<Integer, Double> entry : data.cpuData().cpuUsage().entrySet()) {
                     report.append("    核心 ").append(entry.getKey()).append(": ")
-                          .append(String.format("%.2f%%", entry.getValue() * 100)).append("\n");
+                          .append(String.format(Locale.getDefault(), "%.2f%%", entry.getValue() * 100)).append("\n");
                 }
             }
             report.append("\n");
         }
 
-        if (data.gpuData != null) {
+        if (data.gpuData() != null) {
             report.append("GPU 数据:\n");
-            report.append("  使用率: ").append(String.format("%.2f%%", data.gpuData.usage * 100)).append("\n");
-            report.append("  FPS: ").append(data.gpuData.fps).append("\n");
-            report.append("  丢帧数: ").append(data.gpuData.droppedFrames).append("\n");
+            report.append("  使用率: ").append(String.format(Locale.getDefault(), "%.2f%%", data.gpuData().usage() * 100)).append("\n");
+            report.append("  FPS: ").append(data.gpuData().fps()).append("\n");
+            report.append("  丢帧数: ").append(data.gpuData().droppedFrames()).append("\n");
             report.append("\n");
         }
 
-        if (data.memoryData != null) {
+        if (data.memoryData() != null) {
             report.append("内存数据:\n");
-            report.append("  总内存: ").append(formatBytes(data.memoryData.totalMemory)).append("\n");
-            report.append("  堆内存: ").append(formatBytes(data.memoryData.heapMemory)).append("\n");
-            report.append("  GC 次数: ").append(data.memoryData.gcCount).append("\n");
-            report.append("  GC 总耗时: ").append(data.memoryData.gcDuration / 1_000_000.0).append(" ms\n");
+            report.append("  总内存: ").append(formatBytes(data.memoryData().totalMemory())).append("\n");
+            report.append("  堆内存: ").append(formatBytes(data.memoryData().heapMemory())).append("\n");
+            report.append("  GC 次数: ").append(data.memoryData().gcCount()).append("\n");
+            report.append("  GC 总耗时: ").append(data.memoryData().gcDuration() / 1_000_000.0).append(" ms\n");
             report.append("\n");
         }
 
-        if (data.threadData != null && !data.threadData.isEmpty()) {
+        if (data.threadData() != null && !data.threadData().isEmpty()) {
             report.append("线程数据:\n");
-            for (SystraceData.ThreadData thread : data.threadData) {
-                report.append("  ").append(thread.threadName).append(" (ID: ").append(thread.threadId).append(")\n");
-                report.append("    状态: ").append(thread.state).append("\n");
-                report.append("    CPU 使用率: ").append(String.format("%.2f%%", thread.cpuUsage * 100)).append("\n");
+            for (SystraceData.ThreadData thread : data.threadData()) {
+                report.append("  ").append(thread.threadName()).append(" (ID: ").append(thread.threadId()).append(")\n");
+                report.append("    状态: ").append(thread.state()).append("\n");
+                report.append("    CPU 使用率: ").append(String.format(Locale.getDefault(), "%.2f%%", thread.cpuUsage() * 100)).append("\n");
             }
             report.append("\n");
         }
 
-        if (data.ioData != null && !data.ioData.isEmpty()) {
+        if (data.ioData() != null && !data.ioData().isEmpty()) {
             report.append("I/O 数据:\n");
-            for (SystraceData.IoData io : data.ioData) {
-                report.append("  ").append(io.operation).append("\n");
-                report.append("    字节数: ").append(formatBytes(io.bytes)).append("\n");
-                report.append("    耗时: ").append(io.duration / 1_000_000.0).append(" ms\n");
+            for (SystraceData.IOData io : data.ioData()) {
+                report.append("  ").append(io.operation()).append("\n");
+                report.append("    字节数: ").append(formatBytes(io.bytes())).append("\n");
+                report.append("    耗时: ").append(io.duration() / 1_000_000.0).append(" ms\n");
             }
             report.append("\n");
         }
@@ -102,7 +103,7 @@ public class SystraceParser {
         return report.toString();
     }
 
-    private static SystraceData.CpuData parseCpuData(File file) {
+    private static SystraceData.CPUData parseCpuData(File file) {
         Map<Integer, Double> cpuUsage = new HashMap<>();
         double totalUsage = 0.0;
         int coreCount = 0;
@@ -126,10 +127,10 @@ public class SystraceParser {
         }
 
         double averageUsage = coreCount > 0 ? totalUsage / coreCount : 0.0;
-        return new SystraceData.CpuData(cpuUsage, averageUsage);
+        return new SystraceData.CPUData(cpuUsage, averageUsage);
     }
 
-    private static SystraceData.GpuData parseGpuData(File file) {
+    private static SystraceData.GPUData parseGpuData(File file) {
         double usage = 0.0;
         int fps = 0;
         int droppedFrames = 0;
@@ -167,7 +168,7 @@ public class SystraceParser {
             Log.w(TAG, "解析 GPU 数据失败", e);
         }
 
-        return new SystraceData.GpuData(usage, fps, droppedFrames);
+        return new SystraceData.GPUData(usage, fps, droppedFrames);
     }
 
     private static SystraceData.MemoryData parseMemoryData(File file) {
@@ -240,8 +241,8 @@ public class SystraceParser {
         return threadData;
     }
 
-    private static List<SystraceData.IoData> parseIoData(File file) {
-        List<SystraceData.IoData> ioData = new ArrayList<>();
+    private static List<SystraceData.IOData> parseIoData(File file) {
+        List<SystraceData.IOData> ioData = new ArrayList<>();
 
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             String line;
@@ -261,7 +262,7 @@ public class SystraceParser {
                     }
                     
                     if (bytes > 0 || duration > 0) {
-                        ioData.add(new SystraceData.IoData(operation, bytes, duration));
+                        ioData.add(new SystraceData.IOData(operation, bytes, duration));
                     }
                 }
             }
@@ -335,11 +336,11 @@ public class SystraceParser {
         if (bytes < 1024) {
             return bytes + " B";
         } else if (bytes < 1024 * 1024) {
-            return String.format("%.2f KB", bytes / 1024.0);
+            return String.format(Locale.getDefault(), "%.2f KB", bytes / 1024.0);
         } else if (bytes < 1024 * 1024 * 1024) {
-            return String.format("%.2f MB", bytes / (1024.0 * 1024.0));
+            return String.format(Locale.getDefault(), "%.2f MB", bytes / (1024.0 * 1024.0));
         } else {
-            return String.format("%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0));
+            return String.format(Locale.getDefault(), "%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0));
         }
     }
 }

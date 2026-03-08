@@ -1,6 +1,7 @@
-package com.justnothing.testmodule.utils.data;
+package com.justnothing.testmodule.utils.reflect;
 
 import com.justnothing.testmodule.constants.HookConfig;
+import com.justnothing.testmodule.utils.data.DataBridge;
 import com.justnothing.testmodule.utils.functions.Logger;
 
 import dalvik.system.DexClassLoader;
@@ -13,19 +14,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ClassLoaderManager {
+
+    public static final String TAG = "ClassLoaderManager";
     private final ClassLoader defaultClassLoader;
     private static DexClassLoader apkClassLoader = null;
     private static final Object classLoaderLock = new Object();
     private static final String APK_PACKAGE_NAME = "com.justnothing.testmodule";
+    private static final Logger logger = Logger.getLoggerForName(TAG);
 
-    private static final class ManagerLogger extends Logger {
-        @Override
-        public String getTag() {
-            return "ClassLoaderManager";
-        }
-    }
-
-    private static final ManagerLogger logger = new ManagerLogger();
 
     public ClassLoaderManager() {
         defaultClassLoader = getDefaultClassLoader();

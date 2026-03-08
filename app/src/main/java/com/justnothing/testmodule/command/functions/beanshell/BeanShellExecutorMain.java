@@ -2,7 +2,6 @@ package com.justnothing.testmodule.command.functions.beanshell;
 
 import static com.justnothing.testmodule.constants.CommandServer.CMD_BEAN_SHELL_VER;
 
-import android.util.Log;
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
