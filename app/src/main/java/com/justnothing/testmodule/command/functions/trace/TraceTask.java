@@ -73,7 +73,7 @@ public class TraceTask implements Runnable {
 
     private Method[] findMethod(Class<?> clazz, String methodName, String signature)
             throws NoSuchMethodException, ClassNotFoundException {
-        return ReflectionUtils.findMethod(clazz, methodName, signature, classLoader);
+        return ReflectionUtils.findAllMethods(clazz, methodName, signature, classLoader);
     }
 
     @Override

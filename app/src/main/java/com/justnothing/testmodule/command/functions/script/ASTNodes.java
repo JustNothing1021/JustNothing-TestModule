@@ -1,6 +1,8 @@
 package com.justnothing.testmodule.command.functions.script;
 
 import com.justnothing.testmodule.command.functions.script.ScriptModels.*;
+import com.justnothing.testmodule.utils.reflect.ReflectionUtils;
+
 import static com.justnothing.testmodule.command.functions.script.ScriptLogger.*;
 import static com.justnothing.testmodule.command.functions.script.ScriptUtils.*;
 
@@ -104,7 +106,7 @@ public class ASTNodes {
                 for (ASTNode element : elements) {
                     Object value = element.evaluate(context);
                     values.add(value);
-                    if (value != null && !isTypeCompatible(type, value.getClass())) {
+                    if (value != null && !ReflectionUtils.isTypeCompatible(type, value.getClass())) {
                         logger.warn("数组元素类型不一致: " + type + " != " + value.getClass() + ", 尝试解析为Object[]");
                         type = Object.class;
                     }
@@ -1102,7 +1104,7 @@ public class ASTNodes {
             Constructor<?> bestMatch = null;
             StringBuilder sb = new StringBuilder();
             for (Constructor<?> item : clazz.getConstructors()) {
-                if (isApplicableArgs(item.getParameterTypes(), Arrays.asList(argTypes), item.isVarArgs())) {
+                if (ReflectionUtils.isApplicableArgs(item.getParameterTypes(), Arrays.asList(argTypes), item.isVarArgs())) {
                     bestMatch = item;
                 }
                 sb.append(Arrays.toString(item.getParameterTypes())).append("\n");
@@ -2599,7 +2601,7 @@ public class ASTNodes {
                     Object returnValue = value.evaluate(context);
                     context.returnValue = returnValue;
                     String expectedReturnType = context.getCurrentMethodReturnType();
-                    if (!isTypeCompatible(context.findClass(expectedReturnType), returnValue.getClass())) {
+                    if (!ReflectionUtils.isTypeCompatible(context.findClass(expectedReturnType), returnValue.getClass())) {
                         String actualType = returnValue != null ? returnValue.getClass().getSimpleName() : "null";
                         logger.error("返回值类型不匹配: 期望 '" + expectedReturnType + "', 实际 '" + actualType + "'");
                         throw new RuntimeException(
@@ -3112,7 +3114,7 @@ public class ASTNodes {
             Class<?> thenType = thenExpr.getType(context);
             Class<?> elseType = elseExpr.getType(context);
             
-            if (!isTypeCompatible(thenType, elseType) && !isTypeCompatible(elseType, thenType)) {
+            if (!ReflectionUtils.isTypeCompatible(thenType, elseType) && !ReflectionUtils.isTypeCompatible(elseType, thenType)) {
                 logger.error(
                         "三元表达式中的两个表达式类型不匹配，类型分别为：" + thenType + " 和 " + elseType);
                 throw new RuntimeException("Types of two expressions in ternary expression do not match: "
@@ -3133,7 +3135,7 @@ public class ASTNodes {
             if (thenType == elseType) {
                 return thenType;
             }
-            if (isTypeCompatible(thenType, elseType)) {
+            if (ReflectionUtils.isTypeCompatible(thenType, elseType)) {
                 return thenType;
             }
             return elseType;

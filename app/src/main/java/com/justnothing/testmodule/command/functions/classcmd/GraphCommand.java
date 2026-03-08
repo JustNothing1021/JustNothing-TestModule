@@ -58,7 +58,7 @@ public class GraphCommand extends AbstractClassCommand {
                 for (int j = 0; j < i + 1; j++) {
                     sb.append("  ");
                 }
-                sb.append("├─ 实现接口: ");
+                sb.append(i != hierarchy.size() - 1 ? "├─" : "└").append("实现接口: ");
                 for (int k = 0; k < interfaces.length; k++) {
                     if (k > 0) {
                         sb.append(", ");

@@ -116,14 +116,6 @@ public class CommandExceptionHandler {
         return sb.toString();
     }
     
-    // private static String formatError(String commandName, Throwable e) {
-    //     return formatError(commandName, e, null, null);
-    // }
-    
-    // private static String formatError(String commandName, Throwable e, String errorHint) {
-    //     return formatError(commandName, e, errorHint, null);
-    // }
-    
     private static String formatError(String commandName, Throwable e, String errorHint, Map<String, Object> context) {
         StringBuilder sb = new StringBuilder();
         sb.append(ERROR_SEPARATOR).append("\n");

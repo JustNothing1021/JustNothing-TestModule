@@ -4,7 +4,6 @@ import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.reflect.ReflectionUtils;
 
 import java.lang.reflect.Constructor;
-import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -85,7 +84,8 @@ public class ConstructorCommand extends AbstractClassCommand {
         Object instance = constructor.newInstance(params.toArray());
 
         context.getLogger().info("创建实例成功: " + instance);
-        return "创建实例成功: " + instance +
+        return "创建实例成功\n============================" + instance +
+                "\n============================" +
                 "\n类型: " + instance.getClass().getName() +
                 "\nHash: " + System.identityHashCode(instance);
     }

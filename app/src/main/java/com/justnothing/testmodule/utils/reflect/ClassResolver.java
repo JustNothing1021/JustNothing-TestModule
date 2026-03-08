@@ -7,6 +7,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -38,6 +39,93 @@ public class ClassResolver {
             registerClassLoader(loader);
             logger.info("注册APK ClassLoader");
         }
+    }
+
+    public static boolean isTypeCompatible(Class<?> expected, Class<?> actual) {
+        if (expected == Void.class && actual == Void.class)
+            return true;
+
+        if (actual == Void.class)
+            return !expected.isPrimitive();
+
+        if (expected.isPrimitive())
+            return ReflectionUtils.isPrimitiveWrapperMatch(expected, actual);
+
+        return expected.isAssignableFrom(actual);
+    }
+
+
+    public static boolean isApplicableArgs(Class<?>[] methodArgsTypes, List<Class<?>> usingArgTypes,
+                                           boolean isVarArgs) {
+        // 如果是可变参数方法
+        if (isVarArgs) {
+            // 可变参数方法至少要有一个参数（可变参数数组本身）
+            if (methodArgsTypes.length == 0)
+                return false;
+
+            // 可变参数数组类型是最后一个参数
+            Class<?> varArgsType = methodArgsTypes[methodArgsTypes.length - 1];
+            if (varArgsType.isArray()) {
+                // 获取可变参数的元素类型
+                Class<?> varArgsComponentType = varArgsType.getComponentType();
+
+                // 固定参数的数量（不包括可变参数）
+                int fixedParamCount = methodArgsTypes.length - 1;
+
+                // 如果传入参数少于固定参数数量，不匹配
+                if (usingArgTypes.size() < fixedParamCount) {
+                    return false;
+                }
+
+                // 检查固定参数
+                for (int i = 0; i < fixedParamCount; i++) {
+                    Class<?> methodArgType = methodArgsTypes[i];
+                    Class<?> usingArgType = usingArgTypes.get(i);
+                    if (!isTypeCompatible(methodArgType, usingArgType)) {
+                        return false;
+                    }
+                }
+
+                // 检查可变参数
+                for (int i = fixedParamCount; i < usingArgTypes.size(); i++) {
+                    Class<?> usingArgType = usingArgTypes.get(i);
+
+                    // 每个可变参数都必须可以赋值给可变参数的元素类型
+                    if (!isTypeCompatible(varArgsComponentType, usingArgType)) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+        }
+
+        // 非可变参数方法或处理为普通方法
+        if (methodArgsTypes.length != usingArgTypes.size()) {
+            return false;
+        }
+
+        for (int i = 0; i < methodArgsTypes.length; i++) {
+            if (!isTypeCompatible(methodArgsTypes[i], usingArgTypes.get(i))) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    // 实际上这仨重载就只用了两次
+    public static boolean isApplicableArgs(Class<?>[] methodArgsTypes, Class<?>[] usingArgTypes, boolean isVarArgs) {
+        return isApplicableArgs(methodArgsTypes, Arrays.asList(usingArgTypes), isVarArgs);
+    }
+
+    public static boolean isApplicableArgs(List<Class<?>> methodArgsTypes, List<Class<?>> usingArgTypes,
+                                           boolean isVarArgs) {
+        return isApplicableArgs(methodArgsTypes.toArray(new Class<?>[0]), usingArgTypes, isVarArgs);
+    }
+
+    public static boolean isApplicableArgs(List<Class<?>> methodArgsTypes, Class<?>[] usingArgTypes,
+                                           boolean isVarArgs) {
+        return isApplicableArgs(methodArgsTypes.toArray(new Class<?>[0]), usingArgTypes, isVarArgs);
     }
 
     public static ClassLoader getApkClassLoader() {
@@ -210,9 +298,15 @@ public class ClassResolver {
             return XposedBasicHook.MethodFinder.withCl(preferredLoader)
                 .find(className, methodName, paramTypes);
         } catch (Exception e) {
-            logger.debug("查找方法失败: " + className + "." + methodName + ", " + e.getMessage());
-            return null;
+            logger.debug("查找方法失败: " + className + "." + methodName + ", " + e.getMessage() + ", 尝试使用反射");
+            Method[] methods = clazz.getDeclaredMethods();
+            for (Method m : methods) {
+                if (ClassResolver.isApplicableArgs(m.getParameterTypes(), (Class<?>[]) paramTypes, m.isVarArgs()))
+                    return m;
+            }
+            logger.debug("反射查找也失败了，方法名：" + className + "." + methodName);
         }
+        return null;
     }
 
     public static List<Method> findAllMethods(String className, String methodName) {
@@ -260,7 +354,6 @@ public class ClassResolver {
         }
         return clazz;
     }
-
 
     public static Field findStaticField(String className, String fieldName, boolean accessSuper, boolean accessInterfaces) {
         return findStaticField(className, fieldName, null, true, true);

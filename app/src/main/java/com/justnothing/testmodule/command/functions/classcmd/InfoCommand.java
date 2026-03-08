@@ -20,15 +20,14 @@ public class InfoCommand extends AbstractClassCommand {
             return "参数不足, 需要至少1个参数: class info <class_name>\n" + getHelpText();
         }
 
-        String className = args[0];
-        
+
         boolean showInterfaces = false;
         boolean showConstructors = false;
         boolean showSuper = false;
         boolean showModifiers = false;
         boolean showAll = true;
 
-        for (int i = 1; i < args.length; i++) {
+        for (int i = 0; i < args.length - 1; i++) {
             String arg = args[i];
             switch (arg) {
                 case "-i", "--interfaces" -> {
@@ -50,6 +49,9 @@ public class InfoCommand extends AbstractClassCommand {
                 case "-a", "--all" -> showAll = true;
             }
         }
+
+        String className = args[args.length - 1];
+
         
         Class<?> targetClass = context.loadClass(className);
         if (targetClass == null) {

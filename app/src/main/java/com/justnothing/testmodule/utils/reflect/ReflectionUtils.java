@@ -2,19 +2,24 @@ package com.justnothing.testmodule.utils.reflect;
 
 import com.justnothing.testmodule.utils.functions.Logger;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Field;
+import java.lang.reflect.GenericArrayType;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Member;
 import java.lang.reflect.Method;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class ReflectionUtils {
 
     private static final Logger logger = Logger.getLoggerForName("ReflectionUtils");
-
 
     public static boolean isPrimitiveWrapperMatch(Class<?> target, Class<?> source) {
         if (target == int.class && source == Integer.class)
@@ -50,22 +55,28 @@ public class ReflectionUtils {
         return target == Short.class && source == short.class;
     }
 
-    public static boolean isApplicableArgs(Class<?>[] methodArgsTypes, List<Class<?>> usingArgTypes) {
-        if (methodArgsTypes.length != usingArgTypes.size())
-            return false;
-        for (int i = 0; i < methodArgsTypes.length; i++)
-            if (!methodArgsTypes[i].isAssignableFrom(usingArgTypes.get(i))
-                    && !isPrimitiveWrapperMatch(methodArgsTypes[i], usingArgTypes.get(i))
-                    && Void.class != usingArgTypes.get(i))
-                return false;
-        return true;
+
+    public static boolean isApplicableArgs(Class<?>[] methodArgsTypes, List<Class<?>> usingArgTypes,
+                                           boolean isVarArgs) {
+        return ClassResolver.isApplicableArgs(methodArgsTypes, usingArgTypes, isVarArgs);
     }
 
-    public static boolean isApplicableArgs(Class<?>[] methodArgsTypes, Class<?>[] usingArgTypes) {
-        return isApplicableArgs(methodArgsTypes, Arrays.asList(usingArgTypes));
+    public static boolean isApplicableArgs(Class<?>[] methodArgsTypes, Class<?>[] usingArgTypes, boolean isVarArgs) {
+        return isApplicableArgs(methodArgsTypes, Arrays.asList(usingArgTypes), isVarArgs);
     }
 
-    public static Method[] findMethod(Class<?> clazz, String methodName, String signature, ClassLoader classLoader)
+    public static boolean isApplicableArgs(List<Class<?>> methodArgsTypes, List<Class<?>> usingArgTypes,
+                                           boolean isVarArgs) {
+        return isApplicableArgs(methodArgsTypes.toArray(new Class<?>[0]), usingArgTypes, isVarArgs);
+    }
+
+    public static boolean isApplicableArgs(List<Class<?>> methodArgsTypes, Class<?>[] usingArgTypes,
+                                           boolean isVarArgs) {
+        return isApplicableArgs(methodArgsTypes.toArray(new Class<?>[0]), usingArgTypes, isVarArgs);
+    }
+
+
+    public static Method[] findAllMethods(Class<?> clazz, String methodName, String signature, ClassLoader classLoader)
             throws NoSuchMethodException, ClassNotFoundException {
         logger.debug("在类 " + clazz.getName() + " 中查找方法: " + methodName
                 + (signature != null ? " (签名: " + signature + ")" : ""));
@@ -84,7 +95,7 @@ public class ReflectionUtils {
             Class<?> superClass = clazz.getSuperclass();
             if (superClass != null) {
                 logger.debug("在父类 " + superClass.getName() + " 中继续查找");
-                return findMethod(superClass, methodName, signature, classLoader);
+                return findAllMethods(superClass, methodName, signature, classLoader);
             }
 
             StringBuilder availableMethods = new StringBuilder("可用方法:\n");
@@ -101,8 +112,9 @@ public class ReflectionUtils {
             return candidates.toArray(new Method[0]);
         }
 
+        Class<?>[] expected = SignatureUtils.parseSignature(signature, classLoader);
         for (Method method : candidates) {
-            if (isApplicableArgs(method.getParameterTypes(), SignatureUtils.parseSignature(signature, classLoader))) {
+            if (ClassResolver.isApplicableArgs(method.getParameterTypes(), expected, method.isVarArgs())) {
                 return new Method[] { method };
             }
         }
@@ -144,8 +156,9 @@ public class ReflectionUtils {
             return candidates.toArray(new Constructor<?>[0]);
         }
 
+        Class<?>[] expected = SignatureUtils.parseSignature(signature, classLoader);
         for (Constructor<?> constructor : candidates) {
-            if (isApplicableArgs(constructor.getParameterTypes(), SignatureUtils.parseSignature(signature, classLoader))) {
+            if (ClassResolver.isApplicableArgs(constructor.getParameterTypes(), expected, constructor.isVarArgs())) {
                 return new Constructor<?>[] { constructor };
             }
         }
@@ -163,19 +176,8 @@ public class ReflectionUtils {
         for (Constructor<?> constructor : clazz.getDeclaredConstructors()) {
             if (constructor.getParameterCount() == paramTypes.length) {
                 Class<?>[] constructorParams = constructor.getParameterTypes();
-                boolean compatible = true;
-
-                for (int i = 0; i < paramTypes.length; i++) {
-                    if (!constructorParams[i].isAssignableFrom(paramTypes[i])) {
-                        compatible = false;
-                        break;
-                    }
-                }
-
-                if (compatible) {
-                    constructor.setAccessible(true);
+                if (ClassResolver.isApplicableArgs(constructorParams, paramTypes, constructor.isVarArgs()))
                     return constructor;
-                }
             }
         }
         return null;
@@ -311,6 +313,7 @@ public class ReflectionUtils {
         } else if (member instanceof Constructor<?> constructor) {
             sb.append(simple ? constructor.getDeclaringClass().getSimpleName() :
                                constructor.getDeclaringClass().getName());
+            sb.append(" (");
             Class<?>[] params = constructor.getParameterTypes();
             for (int i = 0; i < params.length; i++) {
                 sb.append(simple ? params[i].getSimpleName() : params[i].getName());
@@ -322,7 +325,236 @@ public class ReflectionUtils {
         return sb.toString().trim();
     }
 
+
+    public static boolean isTypeCompatible(Class<?> expected, Class<?> actual) {
+        return ClassResolver.isTypeCompatible(expected, actual);
+    }
+
+
     public static String getModifiersString(int modifiers) {
         return Modifier.toString(modifiers);
+    }
+
+
+    public static Object callMethod(Object object, String methodName, List<Object> args) throws Exception {
+        if (methodName == null)
+            methodName = "call";
+
+        if (object == null) {
+            throw new NullPointerException(
+                    "Attempt to invoke method " + methodName + " on a null object reference");
+        }
+
+        Class<?> clazz = object.getClass();
+
+        Method method = ClassResolver.findMethod(clazz.getName(), methodName,
+                args.stream().map(arg -> arg != null ? arg.getClass() : Void.class));
+        Object[] invokeArgs = prepareInvokeArguments(method, args);
+
+        try {
+            method.setAccessible(true);
+        } catch (SecurityException ignored) {
+        }
+        try {
+            return method.invoke(object, invokeArgs);
+        } catch (InvocationTargetException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof Exception) {
+                throw (Exception) cause;
+            } else if (cause instanceof Error) {
+                throw (Error) cause;
+            } else {
+                throw new Exception(cause);
+            }
+        }
+    }
+
+    /**
+     * 直接调用 Method 对象的方法
+     * @param method Method 对象
+     * @param target 目标对象（对于静态方法为 null）
+     * @param args 参数列表
+     * @return 方法调用结果
+     * @throws Exception 调用失败时抛出异常
+     */
+    public static Object callMethod(Method method, Object target, List<Object> args) throws Exception {
+        if (method == null) {
+            throw new NullPointerException("Method cannot be null");
+        }
+
+        Object[] invokeArgs = prepareInvokeArguments(method, args);
+        try {
+            method.setAccessible(true);
+        } catch (SecurityException ignored) {
+        }
+        try {
+            return method.invoke(target, invokeArgs);
+        } catch (InvocationTargetException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof Exception) {
+                throw (Exception) cause;
+            } else if (cause instanceof Error) {
+                throw (Error) cause;
+            } else {
+                throw new Exception(cause);
+            }
+        }
+    }
+
+    public static Object callStaticMethod(String className, String methodName, List<Object> args) throws Exception {
+        Class<?> clazz = ClassResolver.findClass(className);
+        if (clazz == null) {
+            throw new ClassNotFoundException("Class not found: " + className);
+        }
+
+
+        // 查找方法（支持可变参数）
+        Method method = ClassResolver.findMethod(clazz.getName(), methodName,
+                args.stream().map(arg -> arg != null ? arg.getClass() : Void.class));
+
+        // 准备调用参数（处理可变参数）
+        Object[] invokeArgs = prepareInvokeArguments(method, args);
+
+        try {
+            return method.invoke(null, invokeArgs);
+        } catch (InvocationTargetException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof Exception) {
+                throw (Exception) cause;
+            } else if (cause instanceof Error) {
+                throw (Error) cause;
+            } else {
+                throw e;
+            }
+        }
+    }
+
+    private static Object[] prepareInvokeArguments(Method method, List<Object> args) {
+        Class<?>[] paramTypes = method.getParameterTypes();
+
+        if (!method.isVarArgs() || paramTypes.length == 0) {
+            return args.toArray();
+        }
+
+        int fixedParamCount = paramTypes.length - 1;
+        Class<?> varArgsType = paramTypes[fixedParamCount];
+        Class<?> varArgsComponentType = varArgsType.getComponentType();
+        assert varArgsComponentType != null;
+
+        // 获取泛型类型信息（如果有）
+        Type genericVarArgsType = method.getGenericParameterTypes()[fixedParamCount];
+        Class<?> inferredElementType = inferVarArgElementType(genericVarArgsType, args, fixedParamCount);
+
+        // 检查传入参数数量
+        if (args.size() < fixedParamCount) {
+            throw new IllegalArgumentException("Insufficient arguments");
+        }
+
+        Object[] invokeArgs = new Object[paramTypes.length];
+
+        // 设置固定参数
+        for (int i = 0; i < fixedParamCount; i++) {
+            invokeArgs[i] = args.get(i);
+        }
+
+        // 处理可变参数部分
+        int varArgCount = args.size() - fixedParamCount;
+
+        if (varArgCount == 1) {
+            Object lastArg = args.get(fixedParamCount);
+
+            // 检查是否需要展开数组
+            if (shouldExpandArrayForVarArgs(method, lastArg, inferredElementType)) {
+                // 展开数组为多个参数
+                int length = Array.getLength(lastArg);
+                Object varArgArray = Array.newInstance(varArgsComponentType, length);
+                for (int i = 0; i < length; i++) {
+                    Array.set(varArgArray, i, Array.get(lastArg, i));
+                }
+                invokeArgs[fixedParamCount] = varArgArray;
+            } else if (lastArg != null && lastArg.getClass().isArray() &&
+                    isTypeCompatible(varArgsComponentType, lastArg.getClass().getComponentType())) {
+                // 参数已经是正确的数组，直接使用
+                invokeArgs[fixedParamCount] = lastArg;
+            } else {
+                // 创建单元素数组
+                Object varArgArray = Array.newInstance(varArgsComponentType, 1);
+                Array.set(varArgArray, 0, lastArg);
+                invokeArgs[fixedParamCount] = varArgArray;
+            }
+        } else if (varArgCount == 0) {
+            // 没有传入可变参数，创建空数组
+            invokeArgs[fixedParamCount] = Array.newInstance(varArgsComponentType, 0);
+        } else {
+            // 多个可变参数，创建数组
+            Object varArgArray = Array.newInstance(varArgsComponentType, varArgCount);
+            for (int i = 0; i < varArgCount; i++) {
+                Object arg = args.get(fixedParamCount + i);
+                Array.set(varArgArray, i, arg);
+            }
+            invokeArgs[fixedParamCount] = varArgArray;
+        }
+
+        return invokeArgs;
+    }
+
+    private static Class<?> inferVarArgElementType(Type genericType, List<Object> args, int fixedParamCount) {
+        if (genericType instanceof ParameterizedType) {
+            // 处理泛型情况，如 List<T> asList(T... a)
+            Type[] actualTypeArgs = ((ParameterizedType) genericType).getActualTypeArguments();
+            if (actualTypeArgs.length > 0 && actualTypeArgs[0] instanceof Class) {
+                return (Class<?>) actualTypeArgs[0];
+            }
+        } else if (genericType instanceof GenericArrayType) {
+            // 处理泛型数组情况
+            Type componentType = ((GenericArrayType) genericType).getGenericComponentType();
+            if (componentType instanceof Class) {
+                return (Class<?>) componentType;
+            }
+        }
+
+        // 如果没有泛型信息，尝试从参数推断
+        if (args.size() > fixedParamCount) {
+            Object lastArg = args.get(fixedParamCount);
+            if (lastArg != null && lastArg.getClass().isArray()) {
+                return lastArg.getClass().getComponentType();
+            }
+        }
+
+        return null;
+    }
+
+    private static boolean shouldExpandArrayForVarArgs(Method method, Object arrayArg, Class<?> inferredElementType) {
+        if (arrayArg == null || !arrayArg.getClass().isArray()) {
+            return false;
+        }
+
+        Class<?> varArgsType = method.getParameterTypes()[method.getParameterTypes().length - 1];
+        Class<?> varArgsComponentType = varArgsType.getComponentType();
+        Class<?> arrayComponentType = arrayArg.getClass().getComponentType();
+        assert varArgsComponentType != null;
+
+        // 对于像 Arrays.asList(T... a) 这样的泛型方法
+        // 如果传入数组，且数组的元素类型可以赋值给可变参数的元素类型，则展开
+        if (inferredElementType != null &&
+                isTypeCompatible(inferredElementType, arrayComponentType)) {
+            return true;
+        }
+
+        // 避免双重数组
+        // 如果可变参数已经是数组类型（如 String[]...），则不展开
+        if (varArgsComponentType.isArray()) {
+            return false;
+        }
+
+        // 如果数组元素类型可以赋值给可变参数元素类型，考虑展开
+        // 但这里需要小心，因为有时候确实需要传递数组作为单个参数
+        // 这是最复杂的情况，需要根据具体方法决定
+        // 但实际上我也不是很会补充，所以暂时返回false
+        return false;
+    }
+
+    public Object callStaticMethod(Class<?> clazz, String methodName, List<Object> args) throws Exception {
+        return callStaticMethod(clazz.getName(), methodName, args);
     }
 }

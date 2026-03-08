@@ -17,7 +17,7 @@ public class ListCommand extends AbstractClassCommand {
     protected String executeInternal(ClassCommandContext context) throws Exception {
         String[] args = context.getArgs();
         
-        boolean verbose = args.length > 0 && (args[0].equals("-vb") || args[0].equals("--verbose"));
+        boolean verbose = args.length > 0 && (args[0].equals("-v") || args[0].equals("--verbose"));
         if (verbose && args.length < 2) {
             context.getLogger().warn("详细模式需要指定类名");
             return getHelpText();
@@ -74,10 +74,10 @@ public class ListCommand extends AbstractClassCommand {
             列出一个类的所有方法.
         
             可选项:
-                -vb, --verbose      详细输出完整类名
+                -v, --verbose      详细输出完整类名
         
             示例:
-                class list -vb java.lang.String
+                class list -v java.lang.String
                 class list com.android.server.am.ActivityManagerService
             """;
     }

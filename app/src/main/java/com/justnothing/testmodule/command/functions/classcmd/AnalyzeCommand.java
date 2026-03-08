@@ -5,7 +5,13 @@ import com.justnothing.testmodule.utils.reflect.ReflectionUtils;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public class AnalyzeCommand extends AbstractClassCommand {
 
@@ -63,19 +69,22 @@ public class AnalyzeCommand extends AbstractClassCommand {
                 for (Map.Entry<String, FieldInfo> entry : fieldMap.entrySet()) {
                     FieldInfo fieldInfo = entry.getValue();
                     sb.append("  ").append(getFieldDescriptor(fieldInfo.field));
-                    sb.append(" = ");
-                    try {
-                        Object value = fieldInfo.field.get(null);
-                        if (value == null) {
-                            sb.append("null");
-                        } else if (value instanceof String) {
-                            sb.append("\"").append(value).append("\"");
-                        } else {
-                            sb.append(value);
+                    if (Modifier.isStatic(fieldInfo.field.getModifiers())) {
+                        try {
+                            sb.append(" = ");
+                            Object value = fieldInfo.field.get(null);
+                            if (value == null) {
+                                sb.append("null");
+                            } else if (value instanceof String) {
+                                sb.append("\"").append(value).append("\"");
+                            } else {
+                                sb.append(value);
+                            }
+                        } catch (IllegalAccessException | NullPointerException |  IllegalArgumentException e) {
+                            sb.append("[无法访问: ").append(e.getMessage()).append("]");
                         }
-                    } catch (IllegalAccessException e) {
-                        sb.append("[无法访问: ").append(e.getMessage()).append("]");
                     }
+
                     sb.append("\n");
 
                     if (fieldInfo.fromClass != targetClass) {
@@ -267,23 +276,23 @@ public class AnalyzeCommand extends AbstractClassCommand {
         }
 
         Class<?>[] interfaces = getAllInterfaces(targetClass);
-        for (Class<?> iface : interfaces) {
+        for (Class<?> _interface : interfaces) {
             try {
-                Method[] methods = iface.getDeclaredMethods();
+                Method[] methods = _interface.getDeclaredMethods();
                 for (Method method : methods) {
                     String key = getMethodSignature(method);
                     MethodInfo methodInfo = methodMap.get(key);
                     if (methodInfo != null) {
-                        methodInfo.fromInterfaces.add(iface);
+                        methodInfo.fromInterfaces.add(_interface);
                     } else {
                         method.setAccessible(true);
-                        MethodInfo newInfo = new MethodInfo(method, iface);
-                        newInfo.fromInterfaces.add(iface);
+                        MethodInfo newInfo = new MethodInfo(method, _interface);
+                        newInfo.fromInterfaces.add(_interface);
                         methodMap.put(key, newInfo);
                     }
                 }
             } catch (Exception e) {
-                context.getLogger().debug("获取接口方法失败: " + iface.getName() + ", " + e.getMessage());
+                context.getLogger().debug("获取接口方法失败: " + _interface.getName() + ", " + e.getMessage());
             }
         }
 
@@ -297,11 +306,11 @@ public class AnalyzeCommand extends AbstractClassCommand {
         Class<?> current = clazz;
         while (current != null) {
             Class<?>[] currentInterfaces = current.getInterfaces();
-            for (Class<?> iface : currentInterfaces) {
-                if (!visited.contains(iface)) {
-                    visited.add(iface);
-                    interfaces.add(iface);
-                    interfaces.addAll(Arrays.asList(getAllInterfaces(iface)));
+            for (Class<?> _interface : currentInterfaces) {
+                if (!visited.contains(_interface)) {
+                    visited.add(_interface);
+                    interfaces.add(_interface);
+                    interfaces.addAll(Arrays.asList(getAllInterfaces(_interface)));
                 }
             }
             current = current.getSuperclass();
@@ -323,7 +332,7 @@ public class AnalyzeCommand extends AbstractClassCommand {
     }
 
     private String getFieldDescriptor(Field field) {
-        return java.lang.reflect.Modifier.toString(field.getModifiers()) + field.getType().getSimpleName() + " " + field.getName();
+        return Modifier.toString(field.getModifiers()) + field.getType().getSimpleName() + " " + field.getName();
     }
 
 

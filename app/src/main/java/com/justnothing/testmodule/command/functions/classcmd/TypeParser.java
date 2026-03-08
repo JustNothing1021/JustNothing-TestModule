@@ -188,8 +188,8 @@ public class TypeParser {
             }
         }
 
-        Method method = findStaticMethod(targetClass, methodName,
-                paramTypes.toArray(new Class<?>[0]));
+        Method method = ClassCommandContext.findMethod(targetClass, methodName,
+                paramTypes.toArray(new Class<?>[0]), true, true, true);
 
         if (method == null) {
             logger.error("找不到静态方法: " + typeName + "." + methodName);
@@ -252,30 +252,6 @@ public class TypeParser {
         return constructor.newInstance(params.toArray());
     }
 
-    private static Method findStaticMethod(Class<?> clazz, String methodName, Class<?>[] paramTypes) {
-        for (Method method : clazz.getDeclaredMethods()) {
-            if (method.getName().equals(methodName) &&
-                    Modifier.isStatic(method.getModifiers()) &&
-                    method.getParameterCount() == paramTypes.length) {
-
-                Class<?>[] methodParams = method.getParameterTypes();
-                boolean compatible = true;
-
-                for (int i = 0; i < paramTypes.length; i++) {
-                    if (!methodParams[i].isAssignableFrom(paramTypes[i])) {
-                        compatible = false;
-                        break;
-                    }
-                }
-
-                if (compatible) {
-                    method.setAccessible(true);
-                    return method;
-                }
-            }
-        }
-        return null;
-    }
 
 
     private static Object inferType(String value) {

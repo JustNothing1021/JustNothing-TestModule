@@ -73,7 +73,7 @@ public class WatchTask implements Runnable {
             } else if (type == WatchType.METHOD) {
                 logger.debug(" 在类 " + targetClass.getName() + " 查找方法: " + memberName
                         + (signature != null ? " (签名: " + signature + ")" : ""));
-                this.targetMethods.addAll(Arrays.asList(ReflectionUtils.findMethod(targetClass, memberName, signature, classLoader)));
+                this.targetMethods.addAll(Arrays.asList(ReflectionUtils.findAllMethods(targetClass, memberName, signature, classLoader)));
                 for (Method method : this.targetMethods) {
                     method.setAccessible(true);
                 }

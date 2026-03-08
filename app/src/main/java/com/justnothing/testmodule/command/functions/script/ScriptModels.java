@@ -1970,7 +1970,6 @@ public class ScriptModels {
             }
         }
 
-        // 修改 prepareInvokeArguments 方法中的可变参数处理部分
         private Object[] prepareInvokeArguments(Method method, List<Object> args) {
             Class<?>[] paramTypes = method.getParameterTypes();
 
@@ -2164,7 +2163,7 @@ public class ScriptModels {
                 boolean isVarArgs = method.isVarArgs();
                 Class<?>[] paramTypes = method.getParameterTypes();
 
-                if (isApplicableArgs(paramTypes, argTypes, isVarArgs)) {
+                if (ReflectionUtils.isApplicableArgs(paramTypes, argTypes, isVarArgs)) {
                     // 检查访问权限
                     if (targetObj != null && !canAccessMethodSafely(method, targetObj, true)) {
                         logger.debug("方法 " + method + " 当前无法访问，尝试通过接口查找");
@@ -2291,7 +2290,7 @@ public class ScriptModels {
                         boolean isVarArgs = method.isVarArgs();
                         Class<?>[] paramTypes = method.getParameterTypes();
 
-                        if (isApplicableArgs(paramTypes, argTypes, isVarArgs)) {
+                        if (ReflectionUtils.isApplicableArgs(paramTypes, argTypes, isVarArgs)) {
                             // 确保方法来自接口本身（不是Object类的方法）
                             if (method.getDeclaringClass().isInterface()) {
                                 return method;

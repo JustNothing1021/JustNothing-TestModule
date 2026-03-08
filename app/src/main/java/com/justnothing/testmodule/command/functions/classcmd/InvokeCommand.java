@@ -93,11 +93,11 @@ public class InvokeCommand extends AbstractClassCommand {
             }
         }
 
-        Method method = findMethod(targetClass, methodName,
+        Method method = ClassCommandContext.findMethod(targetClass, methodName,
                 paramTypes.toArray(new Class<?>[0]), true, accessSuper, accessInterfaces);
 
         if (method == null) {
-            method = findMethod(targetClass, methodName,
+            method = ClassCommandContext.findMethod(targetClass, methodName,
                     paramTypes.toArray(new Class<?>[0]), false, accessSuper, accessInterfaces);
 
             if (method == null) {
@@ -131,7 +131,7 @@ public class InvokeCommand extends AbstractClassCommand {
         Object result;
 
         if (Modifier.isStatic(method.getModifiers())) {
-            result = method.invoke(null, params.toArray());
+            result = ReflectionUtils.callStaticMethod(className, methodName, params);
         } else {
             result = findSingletonInstance(targetClass, context);
             if (result == null) {
@@ -146,7 +146,7 @@ public class InvokeCommand extends AbstractClassCommand {
                     return CommandExceptionHandler.handleException("class invoke", e, context.getLogger(), errContext, "非静态方法需要一个示例，在创建实例的时候出现错误");
                 }
             }
-            result = method.invoke(result, params.toArray());
+            result = ReflectionUtils.callMethod(result, methodName, params);
         }
 
         if (result == null) {
@@ -176,87 +176,7 @@ public class InvokeCommand extends AbstractClassCommand {
             """;
     }
 
-    private Method findMethod(@NotNull Class<?> clazz, String methodName, Class<?>[] paramTypes,
-                              boolean staticOnly, boolean accessSuper, boolean accessInterfaces) {
-        Class<?> currentClass = clazz;
-        
-        while (currentClass != null) {
-            try {
-                Method method = currentClass.getDeclaredMethod(methodName, paramTypes);
-                if (!staticOnly || Modifier.isStatic(method.getModifiers())) {
-                    return method;
-                }
-            } catch (NoSuchMethodException e) {
-                for (Method method : currentClass.getDeclaredMethods()) {
-                    if (method.getName().equals(methodName)) {
-                        if (staticOnly && !Modifier.isStatic(method.getModifiers())) {
-                            continue;
-                        }
 
-                        if (method.getParameterCount() == paramTypes.length) {
-                            Class<?>[] methodParams = method.getParameterTypes();
-                            boolean compatible = true;
-
-                            for (int i = 0; i < paramTypes.length; i++) {
-                                if (!methodParams[i].isAssignableFrom(paramTypes[i])) {
-                                    compatible = false;
-                                    break;
-                                }
-                            }
-
-                            if (compatible) {
-                                return method;
-                            }
-                        }
-                    }
-                }
-            }
-            
-            if (accessSuper) {
-                currentClass = currentClass.getSuperclass();
-            } else {
-                break;
-            }
-        }
-        
-        if (accessInterfaces) {
-            Class<?>[] interfaces = clazz.getInterfaces();
-            for (Class<?> _interface : interfaces) {
-                try {
-                    Method method = _interface.getDeclaredMethod(methodName, paramTypes);
-                    if (!staticOnly || Modifier.isStatic(method.getModifiers())) {
-                        return method;
-                    }
-                } catch (NoSuchMethodException e) {
-                    for (Method method : _interface.getDeclaredMethods()) {
-                        if (method.getName().equals(methodName)) {
-                            if (staticOnly && !Modifier.isStatic(method.getModifiers())) {
-                                continue;
-                            }
-
-                            if (method.getParameterCount() == paramTypes.length) {
-                                Class<?>[] methodParams = method.getParameterTypes();
-                                boolean compatible = true;
-
-                                for (int i = 0; i < paramTypes.length; i++) {
-                                    if (!methodParams[i].isAssignableFrom(paramTypes[i])) {
-                                        compatible = false;
-                                        break;
-                                    }
-                                }
-
-                                if (compatible) {
-                                    return method;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        return null;
-    }
 
     private Object findSingletonInstance(Class<?> clazz, ClassCommandContext context) {
         String[] singletonFieldNames = {

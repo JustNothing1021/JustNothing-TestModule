@@ -109,10 +109,10 @@ public class ClassMain extends CommandBase {
                         列出一个类的所有方法.
                     
                         可选项:
-                            -vb, --verbose      详细输出完整类名
+                            -v, --verbose      详细输出完整类名
                     
                     示例:
-                        clist -vb java.lang.String
+                        clist -v java.lang.String
                         clist com.android.server.am.ActivityManagerService
                     
                         (Submodule class %s)
@@ -193,7 +193,7 @@ public class ClassMain extends CommandBase {
                         -a, --all         显示所有信息 (默认)
                     
                     list 选项:
-                        -vb, --verbose    详细输出完整类名
+                        -v, --verbose    详细输出完整类名
                     
                     invoke 选项:
                         --super           访问父类成员
@@ -240,7 +240,7 @@ public class ClassMain extends CommandBase {
                         示例:
                             class reflect java.lang.System field out
                             class reflect java.lang.Integer method parseInt -p "String:\\"114514\\""
-                            class reflect java.lang.String constructor -p "String:\\"1919810\\""
+                            class reflect java.lang.String constructor -p "Integer:1919810"
                             class reflect java.lang.System static out
                     
                     快捷命令:
@@ -262,7 +262,7 @@ public class ClassMain extends CommandBase {
                         class analyze java.lang.String
                         class analyze -f com.android.server.am.ActivityManagerService
                         class analyze -a java.util.ArrayList
-                        class list -vb java.lang.String
+                        class list -v java.lang.String
                         class list com.android.server.am.ActivityManagerService
                         class invoke java.lang.Integer parseInt String:"123"
                         class invoke android.app.ActivityThread currentActivityThread
