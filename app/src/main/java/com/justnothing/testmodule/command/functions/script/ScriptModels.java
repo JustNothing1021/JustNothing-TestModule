@@ -1718,7 +1718,7 @@ public class ScriptModels {
                 }
                 int minInt = ((Number) min).intValue();
                 int maxInt = ((Number) max).intValue();
-                return minInt + (int) (Math.random() * (maxInt - minInt));
+                return minInt + (int) (Math.random() * (maxInt - minInt + 1));
             });
 
             addBuiltIn("abs", args -> {
@@ -1735,31 +1735,27 @@ public class ScriptModels {
             });
 
             addBuiltIn("min", args -> {
-                if (args.size() != 2) {
-                    logger.error("min需要2个参数，但是接收到了" + args.size() + "个");
-                    throw new RuntimeException("min() requires exactly 2 arguments");
+                double min = Double.POSITIVE_INFINITY;
+                for (Object arg : args) {
+                    if (!(arg instanceof Number)) {
+                        logger.error("min的参数必须是数字");
+                        throw new RuntimeException("min() arguments must be numbers");
+                    }
+                    min = Math.min(min, ((Number) arg).doubleValue());
                 }
-                Object a = args.get(0);
-                Object b = args.get(1);
-                if (!(a instanceof Number) || !(b instanceof Number)) {
-                    logger.error("min的参数必须是2个数字");
-                    throw new RuntimeException("min() arguments must be numbers");
-                }
-                return Math.min(((Number) a).doubleValue(), ((Number) b).doubleValue());
+                return min;
             });
 
             addBuiltIn("max", args -> {
-                if (args.size() != 2) {
-                    logger.error("max需要2个参数，但是接收到了" + args.size() + "个");
-                    throw new RuntimeException("max() requires exactly 2 arguments");
+                double max = Double.NEGATIVE_INFINITY;
+                for (Object arg : args) {
+                    if (!(arg instanceof Number)) {
+                        logger.error("max的参数必须是数字");
+                        throw new RuntimeException("max() arguments must be numbers");
+                    }
+                    max = Math.max(max, ((Number) arg).doubleValue());
                 }
-                Object a = args.get(0);
-                Object b = args.get(1);
-                if (!(a instanceof Number) || !(b instanceof Number)) {
-                    logger.error("max的参数必须是2个数字");
-                    throw new RuntimeException("max() arguments must be numbers");
-                }
-                return Math.max(((Number) a).doubleValue(), ((Number) b).doubleValue());
+                return max;
             });
 
             addBuiltIn("clamp", args -> {

@@ -1,6 +1,8 @@
 package com.justnothing.testmodule.command.functions.script;
 
 
+import com.justnothing.testmodule.constants.AppEnvironment;
+
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Method;
@@ -44,14 +46,7 @@ public class ScriptUtils {
 
 
     static boolean isStandaloneMode() {
-        try {
-            Class<?> clazz = Class.forName("android.util.Log");
-            Method method = clazz.getMethod("i", String.class, String.class);
-            method.invoke(null, "TestInterpreter", "这个日志是用来测试现在是不是在安卓环境里的");
-            return false;
-        } catch (Exception e) {
-            return true;
-        }
+        return !AppEnvironment.isAndroidEnv();
     }
 
 

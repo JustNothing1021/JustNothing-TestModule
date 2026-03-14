@@ -55,7 +55,7 @@ Xposed Method CLI (Command Line Interface) Server端 v0.3.4
 ====== 脚本交互执行模式 ======
 输入 'exit' 或 'quit' 退出
 
->>> System.out.println("Never gonna " + new String[] {"give you up", "say goodbye"} [randomInt(0, 1)]);
+>>> System.out.println("Never gonna " + new String[] {"give you up", "say goodbye"} [randint(0, 1)]);
 Never gonna say goodbye
 >>> analyze(com.android.server.am.ActivityManagerService);
 === Object Analysis ===

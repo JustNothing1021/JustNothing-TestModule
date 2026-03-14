@@ -4,6 +4,8 @@ import android.content.Context;
 import android.util.Log;
 import android.widget.Toast;
 
+import cn.ncw.logger.log.NCWLoggerFactory;
+
 import com.justnothing.testmodule.constants.AppEnvironment;
 import com.justnothing.testmodule.utils.data.LogWriter;
 
@@ -18,6 +20,7 @@ public abstract class Logger {
     public static final Boolean USE_ONE_LOGGER_ONLY = true;
     
     private static final LogWriter SHARED_LOG_WRITER = new LogWriter(!AppEnvironment.isHookEnv());
+    private static final NCWLoggerFactory STANDALONE_LOGGER = new NCWLoggerFactory(MAIN_TAG);
     public static final List<Logger> instances = new ArrayList<>();
 
 //    private Context context;
@@ -63,6 +66,8 @@ public abstract class Logger {
 //        } catch (RuntimeException ignored) {}
     }
 
+
+
     public static void handleWarn(String s) {
         showToast("(警告) " + s, Toast.LENGTH_SHORT);
     }
@@ -106,24 +111,41 @@ public abstract class Logger {
         if (SILENT) return;
         long timestamp = System.currentTimeMillis();
         xposedLog(message);
-        if (shouldUseSystemLogger()) {
+        if (AppEnvironment.isAndroidEnv()) { 
+            if (shouldUseSystemLogger()) {
+                switch (level) {
+                    case "DEBUG":
+                        Log.d(MAIN_TAG + "[" + getTag() + "]", message);
+                        break;
+                    case "INFO":
+                        Log.i(MAIN_TAG + "[" + getTag() + "]", message);
+                        break;
+                    case "WARN":
+                        Log.w(MAIN_TAG + "[" + getTag() + "]", message);
+                        break;
+                    case "ERROR":
+                        Log.e(MAIN_TAG + "[" + getTag() + "]", message);
+                        break;
+                }
+            }
+            SHARED_LOG_WRITER.addLog(level, getTag(), message, timestamp);
+        } else {
+            String tag = MAIN_TAG + "[" + getTag() + "]";
             switch (level) {
                 case "DEBUG":
-                    Log.d(MAIN_TAG + "[" + getTag() + "]", message);
+                    STANDALONE_LOGGER.debug(message, tag);
                     break;
                 case "INFO":
-                    Log.i(MAIN_TAG + "[" + getTag() + "]", message);
+                    STANDALONE_LOGGER.info(message, tag);
                     break;
                 case "WARN":
-                    Log.w(MAIN_TAG + "[" + getTag() + "]", message);
+                    STANDALONE_LOGGER.warn(message, tag);
                     break;
                 case "ERROR":
-                    Log.e(MAIN_TAG + "[" + getTag() + "]", message);
+                    STANDALONE_LOGGER.error(message, tag);
                     break;
             }
         }
-        // Log.d("Test", "向logWriter添加一条日志");
-        SHARED_LOG_WRITER.addLog(level, getTag(), message, timestamp);
     }
 
     private void logThrowable(String level, Throwable th) {

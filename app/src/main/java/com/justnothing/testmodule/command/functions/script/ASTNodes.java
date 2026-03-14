@@ -229,9 +229,9 @@ public class ASTNodes {
         }
 
         private Object add(Object a, Object b) {
-            if (a != null && a instanceof String) {
+            if (a instanceof String) {
                 return a + String.valueOf(b);
-            } else if (b != null && b instanceof String) {
+            } else if (b instanceof String) {
                 return String.valueOf(a) + b;
             } else if (a == null || b == null) {
                 logger.error("无法在null值上执行运算: a = " + a + ", b = " + b);
@@ -378,18 +378,6 @@ public class ASTNodes {
                 return compareNumbers((Number) a, (Number) b);
             }
 
-            // 保持你原有的逻辑不变
-            if (a instanceof Comparable && b instanceof Comparable) {
-                @SuppressWarnings("unchecked")
-                Comparable<Object> comparableA = (Comparable<Object>) a;
-                return comparableA.compareTo(b);
-            }
-
-
-            // 处理数字类型比较
-            if (a instanceof Number && b instanceof Number) {
-                return compareNumbers((Number) a, (Number) b);
-            }
 
             // 保持你原有的逻辑不变
             if (a instanceof Comparable && b instanceof Comparable) {
@@ -620,7 +608,7 @@ public class ASTNodes {
             } else if (obj instanceof Byte) {
                 return ((Byte) obj).intValue();
             } else if (obj instanceof Character) {
-                return (int) ((Character) obj).charValue();
+                return (int) (Character) obj;
             } else if (obj instanceof Float) {
                 return ((Float) obj).intValue();
             } else if (obj instanceof Double) {
@@ -639,7 +627,7 @@ public class ASTNodes {
             } else if (obj instanceof Byte) {
                 return ((Byte) obj).longValue();
             } else if (obj instanceof Character) {
-                return (long) ((Character) obj).charValue();
+                return (long) (Character) obj;
             } else if (obj instanceof Float) {
                 return ((Float) obj).longValue();
             } else if (obj instanceof Double) {
@@ -681,7 +669,7 @@ public class ASTNodes {
             if (obj instanceof Number) {
                 return (Number) obj;
             } else if (obj instanceof Character) {
-                return (int) ((Character) obj).charValue();
+                return (int) (Character) obj;
             }
             return null;
         }
@@ -1361,8 +1349,7 @@ public class ASTNodes {
                 }
             }
 
-            if (targetObj instanceof Class) {
-                Class<?> clazz = (Class<?>) targetObj;
+            if (targetObj instanceof Class<?> clazz) {
                 try {
                     // 首先尝试作为静态字段访问
                     Field field = findField(clazz, memberName);
@@ -1382,11 +1369,10 @@ public class ASTNodes {
                 }
 
                 // 如果都不是，视为实例成员访问
-                return handleInstanceMember(targetObj, memberName, context);
             } else {
                 // 实例成员访问：字段
-                return handleInstanceMember(targetObj, memberName, context);
             }
+            return handleInstanceMember(targetObj, memberName, context);
         }
 
         private String buildClassName(ASTNode node, String memberName) {
@@ -3615,7 +3601,7 @@ public class ASTNodes {
         // 优先选择参数数量匹配的方法
         java.util.List<Method> paramCountMatches = candidates.stream()
             .filter(m -> m.getParameterCount() == expectedParamTypes.length)
-            .collect(java.util.stream.Collectors.toList());
+            .collect(Collectors.toList());
         
         if (!paramCountMatches.isEmpty()) {
             // 如果有参数数量匹配的方法，返回第一个
@@ -3698,9 +3684,9 @@ public class ASTNodes {
             return firstMethod.invoke(isStatic ? null : target, args);
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("No suitable overload found for " + firstMethod.getName() + 
-                ". Expected " + firstMethod.getParameterCount() + " parameters but got " + 
-                (args != null ? args.length : 0) + ". Available overloads: " + 
-                candidates.stream().map(m -> m.getParameterCount() + " params").collect(java.util.stream.Collectors.toList()));
+                ". Expected " + firstMethod.getParameterCount() + " parameters but got " +
+                    args.length + ". Available overloads: " +
+                candidates.stream().map(m -> m.getParameterCount() + " params").collect(Collectors.toList()));
         }
     }
 
@@ -3743,37 +3729,4 @@ public class ASTNodes {
         }
     }
 
-    /**
-     * 数组构造函数，处理 int[]::new 这样的数组构造引用
-     */
-    private static class ArrayConstructor {
-        private final Class<?> arrayType;
-
-        public ArrayConstructor(Class<?> arrayType) {
-            this.arrayType = arrayType;
-        }
-
-        /**
-         * 创建数组实例
-         * @param length 数组长度
-         * @return 数组实例
-         */
-        public Object newInstance(int length) {
-            return java.lang.reflect.Array.newInstance(arrayType.getComponentType(), length);
-        }
-
-        /**
-         * 创建多维数组
-         * @param dimensions 各维度长度
-         * @return 多维数组实例
-         */
-        public Object newInstance(int... dimensions) {
-            return java.lang.reflect.Array.newInstance(arrayType.getComponentType(), dimensions);
-        }
-
-        @Override
-        public String toString() {
-            return "ArrayConstructor for " + arrayType.getName();
-        }
-    }
 }

@@ -102,11 +102,11 @@ public class ScriptExecutorMain extends CommandBase {
                         split(String str, String delimiter) -> List - 分割字符串
                         join(Collection/Array, String delimiter) -> String - 连接集合/数组元素为字符串
                         trace() -> null                          - 打印调用栈
-                        currentTimeMillis() -> long               - 获取当前时间戳(毫秒)
+                        currentTimeMillis() -> long              - 获取当前时间戳(毫秒)
                         nanoTime() -> long                       - 获取高精度时间(纳秒)
                         sleep(long ms) -> null                   - 休眠指定毫秒数
                         random() -> double                       - 生成随机数(0.0-1.0)
-                        randint(int min, int max) -> int      - 生成指定范围内的随机整数
+                        randint(int min, int max) -> int         - 生成指定范围内的随机整数
                         abs(Number number) -> Number             - 绝对值
                         min(Number a, Number b) -> Number        - 最小值
                         max(Number a, Number b) -> Number        - 最大值
@@ -194,11 +194,11 @@ public class ScriptExecutorMain extends CommandBase {
                             nanoTime() -> long                       - 获取高精度时间(纳秒)
                             sleep(long ms) -> null                   - 休眠指定毫秒数
                             
-                            random() -> double                       - 生成随机数(0.0-1.0)
-                            randint(int min, int max) -> int      - 生成指定范围内的随机整数
-                            abs(Number number) -> Number             - 绝对值
-                            min(Number a, Number b) -> Number        - 最小值
-                            max(Number a, Number b) -> Number        - 最大值
+                            random() -> double                      - 生成随机数(0.0-1.0)
+                            randint(int min, int max) -> int        - 生成指定范围内的随机整数
+                            abs(Number number) -> double            - 绝对值
+                            min(Number... numbers) -> double        - 最小值
+                            max(Number... numbers) -> double        - 最大值
                             clamp(Number value, Number min, Number max) -> Number - 将值限制在指定范围内
                             
                             getField(Object obj, String fieldName) -> Object - 获取对象的字段值

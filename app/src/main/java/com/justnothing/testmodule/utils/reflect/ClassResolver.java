@@ -1,5 +1,6 @@
 package com.justnothing.testmodule.utils.reflect;
 
+import com.justnothing.testmodule.constants.AppEnvironment;
 import com.justnothing.testmodule.hooks.XposedBasicHook;
 import com.justnothing.testmodule.utils.functions.Logger;
 
@@ -276,7 +277,15 @@ public class ClassResolver {
 
     private static Class<?> findInLoader(String className, ClassLoader loader) {
         try {
-            return XposedBasicHook.ClassFinder.withCl(loader).find(className);
+            if (AppEnvironment.isHookEnv()) {
+                return XposedBasicHook.ClassFinder.withCl(loader).find(className);
+            } else {
+                if (loader != null) {
+                    return Class.forName(className, false, loader);
+                } else {
+                    return Class.forName(className);
+                }
+            }
         } catch (Exception e) {
             logger.debug("在ClassLoader中查找类失败: " + className + ", " + e.getMessage());
             return null;
@@ -294,18 +303,21 @@ public class ClassResolver {
             return null;
         }
 
-        try {
-            return XposedBasicHook.MethodFinder.withCl(preferredLoader)
-                .find(className, methodName, paramTypes);
-        } catch (Exception e) {
-            logger.debug("查找方法失败: " + className + "." + methodName + ", " + e.getMessage() + ", 尝试使用反射");
-            Method[] methods = clazz.getDeclaredMethods();
-            for (Method m : methods) {
-                if (ClassResolver.isApplicableArgs(m.getParameterTypes(), (Class<?>[]) paramTypes, m.isVarArgs()))
-                    return m;
+        if (AppEnvironment.isHookEnv()) {
+            try {
+                return XposedBasicHook.MethodFinder.withCl(preferredLoader)
+                    .find(className, methodName, paramTypes);
+            } catch (Exception e) {
+                logger.debug("查找方法失败: " + className + "." + methodName + ", " + e.getMessage() + ", 尝试使用反射");
             }
-            logger.debug("反射查找也失败了，方法名：" + className + "." + methodName);
         }
+
+        Method[] methods = clazz.getDeclaredMethods();
+        for (Method m : methods) {
+            if (ClassResolver.isApplicableArgs(m.getParameterTypes(), (Class<?>[]) paramTypes, m.isVarArgs()))
+                return m;
+        }
+        logger.debug("反射查找也失败了，方法名：" + className + "." + methodName);
         return null;
     }
 
@@ -320,13 +332,24 @@ public class ClassResolver {
             return new ArrayList<>();
         }
 
-        try {
-            return XposedBasicHook.MethodFinder.withCl(preferredLoader)
-                .findAll(className, methodName);
-        } catch (Exception e) {
-            logger.debug("查找所有方法失败: " + className + "." + methodName + ", " + e.getMessage());
-            return new ArrayList<>();
+        if (AppEnvironment.isHookEnv()) {
+            try {
+                return XposedBasicHook.MethodFinder.withCl(preferredLoader)
+                    .findAll(className, methodName);
+            } catch (Exception e) {
+                logger.debug("查找所有方法失败: " + className + "." + methodName + ", " + e.getMessage());
+                return new ArrayList<>();
+            }
         }
+
+        Method[] methods = clazz.getDeclaredMethods();
+        List<Method> result = new ArrayList<>();
+        for (Method m : methods) {
+            if (m.getName().equals(methodName)) {
+                result.add(m);
+            }
+        }
+        return result;
     }
 
     public static Class<?> findClassOrFail(String className) throws ClassNotFoundException {

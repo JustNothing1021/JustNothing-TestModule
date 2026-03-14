@@ -347,8 +347,34 @@ public class ReflectionUtils {
 
         Class<?> clazz = object.getClass();
 
-        Method method = ClassResolver.findMethod(clazz.getName(), methodName,
-                args.stream().map(arg -> arg != null ? arg.getClass() : Void.class));
+        List<Class<?>> paramTypes = args.stream()
+                .map(arg -> arg != null ? arg.getClass() : Void.class)
+                        .collect(Collectors.toList());
+
+
+
+        logger.debug("查找实例方法: " + clazz.getName() + "." + methodName + ", 参数类型: " + paramTypes);
+
+        Method method = ClassResolver.findMethod(clazz.getName(), methodName, paramTypes.toArray());
+
+        if (method == null) {
+            Method[] methods = clazz.getDeclaredMethods();
+            for (Method m : methods) {
+                if (m.getName().equals(methodName) && !Modifier.isStatic(m.getModifiers())) {
+                    if (ClassResolver.isApplicableArgs(m.getParameterTypes(), paramTypes, m.isVarArgs())) {
+                        method = m;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (method == null) {
+            throw new NoSuchMethodException("Method not found: " + clazz.getName() + "." + methodName + " with args: " + paramTypes);
+        }
+
+        logger.debug("找到方法: " + method + ", 可变参数: " + method.isVarArgs());
+
         Object[] invokeArgs = prepareInvokeArguments(method, args);
 
         try {
@@ -407,12 +433,32 @@ public class ReflectionUtils {
             throw new ClassNotFoundException("Class not found: " + className);
         }
 
+        List<Class<?>> paramTypes = args.stream()
+                .map(arg -> arg != null ? arg.getClass() : Void.class)
+                        .collect(Collectors.toList());
 
-        // 查找方法（支持可变参数）
-        Method method = ClassResolver.findMethod(clazz.getName(), methodName,
-                args.stream().map(arg -> arg != null ? arg.getClass() : Void.class));
+        logger.debug("查找静态方法: " + className + "." + methodName + ", 参数类型: " + paramTypes);
 
-        // 准备调用参数（处理可变参数）
+        Method method = ClassResolver.findMethod(clazz.getName(), methodName, paramTypes.toArray());
+
+        if (method == null) {
+            Method[] methods = clazz.getDeclaredMethods();
+            for (Method m : methods) {
+                if (m.getName().equals(methodName) && Modifier.isStatic(m.getModifiers())) {
+                    if (ClassResolver.isApplicableArgs(m.getParameterTypes(), paramTypes, m.isVarArgs())) {
+                        method = m;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (method == null) {
+            throw new NoSuchMethodException("Method not found: " + className + "." + methodName + " with args: " + paramTypes);
+        }
+
+        logger.debug("找到方法: " + method + ", 可变参数: " + method.isVarArgs());
+
         Object[] invokeArgs = prepareInvokeArguments(method, args);
 
         try {
