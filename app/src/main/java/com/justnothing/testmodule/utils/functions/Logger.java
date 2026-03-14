@@ -4,7 +4,6 @@ import android.content.Context;
 import android.util.Log;
 import android.widget.Toast;
 
-import cn.ncw.logger.log.NCWLoggerFactory;
 
 import com.justnothing.testmodule.constants.AppEnvironment;
 import com.justnothing.testmodule.utils.data.LogWriter;
@@ -20,7 +19,6 @@ public abstract class Logger {
     public static final Boolean USE_ONE_LOGGER_ONLY = true;
     
     private static final LogWriter SHARED_LOG_WRITER = new LogWriter(!AppEnvironment.isHookEnv());
-    private static final NCWLoggerFactory STANDALONE_LOGGER = new NCWLoggerFactory(MAIN_TAG);
     public static final List<Logger> instances = new ArrayList<>();
 
 //    private Context context;
@@ -110,6 +108,7 @@ public abstract class Logger {
     private void logInternal(String level, String message) {
         if (SILENT) return;
         long timestamp = System.currentTimeMillis();
+
         xposedLog(message);
         if (AppEnvironment.isAndroidEnv()) { 
             if (shouldUseSystemLogger()) {
@@ -130,21 +129,22 @@ public abstract class Logger {
             }
             SHARED_LOG_WRITER.addLog(level, getTag(), message, timestamp);
         } else {
-            String tag = MAIN_TAG + "[" + getTag() + "]";
-            switch (level) {
-                case "DEBUG":
-                    STANDALONE_LOGGER.debug(message, tag);
-                    break;
-                case "INFO":
-                    STANDALONE_LOGGER.info(message, tag);
-                    break;
-                case "WARN":
-                    STANDALONE_LOGGER.warn(message, tag);
-                    break;
-                case "ERROR":
-                    STANDALONE_LOGGER.error(message, tag);
-                    break;
-            }
+            
+//            String tag = MAIN_TAG + "[" + getTag() + "]";
+//            switch (level) {
+//                case "DEBUG":
+//                    STANDALONE_LOGGER.debug(message, tag);
+//                    break;
+//                case "INFO":
+//                    STANDALONE_LOGGER.info(message, tag);
+//                    break;
+//                case "WARN":
+//                    STANDALONE_LOGGER.warn(message, tag);
+//                    break;
+//                case "ERROR":
+//                    STANDALONE_LOGGER.error(message, tag);
+//                    break;
+//            }
         }
     }
 
