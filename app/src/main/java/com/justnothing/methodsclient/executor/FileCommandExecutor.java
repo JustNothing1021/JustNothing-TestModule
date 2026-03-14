@@ -10,7 +10,6 @@ import com.justnothing.methodsclient.monitor.PerformanceMonitor;
 import com.justnothing.testmodule.constants.AppEnvironment;
 import com.justnothing.testmodule.constants.FileDirectory;
 import com.justnothing.testmodule.hooks.HookEntry;
-import com.justnothing.testmodule.utils.functions.CmdUtils;
 import com.justnothing.testmodule.utils.io.IOManager;
 import com.justnothing.testmodule.utils.io.RootProcessPool;
 import java.io.File;
@@ -48,15 +47,15 @@ public class FileCommandExecutor {
             String outputFile = tmpDir + "/" + FileDirectory.OUTPUT_FILE_NAME;
 
             if (isInAppProcess) {
-                CmdUtils.CommandOutput mkdirResult = CmdUtils.runRootCommand("mkdir -p " + sessionDir, 5000);
-                if (!mkdirResult.succeed()) {
+                IOManager.ProcessResult mkdirResult = RootProcessPool.executeCommand("mkdir -p " + sessionDir, 5000, true);
+                if (!mkdirResult.isSuccess()) {
                     error.append("创建会话目录失败: ").append(mkdirResult.stdout());
                     logger.error("创建会话目录失败: " + mkdirResult.stdout());
                     return new ExecutionResult(false, "", error.toString());
                 }
 
-                CmdUtils.CommandOutput mkdirTmpResult = CmdUtils.runRootCommand("mkdir -p " + tmpDir, 5000);
-                if (!mkdirTmpResult.succeed()) {
+                IOManager.ProcessResult mkdirTmpResult = RootProcessPool.executeCommand("mkdir -p " + tmpDir, 5000, true);
+                if (!mkdirTmpResult.isSuccess()) {
                     error.append("创建临时目录失败: ").append(mkdirTmpResult.stdout());
                     logger.error("创建临时目录失败: " + mkdirTmpResult.stdout());
                     return new ExecutionResult(false, "", error.toString());
@@ -76,8 +75,8 @@ public class FileCommandExecutor {
                     logger.error("创建临时目录失败: " + tmpDir);
                     return new ExecutionResult(false, "", error.toString());
                 }
-                CmdUtils.CommandOutput chmodResult = CmdUtils.runRootCommand("chmod 777 " + tmpDir, 5000);
-                if (!chmodResult.succeed()) {
+                IOManager.ProcessResult chmodResult = RootProcessPool.executeCommand("chmod 777 " + tmpDir, 5000, true);
+                if (!chmodResult.isSuccess()) {
                     logger.warn("设置临时目录权限失败: " + tmpDir);
                 } else {
                     logger.debug("临时目录权限设置成功");
@@ -102,8 +101,8 @@ public class FileCommandExecutor {
             // 设置输入文件权限为可读，确保服务端可以访问
             if (!isInAppProcess) {
                 // 应用环境：需要设置文件权限
-                CmdUtils.CommandOutput chmodResult = CmdUtils.runRootCommand("chmod 644 " + inputFile, 5000);
-                if (!chmodResult.succeed()) {
+                IOManager.ProcessResult chmodResult = RootProcessPool.executeCommand("chmod 644 " + inputFile, 5000, true);
+                if (!chmodResult.isSuccess()) {
                     logger.warn("设置输入文件权限失败: " + inputFile);
                 } else {
                     logger.debug("输入文件权限设置成功");
@@ -116,11 +115,11 @@ public class FileCommandExecutor {
             String[] serviceCmd = new String[]{"service", "call", "justnothing_xposed_method_cli",
                     String.valueOf(TRANSACTION_EXECUTE_FILE), "s16", "FILE:" + inputFile + ":" + outputFile};
 
-            // 使用CmdUtils执行服务调用
+            // 使用RootProcessPool执行服务调用
             String serviceCommand = String.join(" ", serviceCmd);
-            CmdUtils.CommandOutput serviceResult = CmdUtils.runCommand(serviceCommand, 60000);
+            IOManager.ProcessResult serviceResult = RootProcessPool.executeCommand(serviceCommand, 60000, false);
             
-            if (serviceResult.succeed()) {
+            if (serviceResult.isSuccess()) {
                 int maxWait = 30;
                 int waited = 0;
                 boolean fileFound = false;
@@ -152,8 +151,8 @@ public class FileCommandExecutor {
                     logger.error("文件模式执行超时");
                 }
             } else {
-                error.append("服务调用失败，退出码: ").append(serviceResult.stat());
-                logger.error("服务调用失败，退出码: " + serviceResult.stat() + ", 输出: " + serviceResult.stdout());
+                error.append("服务调用失败，退出码: ").append(serviceResult.exitCode());
+                logger.error("服务调用失败，退出码: " + serviceResult.exitCode() + ", 输出: " + serviceResult.stdout());
             }
 
             cleanupTempDir(tmpDir);
@@ -185,16 +184,16 @@ public class FileCommandExecutor {
             String outputFile = tmpDir + "/" + FileDirectory.OUTPUT_FILE_NAME;
 
             if (isInAppProcess) {
-                CmdUtils.CommandOutput mkdirResult = CmdUtils.runRootCommand("mkdir -p " + sessionDir, 5000);
-                if (!mkdirResult.succeed()) {
+                IOManager.ProcessResult mkdirResult = RootProcessPool.executeCommand("mkdir -p " + sessionDir, 5000, true);
+                if (!mkdirResult.isSuccess()) {
                     System.err.println("创建会话目录失败: " + mkdirResult.stdout());
                     logger.error("创建会话目录失败: " + mkdirResult.stdout());
                     cleanupTempDir(tmpDir);
                     return false;
                 }
 
-                CmdUtils.CommandOutput mkdirTmpResult = CmdUtils.runRootCommand("mkdir -p " + tmpDir, 5000);
-                if (!mkdirTmpResult.succeed()) {
+                IOManager.ProcessResult mkdirTmpResult = RootProcessPool.executeCommand("mkdir -p " + tmpDir, 5000, true);
+                if (!mkdirTmpResult.isSuccess()) {
                     System.err.println("创建临时目录失败: " + mkdirTmpResult.stdout());
                     logger.error("创建临时目录失败: " + mkdirTmpResult.stdout());
                     cleanupTempDir(tmpDir);
@@ -217,8 +216,8 @@ public class FileCommandExecutor {
                     return false;
                 }
 
-                CmdUtils.CommandOutput chmodResult = CmdUtils.runRootCommand("chmod 777 " + tmpDir, 5000);
-                if (!chmodResult.succeed()) {
+                IOManager.ProcessResult chmodResult = RootProcessPool.executeCommand("chmod 777 " + tmpDir, 5000, true);
+                if (!chmodResult.isSuccess()) {
                     logger.warn("设置临时目录权限失败: " + tmpDir);
                 } else {
                     logger.debug("临时目录权限设置成功");
@@ -240,8 +239,8 @@ public class FileCommandExecutor {
                 return false;
             }
 
-            CmdUtils.CommandOutput chmodResult = CmdUtils.runRootCommand("chmod 644 " + inputFile, 5000);
-            if (!chmodResult.succeed()) {
+            IOManager.ProcessResult chmodResult = RootProcessPool.executeCommand("chmod 644 " + inputFile, 5000, true);
+            if (!chmodResult.isSuccess()) {
                 logger.warn("设置输入文件权限失败: " + inputFile);
             } else {
                 logger.debug("输入文件权限设置成功");
@@ -254,9 +253,9 @@ public class FileCommandExecutor {
                     String.valueOf(TRANSACTION_EXECUTE_FILE), "s16", "FILE:" + inputFile + ":" + outputFile};
 
             String serviceCommand = String.join(" ", serviceCmd);
-            CmdUtils.CommandOutput serviceResult = CmdUtils.runCommand(serviceCommand, 60000);
+            IOManager.ProcessResult serviceResult = RootProcessPool.executeCommand(serviceCommand, 60000, false);
             
-            if (serviceResult.succeed()) {
+            if (serviceResult.isSuccess()) {
                 int maxWait = 30;
                 int waited = 0;
                 boolean fileFound = false;
@@ -287,7 +286,7 @@ public class FileCommandExecutor {
                     logger.error("文件模式执行超时");
                 }
             } else {
-                String t = "服务调用失败，退出码: " + serviceResult.stat() + ", 输出: " + serviceResult.stdout();
+                String t = "服务调用失败，退出码: " + serviceResult.exitCode() + ", 输出: " + serviceResult.stdout();
                 System.err.println(t);
                 logger.error(t);
             }
@@ -347,13 +346,13 @@ public class FileCommandExecutor {
                     "i32", String.valueOf(fixPermissions ? 1 : 0)};
 
             String serviceCommand = String.join(" ", serviceCmd);
-            CmdUtils.CommandOutput serviceResult = CmdUtils.runCommand(serviceCommand, 15000);
+            IOManager.ProcessResult serviceResult = RootProcessPool.executeCommand(serviceCommand, 15000, false);
             
-            if (serviceResult.succeed()) {
+            if (serviceResult.isSuccess()) {
                 logger.info("写入Hook数据请求成功, 修复权限: " + fixPermissions + ", 输出: " + serviceResult.stdout());
                 return true;
             } else {
-                String errorMsg = "写入Hook数据服务调用失败，退出码: " + serviceResult.stat() + ", 修复权限: " + fixPermissions + ", 输出: " + serviceResult.stdout();
+                String errorMsg = "写入Hook数据服务调用失败，退出码: " + serviceResult.exitCode() + ", 修复权限: " + fixPermissions + ", 输出: " + serviceResult.stdout();
                 logger.error(errorMsg);
                 return false;
             }

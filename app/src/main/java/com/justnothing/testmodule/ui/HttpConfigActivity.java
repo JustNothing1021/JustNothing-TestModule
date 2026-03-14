@@ -34,17 +34,7 @@ import com.justnothing.testmodule.constants.FileDirectory;
 public class HttpConfigActivity extends AppCompatActivity {
 
 
-    public static class HttpLogger extends Logger {
-        HttpLogger() {
-        }
-
-        @Override
-        public String getTag() {
-            return MAIN_TAG;
-        }
-    }
-
-    public static HttpLogger logger = new HttpLogger();
+    private static final Logger logger = Logger.getLoggerForName("HttpConfigActivity");
 
     public static HttpConfigActivity instance;
 

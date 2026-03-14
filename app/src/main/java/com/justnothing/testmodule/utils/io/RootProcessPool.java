@@ -21,12 +21,6 @@ public class RootProcessPool extends Logger {
     private static final long PROCESS_IDLE_TIMEOUT = 30000;
     private static final long COMMAND_TIMEOUT_MS = 30000;
 
-    private static final ExecutorService IO_THREAD_POOL = Executors.newCachedThreadPool(r -> {
-        Thread t = new Thread(r, "RootProcess-IO");
-        t.setDaemon(true);
-        return t;
-    });
-
     private final BlockingQueue<RootProcess> availableProcesses;
     private final BlockingQueue<RootProcess> availableNonRootProcesses;
     private final AtomicInteger totalProcesses = new AtomicInteger(0);
@@ -365,16 +359,6 @@ public class RootProcessPool extends Logger {
             poolLock.unlock();
         }
 
-        try {
-            IO_THREAD_POOL.shutdown();
-            if (!IO_THREAD_POOL.awaitTermination(5000, TimeUnit.MILLISECONDS)) {
-                IO_THREAD_POOL.shutdownNow();
-            }
-        } catch (InterruptedException e) {
-            IO_THREAD_POOL.shutdownNow();
-            Thread.currentThread().interrupt();
-        }
-
         info("RootProcessPool已关闭");
     }
 
@@ -418,13 +402,13 @@ public class RootProcessPool extends Logger {
             outputStream.writeBytes("echo 'ROOT_READY'\n");
             outputStream.flush();
 
-            Future<String> initFuture = CompletableFuture.supplyAsync(() -> {
+            Future<String> initFuture = ThreadPoolManager.submitIOCallable(() -> {
                 try {
                     return stdoutReader.readLine();
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
-            }, IO_THREAD_POOL);
+            });
 
             try {
                 String line = initFuture.get(5000, TimeUnit.MILLISECONDS);
@@ -452,8 +436,9 @@ public class RootProcessPool extends Logger {
 
             final long commandStartTime = System.currentTimeMillis();
             final AtomicBoolean ioComplete = new AtomicBoolean(false);
+            final AtomicBoolean stdoutDone = new AtomicBoolean(false);
 
-            CompletableFuture<String> stdoutFuture = CompletableFuture.supplyAsync(() -> {
+            Future<String> stdoutFuture = ThreadPoolManager.submitIOCallable(() -> {
                 try {
                     StringBuilder localStdout = new StringBuilder();
                     String line;
@@ -472,21 +457,34 @@ public class RootProcessPool extends Logger {
                             stdout.append(localStdout);
                         }
                     }
+                    stdoutDone.set(true);
                     return "stdout_done";
                 } catch (IOException e) {
                     healthy = false;
+                    stdoutDone.set(true);
                     return "stdout_error";
                 }
-            }, IO_THREAD_POOL);
+            });
 
-            CompletableFuture<String> stderrFuture = CompletableFuture.supplyAsync(() -> {
+            Future<String> stderrFuture = ThreadPoolManager.submitIOCallable(() -> {
                 try {
                     StringBuilder localStderr = new StringBuilder();
                     String line;
-                    while ((line = stderrReader.readLine()) != null) {
-                        localStderr.append(line).append('\n');
-                        if (System.currentTimeMillis() - commandStartTime > timeoutMs) {
+                    while (true) {
+                        if (stdoutDone.get()) {
                             break;
+                        }
+                        if (stderrReader.ready()) {
+                            line = stderrReader.readLine();
+                            if (line == null) {
+                                break;
+                            }
+                            localStderr.append(line).append('\n');
+                        } else {
+                            if (System.currentTimeMillis() - commandStartTime > timeoutMs) {
+                                break;
+                            }
+                            Thread.sleep(10);
                         }
                     }
                     synchronized (ioComplete) {
@@ -498,12 +496,21 @@ public class RootProcessPool extends Logger {
                 } catch (IOException e) {
                     healthy = false;
                     return "stderr_error";
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return "stderr_interrupted";
                 }
-            }, IO_THREAD_POOL);
+            });
 
             try {
-                CompletableFuture<Void> allFutures = CompletableFuture.allOf(stdoutFuture, stderrFuture);
-                allFutures.get(timeoutMs, TimeUnit.MILLISECONDS);
+                long remainingTime = timeoutMs - (System.currentTimeMillis() - commandStartTime);
+                if (remainingTime > 0) {
+                    stdoutFuture.get(remainingTime, TimeUnit.MILLISECONDS);
+                }
+                remainingTime = timeoutMs - (System.currentTimeMillis() - commandStartTime);
+                if (remainingTime > 0) {
+                    stderrFuture.get(remainingTime, TimeUnit.MILLISECONDS);
+                }
             } catch (TimeoutException e) {
                 healthy = false;
                 stdoutFuture.cancel(true);

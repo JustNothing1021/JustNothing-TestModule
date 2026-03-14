@@ -48,19 +48,11 @@ public class ThemeSettings extends Logger {
     }
     
     public void applyTheme(Context context) {
-        int appCompatMode;
-        switch (currentThemeMode) {
-            case MODE_LIGHT:
-                appCompatMode = AppCompatDelegate.MODE_NIGHT_NO;
-                break;
-            case MODE_DARK:
-                appCompatMode = AppCompatDelegate.MODE_NIGHT_YES;
-                break;
-            case MODE_AUTO:
-            default:
-                appCompatMode = AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM;
-                break;
-        }
+        int appCompatMode = switch (currentThemeMode) {
+            case MODE_LIGHT -> AppCompatDelegate.MODE_NIGHT_NO;
+            case MODE_DARK -> AppCompatDelegate.MODE_NIGHT_YES;
+            default -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM;
+        };
         AppCompatDelegate.setDefaultNightMode(appCompatMode);
         debug("应用主题模式: " + getThemeModeName(currentThemeMode));
     }

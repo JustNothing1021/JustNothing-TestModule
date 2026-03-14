@@ -14,12 +14,12 @@ import com.justnothing.testmodule.service.handler.SocketServer;
 import com.justnothing.testmodule.service.handler.TransactionHandler;
 import com.justnothing.testmodule.utils.data.DataBridge;
 import com.justnothing.testmodule.utils.data.DataDirectoryManager;
-import com.justnothing.testmodule.utils.functions.CmdUtils;
 import com.justnothing.testmodule.utils.functions.Logger;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
+import com.justnothing.testmodule.utils.io.IOManager;
+import com.justnothing.testmodule.utils.io.RootProcessPool;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Enumeration;
@@ -59,14 +59,14 @@ public class ShellService extends Binder {
         for (int suAttempt = 1; suAttempt <= suMaxRetries; suAttempt++) {
             try {
                 logger.info("su检查尝试 " + suAttempt + "/" + suMaxRetries + " (超时: " + suTimeoutMs + "ms)");
-                CmdUtils.CommandOutput suCheck = CmdUtils.runRootCommand("echo 'su available'", suTimeoutMs);
+                IOManager.ProcessResult suCheck = RootProcessPool.executeCommand("echo 'su available'", suTimeoutMs, true);
                 
-                if (suCheck.succeed() && suCheck.stdout() != null && suCheck.stdout().contains("su available")) {
+                if (suCheck.isSuccess() && suCheck.stdout() != null && suCheck.stdout().contains("su available")) {
                     logger.info("su可用，继续执行chmod");
                     suAvailable = true;
                     break;
                 } else {
-                    logger.warn("su检查尝试 " + suAttempt + " 失败，退出码: " + suCheck.stat() + 
+                    logger.warn("su检查尝试 " + suAttempt + " 失败，退出码: " + suCheck.exitCode() + 
                                ", 输出: " + (suCheck.stdout() != null ? suCheck.stdout() : "(空)") + 
                                ", 错误: " + (suCheck.stderr() != null ? suCheck.stderr() : "(空)"));
                 }
@@ -103,19 +103,19 @@ public class ShellService extends Binder {
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
             try {
                 logger.info("chmod尝试 " + attempt + "/" + maxRetries + " (超时: " + timeoutMs + "ms)");
-                CmdUtils.CommandOutput result = CmdUtils.runRootCommand("chmod -R 777 " + dataDir, timeoutMs);
+                IOManager.ProcessResult result = RootProcessPool.executeCommand("chmod -R 777 " + dataDir, timeoutMs, true);
 
-                logger.info("chmod命令执行结果 - 退出码: " + result.stat() +
+                logger.info("chmod命令执行结果 - 退出码: " + result.exitCode() +
                             ", stdout: " + (result.stdout() != null ? result.stdout() : "(空)") + 
                             ", stderr: " + (result.stderr() != null ? result.stderr() : "(空)"));
                 
-                if (result.succeed()) {
+                if (result.isSuccess()) {
                     logger.info("chmod -R 777 " + dataDir + " 执行成功");
                     
                     logger.info("验证权限设置...");
                     try {
-                        CmdUtils.CommandOutput statResult = CmdUtils.runRootCommand("stat -c '%a' " + dataDir, 3000);
-                        if (statResult.succeed() && statResult.stdout() != null) {
+                        IOManager.ProcessResult statResult = RootProcessPool.executeCommand("stat -c '%a' " + dataDir, 3000, true);
+                        if (statResult.isSuccess() && statResult.stdout() != null) {
                             String permissions = statResult.stdout().trim();
                             logger.info("目录权限: " + permissions);
                             
@@ -134,7 +134,7 @@ public class ShellService extends Binder {
                     
                     return true;
                 } else {
-                    logger.warn("chmod尝试 " + attempt + " 失败，退出码: " + result.stat() + 
+                    logger.warn("chmod尝试 " + attempt + " 失败，退出码: " + result.exitCode() + 
                                ", 错误: " + (result.stderr() != null ? result.stderr() : "(空)"));
                 }
             } catch (InterruptedException e) {
@@ -263,9 +263,7 @@ public class ShellService extends Binder {
         }
         
         File scriptsDir = DataBridge.getScriptsDirectory();
-        if (!scriptsDir.exists()) {
-            scriptsDir.mkdirs();
-        }
+        IOManager.createDirectory(scriptsDir.getAbsolutePath());
         
         File moduleApk = new File(modulePath);
         if (!moduleApk.exists()) {
@@ -301,14 +299,9 @@ public class ShellService extends Binder {
                     continue;
                 }
                 
-                try (InputStream inputStream = zipFile.getInputStream(entry);
-                    FileOutputStream outputStream = new FileOutputStream(targetFile)) {
-                    
-                    byte[] buffer = new byte[8192];
-                    int bytesRead;
-                    while ((bytesRead = inputStream.read(buffer)) != -1) {
-                        outputStream.write(buffer, 0, bytesRead);
-                    }
+                try (InputStream inputStream = zipFile.getInputStream(entry)) {
+                    byte[] content = inputStream.readAllBytes();
+                    IOManager.writeFile(targetFile.getAbsolutePath(), content);
                     
                     logger.debug("成功复制Hook示例文件: " + fileName);
                     successCount++;

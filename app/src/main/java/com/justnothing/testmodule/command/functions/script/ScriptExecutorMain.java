@@ -9,9 +9,7 @@ import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.data.DataBridge;
 import com.justnothing.testmodule.utils.io.IOManager;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
@@ -417,16 +415,15 @@ public class ScriptExecutorMain extends CommandBase {
             return "错误: 脚本 '" + scriptName + "' 已存在";
         }
 
-        scriptFile.getParentFile().mkdirs();
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(scriptFile))) {
-            writer.write("// Script: " + scriptName);
-            writer.newLine();
-            writer.write("// Created by: " + System.currentTimeMillis());
-            writer.newLine();
-            writer.newLine();
-            writer.write("// 在这里编写你的脚本代码...");
-            writer.newLine();
-        }
+        IOManager.createDirectory(scriptFile.getParentFile().getAbsolutePath());
+        
+        StringBuilder content = new StringBuilder();
+        content.append("// Script: ").append(scriptName).append("\n");
+        content.append("// Created by: ").append(System.currentTimeMillis()).append("\n");
+        content.append("\n");
+        content.append("// 在这里编写你的脚本代码...\n");
+        
+        IOManager.writeFile(scriptFile.getAbsolutePath(), content.toString());
 
         return "脚本 '" + scriptName + "' 创建成功\n" +
                 "路径: " + scriptFile.getAbsolutePath() + "\n" +
@@ -616,10 +613,8 @@ public class ScriptExecutorMain extends CommandBase {
                     "提示: 使用 'script delete " + fileName + "' 删除旧文件";
         }
 
-        destFile.getParentFile().mkdirs();
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(destFile))) {
-            writer.write(content);
-        }
+        IOManager.createDirectory(destFile.getParentFile().getAbsolutePath());
+        IOManager.writeFile(destFile.getAbsolutePath(), content);
 
         return "文件导入成功\n" +
                 "源文件: " + sourceFile.getAbsolutePath() + "\n" +
@@ -657,9 +652,7 @@ public class ScriptExecutorMain extends CommandBase {
         File exportFile = new File(exportPath);
         String content = IOManager.readFile(sourceFile.getAbsolutePath());
 
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(exportFile))) {
-            writer.write(content);
-        }
+        IOManager.writeFile(exportFile.getAbsolutePath(), content);
 
         return fileType + "导出成功\n" +
                 "文件: " + fileName + "\n" +

@@ -1,7 +1,8 @@
 package com.justnothing.testmodule.hooks.android.server.am;
 
 import com.justnothing.testmodule.hooks.PackageHook;
-import com.justnothing.testmodule.utils.functions.CmdUtils;
+import com.justnothing.testmodule.utils.io.IOManager;
+import com.justnothing.testmodule.utils.io.RootProcessPool;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -32,7 +33,7 @@ public class AMServiceHook extends PackageHook {
                         warn("将会尝试重置persist.sys.xtc.alxcse为false");
                         asyncExecutor.execute(() -> {
                             try {
-                                CmdUtils.CommandOutput res = CmdUtils.runRootCommand("setprop persist.sys.xtc.alxcse false");
+                                IOManager.ProcessResult res = RootProcessPool.executeCommand("setprop persist.sys.xtc.alxcse false", 5000, true);
                                 warn("异步执行结果: " + res);
                             } catch (Exception e) {
                                 warn("异步执行命令失败: " + e.getMessage());

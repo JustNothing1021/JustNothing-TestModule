@@ -5,7 +5,7 @@ import android.util.Log;
 import com.justnothing.testmodule.constants.FileDirectory;
 
 import java.io.File;
-import java.io.FileWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.text.SimpleDateFormat;
@@ -219,6 +219,7 @@ public class LogWriter {
             return;
         }
         
+        FileOutputStream fos = null;
         try {
             File logFile = getCachedLogFile();
             if (logFile == null) {
@@ -234,22 +235,20 @@ public class LogWriter {
             if (!logFile.exists()) {
                 Log.d(TAG, "创建日志文件: " + logFile.getAbsolutePath());
                 if (!logFile.createNewFile()) Log.w(TAG, "创建日志文件失败，mkdirs返回false");
-
             }
             
             Log.d(TAG, "开始写入日志文件: " + logFile.getAbsolutePath() +
                     ", 缓冲区数量: " + logBufferCount + 
                     ", 总大小: " + totalBufferSize + " bytes");
             
-            StringBuilder sb = new StringBuilder();
+            fos = new FileOutputStream(logFile, true);
+            
             while (!logWriteBuffer.isEmpty()) {
                 String log = logWriteBuffer.remove(0);
-                sb.append(log).append("\n");
+                fos.write((log + "\n").getBytes(java.nio.charset.StandardCharsets.UTF_8));
             }
             
-            try (FileWriter writer = new FileWriter(logFile, true)) {
-                writer.write(sb.toString());
-            }
+            fos.flush();
             
             Log.d(TAG, "日志文件写入完成");
             
@@ -257,6 +256,14 @@ public class LogWriter {
             totalBufferSize = 0;
         } catch (IOException e) {
             Log.e(TAG, "写入日志文件失败", e);
+        } finally {
+            if (fos != null) {
+                try {
+                    fos.close();
+                } catch (IOException e) {
+                    Log.e(TAG, "关闭文件输出流失败", e);
+                }
+            }
         }
     }
     

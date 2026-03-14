@@ -1271,7 +1271,7 @@ public class ASTNodes {
                     try {
                         current = Array.get(current, 0);
                     } catch (ArrayIndexOutOfBoundsException e) {
-                        Class<?> clazz = current.getClass();
+                        Class<?> clazz = current.getClass().getComponentType();
                         while (clazz.isArray()) {
                             dimensions.add(0);
                             clazz = clazz.getComponentType();
@@ -1984,6 +1984,7 @@ public class ASTNodes {
                 } catch (ClassNotFoundException e) {
                     throw new RuntimeException("Cannot resolve type for variable declaration: " + typeName);
                 }
+                
             }
 
             try {
@@ -2346,7 +2347,8 @@ public class ASTNodes {
                         if (loopCount >= MAX_LOOPS)
                             break;
 
-                        item = context.castObject(item, clazz);
+                        if (clazz != null) // 只有在不为auto的时候进行转换
+                            item = context.castObject(item, clazz);
                         context.setVariable(itemName, item, clazz);
                         lastResult = body.evaluate(context);
 
@@ -2587,6 +2589,9 @@ public class ASTNodes {
                     Object returnValue = value.evaluate(context);
                     context.returnValue = returnValue;
                     String expectedReturnType = context.getCurrentMethodReturnType();
+                    if (expectedReturnType == null) {
+                        expectedReturnType = "Object"; // 比如lambda里面的return
+                    }
                     if (!ReflectionUtils.isTypeCompatible(context.findClass(expectedReturnType), returnValue.getClass())) {
                         String actualType = returnValue != null ? returnValue.getClass().getSimpleName() : "null";
                         logger.error("返回值类型不匹配: 期望 '" + expectedReturnType + "', 实际 '" + actualType + "'");
@@ -3321,7 +3326,7 @@ public class ASTNodes {
                                 "This lambda call requires " + parameters.size() + " args, provided " + args.length);
                     } else {
                         for (int i = 0; i < parameters.size(); i++) {
-                            context.setVariable(parameters.get(i), args[i], context.getVariableType(parameters.get(i)));
+                            context.setVariable(parameters.get(i), args[i], parameters.get(i).getClass());
                         }
                         result = body.evaluate(context);
                         context.exitScope();

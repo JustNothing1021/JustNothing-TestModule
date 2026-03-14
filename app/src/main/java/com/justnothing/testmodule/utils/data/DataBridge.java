@@ -9,6 +9,7 @@ import com.justnothing.testmodule.hooks.HookEntry;
 import com.justnothing.testmodule.utils.functions.Logger;
 import com.justnothing.testmodule.utils.hooks.ServerHookConfig;
 import com.justnothing.testmodule.utils.io.IOManager;
+import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
 import org.json.JSONObject;
 
@@ -20,8 +21,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -44,7 +43,6 @@ public class DataBridge {
     private static String lastPermissionError = null;
     private static long lastPermissionErrorTime = 0;
     private static final long PERMISSION_ERROR_REPORT_INTERVAL = 120000;
-    private static ExecutorService permissionFixExecutor = null;
     
     private static boolean logDirPermissionIssue = false;
     private static long lastPermissionCheckTime = 0;
@@ -396,15 +394,7 @@ public class DataBridge {
         final String dirPath = getDataDir().getAbsolutePath();
         final String filePath = file.getAbsolutePath();
 
-        if (permissionFixExecutor == null) {
-            permissionFixExecutor = Executors.newSingleThreadExecutor(r -> {
-                Thread t = new Thread(r, "DataBridge-PermissionFixThread");
-                t.setDaemon(true);
-                return t;
-            });
-        }
-
-        permissionFixExecutor.submit(() -> {
+        ThreadPoolManager.submitFastRunnable(() -> {
             try {
                 boolean dirSuccess = StreamClient.requestChmod(dirPath, "777", true);
                 boolean fileSuccess = StreamClient.requestChmod(filePath, "777", false);

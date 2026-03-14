@@ -19,13 +19,12 @@ import com.justnothing.testmodule.command.functions.performance.systrace.Systrac
 import com.justnothing.testmodule.command.functions.performance.systrace.SystraceRunner;
 import com.justnothing.testmodule.command.functions.performance.trace.TraceData;
 import com.justnothing.testmodule.command.functions.performance.trace.Tracer;
+import com.justnothing.testmodule.utils.io.IOManager;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
 import com.justnothing.testmodule.utils.functions.Logger;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -1541,15 +1540,10 @@ public class PerformanceMain extends CommandBase {
             File parentDir = file.getParentFile();
             
             if (parentDir != null && !parentDir.exists()) {
-                if (!parentDir.mkdirs()) {
-                    logger.error("创建目录失败: " + parentDir.getAbsolutePath());
-                    return false;
-                }
+                IOManager.createDirectory(parentDir.getAbsolutePath());
             }
             
-            try (PrintWriter writer = new PrintWriter(new FileWriter(file))) {
-                writer.write(content);
-            }
+            IOManager.writeFile(filePath, content);
             
             return true;
         } catch (IOException e) {

@@ -1,7 +1,10 @@
 package com.justnothing.testmodule.command.functions.performance.sampler;
 
+import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
+
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -10,7 +13,7 @@ public class HierarchicalSampler {
     private final Map<String, MethodCallInfo> methodCallInfos = new ConcurrentHashMap<>();
     private final Map<String, AtomicInteger> callerCounts = new ConcurrentHashMap<>();
     private final AtomicInteger totalSamples = new AtomicInteger(0);
-    private Thread samplerThread;
+    private Future<?> samplerFuture;
     private final int sampleRate;
     private long startTime;
     private long stopTime;
@@ -28,7 +31,7 @@ public class HierarchicalSampler {
         startTime = System.currentTimeMillis();
         long intervalMs = 1000 / sampleRate;
 
-        samplerThread = new Thread(() -> {
+        samplerFuture = ThreadPoolManager.submitFastRunnable(() -> {
             while (running) {
                 sample();
                 try {
@@ -38,9 +41,6 @@ public class HierarchicalSampler {
                 }
             }
         });
-        samplerThread.setName("HierarchicalPerformanceSampler");
-        samplerThread.setDaemon(true);
-        samplerThread.start();
     }
 
     private void sample() {
@@ -50,7 +50,7 @@ public class HierarchicalSampler {
             Thread thread = entry.getKey();
             StackTraceElement[] stackTrace = entry.getValue();
             
-            if (thread.getName().equals("HierarchicalPerformanceSampler")) {
+            if (thread.getName().contains("Fast-Pool")) {
                 continue;
             }
             
@@ -84,8 +84,8 @@ public class HierarchicalSampler {
     public void stop() {
         running = false;
         stopTime = System.currentTimeMillis();
-        if (samplerThread != null) {
-            samplerThread.interrupt();
+        if (samplerFuture != null) {
+            samplerFuture.cancel(true);
         }
     }
 

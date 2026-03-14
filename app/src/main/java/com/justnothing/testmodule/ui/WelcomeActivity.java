@@ -15,7 +15,6 @@ import com.justnothing.testmodule.utils.functions.Logger;
 import com.justnothing.testmodule.utils.tips.TipSystem;
 import com.justnothing.testmodule.utils.tips.TipCallback;
 import com.justnothing.testmodule.utils.ui.UISettings;
-import com.justnothing.methodsclient.StreamClient;
 
 public class WelcomeActivity extends AppCompatActivity {
     private static final String TAG = "WelcomeActivity";
@@ -123,10 +122,10 @@ public class WelcomeActivity extends AppCompatActivity {
         
         if (displayTip != null) {
             String newContent = displayTip.getContent();
-        subtitleView.setText(newContent);
-        logger.info("欢迎页面副标题已替换为 \"" + newContent + "\"");
+            subtitleView.setText(newContent);
+            logger.info("欢迎页面副标题已替换为 \"" + newContent + "\"");
         } else {
             logger.info("本次未加载特殊提示");
-            }
+        }
     }
 }

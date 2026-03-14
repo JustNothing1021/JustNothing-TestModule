@@ -4,23 +4,8 @@ import com.justnothing.testmodule.utils.functions.Logger;
 import java.util.Locale;
 
 public class CommandArgumentParser {
-    
-    public static class ParseResult {
-        private final String commandLine;
-        private final String classLoader;
-        
-        public ParseResult(String commandLine, String classLoader) {
-            this.commandLine = commandLine;
-            this.classLoader = classLoader;
-        }
-        
-        public String getCommandLine() {
-            return commandLine;
-        }
-        
-        public String getClassLoader() {
-            return classLoader;
-        }
+
+    public record ParseResult(String commandLine, String classLoader) {
     }
     
     public static ParseResult parseOptions(String cmdline, Logger logger) {

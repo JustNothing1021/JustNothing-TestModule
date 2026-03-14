@@ -2,6 +2,8 @@ package com.justnothing.testmodule.command.functions.performance.systrace;
 
 import android.util.Log;
 
+import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -9,6 +11,7 @@ import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -17,7 +20,7 @@ public class SystraceRunner {
     
     private final AtomicBoolean running = new AtomicBoolean(false);
     private Process systraceProcess;
-    private Thread outputThread;
+    private Future<?> outputFuture;
     private String outputFile;
     private final String outputDir;
     private long startTime;
@@ -65,7 +68,7 @@ public class SystraceRunner {
             systraceProcess = processBuilder.start();
             running.set(true);
 
-            outputThread = new Thread(() -> {
+            outputFuture = ThreadPoolManager.submitIORunnable(() -> {
                 try {
                     BufferedReader reader = new BufferedReader(
                         new InputStreamReader(systraceProcess.getInputStream()));
@@ -100,10 +103,6 @@ public class SystraceRunner {
                     running.set(false);
                 }
             });
-            
-            outputThread.setName("SystraceOutputThread");
-            outputThread.setDaemon(true);
-            outputThread.start();
             
         } catch (IOException e) {
             Log.e(TAG, "启动 Systrace 失败: IO 错误", e);

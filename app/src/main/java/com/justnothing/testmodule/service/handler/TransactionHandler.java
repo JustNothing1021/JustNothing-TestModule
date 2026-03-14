@@ -9,8 +9,9 @@ import androidx.annotation.NonNull;
 
 import com.justnothing.testmodule.hooks.HookEntry;
 import com.justnothing.testmodule.utils.data.DataDirectoryManager;
-import com.justnothing.testmodule.utils.functions.CmdUtils;
 import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.io.IOManager;
+import com.justnothing.testmodule.utils.io.RootProcessPool;
 
 import java.io.File;
 import java.io.PrintWriter;
@@ -355,17 +356,17 @@ public class TransactionHandler {
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
             try {
                 logger.info("chmod尝试 " + attempt + "/" + maxRetries + " (超时: " + timeoutMs + "ms)");
-                CmdUtils.CommandOutput result = CmdUtils.runRootCommand("chmod -R 777 " + dataDir, timeoutMs);
+                IOManager.ProcessResult result = RootProcessPool.executeCommand("chmod -R 777 " + dataDir, timeoutMs, true);
                 
-                logger.info("chmod命令执行结果 - 退出码: " + result.stat() + 
-                            ", stdout: " + (result.stdout() != null ? result.stdout() : "(空)") + 
+                logger.info("chmod命令执行结果 - 退出码: " + result.exitCode() +
+                            ", stdout: " + (result.getOutput() != null ? result.getOutput() : "(空)") + 
                             ", stderr: " + (result.stderr() != null ? result.stderr() : "(空)"));
                 
-                if (result.succeed()) {
+                if (result.isSuccess()) {
                     logger.info("chmod -R 777 " + dataDir + " 执行成功");
                     return true;
                 } else {
-                    logger.warn("chmod尝试 " + attempt + " 失败，退出码: " + result.stat() + 
+                    logger.warn("chmod尝试 " + attempt + " 失败，退出码: " + result.exitCode() +
                                ", 错误: " + (result.stderr() != null ? result.stderr() : "(空)"));
                 }
             } catch (Exception e) {

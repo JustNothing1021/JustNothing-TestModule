@@ -70,7 +70,7 @@ public class LogViewerActivity extends AppCompatActivity {
     private String searchText = "";
     private static final int MAX_DISPLAY_LOGS = 100;
     private static final int LOAD_MORE_INCREMENT = 100;
-    private static final int REFRESH_INTERVAL = 5000;
+    private static final int REFRESH_INTERVAL = 30000;
     private int currentDisplayLimit = MAX_DISPLAY_LOGS;
     private String lastLogHash = "";
     private List<LogWriter.LogEntry> allCachedLogs = new ArrayList<>();

@@ -189,17 +189,25 @@ public class IOManager {
         writeFile(filePath, content, StandardCharsets.UTF_8, false);
     }
 
+    public static void writeFile(String filePath, byte[] content) throws IOException {
+        writeFile(filePath, content, false);
+    }
+
     public static void writeFile(String filePath, String content, boolean append) throws IOException {
         writeFile(filePath, content, StandardCharsets.UTF_8, append);
     }
+    public static void writeFile(String filePath, String content, Charset charset, boolean append)
+            throws IOException {
+        byte[] bytes = content.getBytes(charset);
+        writeFile(filePath, bytes, append);
+    }
 
-    public static void writeFile(String filePath, String content, Charset charset, boolean append) throws IOException {
+    public static void writeFile(String filePath, byte[] bytes, boolean append) throws IOException {
         if (BootMonitor.isZygotePhase()) {
             return;
         }
 
         long startTime = System.currentTimeMillis();
-        byte[] bytes = content.getBytes(charset);
         Path path = Paths.get(filePath);
 
         ensureParentDirectoryExists(path.getParent());

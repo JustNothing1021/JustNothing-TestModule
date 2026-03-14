@@ -3,6 +3,7 @@ package com.justnothing.testmodule.command.functions.bytecode;
 import android.annotation.SuppressLint;
 
 import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.io.IOManager;
 
 import dalvik.system.DexFile;
 import java.io.*;
@@ -343,10 +344,8 @@ public class SystemBytecodeExtractor {
                     + ".class";
                 
                 File outputFile = new File(dir, safeName);
-                try (FileOutputStream fos = new FileOutputStream(outputFile)) {
-                    fos.write(bytecode);
-                    success++;
-                }
+                IOManager.writeFile(outputFile.getAbsolutePath(), bytecode);
+                success++;
                 
                 // 每100个文件记录一次
                 if (success % 100 == 0) {
@@ -369,22 +368,25 @@ public class SystemBytecodeExtractor {
      * 创建索引文件
      */
     private static void createIndexFile(Map<String, byte[]> classes, File indexFile) {
-        try (PrintWriter writer = new PrintWriter(new FileWriter(indexFile))) {
-            writer.println("Class Index - Total: " + classes.size());
-            writer.println("Generated: " + new Date());
-            writer.println("========================================");
-            
-            List<String> classNames = new ArrayList<>(classes.keySet());
-            Collections.sort(classNames);
-            
-            for (String className : classNames) {
-                byte[] bytecode = classes.get(className);
-                writer.println(String.format(
-                    Locale.getDefault(),
-                    "%-80s %10d bytes",
-                    className, 
-                    bytecode != null ? bytecode.length : 0));
-            }
+        StringBuilder content = new StringBuilder();
+        content.append("Class Index - Total: ").append(classes.size()).append("\n");
+        content.append("Generated: ").append(new Date()).append("\n");
+        content.append("========================================\n");
+        
+        List<String> classNames = new ArrayList<>(classes.keySet());
+        Collections.sort(classNames);
+        
+        for (String className : classNames) {
+            byte[] bytecode = classes.get(className);
+            content.append(String.format(
+                Locale.getDefault(),
+                "%-80s %10d bytes\n",
+                className, 
+                bytecode != null ? bytecode.length : 0));
+        }
+        
+        try {
+            IOManager.writeFile(indexFile.getAbsolutePath(), content.toString());
         } catch (Exception e) {
             logger.warn("createIndexFile出现错误", e);
         }

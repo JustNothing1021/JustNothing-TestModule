@@ -227,11 +227,11 @@ public class CommandExecutor {
 
         CommandArgumentParser.ParseResult parseResult = CommandArgumentParser.parseOptions(fullCommand, logger);
         
-        if (parseResult.getClassLoader() != null) {
-            setTargetPackage(parseResult.getClassLoader());
+        if (parseResult.classLoader() != null) {
+            setTargetPackage(parseResult.classLoader());
         }
         
-        String[] commandParams = CommandArgumentParser.splitArguments(parseResult.getCommandLine());
+        String[] commandParams = CommandArgumentParser.splitArguments(parseResult.commandLine());
         if (commandParams.length == 0) {
             output.println("没有指定命令 (可以用help来获取帮助)");
             return;

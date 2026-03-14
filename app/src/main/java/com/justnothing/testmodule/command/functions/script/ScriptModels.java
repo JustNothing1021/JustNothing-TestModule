@@ -1,5 +1,7 @@
 package com.justnothing.testmodule.command.functions.script;
 
+import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
+
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
@@ -25,6 +27,7 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Future;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -1437,16 +1440,14 @@ public class ScriptModels {
 
                 Object runnable = args.get(0);
                 try {
-                    // 创建一个新线程来运行
-                    Thread thread = new Thread(() -> {
+                    Future<?> future = ThreadPoolManager.submitFastRunnable(() -> {
                         try {
                             this.callMethod(runnable, "run", Collections.emptyList());
                         } catch (Exception e) {
                             logger.error("运行Runnable时出错: " + e);
                         }
-                    }, "runLater");
-                    thread.start();
-                    return thread;
+                    });
+                    return future;
                 } catch (Exception e) {
                     throw new RuntimeException("Failed to run Runnable: " + e.getMessage());
                 }

@@ -164,4 +164,12 @@
     <string name="data_export_file_clear_failed">删除文件 %s 失败</string>
     <string name="general_exit_app">退出应用</string>
     <string name="script_example_script_3_command" translatable="false"><![CDATA[script for (int i = 0; i < 114; i++) println(i); ]]></string>
+    <string name="performance_monitor_stat_desc">监控状态: %s</string>
+    <string name="performance_monitor_stat_enabled">启用</string>
+    <string name="performance_monitor_stat_disabled">禁用</string>
+    <string name="performance_hook_count">Hook数量: %d</string>
+    <string name="newline" translatable="false">\n</string>
+    <string name="performance_hook_call_cnt">调用次数: %d</string>
+    <string name="performance_hook_total_time">总耗时: %dms</string>
+    <string name="performance_hook_avg_time">平均耗时: %dms</string>
 </resources>

@@ -78,14 +78,7 @@ public class UISettings extends Logger {
         }
     }
     
-    public float getScaledDimension(float dimension) {
-        return dimension * currentScale;
-    }
-    
-    public float getScaledTextSize(float textSize) {
-        return textSize * currentScale;
-    }
-    
+
     public float getMinScale() {
         return MIN_SCALE;
     }

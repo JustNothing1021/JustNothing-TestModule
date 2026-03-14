@@ -3,8 +3,8 @@ package com.justnothing.methodsclient.monitor;
 import static com.justnothing.testmodule.constants.CommandClient.PERFORMANCE_DATA_FILE;
 
 import com.justnothing.methodsclient.StreamClient;
-import com.justnothing.testmodule.utils.functions.CmdUtils;
 import com.justnothing.testmodule.utils.io.IOManager;
+import com.justnothing.testmodule.utils.io.RootProcessPool;
 
 import java.io.File;
 import java.io.IOException;
@@ -139,8 +139,8 @@ public class PerformanceMonitor {
                 return;
             }
             try {
-                CmdUtils.CommandOutput chmodResult = CmdUtils.runRootCommand("chmod 777 " + dir.getAbsolutePath(), 5000);
-                if (!chmodResult.succeed()) {
+                IOManager.ProcessResult chmodResult = RootProcessPool.executeCommand("chmod 777 " + dir.getAbsolutePath(), 5000, true);
+                if (!chmodResult.isSuccess()) {
                     logger.warn("设置性能统计目录权限失败: " + dir.getAbsolutePath());
                 }
             } catch (Exception e) {

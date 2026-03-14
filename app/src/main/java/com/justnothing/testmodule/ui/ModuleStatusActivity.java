@@ -24,20 +24,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ModuleStatusActivity extends AppCompatActivity {
-
-    private final Logger logger = new Logger() {
-        @Override
-        public String getTag() {
-            return "ModuleStatusActivity";
-        }
-    };
-
+    private static final Logger logger = Logger.getLoggerForName("ModuleStatusActivity");
     private ModuleStatusMonitor monitor;
     private final List<ModuleStatusMonitor.HookDetail> hookDetails = new ArrayList<>();
     private HookDetailAdapter adapter;
     private Handler handler;
     private Runnable updateRunnable;
-    private static final int REFRESH_INTERVAL = 3000;
+    private static final int REFRESH_INTERVAL = 30000;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

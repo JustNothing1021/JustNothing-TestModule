@@ -28,12 +28,7 @@ import java.util.Locale;
 
 public class DataExportActivity extends AppCompatActivity {
 
-    private final Logger logger = new Logger() {
-        @Override
-        public String getTag() {
-            return "DataExportActivity";
-        }
-    };
+    private final Logger logger = Logger.getLoggerForName("DataExportActivity");
 
     private static final int REQUEST_STORAGE_PERMISSION = 1001;
     private DataExporter exporter;

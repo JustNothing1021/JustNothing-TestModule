@@ -684,44 +684,68 @@ public class ScriptParser {
         try {
             ASTNode expr = parsePrimary();
 
-            while (match('.')) {
-                skipWhitespace();
-                String member = parseIdentifier();
-                skipWhitespace();
+            while (true) {
+                boolean matched = false;
 
-                try {
-                    if (expr instanceof ClassReferenceNode classRef) {
-                        String nestedClassName = classRef.getClassName() + "." + member;
-                        if (context.hasClass(nestedClassName)) {
-                            // 是嵌套类
-                            expr = new ClassReferenceNode(nestedClassName);
-                            continue;
-                        } else if (context.hasClass(classRef.getClassName())) {
-                            try {
-                                context.findClass(classRef.getClassName()).getDeclaredField(member);
-                                // 是字段
+                if (match('.')) {
+                    matched = true;
+                    skipWhitespace();
+                    String member = parseIdentifier();
+                    skipWhitespace();
+
+                    try {
+                        if (expr instanceof ClassReferenceNode classRef) {
+                            String nestedClassName = classRef.getClassName() + "." + member;
+                            if (context.hasClass(nestedClassName)) {
+                                // 是嵌套类
+                                expr = new ClassReferenceNode(nestedClassName);
+                                continue;
+                            } else if (context.hasClass(classRef.getClassName())) {
+                                try {
+                                    context.findClass(classRef.getClassName()).getDeclaredField(member);
+                                    // 是字段
+                                    expr = new FieldAccessNode(expr, member);
+                                    continue;
+                                } catch (ClassNotFoundException | NoSuchFieldException ignored) {
+                                }
+                            }
+                        } else if (expr.getType(context) != null && expr instanceof VariableNode) {
+                            skipWhitespace();
+                            if (peek() != '(') { // 不是方法调用
+                                if (context.getFlag("W_CLASS_AS_VARIABLE") == null) {
+                                    logger.warn("尝试将一个类名作为变量值，将不会允许通过点运算符访问内部类，"
+                                                    + "最好直接用类名，将不会展示此警告");
+                                    context.printlnWarn(
+                                            "Attempted to access a class through a variable; " 
+                                                + "consider using class name directly");
+                                    context.setFlag("W_CLASS_AS_VARIABLE", true);
+                                }
                                 expr = new FieldAccessNode(expr, member);
                                 continue;
-                            } catch (ClassNotFoundException | NoSuchFieldException ignored) {
                             }
                         }
-                    } else if (expr.getType(context) != null && expr instanceof VariableNode) {
-                        skipWhitespace();
-                        if (peek() != '(') { // 不是方法调用
-                            if (context.getFlag("W_CLASS_AS_VARIABLE") == null) {
-                                logger.warn("尝试将一个类名作为变量值，将不会允许通过点运算符访问内部类，最好直接用类名，将不会展示此警告");
-                                context.printlnWarn(
-                                        "Attempted to access a class through a variable; consider using class name directly");
-                                context.setFlag("W_CLASS_AS_VARIABLE", true);
-                            }
-                            expr = new FieldAccessNode(expr, member);
-                            continue;
-                        }
+                    } catch (Exception ignored) {
                     }
-                } catch (Exception ignored) {
+
+                    // 如果后面有括号，创建方法调用节点
+                    if (peek() == '(') {
+                        expectToMove('(');
+                        skipWhitespace();
+                        List<ASTNode> args = parseArguments();
+                        skipWhitespace();
+                        expectToMove(')');
+                        expr = new MethodCallNode(expr, member, args);
+                    } else {
+                        // 否则创建成员访问节点
+                        expr = new MemberAccessNode(expr, member);
+                    }
                 }
 
+                skipWhitespace();
+
                 while (peek(2).equals("[]")) {
+                    matched = true;
+                    expectWordToMove("[]");
                     if (expr instanceof ClassReferenceNode classRef) {
                         expr = new ClassReferenceNode(classRef.getClassName() + "[]");
                     } else {
@@ -730,32 +754,30 @@ public class ScriptParser {
                     }
                 }
 
-                // 如果后面有括号，创建方法调用节点
-                if (peek() == '(') {
-                    expectToMove('(');
+                if (match('[')) { // 数组操作
+                    matched = true;
+                    skipWhitespace();
+                    ASTNode index = parseAdditive();
+                    expectToMove(']');
+                    expr = new ArrayAccessNode(expr, index);
+                    skipWhitespace();
+                }
+
+                if (match('(')) { // 直接的调用 (比如 (() -> 114514)() 这种)
                     skipWhitespace();
                     List<ASTNode> args = parseArguments();
                     skipWhitespace();
                     expectToMove(')');
-                    expr = new MethodCallNode(expr, member, args);
-                } else {
-                    // 否则创建成员访问节点
-                    expr = new MemberAccessNode(expr, member);
+                    expr = new DirectFunctionCallNode(expr, args);
+                    skipWhitespace();
                 }
+
+                if (!matched) break;
             }
 
-            while (peek(2).equals("[]")) {
-                expectWordToMove("[]");
-                if (expr instanceof ClassReferenceNode classRef) {
-                    expr = new ClassReferenceNode(classRef.getClassName() + "[]");
-                } else {
-                    logger.error("不能给" + expr.getClass().getSimpleName() + "类型的变量添加数组后缀");
-                    unexpectedToken();
-                }
-            }
 
-            skipWhitespace();
             logger.debug("方法解析完成，接下来的大致内容: " + peek(20));
+
             while (matchWord("::")) {
                 skipWhitespace();
                 String methodName = parseIdentifier();
@@ -764,23 +786,7 @@ public class ScriptParser {
                 expr = new MethodReferenceNode(expr, methodName);
             }
             skipWhitespace();
-
-            while (peek() == '[' || peek() == '(') {
-                if (match('[')) { // 数组操作
-                    skipWhitespace();
-                    ASTNode index = parseAdditive();
-                    expectToMove(']');
-                    expr = new ArrayAccessNode(expr, index);
-                    skipWhitespace();
-                } else if (match('(')) { // 如果还有函数调用 (比如 (() -> 114514)() 这种)
-                    skipWhitespace();
-                    List<ASTNode> args = parseArguments();
-                    skipWhitespace();
-                    expectToMove(')');
-                    expr = new DirectFunctionCallNode(expr, args);
-                    skipWhitespace();
-                }
-            }
+                 
             return expr;
         } catch (RuntimeException e) {
             failure = true;
@@ -2172,16 +2178,14 @@ public class ScriptParser {
             while (peek() != ')') {
                 parameters.add(parseIdentifier());
                 skipWhitespace();
-                if (peek() == ',') {
-                    advance();
+                if (match(',')) {
                     skipWhitespace();
                 } else if (peek(2).equals("->")) {
-                    break;
-                } else if (peek() == ')') {
                     if (hasLeftParenthesis) {
                         throw new RuntimeException("Invalid lambda expression");
                     }
-                } else {
+                    break;
+                } else if (peek() != ')') {
                     throw new RuntimeException("Invalid lambda expression");
                 }
             }
@@ -2198,7 +2202,7 @@ public class ScriptParser {
 
             ASTNode body;
             if (peek() == '{') {
-                body = parseBlock(false);
+                body = parseBlock(true);
             } else {
                 body = parseExpression();
             }

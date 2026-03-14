@@ -162,4 +162,11 @@
     <string name="data_export_file_cleared">Deleted file %s</string>
     <string name="data_export_file_clear_failed">Failed to delete file %s</string>
     <string name="general_exit_app">Exit App</string>
+    <string name="performance_monitor_stat_desc">Performance Monitor: %s</string>
+    <string name="performance_monitor_stat_enabled">enabled</string>
+    <string name="performance_monitor_stat_disabled">disabled</string>
+    <string name="performance_hook_count">Hook count: %d</string>
+    <string name="performance_hook_call_cnt">Called times: %d</string>
+    <string name="performance_hook_total_time">Total time cost: %dms</string>
+    <string name="performance_hook_avg_time">Average time cost: %dms</string>
 </resources>

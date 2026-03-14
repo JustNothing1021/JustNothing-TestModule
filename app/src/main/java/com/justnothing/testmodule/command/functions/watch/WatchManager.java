@@ -2,10 +2,9 @@ package com.justnothing.testmodule.command.functions.watch;
 
 import com.justnothing.testmodule.utils.functions.Logger;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
+import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import de.robv.android.xposed.XposedHelpers;
@@ -18,17 +17,11 @@ public class WatchManager {
     
     private final ConcurrentHashMap<Integer, WatchTask> watchTasks;
     private final AtomicInteger nextId;
-    private final ExecutorService executor;
     private final int maxOutputSize;
     
     private WatchManager() {
         this.watchTasks = new ConcurrentHashMap<>();
         this.nextId = new AtomicInteger(1);
-        this.executor = Executors.newCachedThreadPool(r -> {
-            Thread thread = new Thread(r, "WatchTask-" + nextId.get());
-            thread.setDaemon(true);
-            return thread;
-        });
         this.maxOutputSize = 100;
     }
     
@@ -42,7 +35,7 @@ public class WatchManager {
             int id = nextId.getAndIncrement();
             WatchTask task = new WatchTask(id, WatchTask.WatchType.FIELD, targetClass, fieldName, null, interval, maxOutputSize, classLoader);
             watchTasks.put(id, task);
-            executor.submit(task);
+            ThreadPoolManager.submitFastRunnable(task);
             logger.info("添加字段watch任务: " + id);
             return id;
         } catch (Exception e) {
@@ -62,7 +55,7 @@ public class WatchManager {
             
             WatchTask task = new WatchTask(id, WatchTask.WatchType.METHOD, targetClass, methodName, signature, interval, maxOutputSize, classLoader);
             watchTasks.put(id, task);
-            executor.submit(task);
+            ThreadPoolManager.submitFastRunnable(task);
             logger.info("成功添加方法watch任务: " + id);
             return id;
         } catch (Exception e) {
@@ -141,6 +134,5 @@ public class WatchManager {
     public void shutdown() {
         logger.info("关闭WatchManager");
         clearAll();
-        executor.shutdown();
     }
 }

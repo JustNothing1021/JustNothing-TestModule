@@ -9,8 +9,9 @@ import com.justnothing.methodsclient.executor.AsyncChmodExecutor;
 import com.justnothing.testmodule.constants.AppEnvironment;
 import com.justnothing.testmodule.constants.FileDirectory;
 import com.justnothing.testmodule.ui.ErrorDialog;
-import com.justnothing.testmodule.utils.functions.CmdUtils;
 import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.io.IOManager;
+import com.justnothing.testmodule.utils.io.RootProcessPool;
 
 import java.io.File;
 
@@ -134,8 +135,8 @@ public class DataDirectoryManager {
             }
             
             logger.warn("AsyncChmodExecutor设置权限失败，尝试使用root权限: " + file.getAbsolutePath());
-            CmdUtils.CommandOutput chmodResult = CmdUtils.runRootCommand("chmod " + permissions + " " + file.getAbsolutePath(), 5000);
-            if (chmodResult.succeed()) {
+            IOManager.ProcessResult chmodResult = RootProcessPool.executeCommand("chmod " + permissions + " " + file.getAbsolutePath(), 5000, true);
+            if (chmodResult.isSuccess()) {
                 logger.info("使用root权限为" + description + "设置权限成功, 路径:  " + file.getAbsolutePath());
                 return true;
             } else {

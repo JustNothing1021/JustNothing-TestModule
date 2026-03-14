@@ -63,29 +63,6 @@ public class FileUtils {
         }
     }
 
-    public static boolean saveObjectToFileByShell(Object obj, String dst) {
-        String data = (String) obj;
-        File file = new File(dst);
-        try {
-            if (file.getParent() != null && !(new File(file.getParent()).isDirectory())) {
-                Pair<Boolean, CmdUtils.CommandOutput> res = mkdirBySuShell(file);
-                if (!res.first) {
-                    logger.warn(
-                            "saveObjectToFileByShell: 保存文件时创建目录" + file.getParent() + "失败: "
-                            + res.second.stdout()
-                    );
-                }
-            }
-            CmdUtils.runCommand(String.join(" ",
-                    "echo", CmdUtils.quoted(data), ">>", CmdUtils.quoted(dst)
-            ));
-            return true;
-        } catch (IOException | InterruptedException e) {
-            logger.error("saveObjectToFileByShell: 文件" + dst + "保存失败", e);
-            return false;
-        }
-    }
-
     public static boolean mkdir(String dst) {
         File file = new File(dst);
         if (file.isFile()) {
@@ -124,57 +101,6 @@ public class FileUtils {
             return true;
         } catch (Exception ignored) {
             return false;
-        }
-    }
-
-    public static Pair<Boolean, CmdUtils.CommandOutput> createFileBySuShell(File dst) {
-        try {
-            IOManager.ProcessResult res = RootProcessPool.executeCommand("touch " + CmdUtils.quoted(dst.getPath()));
-            CmdUtils.CommandOutput cmdOutput = new CmdUtils.CommandOutput(res.exitCode(), res.stdout(), res.stderr(), res.stdout() + res.stderr());
-            return new Pair<>(res.exitCode() == 0, cmdOutput);
-        } catch (Exception e) {
-            return new Pair<>(false, null);
-        }
-    }
-
-    public static Pair<Boolean, CmdUtils.CommandOutput> mkdirBySuShell(File dst) {
-        try {
-            IOManager.ProcessResult res = RootProcessPool.executeCommand("mkdir " + CmdUtils.quoted(dst.getPath()));
-            CmdUtils.CommandOutput cmdOutput = new CmdUtils.CommandOutput(res.exitCode(), res.stdout(), res.stderr(), res.stdout() + res.stderr());
-            if (res.exitCode() == 0) return new Pair<>(true, cmdOutput);
-            Boolean succeed = res.stdout().toLowerCase().contains("file exists") && dst.isDirectory();
-            return new Pair<>(succeed, cmdOutput);
-        } catch (Exception e) {
-            return new Pair<>(false, null);
-        }
-    }
-
-    public static Pair<Boolean, CmdUtils.CommandOutput> copyByShell(File src, File dst) {
-        try {
-            CmdUtils.CommandOutput res = CmdUtils.runCommand(
-                String.join(" ",
-                        "cp", "-R",
-                        CmdUtils.quoted(src.getPath()),
-                        CmdUtils.quoted(dst.getPath())
-                ));
-            return new Pair<>(res.stat() == 0, res);
-        } catch (Exception e) {
-            return new Pair<>(false, null);
-        }
-    }
-
-    public static Pair<Boolean, CmdUtils.CommandOutput> setContentByShell(File src, String content) {
-        try {
-            CmdUtils.CommandOutput res = CmdUtils.runCommand(
-                String.join(" ",
-                    "echo",
-                    CmdUtils.quoted(content),
-                    ">>",
-                    CmdUtils.quoted(src.getPath())
-                ));
-            return new Pair<>(res.stat() == 0, res);
-        } catch (Exception e) {
-            return new Pair<>(false, null);
         }
     }
 

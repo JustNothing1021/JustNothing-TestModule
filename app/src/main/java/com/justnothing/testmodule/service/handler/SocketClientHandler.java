@@ -21,6 +21,7 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -98,11 +99,106 @@ public class SocketClientHandler {
 
                 logger.debug("Socket客户端命令: " + command);
 
-                executeCommandForSocket(command, writer);
+                executeCommandForTextProtocolSocket(command, writer);
             } catch (Exception e) {
                 logger.error("处理Socket客户端错误", e);
             }
         } catch (IOException ignored) {
+        }
+    }
+
+    private void runInteractiveProtocolServer(
+            final InputStream input,
+            final OutputStream output,
+            final AtomicBoolean readerRunning,
+            final Socket clientSocket,
+            final AtomicLong lastResponseTime,
+            final InteractiveOutputHandler finalOutputHandler
+    ) {
+        try {
+            while (readerRunning.get() && !Thread.currentThread().isInterrupted()) {
+                try {
+                    clientSocket.setSoTimeout(1000);
+
+                    Object[] packet = InteractiveProtocol.readMessage(input);
+
+                    if (packet == null) {
+                        logger.info("客户端关闭连接");
+                        break;
+                    }
+
+                    lastResponseTime.getAndSet(System.currentTimeMillis());
+
+                    byte packetType = (byte) packet[0];
+                    byte[] packetData = (byte[]) packet[1];
+
+                    switch (packetType) {
+                        case InteractiveProtocol.TYPE_INPUT_RESPONSE:
+                            if (packetData != null) {
+                                String response = new String(packetData, StandardCharsets.UTF_8);
+                                String[] parts = response.split(":", 2);
+                                if (parts.length == 2) {
+                                    logger.debug("收到输入响应: " + parts[0]);
+                                    finalOutputHandler.handleInputResponse(parts[0], parts[1]);
+                                }
+                            }
+                            break;
+
+                        case InteractiveProtocol.TYPE_CLIENT_PONG:
+                            lastResponseTime.getAndSet(System.currentTimeMillis());
+                            logger.debug("收到客户端的CLIENT_PONG响应, 更新客户端最近响应时间: " + lastResponseTime.get());
+                            break;
+
+                        case InteractiveProtocol.TYPE_INPUT_PONG:
+                            InteractiveOutputHandler.lastResponseTime.getAndSet(System.currentTimeMillis());
+                            logger.debug("收到了输入端的INPUT_PONG响应，更新输入最近响应时间: " +
+                                    InteractiveOutputHandler.lastResponseTime.get());
+                            break;
+
+                        case InteractiveProtocol.TYPE_CLIENT_PING:
+                            logger.debug("收到了客户端的CLIENT_PING请求，发送SERVER_PONG");
+                            InteractiveProtocol.writeMessage(output, InteractiveProtocol.TYPE_SERVER_PONG, null);
+                            break;
+
+                        default:
+                            logger.warn("未知的客户端消息类型: " + packetType);
+                    }
+
+                } catch (SocketTimeoutException e) {
+                    if (System.currentTimeMillis() - lastResponseTime.get() > PROTOCOL_REQUEST_TIMEOUT) {
+                        logger.error("客户端响应超时 (" + (System.currentTimeMillis() - lastResponseTime.get()) + "ms)");
+                        return;
+                    }
+                } catch (IOException e) {
+                    if (!Objects.requireNonNull(e.getMessage()).contains("Socket closed") &&
+                            !e.getMessage().contains("Read timed out") &&
+                            !e.getMessage().contains("Connection reset")) {
+                        logger.warn("读取客户端消息失败", e);
+                    }
+                    break;
+                }
+            }
+        } finally {
+            readerRunning.set(false);
+            finalOutputHandler.close();
+        }
+    }
+
+    private void runInteractiveProtocolPing(
+        final OutputStream output
+    ) {
+
+        try {
+            Thread.sleep(PING_CLIENT_INTERVAL);
+            InteractiveProtocol.writeMessage(output,
+                    InteractiveProtocol.TYPE_SERVER_PING,
+                    null);
+            logger.debug("向客户端发送SERVER_PING包");
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } catch (IOException e) {
+            logger.warn("发送SERVER_PING失败", e);
         }
     }
 
@@ -132,99 +228,14 @@ public class SocketClientHandler {
                 final InteractiveOutputHandler finalOutputHandler = outputHandler;
                 final AtomicLong lastResponseTime = new AtomicLong(System.currentTimeMillis());
 
-                Object writeLock = new Object();
 
-                ThreadPoolManager.submitSocketRunnable(() -> {
-                    try {
-                        while (readerRunning.get() && !Thread.currentThread().isInterrupted()) {
-                            try {
-                                clientSocket.setSoTimeout(1000);
+                ThreadPoolManager.submitSocketRunnable(() -> runInteractiveProtocolServer(
+                        input, output, readerRunning, clientSocket, lastResponseTime, finalOutputHandler
+                ));
 
-                                Object[] packet = InteractiveProtocol.readMessage(input);
-
-                                if (packet == null) {
-                                    logger.info("客户端关闭连接");
-                                    break;
-                                }
-
-                                lastResponseTime.getAndSet(System.currentTimeMillis());
-
-                                byte packetType = (byte) packet[0];
-                                byte[] packetData = (byte[]) packet[1];
-
-                                switch (packetType) {
-                                    case InteractiveProtocol.TYPE_INPUT_RESPONSE:
-                                        if (packetData != null) {
-                                            String response = new String(packetData, StandardCharsets.UTF_8);
-                                            String[] parts = response.split(":", 2);
-                                            if (parts.length == 2) {
-                                                logger.debug("收到输入响应: " + parts[0]);
-                                                finalOutputHandler.handleInputResponse(parts[0], parts[1]);
-                                            }
-                                        }
-                                        break;
-
-                                    case InteractiveProtocol.TYPE_CLIENT_PONG:
-                                        lastResponseTime.getAndSet(System.currentTimeMillis());
-                                        logger.debug("收到客户端的CLIENT_PONG响应, 更新客户端最近响应时间: " + lastResponseTime.get());
-                                        break;
-
-                                    case InteractiveProtocol.TYPE_INPUT_PONG:
-                                        InteractiveOutputHandler.lastResponseTime.getAndSet(System.currentTimeMillis());
-                                        logger.debug("收到了输入端的INPUT_PONG响应，更新输入最近响应时间: " +
-                                                InteractiveOutputHandler.lastResponseTime.get());
-                                        break;
-
-                                    case InteractiveProtocol.TYPE_CLIENT_PING:
-                                        logger.debug("收到了客户端的CLIENT_PING请求，发送SERVER_PONG");
-                                        InteractiveProtocol.writeMessage(output, InteractiveProtocol.TYPE_SERVER_PONG, null);
-                                        break;
-
-                                    default:
-                                        logger.warn("未知的客户端消息类型: " + packetType);
-                                }
-
-                            } catch (SocketTimeoutException e) {
-                                if (System.currentTimeMillis() - lastResponseTime.get() > PROTOCOL_REQUEST_TIMEOUT) {
-                                    logger.error("客户端响应超时 (" + (System.currentTimeMillis() - lastResponseTime.get()) + "ms)");
-                                    return;
-                                }
-                            } catch (IOException e) {
-                                if (!Objects.requireNonNull(e.getMessage()).contains("Socket closed") &&
-                                        !e.getMessage().contains("Read timed out") &&
-                                        !e.getMessage().contains("Connection reset")) {
-                                    logger.warn("读取客户端消息失败", e);
-                                }
-                                break;
-                            }
-                        }
-                    } finally {
-                        readerRunning.set(false);
-                        finalOutputHandler.close();
-                    }
-                });
-
-                ThreadPoolManager.scheduleAtFixedRate(() -> {
-                    while (!Thread.currentThread().isInterrupted() &&
-                            (System.currentTimeMillis() - lastResponseTime.get()) < PROTOCOL_REQUEST_TIMEOUT) {
-                        try {
-                            Thread.sleep(PING_CLIENT_INTERVAL);
-                            synchronized (writeLock) {
-                                InteractiveProtocol.writeMessage(output,
-                                        InteractiveProtocol.TYPE_SERVER_PING,
-                                        null);
-                            }
-                            logger.debug("向客户端发送SERVER_PING包");
-
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                            break;
-                        } catch (IOException e) {
-                            logger.warn("发送SERVER_PING失败", e);
-                            break;
-                        }
-                    }
-                }, PING_CLIENT_INTERVAL, PING_CLIENT_INTERVAL, TimeUnit.MILLISECONDS);
+                ScheduledFuture<?> future = ThreadPoolManager.scheduleAtFixedRate(
+                        () -> runInteractiveProtocolPing(output),
+                        PING_CLIENT_INTERVAL, PING_CLIENT_INTERVAL, TimeUnit.MILLISECONDS);
 
                 try {
                     commandExecutor.execute(command, outputHandler);
@@ -232,8 +243,7 @@ public class SocketClientHandler {
                     logger.error("执行命令失败", e);
                     try {
                         outputHandler.println("执行命令失败: " + e.getMessage());
-                    } catch (Exception ignored) {
-                    }
+                    } catch (Exception ignored) {}
                 }
 
                 try {
@@ -248,6 +258,7 @@ public class SocketClientHandler {
                 }
 
                 logger.info("命令执行完成");
+                if (future != null) future.cancel(true);
 
             } catch (Exception e) {
                 logger.error("处理交互协议客户端错误", e);
@@ -256,7 +267,7 @@ public class SocketClientHandler {
         }
     }
 
-    private void executeCommandForSocket(String command, final PrintWriter writer) {
+    private void executeCommandForTextProtocolSocket(String command, final PrintWriter writer) {
         IOutputHandler socketOutput = new IOutputHandler() {
             private volatile boolean closed = false;
             final StringBuilder sb = new StringBuilder();

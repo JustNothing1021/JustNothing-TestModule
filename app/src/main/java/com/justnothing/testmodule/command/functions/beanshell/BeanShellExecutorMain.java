@@ -9,9 +9,7 @@ import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.data.DataBridge;
 import com.justnothing.testmodule.utils.io.IOManager;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -235,16 +233,15 @@ public class BeanShellExecutorMain extends CommandBase {
             return "错误: 脚本 '" + scriptName + "' 已存在";
         }
 
-        scriptFile.getParentFile().mkdirs();
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(scriptFile))) {
-            writer.write("# BeanShell Script: " + scriptName);
-            writer.newLine();
-            writer.write("# Created by: " + System.currentTimeMillis());
-            writer.newLine();
-            writer.newLine();
-            writer.write("# 在这里编写你的BeanShell脚本代码...");
-            writer.newLine();
-        }
+        IOManager.createDirectory(scriptFile.getParentFile().getAbsolutePath());
+        
+        StringBuilder content = new StringBuilder();
+        content.append("# BeanShell Script: ").append(scriptName).append("\n");
+        content.append("# Created by: ").append(System.currentTimeMillis()).append("\n");
+        content.append("\n");
+        content.append("# 在这里编写你的BeanShell脚本代码...\n");
+        
+        IOManager.writeFile(scriptFile.getAbsolutePath(), content.toString());
 
         return "BeanShell脚本 '" + scriptName + "' 创建成功\n" +
                "路径: " + scriptFile.getAbsolutePath() + "\n" +
@@ -383,10 +380,8 @@ public class BeanShellExecutorMain extends CommandBase {
                    "提示: 使用 'bscript delete " + scriptName + "' 删除旧脚本";
         }
 
-        destFile.getParentFile().mkdirs();
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(destFile))) {
-            writer.write(content);
-        }
+        IOManager.createDirectory(destFile.getParentFile().getAbsolutePath());
+        IOManager.writeFile(destFile.getAbsolutePath(), content);
 
         return "BeanShell脚本导入成功\n" +
                "源文件: " + sourceFile.getAbsolutePath() + "\n" +
@@ -410,9 +405,7 @@ public class BeanShellExecutorMain extends CommandBase {
         File exportFile = new File(exportPath);
         String content = IOManager.readFile(scriptFile.getAbsolutePath());
 
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(exportFile))) {
-            writer.write(content);
-        }
+        IOManager.writeFile(exportFile.getAbsolutePath(), content);
 
         return "BeanShell脚本导出成功\n" +
                "脚本: " + scriptName + "\n" +

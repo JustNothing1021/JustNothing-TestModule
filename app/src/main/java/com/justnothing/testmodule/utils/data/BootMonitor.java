@@ -16,11 +16,6 @@ public class BootMonitor {
     private static final AtomicLong zygoteInitStartTime = new AtomicLong(0);
     private static final AtomicLong zygoteInitEndTime = new AtomicLong(0);
     
-    private static final AtomicBoolean dataDirInitCompleted = new AtomicBoolean(false);
-    private static final AtomicLong dataDirInitStartTime = new AtomicLong(0);
-    private static final AtomicLong dataDirInitEndTime = new AtomicLong(0);
-    
-    private static final AtomicBoolean hooksSetupStarted = new AtomicBoolean(false);
     private static final AtomicBoolean hooksSetupCompleted = new AtomicBoolean(false);
     private static final AtomicLong hooksSetupStartTime = new AtomicLong(0);
     private static final AtomicLong hooksSetupEndTime = new AtomicLong(0);
@@ -50,23 +45,8 @@ public class BootMonitor {
             logger.info("============== Zygote初始化完成，耗时: " + duration + "ms");
         }
     }
-    
 
-    public static void markHooksSetupStarted() {
-        if (hooksSetupStarted.compareAndSet(false, true)) {
-            hooksSetupStartTime.set(System.currentTimeMillis());
-            logger.info("============== 服务端Hook设置开始");
-        }
-    }
-    
-    public static void markHooksSetupCompleted() {
-        if (hooksSetupCompleted.compareAndSet(false, true)) {
-            hooksSetupEndTime.set(System.currentTimeMillis());
-            long duration = hooksSetupEndTime.get() - hooksSetupStartTime.get();
-            logger.info("=========== 服务端Hooks设置完成，耗时: " + duration + "ms");
-        }
-    }
-    
+
     public static void markPackageLoadStarted(String pkgName, String procName) {
         firstLoadPackageStarted.set(true);
         if (packageLoadStarted.compareAndSet(false, true)) {
@@ -119,37 +99,6 @@ public class BootMonitor {
             long duration = packageLoadEndTime.get() - packageLoadStartTime.get();
             logger.info("  耗时: " + duration + "ms");
         }
-    }
-    
-    public static JSONObject getBootStatusAsJson() {
-        JSONObject status = new JSONObject();
-        try {
-            status.put("zygote_init_completed", zygoteInitCompleted.get());
-            if (zygoteInitCompleted.get()) {
-                status.put("zygote_init_duration", zygoteInitEndTime.get() - zygoteInitStartTime.get());
-            }
-            
-            status.put("data_dir_init_completed", dataDirInitCompleted.get());
-            if (dataDirInitCompleted.get()) {
-                status.put("data_dir_init_duration", dataDirInitEndTime.get() - dataDirInitStartTime.get());
-            }
-            
-            status.put("hooks_setup_completed", hooksSetupCompleted.get());
-            if (hooksSetupCompleted.get()) {
-                status.put("hooks_setup_duration", hooksSetupEndTime.get() - hooksSetupStartTime.get());
-            }
-            
-            status.put("package_load_completed", packageLoadCompleted.get());
-            status.put("total_packages_loaded", totalPackagesLoaded);
-            status.put("successful_package_loads", successfulPackageLoads);
-            status.put("failed_package_loads", failedPackageLoads);
-            if (packageLoadCompleted.get()) {
-                status.put("package_load_duration", packageLoadEndTime.get() - packageLoadStartTime.get());
-            }
-        } catch (Exception e) {
-            logger.error("生成启动状态JSON失败", e);
-        }
-        return status;
     }
     
 }

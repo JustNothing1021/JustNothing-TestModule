@@ -36,12 +36,7 @@ public class PerformanceActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_performance);
 
-        logger = new Logger() {
-            @Override
-            public String getTag() {
-                return "PerformanceActivity";
-            }
-        };
+        logger = Logger.getLoggerForName("PerformanceActivity");
         monitor = new PerformanceMonitor();
         handler = new Handler(Looper.getMainLooper());
 
@@ -54,7 +49,6 @@ public class PerformanceActivity extends AppCompatActivity {
 
         Button btnRefresh = findViewById(R.id.btn_refresh);
         Button btnClear = findViewById(R.id.btn_clear);
-        TextView textStatus = findViewById(R.id.text_status);
 
         btnRefresh.setOnClickListener(v -> {
             refreshStats();
@@ -95,10 +89,15 @@ public class PerformanceActivity extends AppCompatActivity {
         statsList.clear();
         statsList.addAll(stats.values());
         adapter.notifyDataSetChanged();
-
+        String statDesc = getString(R.string.performance_monitor_stat_desc,
+                (monitor.isEnabled() ?
+                        getString(R.string.performance_monitor_stat_enabled) :
+                        getString(R.string.performance_monitor_stat_disabled)));
+        String hookDesc = getString(R.string.performance_hook_count, statsList.size());
+        String finalDesc = statDesc + getString(R.string.newline) + hookDesc;
         TextView textStatus = findViewById(R.id.text_status);
-        textStatus.setText("监控状态: " + (monitor.isEnabled() ? "启用" : "禁用") + 
-                          "\nHook数量: " + statsList.size());
+        textStatus.setText(finalDesc);
+
     }
 
     private class StatsAdapter extends RecyclerView.Adapter<StatsAdapter.ViewHolder> {
@@ -137,9 +136,9 @@ public class PerformanceActivity extends AppCompatActivity {
 
             void bind(PerformanceMonitor.HookStats stat) {
                 textName.setText(stat.name);
-                textCallCount.setText("调用次数: " + stat.callCount);
-                textTotalTime.setText("总耗时: " + stat.totalTime + "ms");
-                textAvgTime.setText("平均耗时: " + stat.avgTime + "ms");
+                textCallCount.setText(getString(R.string.performance_hook_call_cnt, stat.callCount));
+                textTotalTime.setText(getString(R.string.performance_hook_total_time, stat.totalTime));
+                textAvgTime.setText(getString(R.string.performance_hook_avg_time, stat.avgTime));
             }
         }
     }

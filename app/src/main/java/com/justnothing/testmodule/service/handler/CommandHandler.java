@@ -10,6 +10,7 @@ import com.justnothing.testmodule.command.output.StreamOutputWriter;
 import com.justnothing.testmodule.utils.data.DataDirectoryManager;
 import com.justnothing.testmodule.utils.functions.Logger;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
+import com.justnothing.testmodule.utils.io.IOManager;
 
 import java.io.File;
 import java.io.IOException;
@@ -139,8 +140,8 @@ public class CommandHandler {
 
         String command;
         try {
-            java.nio.file.Path inputPath = java.nio.file.Paths.get(inputFile);
-            command = new String(java.nio.file.Files.readAllBytes(inputPath), StandardCharsets.UTF_8);
+            String inputPath = Paths.get(inputFile).toAbsolutePath().toFile().getAbsolutePath();
+            command = IOManager.readFile(inputPath, StandardCharsets.UTF_8);
             logger.info("从文件读取命令: " + (command.length() > 100 ? command.substring(0, 100) + "..." : command));
         } catch (Exception e) {
             logger.error("读取输入文件时遇到错误: " + inputFile, e);
@@ -190,7 +191,7 @@ public class CommandHandler {
             logger.debug("结果内容: " + result);
             
             Path outputPath = Paths.get(outputFile);
-            Files.write(outputPath, result.getBytes(StandardCharsets.UTF_8));
+            IOManager.writeFile(outputPath.toFile().getAbsolutePath(), result);
             
             logger.debug("文件写入完成，设置文件权限");
             
@@ -198,7 +199,7 @@ public class CommandHandler {
 
             logger.info("文件写入完成，验证文件内容");
             
-            long fileSize = java.nio.file.Files.size(outputPath);
+            long fileSize = Files.size(outputPath);
             logger.info("文件验证成功，文件大小: " + fileSize + " 字节");
             
             return 0;

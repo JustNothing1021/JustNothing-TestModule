@@ -10,8 +10,8 @@ import static com.justnothing.testmodule.service.handler.TransactionHandler.TRAN
 
 import com.justnothing.methodsclient.StreamClient;
 import com.justnothing.methodsclient.executor.FileCommandExecutor;
-import com.justnothing.testmodule.utils.functions.CmdUtils;
 import com.justnothing.testmodule.utils.io.IOManager;
+import com.justnothing.testmodule.utils.io.RootProcessPool;
 
 import java.io.File;
 import java.net.InetSocketAddress;
@@ -94,11 +94,11 @@ public class ClientPortManager {
                     "i32", String.valueOf(newPort),
                     "s16", outputFilePath};
 
-            // 使用CmdUtils执行服务调用
+            // 使用RootProcessPool执行服务调用
             String serviceCommand = String.join(" ", serviceCmd);
-            CmdUtils.CommandOutput serviceResult = CmdUtils.runCommand(serviceCommand, 15000);
+            IOManager.ProcessResult serviceResult = RootProcessPool.executeCommand(serviceCommand, 15000, false);
             
-            if (serviceResult.succeed()) {
+            if (serviceResult.isSuccess()) {
                 logger.info("执行完成, 输出: " + serviceResult.stdout());
 
                 int maxWait = 10;
@@ -130,7 +130,7 @@ public class ClientPortManager {
                     System.err.println("错误: " + errorMsg);
                 }
             } else {
-                String errorMsg = "服务调用失败，退出码: " + serviceResult.stat() + ", 输出: " + serviceResult.stdout();
+                String errorMsg = "服务调用失败，退出码: " + serviceResult.exitCode() + ", 输出: " + serviceResult.stdout();
                 logger.error(errorMsg);
                 System.err.println("错误: " + errorMsg);
             }
@@ -159,8 +159,8 @@ public class ClientPortManager {
                     return;
                 }
                 try {
-                    CmdUtils.CommandOutput chmodResult = CmdUtils.runRootCommand("chmod 777 " + parent.getAbsolutePath(), 5000);
-                    if (!chmodResult.succeed()) {
+                    IOManager.ProcessResult chmodResult = RootProcessPool.executeCommand("chmod 777 " + parent.getAbsolutePath(), 5000, true);
+                    if (!chmodResult.isSuccess()) {
                         logger.warn("设置端口文件目录权限失败: " + parent.getAbsolutePath());
                     }
                 } catch (Exception e) {
@@ -168,8 +168,8 @@ public class ClientPortManager {
                 }
             } else if (parent != null && (!parent.canRead() || !parent.canWrite() || !parent.canExecute())) {
                 try {
-                    CmdUtils.CommandOutput chmodResult = CmdUtils.runRootCommand("chmod 777 " + parent.getAbsolutePath(), 5000);
-                    if (!chmodResult.succeed()) {
+                    IOManager.ProcessResult chmodResult = RootProcessPool.executeCommand("chmod 777 " + parent.getAbsolutePath(), 5000, true);
+                    if (!chmodResult.isSuccess()) {
                         logger.warn("设置端口文件目录权限失败: " + parent.getAbsolutePath());
                     }
                 } catch (Exception e) {

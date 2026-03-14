@@ -1,26 +1,20 @@
 package com.justnothing.methodsclient.executor;
 
 import com.justnothing.testmodule.utils.data.BootMonitor;
-import com.justnothing.testmodule.utils.functions.CmdUtils;
 import com.justnothing.testmodule.utils.functions.Logger;
 import com.justnothing.testmodule.utils.io.RootProcessPool;
 import com.justnothing.testmodule.utils.io.IOManager;
+import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicInteger;
 
 // AI写的，用于异步执行chmod操作
 // 其实感觉有点拆东墙补西墙。。。
 public class AsyncChmodExecutor extends Logger {
-    private static final int MAX_THREAD_POOL_SIZE = 2;
     private static final long SYNC_TIMEOUT_MS = 10000;
-    private static ExecutorService executorService;
     private static final ConcurrentHashMap<String, Future<?>> pendingTasks = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, Boolean> completedTasks = new ConcurrentHashMap<>();
-    private static final AtomicInteger threadCounter = new AtomicInteger(0);
     private static final AsyncChmodExecutor instance = new AsyncChmodExecutor();
     private static boolean async = true;
     
@@ -58,33 +52,9 @@ public class AsyncChmodExecutor extends Logger {
         instance.debug(message);
     }
     
-    public static void initialize() {
-        if (!isSystemBootCompleted()) {
-            logInfo("系统启动未完成，跳过异步chmod执行器初始化");
-            return;
-        }
-        if (executorService == null) {
-            executorService = Executors.newFixedThreadPool(MAX_THREAD_POOL_SIZE, r -> {
-                Thread thread = new Thread(r, "AsyncChmod-" + threadCounter.incrementAndGet());
-                thread.setPriority(Thread.NORM_PRIORITY - 1);
-                return thread;
-            });
-            logInfo("异步chmod执行器已初始化");
-        }
-    }
-
     public static void setAsync(boolean stat) {
         async = stat;
     }
-
-    public static void shutdown() {
-        if (executorService != null) {
-            executorService.shutdown();
-            executorService = null;
-            logInfo("异步chmod执行器已关闭");
-        }
-    }
-    
 
     private static boolean isSystemBootCompleted() {
         long currentTime = System.currentTimeMillis();
@@ -123,9 +93,9 @@ public class AsyncChmodExecutor extends Logger {
 
     private static boolean isSystemBootCompletedFallbackNoLog() {
         try {
-            CmdUtils.CommandOutput result = CmdUtils.runRootCommand("getprop sys.boot_completed", 5000);
+            IOManager.ProcessResult result = RootProcessPool.executeCommand("getprop sys.boot_completed", 5000, true);
             
-            if (result.succeed()) {
+            if (result.isSuccess()) {
                 String output = result.stdout().trim();
                 return "1".equals(output);
             } else {
@@ -170,7 +140,6 @@ public class AsyncChmodExecutor extends Logger {
             }
             return result;
         } else {
-            if (executorService == null) initialize();
             return executeChmodAsync(targetPath, permissions, recursive, taskKey);
         }
     }
@@ -244,7 +213,7 @@ public class AsyncChmodExecutor extends Logger {
         logInfo("异步执行chmod命令: " + chmodCmd);
         
         try {
-            Future<?> future = executorService.submit(() -> {
+            Future<?> future = ThreadPoolManager.submitIORunnable(() -> {
                 try {
                     boolean result = executeChmodSync(targetPath, permissions, recursive);
                     if (result) {

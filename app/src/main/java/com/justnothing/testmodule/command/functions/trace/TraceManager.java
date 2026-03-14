@@ -2,10 +2,9 @@ package com.justnothing.testmodule.command.functions.trace;
 
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
 import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
@@ -16,17 +15,11 @@ public class TraceManager {
     
     private final ConcurrentHashMap<Integer, TraceTask> traceTasks;
     private final AtomicInteger nextId;
-    private final ExecutorService executor;
     private final int maxCallRecords;
     
     private TraceManager() {
         this.traceTasks = new ConcurrentHashMap<>();
         this.nextId = new AtomicInteger(1);
-        this.executor = Executors.newCachedThreadPool(r -> {
-            Thread thread = new Thread(r, "TraceTask-" + nextId.get());
-            thread.setDaemon(true);
-            return thread;
-        });
         this.maxCallRecords = 1000;
     }
     
@@ -45,7 +38,7 @@ public class TraceManager {
             
             TraceTask task = new TraceTask(id, targetClass, methodName, signature, maxCallRecords, classLoader);
             traceTasks.put(id, task);
-            executor.submit(task);
+            ThreadPoolManager.submitFastRunnable(task);
             logger.info("成功添加trace任务: " + id);
             return id;
         } catch (Exception e) {
@@ -93,6 +86,5 @@ public class TraceManager {
     public void shutdown() {
         logger.info("关闭TraceManager");
         clearAllTasks();
-        executor.shutdown();
     }
 }

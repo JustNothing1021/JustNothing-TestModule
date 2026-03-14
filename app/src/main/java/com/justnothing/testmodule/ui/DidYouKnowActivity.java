@@ -16,15 +16,8 @@ import com.justnothing.testmodule.utils.tips.TipType;
 
 
 public class DidYouKnowActivity extends AppCompatActivity {
-    private static final String TAG = "DidYouKnowActivity";
+    private static final Logger logger = Logger.getLoggerForName("DidYouKnowActivity");
 
-    private final Logger logger = new Logger() {
-        @Override
-        public String getTag() {
-            return TAG;
-        }
-    };
-    
     private TipSystem tipSystem;
     private TextView tipContent;
     private TextView tipAuthor;

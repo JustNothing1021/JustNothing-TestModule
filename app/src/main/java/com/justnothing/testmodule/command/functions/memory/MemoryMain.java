@@ -10,12 +10,11 @@ import android.os.Debug;
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
+import com.justnothing.testmodule.utils.io.IOManager;
 
-import java.io.BufferedWriter;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.text.DecimalFormat;
@@ -427,13 +426,12 @@ public class MemoryMain extends CommandBase {
             File outputFile = new File(filePath);
             File parentDir = outputFile.getParentFile();
             if (parentDir != null && !parentDir.exists()) {
-                if (!parentDir.mkdirs()) logger.warn("创建目录失败: " + parentDir.getAbsolutePath());
+                IOManager.createDirectory(parentDir.getAbsolutePath());
             }
             
-            try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile))) {
+            try {
                 logger.info("开始导出堆信息到: " + filePath);
-                writer.write(output.toString());
-                writer.flush();
+                IOManager.writeFile(outputFile.getAbsolutePath(), output.toString());
                 logger.info("堆信息导出完成");
                 return "堆信息已导出到: " + filePath;
             } catch (IOException e) {

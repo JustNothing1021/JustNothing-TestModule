@@ -3,10 +3,9 @@ package com.justnothing.testmodule.command.functions.trace;
 import androidx.annotation.NonNull;
 
 import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.io.IOManager;
 import com.justnothing.testmodule.utils.reflect.ReflectionUtils;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.text.SimpleDateFormat;
@@ -287,26 +286,28 @@ public class TraceTask implements Runnable {
 
     public boolean exportToFile(String filePath) {
         synchronized (callRecords) {
-            try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
-                writer.write("=== Trace 调用记录 ===\n");
-                writer.write("任务ID: " + id + "\n");
-                writer.write("目标方法: " + targetClass.getName() + "." + methodName + "\n");
-                writer.write("签名: " + (signature != null ? signature : "所有") + "\n");
-                writer.write("总调用次数: " + callCount.get() + "\n");
-                writer.write("记录时间: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-                        .format(new java.util.Date()) + "\n\n");
+            try {
+                StringBuilder content = new StringBuilder();
+                content.append("=== Trace 调用记录 ===\n");
+                content.append("任务ID: ").append(id).append("\n");
+                content.append("目标方法: ").append(targetClass.getName()).append(".").append(methodName).append("\n");
+                content.append("签名: ").append(signature != null ? signature : "所有").append("\n");
+                content.append("总调用次数: ").append(callCount.get()).append("\n");
+                content.append("记录时间: ").append(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+                        .format(new java.util.Date())).append("\n\n");
                 
-                writer.write("=== 调用树 ===\n");
+                content.append("=== 调用树 ===\n");
                 for (CallNode node : callTree.values()) {
-                    writer.write(node.toString() + "\n");
+                    content.append(node.toString()).append("\n");
                 }
-                writer.write("\n");
+                content.append("\n");
                 
-                writer.write("=== 详细调用记录 ===\n");
+                content.append("=== 详细调用记录 ===\n");
                 for (CallRecord record : callRecords) {
-                    writer.write(record.toString() + "\n");
+                    content.append(record.toString()).append("\n");
                 }
                 
+                IOManager.writeFile(filePath, content.toString());
                 return true;
             } catch (IOException e) {
                 logger.error("导出trace记录失败", e);

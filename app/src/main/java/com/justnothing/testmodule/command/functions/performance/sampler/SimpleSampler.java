@@ -1,14 +1,17 @@
 package com.justnothing.testmodule.command.functions.performance.sampler;
 
+import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
+
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class SimpleSampler {
     private volatile boolean running = false;
     private final Map<String, AtomicInteger> methodCounts = new ConcurrentHashMap<>();
     private final AtomicInteger totalSamples = new AtomicInteger(0);
-    private Thread samplerThread;
+    private Future<?> samplerFuture;
     private final int sampleRate;
     private long startTime;
     private long stopTime;
@@ -26,7 +29,7 @@ public class SimpleSampler {
         startTime = System.currentTimeMillis();
         long intervalMs = 1000 / sampleRate;
 
-        samplerThread = new Thread(() -> {
+        samplerFuture = ThreadPoolManager.submitFastRunnable(() -> {
             while (running) {
                 sample();
                 try {
@@ -36,9 +39,6 @@ public class SimpleSampler {
                 }
             }
         });
-        samplerThread.setName("PerformanceSampler");
-        samplerThread.setDaemon(true);
-        samplerThread.start();
     }
 
     private void sample() {
@@ -48,7 +48,7 @@ public class SimpleSampler {
             Thread thread = entry.getKey();
             StackTraceElement[] stackTrace = entry.getValue();
             
-            if (thread.getName().equals("PerformanceSampler")) {
+            if (thread.getName().contains("Fast-Pool")) {
                 continue;
             }
             
@@ -68,8 +68,8 @@ public class SimpleSampler {
     public void stop() {
         running = false;
         stopTime = System.currentTimeMillis();
-        if (samplerThread != null) {
-            samplerThread.interrupt();
+        if (samplerFuture != null) {
+            samplerFuture.cancel(true);
         }
     }
 

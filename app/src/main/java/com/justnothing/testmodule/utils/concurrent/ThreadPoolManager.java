@@ -24,15 +24,15 @@ public class ThreadPoolManager {
     private static volatile ThreadPoolManager instance = null;
     private static final int CPU_CORES = Runtime.getRuntime().availableProcessors();
     private static final boolean IS_LOW_END_DEVICE = CPU_CORES <= 4 || Runtime.getRuntime().maxMemory() < 128 * 1024 * 1024;
-    private static final int IO_POOL_SIZE = Math.max(1, IS_LOW_END_DEVICE ? 1 : Math.max(2, CPU_CORES));
-    private static final int CPU_POOL_SIZE = Math.max(1, IS_LOW_END_DEVICE ? 1 : Math.max(1, CPU_CORES / 2));
-    private static final int FAST_POOL_SIZE = Math.max(2, IS_LOW_END_DEVICE ? 2 : Math.max(3, CPU_CORES));
-    private static final int SOCKET_POOL_SIZE = Math.max(2, IS_LOW_END_DEVICE ? 2 : Math.max(3, CPU_CORES));
+    private static final int IO_POOL_SIZE = Math.max(2, IS_LOW_END_DEVICE ? 2 : Math.max(4, CPU_CORES * 2));
+    private static final int CPU_POOL_SIZE = Math.max(1, IS_LOW_END_DEVICE ? 1 : Math.max(2, CPU_CORES));
+    private static final int FAST_POOL_SIZE = Math.max(4, IS_LOW_END_DEVICE ? 4 : Math.max(6, CPU_CORES * 2));
+    private static final int SOCKET_POOL_SIZE = Math.max(4, IS_LOW_END_DEVICE ? 4 : Math.max(6, CPU_CORES * 2));
 
-    private static final int IO_QUEUE_CAPACITY = IS_LOW_END_DEVICE ? 50 : 200;
-    private static final int CPU_QUEUE_CAPACITY = IS_LOW_END_DEVICE ? 20 : 50;
-    private static final int FAST_QUEUE_CAPACITY = IS_LOW_END_DEVICE ? 50 : 150;
-    private static final int SOCKET_QUEUE_CAPACITY = IS_LOW_END_DEVICE ? 100 : 500;
+    private static final int IO_QUEUE_CAPACITY = IS_LOW_END_DEVICE ? 100 : 500;
+    private static final int CPU_QUEUE_CAPACITY = IS_LOW_END_DEVICE ? 50 : 100;
+    private static final int FAST_QUEUE_CAPACITY = IS_LOW_END_DEVICE ? 100 : 300;
+    private static final int SOCKET_QUEUE_CAPACITY = IS_LOW_END_DEVICE ? 200 : 1000;
 
     private static final long KEEP_ALIVE_TIME = 60L;
 
@@ -51,11 +51,11 @@ public class ThreadPoolManager {
     private ThreadPoolManager() {
         super();
 
-        ThreadFactory ioThreadFactory = new NamedThreadFactory("IO-Pool", Thread.NORM_PRIORITY - 1);
-        ThreadFactory cpuThreadFactory = new NamedThreadFactory("CPU-Pool", Thread.NORM_PRIORITY + 1);
-        ThreadFactory fastThreadFactory = new NamedThreadFactory("Fast-Pool", Thread.NORM_PRIORITY);
-        ThreadFactory socketThreadFactory = new NamedThreadFactory("Socket-Pool", Thread.NORM_PRIORITY - 1);
-        ThreadFactory scheduledThreadFactory = new NamedThreadFactory("Scheduled-Pool", Thread.NORM_PRIORITY);
+        ThreadFactory ioThreadFactory = new NamedThreadFactory("IO-Pool", Thread.MAX_PRIORITY);
+        ThreadFactory cpuThreadFactory = new NamedThreadFactory("CPU-Pool", Thread.MAX_PRIORITY);
+        ThreadFactory fastThreadFactory = new NamedThreadFactory("Fast-Pool", Thread.MAX_PRIORITY);
+        ThreadFactory socketThreadFactory = new NamedThreadFactory("Socket-Pool", Thread.MAX_PRIORITY);
+        ThreadFactory scheduledThreadFactory = new NamedThreadFactory("Scheduled-Pool", Thread.MAX_PRIORITY - 1);
 
         RejectionHandler rejectionHandler = new RejectionHandler();
 

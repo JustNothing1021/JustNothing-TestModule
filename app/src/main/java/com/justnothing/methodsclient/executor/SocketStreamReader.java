@@ -92,11 +92,47 @@ public class SocketStreamReader {
 
             final BlockingQueue<String> inputQueue = new LinkedBlockingQueue<>();
 
-            Thread terminalInputThread = getTerminalInputThread(reading, inputQueue);
-            terminalInputThread.start();
+            ThreadPoolManager.submitSocketRunnable(() -> {
+                BufferedReader consoleReader = new BufferedReader(
+                        new InputStreamReader(System.in, StandardCharsets.UTF_8));
 
-            Thread pingThread = getClientPingThread(output, lastResponseTime);
-            pingThread.start();
+                try {
+                    while (reading.get() && !Thread.currentThread().isInterrupted()) {
+                        if (consoleReader.ready()) {
+                            String line = consoleReader.readLine();
+                            if (line != null && !line.isEmpty()) {
+                                inputQueue.offer(line);
+                            }
+                        } else {
+                            Thread.sleep(100);
+                        }
+                    }
+                } catch (Exception ignored) {
+                }
+            });
+
+            Object writeLock = new Object();
+            ThreadPoolManager.submitSocketRunnable(() -> {
+                while (!Thread.currentThread().isInterrupted() &&
+                        (System.currentTimeMillis() - lastResponseTime.get()) < SERVER_RESPONSE_TIMEOUT) {
+                    try {
+                        Thread.sleep(PING_SERVER_INTERVAL);
+                        synchronized (writeLock) {
+                            InteractiveProtocol.writeMessage(output,
+                                    InteractiveProtocol.TYPE_CLIENT_PING,
+                                    null);
+                        }
+                        logger.debug("向服务端发送CLIENT_PING包");
+
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    } catch (IOException e) {
+                        logger.warn("发送CLIENT_PING失败", e);
+                        break;
+                    }
+                }
+            });
 
             while (reading.get() && !Thread.currentThread().isInterrupted()) {
                 try {
@@ -233,58 +269,6 @@ public class SocketStreamReader {
         } finally {
             reading.set(false);
         }
-    }
-
-    @NonNull
-    private static Thread getClientPingThread(OutputStream output, AtomicLong lastResponseTime) {
-        Object writeLock = new Object();
-
-        Thread pingThread = new Thread(() -> {
-            while (!Thread.currentThread().isInterrupted() &&
-                    (System.currentTimeMillis() - lastResponseTime.get()) < SERVER_RESPONSE_TIMEOUT) {
-                try {
-                    Thread.sleep(PING_SERVER_INTERVAL);
-                    synchronized (writeLock) {
-                        InteractiveProtocol.writeMessage(output,
-                                InteractiveProtocol.TYPE_CLIENT_PING,
-                                null);
-                    }
-                    logger.debug("向服务端发送CLIENT_PING包");
-
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
-                } catch (IOException e) {
-                    logger.warn("发送CLIENT_PING失败", e);
-                    break;
-                }
-            }
-        }, "ClientPingThread");
-        pingThread.setDaemon(true);
-        return pingThread;
-    }
-
-    private static Thread getTerminalInputThread(AtomicBoolean reading, BlockingQueue<String> inputQueue) {
-        Thread terminalInputThread = new Thread(() -> {
-            BufferedReader consoleReader = new BufferedReader(
-                    new InputStreamReader(System.in, StandardCharsets.UTF_8));
-
-            try {
-                while (reading.get() && !Thread.currentThread().isInterrupted()) {
-                    if (consoleReader.ready()) {
-                        String line = consoleReader.readLine();
-                        if (line != null && !line.isEmpty()) {
-                            inputQueue.offer(line);
-                        }
-                    } else {
-                        Thread.sleep(100);
-                    }
-                }
-            } catch (Exception ignored) {
-            }
-        }, "TerminalInputThread");
-        terminalInputThread.setDaemon(true);
-        return terminalInputThread;
     }
 
     public static boolean readSocketStreamToString(InputStream input, AtomicBoolean reading,

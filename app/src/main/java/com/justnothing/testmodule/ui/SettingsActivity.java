@@ -155,7 +155,7 @@ public class SettingsActivity extends AppCompatActivity {
         
         // 如果 SeekBar 还没有测量完成，延迟计算
         if (seekBarWidth <= 0) {
-            scaleSeekBar.post(() -> updateDefaultLabelPosition());
+            scaleSeekBar.post(this::updateDefaultLabelPosition);
             return;
         }
         

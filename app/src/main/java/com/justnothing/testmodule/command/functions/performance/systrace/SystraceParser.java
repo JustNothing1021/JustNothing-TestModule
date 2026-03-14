@@ -2,9 +2,9 @@ package com.justnothing.testmodule.command.functions.performance.systrace;
 
 import android.util.Log;
 
-import java.io.BufferedReader;
+import com.justnothing.testmodule.utils.io.IOManager;
+
 import java.io.File;
-import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -108,9 +108,11 @@ public class SystraceParser {
         double totalUsage = 0.0;
         int coreCount = 0;
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
+        try {
+            String content = IOManager.readFile(file.getAbsolutePath());
+            String[] lines = content.split("\n");
+            
+            for (String line : lines) {
                 if (line.contains("cpu") && line.contains("usage")) {
                     String[] parts = line.split("\\s+");
                     for (String part : parts) {
@@ -135,9 +137,11 @@ public class SystraceParser {
         int fps = 0;
         int droppedFrames = 0;
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
+        try {
+            String content = IOManager.readFile(file.getAbsolutePath());
+            String[] lines = content.split("\n");
+            
+            for (String line : lines) {
                 if (line.contains("gpu") && line.contains("usage")) {
                     String[] parts = line.split("\\s+");
                     for (String part : parts) {
@@ -177,9 +181,11 @@ public class SystraceParser {
         int gcCount = 0;
         long gcDuration = 0;
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
+        try {
+            String content = IOManager.readFile(file.getAbsolutePath());
+            String[] lines = content.split("\n");
+            
+            for (String line : lines) {
                 if (line.contains("memory") || line.contains("mem")) {
                     String[] parts = line.split("\\s+");
                     for (String part : parts) {
@@ -212,9 +218,11 @@ public class SystraceParser {
     private static List<SystraceData.ThreadData> parseThreadData(File file) {
         List<SystraceData.ThreadData> threadData = new ArrayList<>();
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
+        try {
+            String content = IOManager.readFile(file.getAbsolutePath());
+            String[] lines = content.split("\n");
+            
+            for (String line : lines) {
                 if (line.contains("thread") && line.contains("state")) {
                     String[] parts = line.split("\\s+");
                     if (parts.length >= 4) {
@@ -244,9 +252,11 @@ public class SystraceParser {
     private static List<SystraceData.IOData> parseIoData(File file) {
         List<SystraceData.IOData> ioData = new ArrayList<>();
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
+        try {
+            String content = IOManager.readFile(file.getAbsolutePath());
+            String[] lines = content.split("\n");
+            
+            for (String line : lines) {
                 if (line.contains("read") || line.contains("write") || line.contains("io")) {
                     String[] parts = line.split("\\s+");
                     String operation = parts[0];
@@ -267,16 +277,18 @@ public class SystraceParser {
                 }
             }
         } catch (Exception e) {
-            Log.w(TAG, "解析 I/O 数据失败", e);
+            Log.w(TAG, "解析IO数据失败", e);
         }
 
         return ioData;
     }
 
     private static long parseDuration(File file) {
-        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
+        try {
+            String content = IOManager.readFile(file.getAbsolutePath());
+            String[] lines = content.split("\n");
+            
+            for (String line : lines) {
                 if (line.contains("duration") || line.contains("time")) {
                     String[] parts = line.split("\\s+");
                     for (String part : parts) {

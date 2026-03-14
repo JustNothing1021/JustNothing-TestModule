@@ -31,14 +31,7 @@ import java.util.Map;
 
 public class HookConfigActivity extends AppCompatActivity {
 
-    private static class ConfigLogger extends Logger {
-        @Override
-        public String getTag() {
-            return "HookConfigActivity";
-        }
-    }
-
-    private final ConfigLogger logger = new ConfigLogger();
+    private static final Logger logger = Logger.getLoggerForName("HookConfigActivity");
 
     private HookAdapter adapter;
     private List<HookItem> hookItems;

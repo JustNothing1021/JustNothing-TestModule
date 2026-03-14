@@ -1,12 +1,15 @@
 package com.justnothing.testmodule.command.output;
 
 import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -16,7 +19,7 @@ public class StreamOutputWriter implements IOutputHandler {
     private final PrintWriter printWriter;
     private final AtomicBoolean closed = new AtomicBoolean(false);
     private final BlockingQueue<String> outputQueue = new ArrayBlockingQueue<>(1024);
-    private final Thread writerThread;
+    private final Future<?> writerFuture;
     private final StringBuilder outputBuilder;
 
     public static final Logger logger = Logger.getLoggerForName("StreamOutputWriter");
@@ -29,10 +32,7 @@ public class StreamOutputWriter implements IOutputHandler {
         this.printWriter = new PrintWriter(outputStream, true);
         this.outputBuilder = new StringBuilder();
 
-        this.writerThread = new Thread(this::writeLoop);
-        this.writerThread.setName("StreamOutputWriter-WriterThread");
-        this.writerThread.setDaemon(true);
-        this.writerThread.start();
+        this.writerFuture = ThreadPoolManager.submitIORunnable(this::writeLoop);
         logger.debug("StreamOutputWriter初始化完成");
     }
 
@@ -140,12 +140,8 @@ public class StreamOutputWriter implements IOutputHandler {
     @Override
     public void close() {
         if (closed.compareAndSet(false, true)) {
-            // 等待写入线程完成
-            try {
-                writerThread.join(2000);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                writerThread.interrupt();
+            if (writerFuture != null) {
+                writerFuture.cancel(true);
             }
         }
     }

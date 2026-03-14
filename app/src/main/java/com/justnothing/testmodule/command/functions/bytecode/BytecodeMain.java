@@ -5,6 +5,7 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_BYTECODE_VE
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
+import com.justnothing.testmodule.utils.io.IOManager;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
 
 import org.benf.cfr.reader.api.CfrDriver;
@@ -17,7 +18,6 @@ import org.objectweb.asm.util.TraceClassVisitor;
 import org.objectweb.asm.util.TraceMethodVisitor;
 import org.objectweb.asm.util.Textifier;
 
-import java.io.FileOutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Method;
@@ -333,9 +333,7 @@ public class BytecodeMain extends CommandBase {
                 return "无法获取类字节码";
             }
 
-            try (FileOutputStream fos = new FileOutputStream(outputPath)) {
-                fos.write(bytecode);
-            }
+            IOManager.writeFile(outputPath, bytecode);
 
             logger.info("字节码已导出到: " + outputPath);
             return "字节码已导出到: " + outputPath + "\n大小: " + bytecode.length + " 字节";
@@ -641,9 +639,7 @@ public class BytecodeMain extends CommandBase {
             String decompiledCode = decompileWithCFR(bytecode, className);
 
             if (outputPath != null) {
-                try (FileOutputStream fos = new FileOutputStream(outputPath)) {
-                    fos.write(decompiledCode.getBytes());
-                }
+                IOManager.writeFile(outputPath, decompiledCode.getBytes());
                 logger.info("反编译代码已导出到: " + outputPath);
                 return "反编译代码已导出到: " + outputPath + "\n\n" + decompiledCode;
             } else {

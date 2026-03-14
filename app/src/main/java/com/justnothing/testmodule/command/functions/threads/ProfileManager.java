@@ -1,9 +1,9 @@
 package com.justnothing.testmodule.command.functions.threads;
 
 import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.io.IOManager;
+import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -12,15 +12,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ProfileManager {
     private static final Logger logger = Logger.getLoggerForName("ProfileManager");
     private static final ProfileManager instance = new ProfileManager();
-    private final ExecutorService executor;
     private final AtomicBoolean profiling;
     private final AtomicInteger profilingDuration;
     private final List<ProfileSample> samples;
@@ -29,11 +26,6 @@ public class ProfileManager {
     private ProfileTask currentTask;
     
     private ProfileManager() {
-        this.executor = Executors.newSingleThreadExecutor(r -> {
-            Thread thread = new Thread(r, "ProfileTask");
-            thread.setDaemon(true);
-            return thread;
-        });
         this.profiling = new AtomicBoolean(false);
         this.profilingDuration = new AtomicInteger(60);
         this.samples = new ArrayList<>();
@@ -57,7 +49,7 @@ public class ProfileManager {
         threadStatsMap.clear();
         
         currentTask = new ProfileTask(duration, this);
-        executor.submit(currentTask);
+        ThreadPoolManager.submitFastRunnable(currentTask);
         
         logger.info("开始性能分析，持续时间: " + duration + "秒");
     }
@@ -147,48 +139,50 @@ public class ProfileManager {
     
     public boolean exportToFile(String filePath) {
         synchronized (samples) {
-            try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
-                writer.write("===== 性能分析报告 =====\n");
-                writer.write("样本数量: " + samples.size() + "\n");
-                writer.write("分析时间: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "\n\n");
+            try {
+                StringBuilder content = new StringBuilder();
+                content.append("===== 性能分析报告 =====\n");
+                content.append("样本数量: ").append(samples.size()).append("\n");
+                content.append("分析时间: ").append(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())).append("\n\n");
                 
-                writer.write("===== 系统资源概况 =====\n");
+                content.append("===== 系统资源概况 =====\n");
                 if (!samples.isEmpty()) {
                     ProfileSample lastSample = samples.get(samples.size() - 1);
-                    writer.write("CPU使用率: " + String.format(Locale.getDefault(), "%.2f%%", lastSample.cpuUsage * 100) + "\n");
-                    writer.write("内存使用: " + formatBytes(lastSample.memoryUsage) + "\n");
-                    writer.write("线程数: " + lastSample.threadCount + "\n");
-                    writer.write("进程数: " + lastSample.processCount + "\n\n");
+                    content.append("CPU使用率: ").append(String.format(Locale.getDefault(), "%.2f%%", lastSample.cpuUsage * 100)).append("\n");
+                    content.append("内存使用: ").append(formatBytes(lastSample.memoryUsage)).append("\n");
+                    content.append("线程数: ").append(lastSample.threadCount).append("\n");
+                    content.append("进程数: ").append(lastSample.processCount).append("\n\n");
                 }
                 
-                writer.write("===== 进程资源统计 =====\n");
+                content.append("===== 进程资源统计 =====\n");
                 for (Map.Entry<String, ProcessStats> entry : processStatsMap.entrySet()) {
                     ProcessStats stats = entry.getValue();
-                    writer.write(String.format(Locale.getDefault(),
+                    content.append(String.format(Locale.getDefault(),
                             "  %s: CPU=%.2f%%, 内存=%s, 线程=%d\n",
                             entry.getKey(),
                             stats.cpuUsage * 100,
                             formatBytes(stats.memoryUsage),
                             stats.threadCount));
                 }
-                writer.write("\n");
+                content.append("\n");
                 
-                writer.write("===== 线程资源统计 =====\n");
+                content.append("===== 线程资源统计 =====\n");
                 for (Map.Entry<String, ThreadStats> entry : threadStatsMap.entrySet()) {
                     ThreadStats stats = entry.getValue();
-                    writer.write(String.format(Locale.getDefault(),
+                    content.append(String.format(Locale.getDefault(),
                             "  %s: CPU=%.2f%%, 状态=%s\n",
                             entry.getKey(),
                             stats.cpuUsage * 100,
                             stats.state));
                 }
-                writer.write("\n");
+                content.append("\n");
                 
-                writer.write("===== 详细样本数据 =====\n");
+                content.append("===== 详细样本数据 =====\n");
                 for (ProfileSample sample : samples) {
-                    writer.write(sample.toString() + "\n");
+                    content.append(sample.toString()).append("\n");
                 }
                 
+                IOManager.writeFile(filePath, content.toString());
                 return true;
             } catch (IOException e) {
                 logger.error("导出性能分析数据失败", e);
