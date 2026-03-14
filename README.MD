@@ -346,7 +346,15 @@ cd JustNothing-TestModule
 
 ## 更新日志
 
-### 当前暂存的更新
+### v0.4.5的TODO 
+ - 给脚本执行器翻新一下（可能会听从我朋友建议开个新项目）
+ - 给所有用签名解析的添加varargs支持
+
+### v0.4.4
+ - 重构了class命令，现在结构更清晰了
+ - 让诸如cinvoke/cconstructor等传参依赖调用的命令也能适配可变参数
+ - 修复了一大堆解释器的问题，添加了方法语法（比如System.out::println）
+ - 修复了一直以来CmdUtils执行root命令超时的问题
  - 修复了工作流不能用的问题（脑溢血方法）
  - 让readme在github上面看起来美观一些
 
