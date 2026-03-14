@@ -129,7 +129,7 @@ public abstract class Logger {
             }
             SHARED_LOG_WRITER.addLog(level, getTag(), message, timestamp);
         } else {
-            
+
 //            String tag = MAIN_TAG + "[" + getTag() + "]";
 //            switch (level) {
 //                case "DEBUG":
