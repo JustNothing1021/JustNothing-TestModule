@@ -67,6 +67,11 @@ public class ScriptModels {
         default Object apply(Object[] args) {
             return call(args);
         }
+
+        @Override
+        default String toString() {
+            return "Lambda@" + Integer.toHexString(System.identityHashCode(this));
+        }
     }
 
     public interface BuiltInFunction {

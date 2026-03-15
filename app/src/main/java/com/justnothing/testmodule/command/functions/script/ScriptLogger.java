@@ -38,23 +38,23 @@ public class ScriptLogger {
         public void debug(String str) {
             if (!enabled)
                 return;
-            System.out.println(GRAY + "[" + TAG + "] " + str + RESET);
+            // System.out.println(GRAY + "[" + TAG + "] " + str + RESET);
         }
 
         @Override
         public void debug(Throwable th) {
             if (!enabled)
                 return;
-            System.out.println(GRAY + "[" + TAG + "] 出现错误" + RESET);
-            th.printStackTrace();
+            // System.out.println(GRAY + "[" + TAG + "] 出现错误" + RESET);
+            // th.printStackTrace();
         }
 
         @Override
         public void debug(String str, Throwable th) {
             if (!enabled)
                 return;
-            System.out.println(GRAY + "[" + TAG + "] " + str + RESET);
-            th.printStackTrace();
+            // System.out.println(GRAY + "[" + TAG + "] " + str + RESET);
+            // th.printStackTrace();
         }
 
         @Override

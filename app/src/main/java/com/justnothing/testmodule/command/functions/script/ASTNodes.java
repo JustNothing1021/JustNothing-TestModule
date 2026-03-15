@@ -3312,28 +3312,37 @@ public class ASTNodes {
         }
 
         private Lambda createLambda(ExecutionContext context) {
-            return (args) -> {
-                try {
-                    context.enterScope();
-                    Object result = null;
-                    if (args == null) {
-                        if (parameters.size() > 0) {
+            final int paramCount = parameters.size();
+            return new Lambda() {
+                @Override
+                public Object call(Object... args) {
+                    try {
+                        context.enterScope();
+                        Object result = null;
+                        if (args == null) {
+                            if (paramCount > 0) {
+                                throw new RuntimeException(
+                                        "此Lambda需要 " + paramCount + " 个参数，但调用提供了 0 个参数");
+                            }
+                        } else if (args.length != paramCount) {
                             throw new RuntimeException(
-                                    "此Lambda需要 " + parameters.size() + " 个参数，但调用提供了 0 个参数");
+                                    "This lambda call requires " + paramCount + " args, provided " + args.length);
+                        } else {
+                            for (int i = 0; i < paramCount; i++) {
+                                context.setVariable(parameters.get(i), args[i], parameters.get(i).getClass());
+                            }
+                            result = body.evaluate(context);
+                            context.exitScope();
                         }
-                    } else if (args.length != parameters.size()) {
-                        throw new RuntimeException(
-                                "This lambda call requires " + parameters.size() + " args, provided " + args.length);
-                    } else {
-                        for (int i = 0; i < parameters.size(); i++) {
-                            context.setVariable(parameters.get(i), args[i], parameters.get(i).getClass());
-                        }
-                        result = body.evaluate(context);
-                        context.exitScope();
+                        return result;
+                    } catch (Exception e) {
+                        throw new RuntimeException("Lambda execution failed: " + e.getMessage(), e);
                     }
-                    return result;
-                } catch (Exception e) {
-                    throw new RuntimeException("Lambda execution failed: " + e.getMessage(), e);
+                }
+
+                @Override
+                public String toString() {
+                    return "Lambda@" + Integer.toHexString(System.identityHashCode(this)) + " with " + paramCount + " arguments";
                 }
             };
         }

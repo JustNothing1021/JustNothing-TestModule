@@ -139,7 +139,7 @@ public abstract class Logger {
             String tag = MAIN_TAG + "[" + getTag() + "]";
             switch (level) {
                 case "DEBUG":
-                    System.out.println(GRAY + tag + " " + message + RESET);
+                    // System.out.println(GRAY + tag + " " + message + RESET);
                     break;
                 case "INFO":
                     System.out.println(GREEN + tag + " " + message + RESET);
