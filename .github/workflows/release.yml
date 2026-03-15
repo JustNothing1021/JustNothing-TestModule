@@ -31,16 +31,7 @@ jobs:
       run: ./gradlew assembleDebug
 
     - name: Build Magisk Module
-      run: |
-        mkdir -p magisk_module/system/framework
-        mkdir -p magisk_module/system/bin
-        
-        cp -r app/magisk/* magisk_module/
-        cp app/build/outputs/apk/debug/app-debug.apk magisk_module/system/framework/testmodule.apk
-        
-        cd magisk_module
-        zip -r ../testmodule-magisk-${{ github.ref_name }}.zip .
-        cd ..
+      run: ./gradlew createMagiskZip
 
     - name: Extract version from tag
       id: version
@@ -76,6 +67,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: testmodule-magisk-${{ github.ref_name }}.zip
+        asset_path: app/build/outputs/magisk-module.zip
         asset_name: testmodule-magisk-${{ steps.version.outputs.version }}.zip
         asset_content_type: application/zip
