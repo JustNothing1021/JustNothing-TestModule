@@ -1,12 +1,10 @@
 package com.justnothing.testmodule.command.functions.script;
 
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Stack;
-
 
 import com.justnothing.testmodule.command.functions.script.ScriptModels.*;
 import com.justnothing.testmodule.command.functions.script.ASTNodes.*;
@@ -650,7 +648,7 @@ public class ScriptParser {
 
         while (peek() != '}') {
             skipWhitespace();
-            
+
             ASTNode key = parseLiteral();
             skipWhitespace();
             expectToMove(':');
@@ -714,10 +712,10 @@ public class ScriptParser {
                             if (peek() != '(') { // 不是方法调用
                                 if (context.getFlag("W_CLASS_AS_VARIABLE") == null) {
                                     logger.warn("尝试将一个类名作为变量值，将不会允许通过点运算符访问内部类，"
-                                                    + "最好直接用类名，将不会展示此警告");
+                                            + "最好直接用类名，将不会展示此警告");
                                     context.printlnWarn(
-                                            "Attempted to access a class through a variable; " 
-                                                + "consider using class name directly");
+                                            "Attempted to access a class through a variable; "
+                                                    + "consider using class name directly");
                                     context.setFlag("W_CLASS_AS_VARIABLE", true);
                                 }
                                 expr = new FieldAccessNode(expr, member);
@@ -772,9 +770,9 @@ public class ScriptParser {
                     skipWhitespace();
                 }
 
-                if (!matched) break;
+                if (!matched)
+                    break;
             }
-
 
             logger.debug("方法解析完成，接下来的大致内容: " + peek(20));
 
@@ -782,11 +780,11 @@ public class ScriptParser {
                 skipWhitespace();
                 String methodName = parseIdentifier();
                 skipWhitespace();
-                
+
                 expr = new MethodReferenceNode(expr, methodName);
             }
             skipWhitespace();
-                 
+
             return expr;
         } catch (RuntimeException e) {
             failure = true;
@@ -812,23 +810,6 @@ public class ScriptParser {
         boolean failure = false;
 
         try {
-            // 处理字面量
-            if (peek() == '\'') {
-                return parseChar();
-            } else if (peek() == '"') {
-                return parseString();
-            } else if (peek() == '-' || peek() == '+' || Character.isDigit(peek())) {
-                return parseNumber();
-            } else if (peek() == '{' || peek() == '[') {
-                ASTNode result =  parseArrayOrMap(); // 我用久了甚至都忘记new数组语法这一说了
-                if (context.getFlag("W_RAW_ARRAY_EXPR") == null) {
-                    logger.warn("直接指定的数组一般解释为原始类型，为了防止歧义，最好用 new typename[] {element...} 来代替");
-                    context.printlnWarn("Arrays without 'new' constructor will be interpreted into primitive types, " +
-                            "consider using 'new typename[] {element...}' for array literals");
-                    context.setFlag("W_RAW_ARRAY_EXPR", true);
-                }
-                return result;
-            }
 
             savePosition();
             try {
@@ -839,15 +820,33 @@ public class ScriptParser {
                 restorePosition();
             }
 
+            // 处理字面量
+            if (peek() == '\'') {
+                return parseChar();
+            } else if (peek() == '"') {
+                return parseString();
+            } else if (peek() == '-' || peek() == '+' || Character.isDigit(peek())) {
+                return parseNumber();
+            } else if (peek() == '{' || peek() == '[') {
+                ASTNode result = parseArrayOrMap(); // 我用久了甚至都忘记new数组语法这一说了
+                if (context.getFlag("W_RAW_ARRAY_EXPR") == null) {
+                    logger.warn("直接指定的数组一般解释为原始类型，为了防止歧义，最好用 new typename[] {element...} 来代替");
+                    context.printlnWarn("Arrays without 'new' constructor will be interpreted into primitive types, " +
+                            "consider using 'new typename[] {element...}' for array literals");
+                    context.setFlag("W_RAW_ARRAY_EXPR", true);
+                }
+                return result;
+            }
+
             if (peek() == '(') {
                 expectToMove('(');
-                
+
                 // 检查是否是强制转换语法: (Type) expr
                 savePosition();
                 try {
                     String typeName = parseIdentifier();
                     skipWhitespace();
-                    
+
                     // 如果后面是 )，说明是强制转换
                     if (peek() == ')') {
                         expectToMove(')');
@@ -859,7 +858,7 @@ public class ScriptParser {
                     // 不是强制转换，回退到括号表达式
                     restorePosition();
                 }
-                
+
                 // 普通括号表达式
                 ASTNode expr = parseExpression();
                 expectToMove(')');
@@ -1132,23 +1131,24 @@ public class ScriptParser {
             skipWhitespace();
 
             List<ASTNode> resources = new ArrayList<>();
-            
+
             if (peek() == '(') {
                 expectToMove('(');
                 skipWhitespace();
-                
+
                 while (peek() != ')') {
                     resources.add(parseTryResourceDeclaration());
                     skipWhitespace();
-                    
+
                     if (peek() == ';') {
                         expectToMove(';');
                         skipWhitespace();
                     } else if (peek() != ')') {
-                        throw new RuntimeException("Expected ';' or ')' in resource declaration, position: " + position);
+                        throw new RuntimeException(
+                                "Expected ';' or ')' in resource declaration, position: " + position);
                     }
                 }
-                
+
                 expectToMove(')');
                 skipWhitespace();
             }
@@ -2176,7 +2176,14 @@ public class ScriptParser {
 
             skipWhitespace();
             while (peek() != ')') {
-                parameters.add(parseIdentifier());
+                String paramName = parseIdentifier();
+
+                if (parameters.contains(paramName)) {
+                    logger.error("在解析lambda形参列表的时候遇到了重名形参名: " + paramName);
+                    throw new RuntimeException("Duplicate parameter name: " + paramName);
+                }
+
+                parameters.add(paramName);
                 skipWhitespace();
                 if (match(',')) {
                     skipWhitespace();
@@ -2190,7 +2197,8 @@ public class ScriptParser {
                 }
             }
 
-            if (hasLeftParenthesis) expectToMove(')');
+            if (hasLeftParenthesis)
+                expectToMove(')');
 
             skipWhitespace();
 
@@ -2655,22 +2663,32 @@ public class ScriptParser {
             return new BinaryOperatorNode("~", operand, null);
         } else if (peek() == '(') {
             savePosition();
-            match('(');
-            boolean succeed = true;
             try {
-                skipWhitespace();
-                castType = parseClassIdentifier();
-                skipWhitespace();
-                expectToMove(')');
-                hasCast = true;
+                // 算是拆东墙补西墙吧（因为只有一个参数列表的lambda可能会被解析成类型转换）
+                ASTNode lambda = parseLambdaExpression();
+                releasePosition();
+                return lambda;
             } catch (RuntimeException e) {
-                succeed = false;
-            } finally {
-                if (succeed)
-                    releasePosition();
-                else
-                    restorePosition();
+                restorePosition();
+                savePosition();
+                match('(');
+                boolean succeed = true;
+                try {
+                    skipWhitespace();
+                    castType = parseClassIdentifier();
+                    skipWhitespace();
+                    expectToMove(')');
+                    hasCast = true;
+                } catch (RuntimeException e2) {
+                    succeed = false;
+                } finally {
+                    if (succeed)
+                        releasePosition();
+                    else
+                        restorePosition();
+                }
             }
+
         }
 
         ASTNode result = parseLiteral();

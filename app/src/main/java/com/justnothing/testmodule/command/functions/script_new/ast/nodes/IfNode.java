@@ -1,0 +1,76 @@
+package com.justnothing.testmodule.command.functions.script_new.ast.nodes;
+
+import com.justnothing.testmodule.command.functions.script_new.ast.ASTNode;
+import com.justnothing.testmodule.command.functions.script_new.ast.SourceLocation;
+import com.justnothing.testmodule.command.functions.script_new.ast.visitor.ASTVisitor;
+
+/**
+ * if语句节点
+ * <p>
+ * 表示if-else条件语句。
+ * </p>
+ * 
+ * @author JustNothing1021
+ * @since 1.0.0
+ */
+public class IfNode extends ASTNode {
+    
+    private final ASTNode condition;
+    private final ASTNode thenBlock;
+    private final ASTNode elseBlock;
+    
+    public IfNode(ASTNode condition, ASTNode thenBlock, 
+                ASTNode elseBlock, SourceLocation location) {
+        super(location);
+        this.condition = condition;
+        this.thenBlock = thenBlock;
+        this.elseBlock = elseBlock;
+    }
+    
+    public ASTNode getCondition() {
+        return condition;
+    }
+    
+    public ASTNode getThenBlock() {
+        return thenBlock;
+    }
+    
+    public ASTNode getElseBlock() {
+        return elseBlock;
+    }
+    
+    public boolean hasElse() {
+        return elseBlock != null;
+    }
+    
+    @Override
+    public <T> T accept(ASTVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+    
+    public static class Builder extends ASTNode.Builder<Builder> {
+        private ASTNode condition;
+        private ASTNode thenBlock;
+        private ASTNode elseBlock;
+        
+        public Builder condition(ASTNode condition) {
+            this.condition = condition;
+            return this;
+        }
+        
+        public Builder thenBlock(ASTNode thenBlock) {
+            this.thenBlock = thenBlock;
+            return this;
+        }
+        
+        public Builder elseBlock(ASTNode elseBlock) {
+            this.elseBlock = elseBlock;
+            return this;
+        }
+        
+        @Override
+        public IfNode build() {
+            return new IfNode(condition, thenBlock, elseBlock, location);
+        }
+    }
+}

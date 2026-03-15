@@ -3322,7 +3322,7 @@ public class ASTNodes {
                         if (args == null) {
                             if (paramCount > 0) {
                                 throw new RuntimeException(
-                                        "此Lambda需要 " + paramCount + " 个参数，但调用提供了 0 个参数");
+                                        "This lambda requires " + paramCount + " arguments, but 0 were provided");
                             }
                         } else if (args.length != paramCount) {
                             throw new RuntimeException(

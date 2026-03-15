@@ -68,8 +68,7 @@ public class ScriptModels {
             return call(args);
         }
 
-        @Override
-        default String toString() {
+        default String toDebugString() {
             return "Lambda@" + Integer.toHexString(System.identityHashCode(this));
         }
     }
