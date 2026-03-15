@@ -127,11 +127,12 @@
     <string name="script_example_script_2_name">列出ActivityManagerService的方法</string>
     <string name="script_example_script_3_name">执行代码</string>
     <string name="script_example_script_desc">这个脚本是一个示例，点开执行一下试试吧！</string>
-    <string name="script_example_script_2_desc">通过执行methods list来列出类方法。</string>
+    <string name="script_example_script_2_desc">通过执行methods class list来列出类方法。</string>
     <string name="script_example_script_3_desc">执行一段简单的Java代码。</string>
     <string name="script_example_script_category">测试类</string>
     <string name="script_example_script_command" translatable="false">help</string>
     <string name="script_example_script_2_command" translatable="false">-cl android clist com.android.server.am.ActivityManagerService</string>
+    <string name="script_example_script_3_command" translatable="false"><![CDATA[srun for (int i = 0; i < 114; i++) println(i); ]]></string>
     <string name="status_hook_count" formatted="false">可用hook总数: %d (Zygote hook: %d, 应用hook: %d)</string>
     <string name="status_module_status_tip">模块状态: %s</string>
     <string name="status_module_status_activated">已激活</string>
@@ -163,7 +164,6 @@
     <string name="data_export_file_cleared">已删除文件 %s</string>
     <string name="data_export_file_clear_failed">删除文件 %s 失败</string>
     <string name="general_exit_app">退出应用</string>
-    <string name="script_example_script_3_command" translatable="false"><![CDATA[script for (int i = 0; i < 114; i++) println(i); ]]></string>
     <string name="performance_monitor_stat_desc">监控状态: %s</string>
     <string name="performance_monitor_stat_enabled">启用</string>
     <string name="performance_monitor_stat_disabled">禁用</string>

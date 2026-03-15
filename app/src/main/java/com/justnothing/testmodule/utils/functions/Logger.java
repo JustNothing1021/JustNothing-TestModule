@@ -21,6 +21,12 @@ public abstract class Logger {
     private static final LogWriter SHARED_LOG_WRITER = new LogWriter(!AppEnvironment.isHookEnv());
     public static final List<Logger> instances = new ArrayList<>();
 
+    private static final String RESET = "\u001B[0m";
+    private static final String GRAY = "\u001B[90m";
+    private static final String GREEN = "\u001B[32m";
+    private static final String YELLOW = "\u001B[33m";
+    private static final String RED = "\u001B[31m";
+
 //    private Context context;
     private boolean bUseXPosedLog = false;
 
@@ -130,21 +136,21 @@ public abstract class Logger {
             SHARED_LOG_WRITER.addLog(level, getTag(), message, timestamp);
         } else {
 
-//            String tag = MAIN_TAG + "[" + getTag() + "]";
-//            switch (level) {
-//                case "DEBUG":
-//                    STANDALONE_LOGGER.debug(message, tag);
-//                    break;
-//                case "INFO":
-//                    STANDALONE_LOGGER.info(message, tag);
-//                    break;
-//                case "WARN":
-//                    STANDALONE_LOGGER.warn(message, tag);
-//                    break;
-//                case "ERROR":
-//                    STANDALONE_LOGGER.error(message, tag);
-//                    break;
-//            }
+            String tag = MAIN_TAG + "[" + getTag() + "]";
+            switch (level) {
+                case "DEBUG":
+                    System.out.println(GRAY + tag + " " + message + RESET);
+                    break;
+                case "INFO":
+                    System.out.println(GREEN + tag + " " + message + RESET);
+                    break;
+                case "WARN":
+                    System.out.println(YELLOW + tag + " " + message + RESET);
+                    break;
+                case "ERROR":
+                    System.err.println(RED + tag + " " + message + RESET);
+                    break;
+            }
         }
     }
 
