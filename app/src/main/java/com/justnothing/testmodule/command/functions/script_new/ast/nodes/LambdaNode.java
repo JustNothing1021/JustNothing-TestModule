@@ -64,6 +64,21 @@ public class LambdaNode extends ASTNode {
         return visitor.visit(this);
     }
     
+    @Override
+    public String formatString(int indent) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(indent(indent)).append("LambdaNode\n");
+        sb.append(indent(indent + 1)).append("parameters: ").append(parameters.size()).append("\n");
+        for (int i = 0; i < parameters.size(); i++) {
+            Parameter param = parameters.get(i);
+            sb.append(indent(indent + 2)).append("param[").append(i).append("]: ");
+            sb.append(param.getType().getSimpleName()).append(" ").append(param.getName()).append("\n");
+        }
+        sb.append(indent(indent + 1)).append("body:\n");
+        sb.append(body.formatString(indent + 2)).append("\n");
+        return sb.toString().strip();
+    }
+    
     public static class Builder extends ASTNode.Builder<Builder> {
         private List<Parameter> parameters;
         private ASTNode body;

@@ -31,6 +31,11 @@ public class VariableNode extends ASTNode {
         return visitor.visit(this);
     }
     
+    @Override
+    public String formatString(int indent) {
+        return indent(indent) + "VariableNode: " + name;
+    }
+    
     public static class Builder extends ASTNode.Builder<Builder> {
         private String name;
         

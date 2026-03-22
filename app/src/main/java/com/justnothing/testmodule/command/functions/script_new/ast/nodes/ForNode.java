@@ -80,6 +80,43 @@ public class ForNode extends ASTNode {
         return visitor.visit(this);
     }
     
+    @Override
+    public String formatString(int indent) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(indent(indent)).append("ForNode\n");
+        sb.append(indent(indent + 1)).append("type: ").append(isEnhanced ? "enhanced" : "traditional").append("\n");
+        
+        if (isEnhanced) {
+            sb.append(indent(indent + 1)).append("variable: ").append(variableName).append("\n");
+            sb.append(indent(indent + 1)).append("iterable:\n");
+            sb.append(iterable.formatString(indent + 2)).append("\n");
+        } else {
+            sb.append(indent(indent + 1)).append("initialization:\n");
+            if (initialization != null) {
+                sb.append(initialization.formatString(indent + 2)).append("\n");
+            } else {
+                sb.append(indent(indent + 2)).append("null\n");
+            }
+            sb.append(indent(indent + 1)).append("condition:\n");
+            if (condition != null) {
+                sb.append(condition.formatString(indent + 2)).append("\n");
+            } else {
+                sb.append(indent(indent + 2)).append("null\n");
+            }
+            sb.append(indent(indent + 1)).append("update:\n");
+            if (update != null) {
+                sb.append(update.formatString(indent + 2)).append("\n");
+            } else {
+                sb.append(indent(indent + 2)).append("null\n");
+            }
+        }
+        
+        sb.append(indent(indent + 1)).append("body:\n");
+        sb.append(body.formatString(indent + 2)).append("\n");
+        
+        return sb.toString().strip();
+    }
+    
     public static class Builder extends ASTNode.Builder<Builder> {
         private ASTNode initialization;
         private ASTNode condition;

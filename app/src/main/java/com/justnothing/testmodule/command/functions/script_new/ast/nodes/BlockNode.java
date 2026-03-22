@@ -37,6 +37,18 @@ public class BlockNode extends ASTNode {
         return visitor.visit(this);
     }
     
+    @Override
+    public String formatString(int indent) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(indent(indent)).append("BlockNode\n");
+        sb.append(indent(indent + 1)).append("statements: ").append(statements.size()).append("\n");
+        for (int i = 0; i < statements.size(); i++) {
+            sb.append(indent(indent + 1)).append("stmt[").append(i).append("]:\n");
+            sb.append(statements.get(i).formatString(indent + 2)).append("\n");
+        }
+        return sb.toString().strip();
+    }
+    
     public static class Builder extends ASTNode.Builder<Builder> {
         private List<ASTNode> statements;
         

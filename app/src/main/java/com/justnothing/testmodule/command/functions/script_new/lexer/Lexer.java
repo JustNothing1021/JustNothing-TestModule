@@ -140,6 +140,56 @@ public class Lexer {
         int startColumn = column;
         StringBuilder sb = new StringBuilder();
         
+        if (peek() == '0' && !isAtEnd()) {
+            char next = peekNext();
+            if (next == 'x' || next == 'X') {
+                advance();
+                advance();
+                while (!isAtEnd() && isHexDigit(peek())) {
+                    sb.append(advance());
+                }
+                String hexStr = sb.toString();
+                SourceLocation location = new SourceLocation(startLine, startColumn);
+                try {
+                    long value = Long.parseLong(hexStr, 16);
+                    addToken(TokenType.LITERAL_INTEGER, value, location);
+                } catch (NumberFormatException e) {
+                    throw error("Invalid hexadecimal number: 0x" + hexStr);
+                }
+                return;
+            } else if (next == 'b' || next == 'B') {
+                advance();
+                advance();
+                while (!isAtEnd() && (peek() == '0' || peek() == '1')) {
+                    sb.append(advance());
+                }
+                String binStr = sb.toString();
+                SourceLocation location = new SourceLocation(startLine, startColumn);
+                try {
+                    long value = Long.parseLong(binStr, 2);
+                    addToken(TokenType.LITERAL_INTEGER, value, location);
+                } catch (NumberFormatException e) {
+                    throw error("Invalid binary number: 0b" + binStr);
+                }
+                return;
+            } else if (next == 'o' || next == 'O') {
+                advance();
+                advance();
+                while (!isAtEnd() && isOctalDigit(peek())) {
+                    sb.append(advance());
+                }
+                String octStr = sb.toString();
+                SourceLocation location = new SourceLocation(startLine, startColumn);
+                try {
+                    long value = Long.parseLong(octStr, 8);
+                    addToken(TokenType.LITERAL_INTEGER, value, location);
+                } catch (NumberFormatException e) {
+                    throw error("Invalid octal number: 0o" + octStr);
+                }
+                return;
+            }
+        }
+        
         while (!isAtEnd() && (Character.isDigit(peek()) || peek() == '.')) {
             sb.append(advance());
         }
@@ -147,7 +197,39 @@ public class Lexer {
         String numberStr = sb.toString();
         SourceLocation location = new SourceLocation(startLine, startColumn);
         
-        if (numberStr.contains(".")) {
+        boolean isFloat = false;
+        boolean isLong = false;
+        boolean isDouble = false;
+        
+        if (!isAtEnd()) {
+            char suffix = Character.toLowerCase(peek());
+            if (suffix == 'f') {
+                advance();
+                isFloat = true;
+            } else if (suffix == 'l') {
+                advance();
+                isLong = true;
+            } else if (suffix == 'd') {
+                advance();
+                isDouble = true;
+            }
+        }
+        
+        if (isFloat) {
+            try {
+                float value = Float.parseFloat(numberStr);
+                addToken(TokenType.LITERAL_DECIMAL, (double) value, location);
+            } catch (NumberFormatException e) {
+                throw error("Invalid float number: " + numberStr);
+            }
+        } else if (isLong) {
+            try {
+                long value = Long.parseLong(numberStr);
+                addToken(TokenType.LITERAL_INTEGER, value, location);
+            } catch (NumberFormatException e) {
+                throw error("Invalid long number: " + numberStr);
+            }
+        } else if (isDouble || numberStr.contains(".")) {
             try {
                 double value = Double.parseDouble(numberStr);
                 addToken(TokenType.LITERAL_DECIMAL, value, location);
@@ -162,6 +244,14 @@ public class Lexer {
                 throw error("Invalid integer number: " + numberStr);
             }
         }
+    }
+    
+    private boolean isHexDigit(char c) {
+        return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+    }
+    
+    private boolean isOctalDigit(char c) {
+        return c >= '0' && c <= '7';
     }
     
     private void readString() {
@@ -184,6 +274,68 @@ public class Lexer {
                         case '\\': sb.append('\\'); break;
                         case '\'': sb.append('\''); break;
                         case '\"': sb.append('\"'); break;
+                        case 'x': {
+                            StringBuilder hex = new StringBuilder();
+                            for (int i = 0; i < 2 && !isAtEnd(); i++) {
+                                char h = peek();
+                                if ((h >= '0' && h <= '9') || 
+                                    (h >= 'a' && h <= 'f') || 
+                                    (h >= 'A' && h <= 'F')) {
+                                    hex.append(advance());
+                                } else {
+                                    break;
+                                }
+                            }
+                            if (hex.length() > 0) {
+                                try {
+                                    int codePoint = Integer.parseInt(hex.toString(), 16);
+                                    sb.append((char) codePoint);
+                                } catch (NumberFormatException e) {
+                                    sb.append("\\x").append(hex);
+                                }
+                            } else {
+                                sb.append("\\x");
+                            }
+                            break;
+                        }
+                        case 'u': {
+                            StringBuilder hex = new StringBuilder();
+                            for (int i = 0; i < 4 && !isAtEnd(); i++) {
+                                char h = peek();
+                                if ((h >= '0' && h <= '9') || 
+                                    (h >= 'a' && h <= 'f') || 
+                                    (h >= 'A' && h <= 'F')) {
+                                    hex.append(advance());
+                                } else {
+                                    break;
+                                }
+                            }
+                            if (hex.length() == 4) {
+                                try {
+                                    int codePoint = Integer.parseInt(hex.toString(), 16);
+                                    sb.append((char) codePoint);
+                                } catch (NumberFormatException e) {
+                                    sb.append("\\u").append(hex);
+                                }
+                            } else {
+                                sb.append("\\u").append(hex);
+                            }
+                            break;
+                        }
+                        case '0': case '1': case '2': case '3':
+                        case '4': case '5': case '6': case '7': {
+                            int octal = next - '0';
+                            for (int i = 0; i < 2 && !isAtEnd(); i++) {
+                                char d = peek();
+                                if (d >= '0' && d <= '7') {
+                                    octal = octal * 8 + (advance() - '0');
+                                } else {
+                                    break;
+                                }
+                            }
+                            sb.append((char) octal);
+                            break;
+                        }
                         default: sb.append(next); break;
                     }
                 }
@@ -222,7 +374,7 @@ public class Lexer {
             } else if (type == TokenType.KEYWORD_NULL) {
                 addToken(TokenType.LITERAL_NULL, null, location);
             } else {
-                addToken(type, location);
+                addToken(type, text, location);
             }
         } else {
             addToken(TokenType.IDENTIFIER, text, location);
@@ -308,6 +460,10 @@ public class Lexer {
                 break;
             case ':':
                 if (match(':')) addToken(TokenType.OPERATOR_DOUBLE_COLON, location);
+                else addToken(TokenType.OPERATOR_COLON, location);
+                break;
+            case '?':
+                addToken(TokenType.OPERATOR_QUESTION, location);
                 break;
             default:
                 throw error("Unknown operator: '" + c + "'");

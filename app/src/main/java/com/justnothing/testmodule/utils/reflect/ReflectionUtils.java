@@ -322,7 +322,7 @@ public class ReflectionUtils {
             sb.append(")");
         }
 
-        return sb.toString().trim();
+        return sb.toString().strip();
     }
 
 

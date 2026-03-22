@@ -71,6 +71,16 @@ public class UnaryOpNode extends ASTNode {
         return visitor.visit(this);
     }
     
+    @Override
+    public String formatString(int indent) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(indent(indent)).append("UnaryOpNode\n");
+        sb.append(indent(indent + 1)).append("operator: ").append(operator.getSymbol()).append("\n");
+        sb.append(indent(indent + 1)).append("operand:\n");
+        sb.append(operand.formatString(indent + 2)).append("\n");
+        return sb.toString().strip();
+    }
+    
     public static class Builder extends ASTNode.Builder<Builder> {
         private Operator operator;
         private ASTNode operand;

@@ -81,6 +81,18 @@ public class BinaryOpNode extends ASTNode {
         return visitor.visit(this);
     }
     
+    @Override
+    public String formatString(int indent) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(indent(indent)).append("BinaryOpNode\n");
+        sb.append(indent(indent + 1)).append("operator: ").append(operator.getSymbol()).append("\n");
+        sb.append(indent(indent + 1)).append("left:\n");
+        sb.append(left.formatString(indent + 2)).append("\n");
+        sb.append(indent(indent + 1)).append("right:\n");
+        sb.append(right.formatString(indent + 2)).append("\n");
+        return sb.toString().strip();
+    }
+    
     public static class Builder extends ASTNode.Builder<Builder> {
         private Operator operator;
         private ASTNode left;

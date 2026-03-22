@@ -4,6 +4,7 @@ import com.justnothing.testmodule.utils.reflect.ReflectionUtils;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -266,7 +267,7 @@ public class MethodResolver {
                 convertedArgs[i] = convertArg(arg, paramTypes[i]);
             }
             
-            Object varArgsArray = java.lang.reflect.Array.newInstance(
+            Object varArgsArray = Array.newInstance(
                 varArgsComponentType, args.size() - fixedParamCount);
             
             for (int i = fixedParamCount; i < args.size(); i++) {
@@ -277,7 +278,7 @@ public class MethodResolver {
                     return null;
                 }
                 
-                java.lang.reflect.Array.set(varArgsArray, i - fixedParamCount, 
+                Array.set(varArgsArray, i - fixedParamCount, 
                     convertArg(arg, varArgsComponentType));
             }
             

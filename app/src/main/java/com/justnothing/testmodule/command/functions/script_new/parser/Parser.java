@@ -150,6 +150,36 @@ public class Parser {
             return parseVariableDeclaration();
         }
         
+        if (check(TokenType.IDENTIFIER)) {
+            if (checkNext(TokenType.DELIMITER_ARROW)) {
+                ASTNode expression = parseExpression();
+                if (expression instanceof LambdaNode) {
+                    if (check(TokenType.DELIMITER_SEMICOLON)) {
+                        advance();
+                    }
+                } else {
+                    consume(TokenType.DELIMITER_SEMICOLON, "Expected semicolon after statement");
+                }
+                return expression;
+            } else {
+                savePosition();
+                try {
+                    return parseVariableDeclaration();
+                } catch (ParseException e) {
+                    restorePosition();
+                    ASTNode expression = parseExpression();
+                    if (expression instanceof LambdaNode) {
+                        if (check(TokenType.DELIMITER_SEMICOLON)) {
+                            advance();
+                        }
+                    } else {
+                        consume(TokenType.DELIMITER_SEMICOLON, "Expected semicolon after statement");
+                    }
+                    return expression;
+                }
+            }
+        }
+        
         if (match(TokenType.KEYWORD_IF)) {
             return parseIfStatement();
         }
@@ -160,6 +190,22 @@ public class Parser {
         
         if (match(TokenType.KEYWORD_WHILE)) {
             return parseWhileStatement();
+        }
+        
+        if (match(TokenType.KEYWORD_DO)) {
+            return parseDoWhileStatement();
+        }
+        
+        if (match(TokenType.KEYWORD_SWITCH)) {
+            return parseSwitchStatement();
+        }
+        
+        if (match(TokenType.KEYWORD_TRY)) {
+            return parseTryStatement();
+        }
+        
+        if (match(TokenType.KEYWORD_THROW)) {
+            return parseThrowStatement();
         }
         
         if (match(TokenType.KEYWORD_RETURN)) {
@@ -174,12 +220,49 @@ public class Parser {
             return parseContinueStatement();
         }
         
-        if (match(TokenType.DELIMITER_LEFT_BRACE)) {
-            return parseBlock();
+        if (check(TokenType.DELIMITER_LEFT_BRACE)) {
+            savePosition();
+            try {
+                advance();
+                if (check(TokenType.DELIMITER_RIGHT_BRACE)) {
+                    restorePosition();
+                    advance();
+                    return parseBlock();
+                }
+                
+                savePosition();
+                try {
+                    parseExpression();
+                    if (check(TokenType.DELIMITER_COMMA) || check(TokenType.DELIMITER_RIGHT_BRACE)) {
+                        restorePosition();
+                        restorePosition();
+                        ASTNode expr = parseExpression();
+                        if (check(TokenType.DELIMITER_SEMICOLON)) {
+                            advance();
+                        }
+                        return expr;
+                    }
+                } catch (ParseException e) {
+                }
+                restorePosition();
+                restorePosition();
+                advance();
+                return parseBlock();
+            } catch (ParseException e) {
+                restorePosition();
+                advance();
+                return parseBlock();
+            }
         }
         
         ASTNode expression = parseExpression();
-        consume(TokenType.DELIMITER_SEMICOLON, "Expected semicolon after statement");
+        if (expression instanceof LambdaNode) {
+            if (check(TokenType.DELIMITER_SEMICOLON)) {
+                advance();
+            }
+        } else {
+            consume(TokenType.DELIMITER_SEMICOLON, "Expected semicolon after statement");
+        }
         return expression;
     }
     
@@ -187,6 +270,10 @@ public class Parser {
      * 解析变量声明
      */
     private AssignmentNode parseVariableDeclaration() throws ParseException {
+        return parseVariableDeclaration(true);
+    }
+    
+    private AssignmentNode parseVariableDeclaration(boolean consumeSemicolon) throws ParseException {
         SourceLocation location = createLocation();
         boolean isFinal = false;
         
@@ -195,19 +282,33 @@ public class Parser {
             advance();
         }
         
-        Token typeToken = advance();
-        Class<?> type = parseTypeFromToken(typeToken);
+        Class<?> type;
+        boolean isAuto = false;
+        
+        if (peek().getType() == TokenType.KEYWORD_AUTO) {
+            advance();
+            type = Object.class;
+            isAuto = true;
+        } else {
+            type = parseType();
+        }
         
         String varName = consume(TokenType.IDENTIFIER, "Expected variable name").getText();
         
         ASTNode value = null;
         if (match(TokenType.OPERATOR_ASSIGN)) {
-            value = parseExpression();
-        } else if (type == Object.class && typeToken.getType() == TokenType.KEYWORD_AUTO) {
+            if (check(TokenType.DELIMITER_LEFT_BRACE)) {
+                value = parseArrayInitializer(type, location);
+            } else {
+                value = parseExpression();
+            }
+        } else if (isAuto) {
             throw error("Auto variable must have initial value");
         }
         
-        consume(TokenType.DELIMITER_SEMICOLON, "Expected semicolon after variable declaration");
+        if (consumeSemicolon) {
+            consume(TokenType.DELIMITER_SEMICOLON, "Expected semicolon after variable declaration");
+        }
         
         return new AssignmentNode(varName, value, true, type, location);
     }
@@ -248,18 +349,33 @@ public class Parser {
             StringBuilder typeName = new StringBuilder();
             
             while (true) {
-                if (check(TokenType.IDENTIFIER) || check(TokenType.OPERATOR_DOT)) {
-                    typeName.append(advance().getText());
-                } else if (check(TokenType.DELIMITER_LEFT_BRACKET)) {
+                if (check(TokenType.IDENTIFIER) || isTypeKeyword(peek().getType())) {
+                    if (typeName.length() > 0 && !typeName.toString().endsWith(".")) {
+                        break;
+                    }
+                    String text = advance().getText();
+                    typeName.append(text);
+                    
+                    if (check(TokenType.OPERATOR_DOT)) {
+                        advance();
+                        typeName.append(".");
+                        continue;
+                    }
+                }
+                
+                if (check(TokenType.DELIMITER_LEFT_BRACKET)) {
                     advance();
                     if (check(TokenType.DELIMITER_RIGHT_BRACKET)) {
                         advance();
                         typeName.append("[]");
+                        continue;
                     } else {
-                        restorePosition();
+                        position--;
                         break;
                     }
-                } else if (check(TokenType.OPERATOR_LESS_THAN)) {
+                }
+                
+                if (check(TokenType.OPERATOR_LESS_THAN)) {
                     advance();
                     typeName.append("<");
                     parseTypeArguments(typeName);
@@ -267,9 +383,10 @@ public class Parser {
                         advance();
                         typeName.append(">");
                     }
-                } else {
-                    break;
+                    continue;
                 }
+                
+                break;
             }
             
             String typeStr = typeName.toString();
@@ -278,13 +395,31 @@ public class Parser {
                 throw error("Expected type");
             }
             
-            releasePosition();
-            return resolveType(typeStr);
+            if (typeStr.endsWith(".")) {
+                typeStr = typeStr.substring(0, typeStr.length() - 1);
+            }
+            
+            try {
+                Class<?> result = resolveType(typeStr);
+                releasePosition();
+                return result;
+            } catch (ParseException e) {
+                restorePosition();
+                throw e;
+            }
             
         } catch (ParseException e) {
             restorePosition();
             throw e;
         }
+    }
+    
+    private boolean isTypeKeyword(TokenType type) {
+        return type == TokenType.KEYWORD_INT || type == TokenType.KEYWORD_LONG ||
+               type == TokenType.KEYWORD_FLOAT || type == TokenType.KEYWORD_DOUBLE ||
+               type == TokenType.KEYWORD_BOOLEAN || type == TokenType.KEYWORD_CHAR ||
+               type == TokenType.KEYWORD_BYTE || type == TokenType.KEYWORD_SHORT ||
+               type == TokenType.KEYWORD_VOID;
     }
     
     /**
@@ -322,6 +457,42 @@ public class Parser {
      * 解析类型字符串为Class对象
      */
     private Class<?> resolveType(String typeName) throws ParseException {
+        if (typeName.endsWith("[]")) {
+            int dimensions = 0;
+            String baseTypeName = typeName;
+            
+            while (baseTypeName.endsWith("[]")) {
+                dimensions++;
+                baseTypeName = baseTypeName.substring(0, baseTypeName.length() - 2);
+            }
+            
+            Class<?> baseType = resolveType(baseTypeName);
+            
+            StringBuilder arrayTypeName = new StringBuilder();
+            for (int i = 0; i < dimensions; i++) {
+                arrayTypeName.append("[");
+            }
+            
+            if (baseType.isPrimitive()) {
+                if (baseType == int.class) arrayTypeName.append("I");
+                else if (baseType == long.class) arrayTypeName.append("J");
+                else if (baseType == float.class) arrayTypeName.append("F");
+                else if (baseType == double.class) arrayTypeName.append("D");
+                else if (baseType == boolean.class) arrayTypeName.append("Z");
+                else if (baseType == char.class) arrayTypeName.append("C");
+                else if (baseType == byte.class) arrayTypeName.append("B");
+                else if (baseType == short.class) arrayTypeName.append("S");
+            } else {
+                arrayTypeName.append("L").append(baseType.getName()).append(";");
+            }
+            
+            try {
+                return Class.forName(arrayTypeName.toString());
+            } catch (ClassNotFoundException e) {
+                throw error("Array type not found: " + typeName);
+            }
+        }
+        
         switch (typeName) {
             case "int":
                 return int.class;
@@ -364,7 +535,15 @@ public class Parser {
             case "Object":
                 return Object.class;
             default:
-                throw error("Unsupported type: " + typeName);
+                try {
+                    return Class.forName(typeName);
+                } catch (ClassNotFoundException e) {
+                    try {
+                        return Class.forName("java.lang." + typeName);
+                    } catch (ClassNotFoundException e2) {
+                        throw error("Class not found: " + typeName);
+                    }
+                }
         }
     }
     
@@ -390,15 +569,57 @@ public class Parser {
     
     /**
      * 解析for语句
+     * 支持传统for循环和for-each循环
      */
-    private ForNode parseForStatement() throws ParseException {
+    private ASTNode parseForStatement() throws ParseException {
         SourceLocation location = createLocation();
         
         consume(TokenType.DELIMITER_LEFT_PAREN, "Expected '(' after for");
         
+        if (check(TokenType.DELIMITER_SEMICOLON)) {
+            return parseTraditionalFor(location);
+        }
+        
+        if (isTypeKeyword(peek().getType()) || peek().getType() == TokenType.IDENTIFIER) {
+            int savedPos = position;
+            
+            try {
+                Class<?> itemType = parseType();
+                String itemName = consume(TokenType.IDENTIFIER, "Expected variable name").getText();
+                
+                if (check(TokenType.OPERATOR_COLON)) {
+                    advance();
+                    ASTNode collection = parseExpression();
+                    consume(TokenType.DELIMITER_RIGHT_PAREN, "Expected ')' after for-each collection");
+                    ASTNode body = parseStatement();
+                    return new ForEachNode(itemType, itemName, collection, body, location);
+                }
+            } catch (ParseException e) {
+            }
+            
+            position = savedPos;
+        }
+        
+        return parseTraditionalFor(location);
+    }
+    
+    /**
+     * 解析传统for循环
+     */
+    private ForNode parseTraditionalFor(SourceLocation location) throws ParseException {
         ASTNode initialization = null;
         if (!check(TokenType.DELIMITER_SEMICOLON)) {
-            initialization = parseExpression();
+            if (isTypeKeyword(peek().getType()) || peek().getType() == TokenType.IDENTIFIER) {
+                savePosition();
+                try {
+                    initialization = parseVariableDeclaration(false);
+                } catch (ParseException e) {
+                    restorePosition();
+                    initialization = parseExpression();
+                }
+            } else {
+                initialization = parseExpression();
+            }
         }
         consume(TokenType.DELIMITER_SEMICOLON, "Expected semicolon after for initialization");
         
@@ -422,7 +643,7 @@ public class Parser {
     /**
      * 解析while语句
      */
-    private ASTNode parseWhileStatement() throws ParseException {
+    private WhileNode parseWhileStatement() throws ParseException {
         SourceLocation location = createLocation();
         
         consume(TokenType.DELIMITER_LEFT_PAREN, "Expected '(' after while");
@@ -431,7 +652,186 @@ public class Parser {
         
         ASTNode body = parseStatement();
         
-        return body;
+        return new WhileNode(condition, body, location);
+    }
+    
+    /**
+     * 解析do-while语句
+     */
+    private DoWhileNode parseDoWhileStatement() throws ParseException {
+        SourceLocation location = createLocation();
+        
+        ASTNode body = parseStatement();
+        
+        consume(TokenType.KEYWORD_WHILE, "Expected 'while' after do body");
+        consume(TokenType.DELIMITER_LEFT_PAREN, "Expected '(' after while");
+        ASTNode condition = parseExpression();
+        consume(TokenType.DELIMITER_RIGHT_PAREN, "Expected ')' after condition");
+        consume(TokenType.DELIMITER_SEMICOLON, "Expected semicolon after do-while");
+        
+        return new DoWhileNode(body, condition, location);
+    }
+    
+    /**
+     * 解析switch语句
+     */
+    private SwitchNode parseSwitchStatement() throws ParseException {
+        SourceLocation location = createLocation();
+        
+        consume(TokenType.DELIMITER_LEFT_PAREN, "Expected '(' after switch");
+        ASTNode expression = parseExpression();
+        consume(TokenType.DELIMITER_RIGHT_PAREN, "Expected ')' after switch expression");
+        
+        consume(TokenType.DELIMITER_LEFT_BRACE, "Expected '{' after switch expression");
+        
+        List<CaseNode> cases = new ArrayList<>();
+        ASTNode defaultCase = null;
+        
+        while (!check(TokenType.DELIMITER_RIGHT_BRACE) && !isAtEnd()) {
+            if (match(TokenType.KEYWORD_CASE)) {
+                ASTNode caseValue = parseExpression();
+                consume(TokenType.OPERATOR_COLON, "Expected ':' after case value");
+                
+                List<ASTNode> statements = new ArrayList<>();
+                while (!check(TokenType.KEYWORD_CASE) && 
+                       !check(TokenType.KEYWORD_DEFAULT) && 
+                       !check(TokenType.DELIMITER_RIGHT_BRACE)) {
+                    statements.add(parseStatement());
+                }
+                
+                cases.add(new CaseNode(caseValue, statements, location));
+            } else if (match(TokenType.KEYWORD_DEFAULT)) {
+                consume(TokenType.OPERATOR_COLON, "Expected ':' after default");
+                
+                List<ASTNode> statements = new ArrayList<>();
+                while (!check(TokenType.KEYWORD_CASE) && 
+                       !check(TokenType.KEYWORD_DEFAULT) && 
+                       !check(TokenType.DELIMITER_RIGHT_BRACE)) {
+                    statements.add(parseStatement());
+                }
+                
+                defaultCase = new BlockNode(statements, location);
+            } else {
+                throw error("Expected 'case' or 'default' in switch body");
+            }
+        }
+        
+        consume(TokenType.DELIMITER_RIGHT_BRACE, "Expected '}' at end of switch");
+        
+        return new SwitchNode(expression, cases, defaultCase, location);
+    }
+    
+    /**
+     * 解析try语句
+     * 语法: 
+     *   try { } catch (Type e) { } [finally { }]
+     *   try (Resource r = expr) { } catch ... finally ...
+     */
+    private TryNode parseTryStatement() throws ParseException {
+        SourceLocation location = createLocation();
+        
+        List<ResourceDeclaration> resources = new ArrayList<>();
+        if (match(TokenType.DELIMITER_LEFT_PAREN)) {
+            if (!check(TokenType.DELIMITER_RIGHT_PAREN)) {
+                do {
+                    resources.add(parseResourceDeclaration());
+                } while (match(TokenType.DELIMITER_SEMICOLON));
+            }
+            consume(TokenType.DELIMITER_RIGHT_PAREN, "Expected ')' after resources");
+        }
+        
+        ASTNode tryBlock = parseStatement();
+        
+        List<CatchClause> catchClauses = new ArrayList<>();
+        while (match(TokenType.KEYWORD_CATCH)) {
+            catchClauses.add(parseCatchClause());
+        }
+        
+        ASTNode finallyBlock = null;
+        if (match(TokenType.KEYWORD_FINALLY)) {
+            finallyBlock = parseStatement();
+        }
+        
+        if (catchClauses.isEmpty() && finallyBlock == null) {
+            throw error("Try statement must have at least one catch or finally clause");
+        }
+        
+        return new TryNode(resources, tryBlock, catchClauses, finallyBlock, location);
+    }
+    
+    /**
+     * 解析资源声明
+     * 语法: 
+     *   Type var = expression
+     *   var (Java 9+ 风格，引用已存在的变量)
+     */
+    private ResourceDeclaration parseResourceDeclaration() throws ParseException {
+        SourceLocation location = createLocation();
+        
+        if (isTypeKeyword(peek().getType())) {
+            Class<?> type = parseType();
+            String varName = consume(TokenType.IDENTIFIER, "Expected variable name").getText();
+            consume(TokenType.OPERATOR_ASSIGN, "Expected '=' in resource declaration");
+            ASTNode initializer = parseExpression();
+            return new ResourceDeclaration(type, varName, initializer, location);
+        }
+        
+        if (check(TokenType.IDENTIFIER)) {
+            int savedPos = position;
+            try {
+                Class<?> type = parseType();
+                if (check(TokenType.IDENTIFIER) && checkNext(TokenType.OPERATOR_ASSIGN)) {
+                    String varName = consume(TokenType.IDENTIFIER, "Expected variable name").getText();
+                    consume(TokenType.OPERATOR_ASSIGN, "Expected '=' in resource declaration");
+                    ASTNode initializer = parseExpression();
+                    return new ResourceDeclaration(type, varName, initializer, location);
+                }
+            } catch (ParseException e) {
+            }
+            position = savedPos;
+        }
+        
+        String varName = consume(TokenType.IDENTIFIER, "Expected resource variable name").getText();
+        return new ResourceDeclaration(varName, location);
+    }
+    
+    /**
+     * 解析catch子句
+     * 语法: catch (Type1 | Type2 e) { }
+     */
+    private CatchClause parseCatchClause() throws ParseException {
+        SourceLocation location = createLocation();
+        
+        consume(TokenType.DELIMITER_LEFT_PAREN, "Expected '(' after catch");
+        
+        List<Class<?>> exceptionTypes = new ArrayList<>();
+        exceptionTypes.add(parseType());
+        
+        while (match(TokenType.OPERATOR_BITWISE_OR)) {
+            exceptionTypes.add(parseType());
+        }
+        
+        String variableName = consume(TokenType.IDENTIFIER, "Expected exception variable name").getText();
+        
+        consume(TokenType.DELIMITER_RIGHT_PAREN, "Expected ')' after catch clause");
+        
+        ASTNode body = parseStatement();
+        
+        return new CatchClause(exceptionTypes, variableName, body, location);
+    }
+    
+    /**
+     * 解析throw语句
+     * 语法: throw expression;
+     */
+    private ASTNode parseThrowStatement() throws ParseException {
+        SourceLocation location = createLocation();
+        
+        ASTNode expression = parseExpression();
+        
+        consume(TokenType.DELIMITER_SEMICOLON, "Expected semicolon after throw");
+        
+        return new ThrowNode(expression, location);
     }
     
     /**
@@ -497,7 +897,7 @@ public class Parser {
         int savedPos = savePosition();
         
         try {
-            ASTNode left = parseLogicalOr();
+            ASTNode left = parseTernary();
             
             if (match(TokenType.OPERATOR_ASSIGN) || 
                 match(TokenType.OPERATOR_PLUS_ASSIGN) ||
@@ -507,7 +907,7 @@ public class Parser {
                 match(TokenType.OPERATOR_MODULO_ASSIGN)) {
                 
                 Token opToken = tokens.get(position - 1);
-                ASTNode right = parseLogicalOr();
+                ASTNode right = parseTernary();
                 
                 if (left instanceof VariableNode) {
                     String varName = ((VariableNode) left).getName();
@@ -521,6 +921,24 @@ public class Parser {
         } finally {
             releasePosition();
         }
+    }
+    
+    /**
+     * 解析三元表达式
+     * condition ? thenExpr : elseExpr
+     */
+    private ASTNode parseTernary() throws ParseException {
+        ASTNode condition = parseLogicalOr();
+        
+        if (match(TokenType.OPERATOR_QUESTION)) {
+            SourceLocation location = createLocation();
+            ASTNode thenExpr = parseTernary();
+            consume(TokenType.OPERATOR_COLON, "Expected ':' in ternary expression");
+            ASTNode elseExpr = parseTernary();
+            return new TernaryNode(condition, thenExpr, elseExpr, location);
+        }
+        
+        return condition;
     }
     
     /**
@@ -542,12 +960,57 @@ public class Parser {
      * 解析逻辑与表达式
      */
     private ASTNode parseLogicalAnd() throws ParseException {
-        ASTNode left = parseEquality();
+        ASTNode left = parseBitwiseOr();
         
         while (match(TokenType.OPERATOR_LOGICAL_AND)) {
             SourceLocation location = createLocation();
-            ASTNode right = parseEquality();
+            ASTNode right = parseBitwiseOr();
             left = new BinaryOpNode(BinaryOpNode.Operator.LOGICAL_AND, left, right, location);
+        }
+        
+        return left;
+    }
+    
+    /**
+     * 解析按位或表达式
+     */
+    private ASTNode parseBitwiseOr() throws ParseException {
+        ASTNode left = parseBitwiseXor();
+        
+        while (match(TokenType.OPERATOR_BITWISE_OR)) {
+            SourceLocation location = createLocation();
+            ASTNode right = parseBitwiseXor();
+            left = new BinaryOpNode(BinaryOpNode.Operator.BITWISE_OR, left, right, location);
+        }
+        
+        return left;
+    }
+    
+    /**
+     * 解析按位异或表达式
+     */
+    private ASTNode parseBitwiseXor() throws ParseException {
+        ASTNode left = parseBitwiseAnd();
+        
+        while (match(TokenType.OPERATOR_BITWISE_XOR)) {
+            SourceLocation location = createLocation();
+            ASTNode right = parseBitwiseAnd();
+            left = new BinaryOpNode(BinaryOpNode.Operator.BITWISE_XOR, left, right, location);
+        }
+        
+        return left;
+    }
+    
+    /**
+     * 解析按位与表达式
+     */
+    private ASTNode parseBitwiseAnd() throws ParseException {
+        ASTNode left = parseEquality();
+        
+        while (match(TokenType.OPERATOR_BITWISE_AND)) {
+            SourceLocation location = createLocation();
+            ASTNode right = parseEquality();
+            left = new BinaryOpNode(BinaryOpNode.Operator.BITWISE_AND, left, right, location);
         }
         
         return left;
@@ -704,6 +1167,18 @@ public class Parser {
      * 解析一元表达式
      */
     private ASTNode parseUnary() throws ParseException {
+        if (match(TokenType.OPERATOR_INCREMENT)) {
+            SourceLocation location = createLocation();
+            ASTNode operand = parseUnary();
+            return new UnaryOpNode(UnaryOpNode.Operator.PRE_INCREMENT, operand, location);
+        }
+        
+        if (match(TokenType.OPERATOR_DECREMENT)) {
+            SourceLocation location = createLocation();
+            ASTNode operand = parseUnary();
+            return new UnaryOpNode(UnaryOpNode.Operator.PRE_DECREMENT, operand, location);
+        }
+        
         if (match(TokenType.OPERATOR_PLUS) || match(TokenType.OPERATOR_MINUS) ||
             match(TokenType.OPERATOR_LOGICAL_NOT) || match(TokenType.OPERATOR_BITWISE_NOT)) {
             
@@ -730,6 +1205,26 @@ public class Parser {
             }
             
             return new UnaryOpNode(operator, operand, location);
+        }
+        
+        if (check(TokenType.DELIMITER_LEFT_PAREN)) {
+            int savedPos = savePosition();
+            try {
+                advance();
+                Class<?> targetType = parseType();
+                
+                if (check(TokenType.DELIMITER_RIGHT_PAREN)) {
+                    advance();
+                    SourceLocation location = createLocation();
+                    ASTNode expression = parseUnary();
+                    releasePosition();
+                    return new CastNode(targetType, expression, location);
+                } else {
+                    restorePosition();
+                }
+            } catch (ParseException e) {
+                restorePosition();
+            }
         }
         
         return parsePostfix();
@@ -768,6 +1263,21 @@ public class Parser {
             }
         }
         
+        while (match(TokenType.OPERATOR_DOUBLE_COLON)) {
+            SourceLocation location = createLocation();
+            String methodName;
+            
+            if (check(TokenType.IDENTIFIER)) {
+                methodName = advance().getText();
+            } else if (check(TokenType.KEYWORD_NEW)) {
+                methodName = advance().getText();
+            } else {
+                throw error("Expected method name after '::'");
+            }
+            
+            expr = new MethodReferenceNode(expr, methodName, location);
+        }
+        
         return expr;
     }
     
@@ -800,28 +1310,53 @@ public class Parser {
             return new LiteralNode(null, null, token.getLocation());
         }
         
-        if (match(TokenType.IDENTIFIER)) {
-            Token token = tokens.get(position - 1);
+        if (check(TokenType.DELIMITER_LEFT_BRACKET)) {
+            return parseArrayLiteral();
+        }
+        
+        if (check(TokenType.DELIMITER_LEFT_BRACE)) {
+            return parseArrayInitializerBrace();
+        }
+        
+        if (check(TokenType.IDENTIFIER)) {
+            savePosition();
+            try {
+                ASTNode lambda = tryParseLambda();
+                if (lambda != null) {
+                    releasePosition();
+                    return lambda;
+                }
+            } catch (ParseException e) {
+                restorePosition();
+            }
+            
+            Token token = advance();
             
             savePosition();
             try {
                 StringBuilder className = new StringBuilder(token.getText());
+                String lastValidClassName = null;
+                int lastValidPosition = position;
                 
                 while (check(TokenType.OPERATOR_DOT) && !isAtEnd()) {
                     advance();
                     if (check(TokenType.IDENTIFIER)) {
                         className.append(".").append(advance().getText());
+                        String currentClassName = className.toString();
+                        
+                        if (resolveClassName(currentClassName) != null) {
+                            lastValidClassName = currentClassName;
+                            lastValidPosition = position;
+                        }
                     } else {
                         break;
                     }
                 }
                 
-                String fullClassName = className.toString();
-                String resolvedClassName = resolveClassName(fullClassName);
-                
-                if (resolvedClassName != null) {
+                if (lastValidClassName != null) {
+                    position = lastValidPosition;
                     releasePosition();
-                    return new ClassReferenceNode(resolvedClassName, token.getLocation());
+                    return new ClassReferenceNode(lastValidClassName, token.getLocation());
                 } else {
                     restorePosition();
                     return new VariableNode(token.getText(), token.getLocation());
@@ -832,7 +1367,20 @@ public class Parser {
             }
         }
         
-        if (match(TokenType.DELIMITER_LEFT_PAREN)) {
+        if (check(TokenType.DELIMITER_LEFT_PAREN)) {
+            savePosition();
+            try {
+                ASTNode lambda = tryParseLambda();
+                if (lambda != null) {
+                    releasePosition();
+                    return lambda;
+                } else {
+                    restorePosition();
+                }
+            } catch (ParseException e) {
+                restorePosition();
+            }
+            advance();
             return parseParenthesizedExpression();
         }
         
@@ -847,19 +1395,91 @@ public class Parser {
      * 解析括号表达式
      */
     private ASTNode parseParenthesizedExpression() throws ParseException {
-        SourceLocation location = createLocation();
         ASTNode expression = parseExpression();
         consume(TokenType.DELIMITER_RIGHT_PAREN, "Expected ')' after expression");
         return expression;
     }
     
     /**
+     * 解析数组字面量
+     * 语法: [element1, element2, ...]
+     */
+    private ArrayLiteralNode parseArrayLiteral() throws ParseException {
+        SourceLocation location = createLocation();
+        
+        consume(TokenType.DELIMITER_LEFT_BRACKET, "Expected '['");
+        
+        List<ASTNode> elements = new ArrayList<>();
+        
+        if (!check(TokenType.DELIMITER_RIGHT_BRACKET)) {
+            do {
+                elements.add(parseExpression());
+            } while (match(TokenType.DELIMITER_COMMA));
+        }
+        
+        consume(TokenType.DELIMITER_RIGHT_BRACKET, "Expected ']' after array literal");
+        
+        return new ArrayLiteralNode(elements, location);
+    }
+    
+    /**
+     * 解析花括号数组初始化器
+     * 语法: {element1, element2, ...}
+     */
+    private ArrayLiteralNode parseArrayInitializerBrace() throws ParseException {
+        SourceLocation location = createLocation();
+        
+        consume(TokenType.DELIMITER_LEFT_BRACE, "Expected '{'");
+        
+        List<ASTNode> elements = new ArrayList<>();
+        
+        if (!check(TokenType.DELIMITER_RIGHT_BRACE)) {
+            do {
+                elements.add(parseExpression());
+            } while (match(TokenType.DELIMITER_COMMA));
+        }
+        
+        consume(TokenType.DELIMITER_RIGHT_BRACE, "Expected '}' after array initializer");
+        
+        return new ArrayLiteralNode(elements, location);
+    }
+    
+    /**
      * 解析构造函数调用
+     * 支持:
+     *   - new ClassName(args)
+     *   - new type[size]
+     *   - new type[] {elements}
+     *   - new type[]{elements} (type already includes [])
      */
     private ASTNode parseConstructorCall() throws ParseException {
         SourceLocation location = createLocation();
         
         Class<?> type = parseType();
+        boolean isArrayType = type.isArray();
+        
+        if (check(TokenType.DELIMITER_LEFT_BRACKET)) {
+            advance();
+            
+            if (check(TokenType.DELIMITER_RIGHT_BRACKET)) {
+                advance();
+                
+                if (check(TokenType.DELIMITER_LEFT_BRACE)) {
+                    return parseArrayInitializer(type, location);
+                } else {
+                    throw error("Expected array initializer after 'new type[]'");
+                }
+            } else {
+                ASTNode size = parseExpression();
+                consume(TokenType.DELIMITER_RIGHT_BRACKET, "Expected ']' after array size");
+                return new NewArrayNode(type, size, location);
+            }
+        }
+        
+        if (isArrayType && check(TokenType.DELIMITER_LEFT_BRACE)) {
+            return parseArrayInitializer(type, location);
+        }
+        
         consume(TokenType.DELIMITER_LEFT_PAREN, "Expected '(' after type");
         
         List<ASTNode> arguments = new ArrayList<>();
@@ -875,12 +1495,73 @@ public class Parser {
     }
     
     /**
+     * 解析数组初始化器
+     * 语法: {element1, element2, ...}
+     */
+    private ArrayLiteralNode parseArrayInitializer(Class<?> type, SourceLocation location) throws ParseException {
+        consume(TokenType.DELIMITER_LEFT_BRACE, "Expected '{'");
+        
+        List<ASTNode> elements = new ArrayList<>();
+        
+        if (!check(TokenType.DELIMITER_RIGHT_BRACE)) {
+            do {
+                elements.add(parseExpression());
+            } while (match(TokenType.DELIMITER_COMMA));
+        }
+        
+        consume(TokenType.DELIMITER_RIGHT_BRACE, "Expected '}' after array initializer");
+        
+        return new ArrayLiteralNode(elements, location);
+    }
+    
+    /**
      * 解析成员访问
      */
     private ASTNode parseMemberAccess(ASTNode target) throws ParseException {
         SourceLocation location = createLocation();
         String memberName = consume(TokenType.IDENTIFIER, "Expected member name").getText();
-        return new MethodCallNode(target, memberName, new ArrayList<>(), location);
+        
+        if (target instanceof ClassReferenceNode) {
+            ClassReferenceNode classRef = (ClassReferenceNode) target;
+            String nestedClassName = classRef.getClassName() + "." + memberName;
+            
+            if (resolveClassName(nestedClassName) != null) {
+                return new ClassReferenceNode(nestedClassName, location);
+            }
+            
+            String innerClassName = classRef.getClassName() + "$" + memberName;
+            if (resolveClassName(innerClassName) != null) {
+                return new ClassReferenceNode(nestedClassName, location);
+            }
+            
+            try {
+                Class<?> clazz = Class.forName(classRef.getClassName());
+                try {
+                    clazz.getDeclaredField(memberName);
+                    return new FieldAccessNode(target, memberName, location);
+                } catch (NoSuchFieldException e) {
+                    // 不是字段，继续处理
+                }
+            } catch (ClassNotFoundException e) {
+                // 类不存在，继续处理
+            }
+        }
+        
+        if (check(TokenType.DELIMITER_LEFT_PAREN)) {
+            advance();
+            List<ASTNode> arguments = new ArrayList<>();
+            
+            if (!check(TokenType.DELIMITER_RIGHT_PAREN)) {
+                do {
+                    arguments.add(parseExpression());
+                } while (match(TokenType.DELIMITER_COMMA));
+            }
+            
+            consume(TokenType.DELIMITER_RIGHT_PAREN, "Expected ')' after method arguments");
+            return new MethodCallNode(target, memberName, arguments, location);
+        } else {
+            return new FieldAccessNode(target, memberName, location);
+        }
     }
     
     /**
@@ -909,6 +1590,118 @@ public class Parser {
         SourceLocation location = createLocation();
         ASTNode index = parseExpression();
         consume(TokenType.DELIMITER_RIGHT_BRACKET, "Expected ']' after array index");
-        return array;
+        return new ArrayAccessNode(array, index, location);
+    }
+    
+    /**
+     * 尝试解析Lambda表达式
+     * 支持以下格式：
+     * - x -> x + 1
+     * - (x, y) -> x + y
+     * - (int x, String y) -> x + y
+     * - (x, y) -> { return x + y; }
+     * - () -> 42
+     * 
+     * @return LambdaNode如果解析成功，null如果不是Lambda表达式
+     * @throws ParseException 如果解析过程中出错
+     */
+    private ASTNode tryParseLambda() throws ParseException {
+        SourceLocation location = createLocation();
+        List<LambdaNode.Parameter> parameters = new ArrayList<>();
+        
+        if (check(TokenType.IDENTIFIER) && checkNext(TokenType.DELIMITER_ARROW)) {
+            Token paramToken = advance();
+            String paramName = paramToken.getText();
+            parameters.add(new LambdaNode.Parameter(paramName, Object.class));
+            advance();
+        } else if (check(TokenType.DELIMITER_LEFT_PAREN)) {
+            savePosition();
+            try {
+                advance();
+                
+                if (!check(TokenType.DELIMITER_RIGHT_PAREN)) {
+                    do {
+                        Token paramToken = consume(TokenType.IDENTIFIER, "Expected parameter name");
+                        parameters.add(new LambdaNode.Parameter(paramToken.getText(), Object.class));
+                    } while (match(TokenType.DELIMITER_COMMA));
+                }
+                
+                consume(TokenType.DELIMITER_RIGHT_PAREN, "Expected ')' after lambda parameters");
+                consume(TokenType.DELIMITER_ARROW, "Expected '->' after lambda parameters");
+                releasePosition();
+            } catch (ParseException e) {
+                restorePosition();
+                return null;
+            }
+        } else {
+            return null;
+        }
+        
+        ASTNode body;
+        if (check(TokenType.DELIMITER_LEFT_BRACE)) {
+            body = parseLambdaBlock();
+        } else {
+            body = parseExpression();
+        }
+        
+        return new LambdaNode(parameters, body, location);
+    }
+    
+    private BlockNode parseLambdaBlock() throws ParseException {
+        SourceLocation location = createLocation();
+        List<ASTNode> statements = new ArrayList<>();
+        
+        consume(TokenType.DELIMITER_LEFT_BRACE, "Expected '{' at start of lambda body");
+        
+        while (!check(TokenType.DELIMITER_RIGHT_BRACE) && !check(TokenType.EOF)) {
+            statements.add(parseLambdaStatement());
+        }
+        
+        consume(TokenType.DELIMITER_RIGHT_BRACE, "Expected '}' at end of lambda body");
+        
+        return new BlockNode(statements, location);
+    }
+    
+    private ASTNode parseLambdaStatement() throws ParseException {
+        if (match(TokenType.KEYWORD_IF)) {
+            return parseIfStatement();
+        }
+        
+        if (match(TokenType.KEYWORD_FOR)) {
+            return parseForStatement();
+        }
+        
+        if (match(TokenType.KEYWORD_WHILE)) {
+            return parseWhileStatement();
+        }
+        
+        if (match(TokenType.KEYWORD_RETURN)) {
+            return parseReturnStatement();
+        }
+        
+        if (match(TokenType.KEYWORD_BREAK)) {
+            return parseBreakStatement();
+        }
+        
+        if (match(TokenType.KEYWORD_CONTINUE)) {
+            return parseContinueStatement();
+        }
+        
+        if (match(TokenType.DELIMITER_LEFT_BRACE)) {
+            return parseLambdaBlock();
+        }
+        
+        ASTNode expression = parseExpression();
+        if (check(TokenType.DELIMITER_SEMICOLON)) {
+            match(TokenType.DELIMITER_SEMICOLON);
+        }
+        return expression;
+    }
+    
+    private boolean checkNext(TokenType type) {
+        if (position + 1 >= tokens.size()) {
+            return false;
+        }
+        return tokens.get(position + 1).getType() == type;
     }
 }

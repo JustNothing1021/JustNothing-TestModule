@@ -48,6 +48,21 @@ public class IfNode extends ASTNode {
         return visitor.visit(this);
     }
     
+    @Override
+    public String formatString(int indent) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(indent(indent)).append("IfNode\n");
+        sb.append(indent(indent + 1)).append("condition:\n");
+        sb.append(condition.formatString(indent + 2)).append("\n");
+        sb.append(indent(indent + 1)).append("then:\n");
+        sb.append(thenBlock.formatString(indent + 2)).append("\n");
+        if (elseBlock != null) {
+            sb.append(indent(indent + 1)).append("else:\n");
+            sb.append(elseBlock.formatString(indent + 2)).append("\n");
+        }
+        return sb.toString().strip();
+    }
+    
     public static class Builder extends ASTNode.Builder<Builder> {
         private ASTNode condition;
         private ASTNode thenBlock;

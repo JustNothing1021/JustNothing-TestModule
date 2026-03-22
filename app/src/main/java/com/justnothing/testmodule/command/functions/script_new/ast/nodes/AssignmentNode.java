@@ -50,6 +50,22 @@ public class AssignmentNode extends ASTNode {
         return visitor.visit(this);
     }
     
+    @Override
+    public String formatString(int indent) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(indent(indent)).append("AssignmentNode\n");
+        sb.append(indent(indent + 1)).append("variable: ").append(variableName).append("\n");
+        sb.append(indent(indent + 1)).append("type: ").append(declaredType != null ? declaredType.getSimpleName() : "null").append("\n");
+        sb.append(indent(indent + 1)).append("isDeclaration: ").append(isDeclaration).append("\n");
+        if (value == null) {
+            sb.append(indent(indent + 1)).append("value: null\n");
+        } else {
+            sb.append(indent(indent + 1)).append("value:\n");
+            sb.append(value.formatString(indent + 2));
+        }
+        return sb.toString().strip();
+    }
+    
     public static class Builder extends ASTNode.Builder<Builder> {
         private String variableName;
         private ASTNode value;

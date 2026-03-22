@@ -1,6 +1,7 @@
 package com.justnothing.testmodule.command.functions.script_new.evaluator;
 
 import com.justnothing.testmodule.command.functions.script_new.exception.EvaluationException;
+import com.justnothing.testmodule.command.functions.script_new.exception.ErrorCode;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -127,7 +128,7 @@ public class ScopeManager {
                 "Variable already declared in current scope: " + name,
                 0,
                 0,
-                com.justnothing.testmodule.command.functions.script_new.exception.ErrorCode.SCOPE_VARIABLE_ALREADY_DECLARED);
+                ErrorCode.SCOPE_VARIABLE_ALREADY_DECLARED);
         }
         
         Variable variable = new Variable(name, type, value, isFinal, currentLevel);
@@ -152,7 +153,7 @@ public class ScopeManager {
             "Variable not found: " + name,
             0,
             0,
-            com.justnothing.testmodule.command.functions.script_new.exception.ErrorCode.SCOPE_VARIABLE_NOT_FOUND);
+            ErrorCode.SCOPE_VARIABLE_NOT_FOUND);
     }
     
     /**
@@ -169,7 +170,7 @@ public class ScopeManager {
                 "Cannot assign to final variable: " + name,
                 0,
                 0,
-                com.justnothing.testmodule.command.functions.script_new.exception.ErrorCode.SCOPE_CANNOT_ASSIGN_TO_FINAL);
+                ErrorCode.SCOPE_CANNOT_ASSIGN_TO_FINAL);
         }
         
         variable.setValue(value);

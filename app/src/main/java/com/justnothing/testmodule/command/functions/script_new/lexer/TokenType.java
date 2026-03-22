@@ -35,6 +35,7 @@ public enum TokenType {
     KEYWORD_ELSE("else"),
     KEYWORD_FOR("for"),
     KEYWORD_WHILE("while"),
+    KEYWORD_DO("do"),
     KEYWORD_RETURN("return"),
     KEYWORD_BREAK("break"),
     KEYWORD_CONTINUE("continue"),
@@ -44,6 +45,13 @@ public enum TokenType {
     KEYWORD_FINAL("final"),
     KEYWORD_NEW("new"),
     KEYWORD_INSTANCEOF("instanceof"),
+    KEYWORD_SWITCH("switch"),
+    KEYWORD_CASE("case"),
+    KEYWORD_DEFAULT("default"),
+    KEYWORD_TRY("try"),
+    KEYWORD_CATCH("catch"),
+    KEYWORD_FINALLY("finally"),
+    KEYWORD_THROW("throw"),
     
     OPERATOR_ASSIGN("="),
     OPERATOR_PLUS_ASSIGN("+="),
@@ -83,6 +91,8 @@ public enum TokenType {
     
     OPERATOR_DOT("."),
     OPERATOR_DOUBLE_COLON("::"),
+    OPERATOR_QUESTION("?"),
+    OPERATOR_COLON(":"),
     
     DELIMITER_SEMICOLON(";"),
     DELIMITER_COMMA(","),
@@ -134,9 +144,10 @@ public enum TokenType {
     
     private static final Set<String> KEYWORDS = new HashSet<>(Arrays.asList(
             "int", "long", "float", "double", "boolean", "char", "byte", "short",
-            "void", "auto", "if", "else", "for", "while",
+            "void", "auto", "if", "else", "for", "while", "do",
             "return", "break", "continue", "true", "false", "null", "final",
-            "new", "instanceof"
+            "new", "instanceof", "switch", "case", "default",
+            "try", "catch", "finally", "throw"
     ));
     
     public static boolean isKeyword(String text) {
@@ -159,6 +170,7 @@ public enum TokenType {
             case "else": return KEYWORD_ELSE;
             case "for": return KEYWORD_FOR;
             case "while": return KEYWORD_WHILE;
+            case "do": return KEYWORD_DO;
             case "return": return KEYWORD_RETURN;
             case "break": return KEYWORD_BREAK;
             case "continue": return KEYWORD_CONTINUE;
@@ -168,6 +180,13 @@ public enum TokenType {
             case "final": return KEYWORD_FINAL;
             case "new": return KEYWORD_NEW;
             case "instanceof": return KEYWORD_INSTANCEOF;
+            case "switch": return KEYWORD_SWITCH;
+            case "case": return KEYWORD_CASE;
+            case "default": return KEYWORD_DEFAULT;
+            case "try": return KEYWORD_TRY;
+            case "catch": return KEYWORD_CATCH;
+            case "finally": return KEYWORD_FINALLY;
+            case "throw": return KEYWORD_THROW;
             default: return IDENTIFIER;
         }
     }

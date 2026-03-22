@@ -22,6 +22,11 @@ public class ClassReferenceNode extends ASTNode {
     }
     
     @Override
+    public String formatString(int indent) {
+        return indent(indent) + "ClassReferenceNode: " + className;
+    }
+    
+    @Override
     public String toString() {
         return "ClassReferenceNode(" + className + ")";
     }

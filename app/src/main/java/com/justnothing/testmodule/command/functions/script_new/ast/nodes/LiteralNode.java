@@ -37,6 +37,24 @@ public class LiteralNode extends ASTNode {
         return visitor.visit(this);
     }
     
+    @Override
+    public String formatString(int indent) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(indent(indent));
+        sb.append("LiteralNode: ");
+        
+        if (value == null) {
+            sb.append("null");
+        } else if (value instanceof String) {
+            sb.append("\"").append(value).append("\"");
+        } else {
+            sb.append(value);
+        }
+        
+        sb.append(" (").append(type != null ? type.getSimpleName() : "void").append(")");
+        return sb.toString();
+    }
+    
     public static class Builder extends ASTNode.Builder<Builder> {
         private Object value;
         private Class<?> type;

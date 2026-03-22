@@ -33,6 +33,33 @@ public abstract class ASTNode {
     public abstract <T> T accept(ASTVisitor<T> visitor);
     
     /**
+     * 格式化输出
+     * 
+     * @return 格式化后的字符串
+     */
+    public String formatString() {
+        return formatString(0);
+    }
+    
+    /**
+     * 格式化输出（带缩进）
+     * 
+     * @param indent 缩进级别
+     * @return 格式化后的字符串
+     */
+    public abstract String formatString(int indent);
+    
+    /**
+     * 生成缩进字符串
+     * 
+     * @param level 缩进级别
+     * @return 缩进字符串
+     */
+    protected String indent(int level) {
+        return "  ".repeat(level);
+    }
+    
+    /**
      * Builder基类
      * 
      * @param <B> Builder子类类型

@@ -50,6 +50,26 @@ public class MethodCallNode extends ASTNode {
         return visitor.visit(this);
     }
     
+    @Override
+    public String formatString(int indent) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(indent(indent)).append("MethodCallNode\n");
+        sb.append(indent(indent + 1)).append("target: ");
+        if (target == null) {
+            sb.append("null\n");
+        } else {
+            sb.append("\n");
+            sb.append(target.formatString(indent + 2)).append("\n");
+        }
+        sb.append(indent(indent + 1)).append("methodName: ").append(methodName).append("\n");
+        sb.append(indent(indent + 1)).append("arguments: ").append(arguments.size()).append("\n");
+        for (int i = 0; i < arguments.size(); i++) {
+            sb.append(indent(indent + 2)).append("arg[").append(i).append("]:\n");
+            sb.append(arguments.get(i).formatString(indent + 3)).append("\n");
+        }
+        return sb.toString().strip();
+    }
+    
     public static class Builder extends ASTNode.Builder<Builder> {
         private ASTNode target;
         private String methodName;
