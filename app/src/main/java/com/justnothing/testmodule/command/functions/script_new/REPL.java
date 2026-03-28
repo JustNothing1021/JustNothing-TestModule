@@ -1,9 +1,14 @@
 package com.justnothing.testmodule.command.functions.script_new;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 import com.justnothing.testmodule.command.functions.script_new.ast.nodes.BlockNode;
+import com.justnothing.testmodule.command.functions.script_new.evaluator.ASTEvaluator;
+import com.justnothing.testmodule.command.functions.script_new.evaluator.ExecutionContext;
 import com.justnothing.testmodule.command.functions.script_new.exception.ParseException;
+import com.justnothing.testmodule.command.functions.script_new.exception.EvaluationException;
 import com.justnothing.testmodule.command.functions.script_new.lexer.Lexer;
 import com.justnothing.testmodule.command.functions.script_new.parser.Parser;
 
@@ -18,9 +23,11 @@ public class REPL {
         System.out.println("  - Lambda表达式: x -> x + 1;");
         System.out.println("  - 控制流: if, for, while");
         System.out.println("  - 方法调用: System.out.println(1);");
+        System.out.println("  - :multi 进入多行输入模式");
         System.out.println();
         
         Scanner scanner = new Scanner(System.in);
+        ExecutionContext context = new ExecutionContext(REPL.class.getClassLoader());
         
         while (true) {
             System.out.print("> ");
@@ -42,28 +49,94 @@ public class REPL {
             
             if (input.equalsIgnoreCase("help")) {
                 System.out.println("支持的命令:");
-                System.out.println("  help  - 显示帮助信息");
-                System.out.println("  exit  - 退出REPL");
-                System.out.println("  quit  - 退出REPL");
+                System.out.println("  help   - 显示帮助信息");
+                System.out.println("  exit   - 退出REPL");
+                System.out.println("  quit   - 退出REPL");
+                System.out.println("  :multi - 进入多行输入模式");
+                System.out.println("  :eval  - 执行多行输入的代码");
+                System.out.println("  :clear - 清空多行输入缓冲区");
+                System.out.println("  :show  - 显示当前多行输入缓冲区内容");
                 System.out.println();
                 continue;
             }
             
-            try {
-                Lexer lexer = new Lexer(input);
-                Parser parser = new Parser(lexer.tokenize());
-                BlockNode ast = parser.parse();
+            if (input.equalsIgnoreCase(":multi")) {
+                System.out.println("进入多行输入模式，输入 :eval 执行，输入 :clear 清空，输入 :exit 退出多行模式");
+                List<String> lines = new ArrayList<>();
                 
-                System.out.println("AST:");
-                System.out.println(ast.formatString());
-            } catch (ParseException e) {
-                System.out.println("错误: " + e.getMessage());
-            } catch (Exception e) {
-                System.out.println("内部错误: " + e.getMessage());
-                e.printStackTrace();
+                while (true) {
+                    System.out.print("... ");
+                    String line;
+                    try {
+                        line = scanner.nextLine().trim();
+                    } catch (Exception e) {
+                        break;
+                    }
+                    
+                    if (line.equalsIgnoreCase(":exit")) {
+                        System.out.println("退出多行输入模式");
+                        break;
+                    }
+                    
+                    if (line.equalsIgnoreCase(":eval")) {
+                        if (lines.isEmpty()) {
+                            System.out.println("没有输入代码");
+                            continue;
+                        }
+                        
+                        String code = String.join("\n", lines);
+                        executeCode(code, context);
+                        lines.clear();
+                        continue;
+                    }
+                    
+                    if (line.equalsIgnoreCase(":clear")) {
+                        lines.clear();
+                        System.out.println("已清空输入缓冲区");
+                        continue;
+                    }
+                    
+                    if (line.equalsIgnoreCase(":show")) {
+                        if (lines.isEmpty()) {
+                            System.out.println("(缓冲区为空)");
+                        } else {
+                            for (int i = 0; i < lines.size(); i++) {
+                                System.out.println((i + 1) + ": " + lines.get(i));
+                            }
+                        }
+                        continue;
+                    }
+                    
+                    lines.add(line);
+                }
+                continue;
             }
+            
+            executeCode(input, context);
         }
         
         scanner.close();
+    }
+    
+    private static void executeCode(String input, ExecutionContext context) {
+        try {
+            Lexer lexer = new Lexer(input);
+            Parser parser = new Parser(lexer.tokenize());
+            BlockNode ast = parser.parse();
+            
+            System.out.println("AST:");
+            System.out.println(ast.formatString());
+            
+            Object result = ASTEvaluator.evaluate(ast, context);
+            
+            System.out.println("Result: " + result);
+        } catch (ParseException e) {
+            System.out.println("错误: " + e.getMessage());
+        } catch (EvaluationException e) {
+            System.out.println("错误: " + e.getMessage());
+        } catch (Exception e) {
+            System.out.println("内部错误: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 }

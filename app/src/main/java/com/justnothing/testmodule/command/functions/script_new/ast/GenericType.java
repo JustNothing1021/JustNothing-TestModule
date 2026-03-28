@@ -4,39 +4,32 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/**
- * 泛型类型表示
- * <p>
- * 表示一个可能带有泛型参数的类型，例如：
- * - String (原始类型)
- * - List&lt;String&gt; (带泛型参数)
- * - Map&lt;String, List&lt;Integer&gt;&gt; (嵌套泛型)
- * - int[] (数组类型)
- * </p>
- * 
- * @author JustNothing1021
- * @since 1.0.0
- */
 public class GenericType {
     
     private final Class<?> rawType;
     private final List<GenericType> typeArguments;
     private final int arrayDepth;
+    private final String originalTypeName;
     
     public GenericType(Class<?> rawType) {
-        this(rawType, Collections.emptyList(), 0);
+        this(rawType, Collections.emptyList(), 0, null);
     }
     
     public GenericType(Class<?> rawType, List<GenericType> typeArguments) {
-        this(rawType, typeArguments, 0);
+        this(rawType, typeArguments, 0, null);
     }
     
     public GenericType(Class<?> rawType, List<GenericType> typeArguments, int arrayDepth) {
+        this(rawType, typeArguments, arrayDepth, null);
+    }
+    
+    public GenericType(Class<?> rawType, List<GenericType> typeArguments, int arrayDepth, String originalTypeName) {
         this.rawType = rawType;
         this.typeArguments = typeArguments != null ? 
             Collections.unmodifiableList(new ArrayList<>(typeArguments)) : 
             Collections.emptyList();
         this.arrayDepth = arrayDepth;
+        this.originalTypeName = originalTypeName;
     }
     
     public Class<?> getRawType() {
@@ -49,6 +42,10 @@ public class GenericType {
     
     public int getArrayDepth() {
         return arrayDepth;
+    }
+    
+    public String getOriginalTypeName() {
+        return originalTypeName;
     }
     
     public boolean isGeneric() {

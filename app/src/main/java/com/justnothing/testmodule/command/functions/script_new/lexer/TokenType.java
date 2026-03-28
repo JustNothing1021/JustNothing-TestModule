@@ -74,6 +74,12 @@ public enum TokenType {
     OPERATOR_MULTIPLY_ASSIGN("*="),
     OPERATOR_DIVIDE_ASSIGN("/="),
     OPERATOR_MODULO_ASSIGN("%="),
+    OPERATOR_BITWISE_AND_ASSIGN("&="),
+    OPERATOR_BITWISE_OR_ASSIGN("|="),
+    OPERATOR_BITWISE_XOR_ASSIGN("^="),
+    OPERATOR_LEFT_SHIFT_ASSIGN("<<="),
+    OPERATOR_RIGHT_SHIFT_ASSIGN(">>="),
+    OPERATOR_UNSIGNED_RIGHT_SHIFT_ASSIGN(">>>="),
     
     OPERATOR_EQUAL("=="),
     OPERATOR_NOT_EQUAL("!="),
@@ -123,6 +129,7 @@ public enum TokenType {
     DELIMITER_ARROW("->"),
     
     LITERAL_INTEGER("integer literal"),
+    LITERAL_LONG("long literal"),
     LITERAL_DECIMAL("decimal literal"),
     LITERAL_STRING("string literal"),
     LITERAL_CHAR("char literal"),

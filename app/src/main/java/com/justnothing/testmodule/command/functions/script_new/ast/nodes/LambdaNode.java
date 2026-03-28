@@ -42,6 +42,7 @@ public class LambdaNode extends ASTNode {
     
     private final List<Parameter> parameters;
     private final ASTNode body;
+    private Class<?> functionalInterfaceType;
     
     public LambdaNode(List<Parameter> parameters, ASTNode body, SourceLocation location) {
         super(location);
@@ -59,6 +60,14 @@ public class LambdaNode extends ASTNode {
         return body;
     }
     
+    public Class<?> getFunctionalInterfaceType() {
+        return functionalInterfaceType;
+    }
+    
+    public void setFunctionalInterfaceType(Class<?> functionalInterfaceType) {
+        this.functionalInterfaceType = functionalInterfaceType;
+    }
+    
     @Override
     public <T> T accept(ASTVisitor<T> visitor) {
         return visitor.visit(this);
@@ -73,6 +82,9 @@ public class LambdaNode extends ASTNode {
             Parameter param = parameters.get(i);
             sb.append(indent(indent + 2)).append("param[").append(i).append("]: ");
             sb.append(param.getType().getSimpleName()).append(" ").append(param.getName()).append("\n");
+        }
+        if (functionalInterfaceType != null) {
+            sb.append(indent(indent + 1)).append("targetInterface: ").append(functionalInterfaceType.getName()).append("\n");
         }
         sb.append(indent(indent + 1)).append("body:\n");
         sb.append(body.formatString(indent + 2)).append("\n");

@@ -194,12 +194,23 @@ public class Lexer {
             sb.append(advance());
         }
         
+        if (!isAtEnd() && (peek() == 'e' || peek() == 'E')) {
+            sb.append(advance());
+            if (!isAtEnd() && (peek() == '+' || peek() == '-')) {
+                sb.append(advance());
+            }
+            while (!isAtEnd() && Character.isDigit(peek())) {
+                sb.append(advance());
+            }
+        }
+        
         String numberStr = sb.toString();
         SourceLocation location = new SourceLocation(startLine, startColumn);
         
         boolean isFloat = false;
         boolean isLong = false;
         boolean isDouble = false;
+        boolean hasExponent = numberStr.contains("e") || numberStr.contains("E");
         
         if (!isAtEnd()) {
             char suffix = Character.toLowerCase(peek());
@@ -225,11 +236,11 @@ public class Lexer {
         } else if (isLong) {
             try {
                 long value = Long.parseLong(numberStr);
-                addToken(TokenType.LITERAL_INTEGER, value, location);
+                addToken(TokenType.LITERAL_LONG, value, location);
             } catch (NumberFormatException e) {
                 throw error("Invalid long number: " + numberStr);
             }
-        } else if (isDouble || numberStr.contains(".")) {
+        } else if (isDouble || numberStr.contains(".") || hasExponent) {
             try {
                 double value = Double.parseDouble(numberStr);
                 addToken(TokenType.LITERAL_DECIMAL, value, location);
@@ -238,8 +249,12 @@ public class Lexer {
             }
         } else {
             try {
-                long value = Long.parseLong(numberStr);
-                addToken(TokenType.LITERAL_INTEGER, value, location);
+                long longValue = Long.parseLong(numberStr);
+                if (longValue >= Integer.MIN_VALUE && longValue <= Integer.MAX_VALUE) {
+                    addToken(TokenType.LITERAL_INTEGER, (int) longValue, location);
+                } else {
+                    addToken(TokenType.LITERAL_LONG, longValue, location);
+                }
             } catch (NumberFormatException e) {
                 throw error("Invalid integer number: " + numberStr);
             }
@@ -431,28 +446,40 @@ public class Lexer {
                 break;
             case '<':
                 if (match('=')) addToken(TokenType.OPERATOR_LESS_THAN_OR_EQUAL, location);
-                else if (match('<')) addToken(TokenType.OPERATOR_LEFT_SHIFT, location);
+                else if (match('<')) {
+                    if (match('=')) addToken(TokenType.OPERATOR_LEFT_SHIFT_ASSIGN, location);
+                    else addToken(TokenType.OPERATOR_LEFT_SHIFT, location);
+                }
                 else addToken(TokenType.OPERATOR_LESS_THAN, location);
                 break;
             case '>':
                 if (match('=')) addToken(TokenType.OPERATOR_GREATER_THAN_OR_EQUAL, location);
                 else if (match('>')) {
-                    if (match('>')) addToken(TokenType.OPERATOR_UNSIGNED_RIGHT_SHIFT, location);
-                    else addToken(TokenType.OPERATOR_RIGHT_SHIFT, location);
+                    if (match('>')) {
+                        if (match('=')) addToken(TokenType.OPERATOR_UNSIGNED_RIGHT_SHIFT_ASSIGN, location);
+                        else addToken(TokenType.OPERATOR_UNSIGNED_RIGHT_SHIFT, location);
+                    } else if (match('=')) {
+                        addToken(TokenType.OPERATOR_RIGHT_SHIFT_ASSIGN, location);
+                    } else {
+                        addToken(TokenType.OPERATOR_RIGHT_SHIFT, location);
+                    }
                 } else {
                     addToken(TokenType.OPERATOR_GREATER_THAN, location);
                 }
                 break;
             case '&':
                 if (match('&')) addToken(TokenType.OPERATOR_LOGICAL_AND, location);
+                else if (match('=')) addToken(TokenType.OPERATOR_BITWISE_AND_ASSIGN, location);
                 else addToken(TokenType.OPERATOR_BITWISE_AND, location);
                 break;
             case '|':
                 if (match('|')) addToken(TokenType.OPERATOR_LOGICAL_OR, location);
+                else if (match('=')) addToken(TokenType.OPERATOR_BITWISE_OR_ASSIGN, location);
                 else addToken(TokenType.OPERATOR_BITWISE_OR, location);
                 break;
             case '^':
-                addToken(TokenType.OPERATOR_BITWISE_XOR, location);
+                if (match('=')) addToken(TokenType.OPERATOR_BITWISE_XOR_ASSIGN, location);
+                else addToken(TokenType.OPERATOR_BITWISE_XOR, location);
                 break;
             case '~':
                 addToken(TokenType.OPERATOR_BITWISE_NOT, location);

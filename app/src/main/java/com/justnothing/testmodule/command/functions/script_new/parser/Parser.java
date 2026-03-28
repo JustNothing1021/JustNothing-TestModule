@@ -330,11 +330,7 @@ public class Parser {
             
             ASTNode value = null;
             if (match(TokenType.OPERATOR_ASSIGN)) {
-                if (check(TokenType.DELIMITER_LEFT_BRACE)) {
-                    value = parseArrayInitializer(type.getRuntimeType(), varLocation);
-                } else {
-                    value = parseExpression();
-                }
+                value = parseExpression();
             } else if (isAuto) {
                 throw error("Auto variable must have initial value");
             }
@@ -762,7 +758,11 @@ public class Parser {
             default:
                 baseType = ClassFinder.findClassWithImports(baseTypeName, null, context.getImports());
                 if (baseType == null) {
-                    throw error("Class not found: " + baseTypeName);
+                    if (context.isClassDeclared(baseTypeName)) {
+                        baseType = Object.class;
+                    } else {
+                        throw error("Class not found: " + baseTypeName);
+                    }
                 }
         }
         
@@ -863,7 +863,12 @@ public class Parser {
             default:
                 baseType = ClassFinder.findClassWithImports(baseTypeName, null, context.getImports());
                 if (baseType == null) {
-                    throw error("Class not found: " + baseTypeName);
+                    if (context.isClassDeclared(baseTypeName)) {
+                        baseType = Object.class;
+                        return new GenericType(baseType, typeArguments, arrayDepth, baseTypeName);
+                    } else {
+                        throw error("Class not found: " + baseTypeName);
+                    }
                 }
         }
         
@@ -1254,6 +1259,8 @@ public class Parser {
         
         String className = consume(TokenType.IDENTIFIER, "Expected class name").getText();
         
+        context.declareClass(className);
+        
         String superClassName = null;
         if (match(TokenType.KEYWORD_EXTENDS)) {
             superClassName = parseTypeName();
@@ -1526,7 +1533,7 @@ public class Parser {
         }
         
         consume(TokenType.DELIMITER_SEMICOLON, "Expected semicolon after return");
-        return value;
+        return new ReturnNode(value, location);
     }
     
     /**
@@ -1579,14 +1586,8 @@ public class Parser {
         try {
             ASTNode left = parseTernary();
             
-            if (match(TokenType.OPERATOR_ASSIGN) || 
-                match(TokenType.OPERATOR_PLUS_ASSIGN) ||
-                match(TokenType.OPERATOR_MINUS_ASSIGN) ||
-                match(TokenType.OPERATOR_MULTIPLY_ASSIGN) ||
-                match(TokenType.OPERATOR_DIVIDE_ASSIGN) ||
-                match(TokenType.OPERATOR_MODULO_ASSIGN)) {
-                
-                Token opToken = tokens.get(position - 1);
+            
+            if (match(TokenType.OPERATOR_ASSIGN)) {
                 ASTNode right = parseTernary();
                 
                 if (left instanceof VariableNode) {
@@ -1603,8 +1604,51 @@ public class Parser {
                     ArrayAccessNode arrayAccess = (ArrayAccessNode) left;
                     return new ArrayAssignmentNode(arrayAccess.getArray(), arrayAccess.getIndex(), right, left.getLocation());
                 }
+            }
+            
+            BinaryOpNode.Operator compoundOp = null;
+            if (match(TokenType.OPERATOR_PLUS_ASSIGN)) {
+                compoundOp = BinaryOpNode.Operator.ADD;
+            } else if (match(TokenType.OPERATOR_MINUS_ASSIGN)) {
+                compoundOp = BinaryOpNode.Operator.SUBTRACT;
+            } else if (match(TokenType.OPERATOR_MULTIPLY_ASSIGN)) {
+                compoundOp = BinaryOpNode.Operator.MULTIPLY;
+            } else if (match(TokenType.OPERATOR_DIVIDE_ASSIGN)) {
+                compoundOp = BinaryOpNode.Operator.DIVIDE;
+            } else if (match(TokenType.OPERATOR_MODULO_ASSIGN)) {
+                compoundOp = BinaryOpNode.Operator.MODULO;
+            } else if (match(TokenType.OPERATOR_BITWISE_AND_ASSIGN)) {
+                compoundOp = BinaryOpNode.Operator.BITWISE_AND;
+            } else if (match(TokenType.OPERATOR_BITWISE_OR_ASSIGN)) {
+                compoundOp = BinaryOpNode.Operator.BITWISE_OR;
+            } else if (match(TokenType.OPERATOR_BITWISE_XOR_ASSIGN)) {
+                compoundOp = BinaryOpNode.Operator.BITWISE_XOR;
+            } else if (match(TokenType.OPERATOR_LEFT_SHIFT_ASSIGN)) {
+                compoundOp = BinaryOpNode.Operator.LEFT_SHIFT;
+            } else if (match(TokenType.OPERATOR_RIGHT_SHIFT_ASSIGN)) {
+                compoundOp = BinaryOpNode.Operator.RIGHT_SHIFT;
+            } else if (match(TokenType.OPERATOR_UNSIGNED_RIGHT_SHIFT_ASSIGN)) {
+                compoundOp = BinaryOpNode.Operator.UNSIGNED_RIGHT_SHIFT;
+            }
+            
+            if (compoundOp != null) {
+                ASTNode right = parseTernary();
+                BinaryOpNode combinedValue = new BinaryOpNode(compoundOp, left, right, left.getLocation());
                 
-                restorePosition();
+                if (left instanceof VariableNode) {
+                    String varName = ((VariableNode) left).getName();
+                    return new AssignmentNode(varName, combinedValue, false, null, left.getLocation());
+                }
+                
+                if (left instanceof FieldAccessNode) {
+                    FieldAccessNode fieldAccess = (FieldAccessNode) left;
+                    return new FieldAssignmentNode(fieldAccess.getTarget(), fieldAccess.getFieldName(), combinedValue, left.getLocation());
+                }
+                
+                if (left instanceof ArrayAccessNode) {
+                    ArrayAccessNode arrayAccess = (ArrayAccessNode) left;
+                    return new ArrayAssignmentNode(arrayAccess.getArray(), arrayAccess.getIndex(), combinedValue, left.getLocation());
+                }
             }
             
             return left;
@@ -2023,6 +2067,11 @@ public class Parser {
             return new LiteralNode(token.getValue(), int.class, token.getLocation());
         }
         
+        if (match(TokenType.LITERAL_LONG)) {
+            Token token = tokens.get(position - 1);
+            return new LiteralNode(token.getValue(), long.class, token.getLocation());
+        }
+        
         if (match(TokenType.LITERAL_DECIMAL)) {
             Token token = tokens.get(position - 1);
             return new LiteralNode(token.getValue(), double.class, token.getLocation());
@@ -2084,13 +2133,21 @@ public class Parser {
                 String lastValidClassName = null;
                 int lastValidPosition = position;
                 
+                String simpleResolved = resolveClassName(token.getText());
+                if (simpleResolved != null) {
+                    lastValidClassName = token.getText();
+                    lastValidPosition = position;
+                }
+                
                 while (check(TokenType.OPERATOR_DOT) && !isAtEnd()) {
                     advance();
                     if (check(TokenType.IDENTIFIER)) {
                         className.append(".").append(advance().getText());
                         String currentClassName = className.toString();
                         
-                        if (resolveClassName(currentClassName) != null) {
+                        String resolved = resolveClassName(currentClassName);
+                        
+                        if (resolved != null) {
                             lastValidClassName = currentClassName;
                             lastValidPosition = position;
                         }
@@ -2112,19 +2169,6 @@ public class Parser {
                     
                     releasePosition();
                     return new ClassReferenceNode(resolveGenericType(lastValidClassName), token.getLocation());
-                }
-                
-                String simpleClassName = token.getText();
-                if (resolveClassName(simpleClassName) != null) {
-                    if (check(TokenType.OPERATOR_LESS_THAN)) {
-                        advance();
-                        StringBuilder genericType = new StringBuilder(simpleClassName).append("<");
-                        parseTypeArguments(genericType);
-                        releasePosition();
-                        return new ClassReferenceNode(resolveGenericType(genericType.toString()), token.getLocation());
-                    }
-                    releasePosition();
-                    return new ClassReferenceNode(resolveGenericType(simpleClassName), token.getLocation());
                 }
                 
                 restorePosition();
@@ -2207,6 +2251,7 @@ public class Parser {
         }
         
         ASTNode firstElement = parseExpression();
+        
         
         if (check(TokenType.OPERATOR_COLON)) {
             return parseMapLiteral(firstElement, location);
@@ -2334,12 +2379,14 @@ public class Parser {
             ClassReferenceNode classRef = (ClassReferenceNode) target;
             String nestedClassName = classRef.getType().getTypeName() + "." + memberName;
             
-            if (resolveClassName(nestedClassName) != null) {
+            String resolved = resolveClassName(nestedClassName);
+            if (resolved != null) {
                 return new ClassReferenceNode(resolveGenericType(nestedClassName), location);
             }
             
             String innerClassName = classRef.getType().getTypeName() + "$" + memberName;
-            if (resolveClassName(innerClassName) != null) {
+            String resolvedInner = resolveClassName(innerClassName);
+            if (resolvedInner != null) {
                 return new ClassReferenceNode(resolveGenericType(nestedClassName), location);
             }
             
@@ -2347,7 +2394,21 @@ public class Parser {
                 Class<?> clazz = Class.forName(classRef.getType().getTypeName());
                 try {
                     clazz.getDeclaredField(memberName);
-                    return new FieldAccessNode(target, memberName, location);
+                    FieldAccessNode fieldAccess = new FieldAccessNode(target, memberName, location);
+                    
+                    if (check(TokenType.DELIMITER_LEFT_PAREN)) {
+                        advance();
+                        List<ASTNode> arguments = new ArrayList<>();
+                        if (!check(TokenType.DELIMITER_RIGHT_PAREN)) {
+                            do {
+                                arguments.add(parseExpression());
+                            } while (match(TokenType.DELIMITER_COMMA));
+                        }
+                        consume(TokenType.DELIMITER_RIGHT_PAREN, "Expected ')' after method arguments");
+                        return new MethodCallNode(fieldAccess, memberName, arguments, location);
+                    }
+                    
+                    return fieldAccess;
                 } catch (NoSuchFieldException e) {
                     // 不是字段，继续处理
                 }
@@ -2367,6 +2428,7 @@ public class Parser {
             }
             
             consume(TokenType.DELIMITER_RIGHT_PAREN, "Expected ')' after method arguments");
+            
             return new MethodCallNode(target, memberName, arguments, location);
         } else {
             return new FieldAccessNode(target, memberName, location);
@@ -2388,7 +2450,14 @@ public class Parser {
         
         consume(TokenType.DELIMITER_RIGHT_PAREN, "Expected ')' after method arguments");
         
-        String methodName = target instanceof VariableNode ? ((VariableNode) target).getName() : null;
+        if (target instanceof VariableNode) {
+            String functionName = ((VariableNode) target).getName();
+            return new FunctionCallNode(functionName, arguments, location);
+        }
+        String methodName = null;
+        if (target instanceof FieldAccessNode) {
+            methodName = ((FieldAccessNode) target).getFieldName();
+        }
         return new MethodCallNode(target, methodName, arguments, location);
     }
     
@@ -2424,24 +2493,31 @@ public class Parser {
             parameters.add(new LambdaNode.Parameter(paramName, Object.class));
             advance();
         } else if (check(TokenType.DELIMITER_LEFT_PAREN)) {
-            savePosition();
-            try {
-                advance();
-                
-                if (!check(TokenType.DELIMITER_RIGHT_PAREN)) {
-                    do {
-                        Token paramToken = consume(TokenType.IDENTIFIER, "Expected parameter name");
-                        parameters.add(new LambdaNode.Parameter(paramToken.getText(), Object.class));
-                    } while (match(TokenType.DELIMITER_COMMA));
-                }
-                
-                consume(TokenType.DELIMITER_RIGHT_PAREN, "Expected ')' after lambda parameters");
-                consume(TokenType.DELIMITER_ARROW, "Expected '->' after lambda parameters");
-                releasePosition();
-            } catch (ParseException e) {
-                restorePosition();
+            int savedPos = position;
+            advance();
+            
+            if (!check(TokenType.DELIMITER_RIGHT_PAREN)) {
+                do {
+                    if (!check(TokenType.IDENTIFIER)) {
+                        position = savedPos;
+                        return null;
+                    }
+                    Token paramToken = advance();
+                    parameters.add(new LambdaNode.Parameter(paramToken.getText(), Object.class));
+                } while (match(TokenType.DELIMITER_COMMA));
+            }
+            
+            if (!check(TokenType.DELIMITER_RIGHT_PAREN)) {
+                position = savedPos;
                 return null;
             }
+            advance();
+            
+            if (!check(TokenType.DELIMITER_ARROW)) {
+                position = savedPos;
+                return null;
+            }
+            advance();
         } else {
             return null;
         }
@@ -2498,6 +2574,14 @@ public class Parser {
         
         if (match(TokenType.DELIMITER_LEFT_BRACE)) {
             return parseLambdaBlock();
+        }
+        
+        if (check(TokenType.KEYWORD_INT) || check(TokenType.KEYWORD_LONG) ||
+            check(TokenType.KEYWORD_FLOAT) || check(TokenType.KEYWORD_DOUBLE) ||
+            check(TokenType.KEYWORD_BOOLEAN) || check(TokenType.KEYWORD_CHAR) ||
+            check(TokenType.KEYWORD_BYTE) || check(TokenType.KEYWORD_SHORT) ||
+            check(TokenType.KEYWORD_AUTO)) {
+            return parseVariableDeclaration();
         }
         
         ASTNode expression = parseExpression();

@@ -2,14 +2,17 @@ package com.justnothing.testmodule.command.functions.script_new.evaluator;
 
 import com.justnothing.testmodule.command.functions.script_new.ast.ASTNode;
 import com.justnothing.testmodule.command.functions.script_new.ast.GenericType;
+import com.justnothing.testmodule.command.functions.script_new.ast.SourceLocation;
 import com.justnothing.testmodule.command.functions.script_new.ast.nodes.*;
 import com.justnothing.testmodule.command.functions.script_new.exception.ErrorCode;
 import com.justnothing.testmodule.command.functions.script_new.exception.EvaluationException;
+import com.justnothing.testmodule.command.functions.script_new.exception.ReturnException;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Constructor;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -63,6 +66,10 @@ public class ASTEvaluator {
         
         if (node instanceof MethodCallNode) {
             return evaluateMethodCall((MethodCallNode) node, context);
+        }
+        
+        if (node instanceof FunctionCallNode) {
+            return evaluateFunctionCall((FunctionCallNode) node, context);
         }
         
         if (node instanceof FieldAccessNode) {
@@ -125,6 +132,10 @@ public class ASTEvaluator {
             return evaluateLambda((LambdaNode) node, context);
         }
         
+        if (node instanceof ReturnNode) {
+            return evaluateReturn((ReturnNode) node, context);
+        }
+        
         if (node instanceof MethodReferenceNode) {
             return evaluateMethodReference((MethodReferenceNode) node, context);
         }
@@ -166,13 +177,20 @@ public class ASTEvaluator {
     
     private static Object evaluateBlock(BlockNode node, ExecutionContext context) throws EvaluationException {
         Object result = null;
-        context.getScopeManager().enterScope();
+        boolean isGlobalScope = context.getScopeManager().getCurrentLevel() == 1;
+        
+        if (!isGlobalScope) {
+            context.getScopeManager().enterScope();
+        }
+        
         try {
             for (ASTNode stmt : node.getStatements()) {
                 result = evaluate(stmt, context);
             }
         } finally {
-            context.getScopeManager().exitScope();
+            if (!isGlobalScope) {
+                context.getScopeManager().exitScope();
+            }
         }
         return result;
     }
@@ -183,11 +201,11 @@ public class ASTEvaluator {
     
     private static Object evaluateVariable(VariableNode node, ExecutionContext context) throws EvaluationException {
         String varName = node.getName();
-        Object value = context.getScopeManager().getVariable(varName);
-        if (value == null && !context.getScopeManager().hasVariable(varName)) {
+        ScopeManager.Variable variable = context.getScopeManager().getVariable(varName);
+        if (variable == null) {
             throw new EvaluationException("Undefined variable: " + varName, node.getLocation(), ErrorCode.EVAL_UNDEFINED_VARIABLE);
         }
-        return value;
+        return variable.getValue();
     }
     
     private static Object evaluateBinaryOp(BinaryOpNode node, ExecutionContext context) throws EvaluationException {
@@ -198,30 +216,54 @@ public class ASTEvaluator {
         switch (op) {
             case ADD:
                 if (left instanceof String || right instanceof String) {
-                    return String.valueOf(left) + String.valueOf(right);
+                    // 拼接字符串
+                    return formatValue(left) + formatValue(right);
                 }
                 if (left instanceof Number && right instanceof Number) {
-                    return ((Number) left).doubleValue() + ((Number) right).doubleValue();
+                    // 单纯的数字运算
+                    return addNumbers((Number) left, (Number) right);
+                }
+                if (left instanceof Object[] && right instanceof Object[]) {
+                    // 合并数组
+                    Object[] leftArr = (Object[]) left;
+                    Object[] rightArr = (Object[]) right;
+                    Object[] result = new Object[leftArr.length + rightArr.length];
+                    System.arraycopy(leftArr, 0, result, 0, leftArr.length);
+                    System.arraycopy(rightArr, 0, result, leftArr.length, rightArr.length);
+                    return result;
                 }
                 break;
             case SUBTRACT:
                 if (left instanceof Number && right instanceof Number) {
-                    return ((Number) left).doubleValue() - ((Number) right).doubleValue();
+                    return subtractNumbers((Number) left, (Number) right);
                 }
                 break;
             case MULTIPLY:
                 if (left instanceof Number && right instanceof Number) {
-                    return ((Number) left).doubleValue() * ((Number) right).doubleValue();
+                    // 单纯的乘法
+                    return multiplyNumbers((Number) left, (Number) right);
+                } else if (left instanceof String && right instanceof Number) {
+                    // 字符串重复
+                    return ((String) left).repeat((int) right);
+                } else if (left instanceof Object[] && right instanceof Number) {
+                    // 数组重复
+                    Object[] newArr = new Object[(int) (Array.getLength(left) * (int) right)];
+                    for (int i = 0; i < (int) right; i++) {
+                        for (int j = 0; j < Array.getLength(left); j++) {
+                            newArr[i * Array.getLength(left) + j] = Array.get(left, j);
+                        }
+                    }
+                    return newArr;
                 }
                 break;
             case DIVIDE:
                 if (left instanceof Number && right instanceof Number) {
-                    return ((Number) left).doubleValue() / ((Number) right).doubleValue();
+                    return divideNumbers((Number) left, (Number) right);
                 }
                 break;
             case MODULO:
                 if (left instanceof Number && right instanceof Number) {
-                    return ((Number) left).doubleValue() % ((Number) right).doubleValue();
+                    return moduloNumbers((Number) left, (Number) right);
                 }
                 break;
             case EQUAL:
@@ -230,28 +272,58 @@ public class ASTEvaluator {
                 return left == null ? right != null : !left.equals(right);
             case LESS_THAN:
                 if (left instanceof Number && right instanceof Number) {
-                    return ((Number) left).doubleValue() < ((Number) right).doubleValue();
+                    return compareNumbers((Number) left, (Number) right) < 0;
                 }
                 break;
             case LESS_THAN_OR_EQUAL:
                 if (left instanceof Number && right instanceof Number) {
-                    return ((Number) left).doubleValue() <= ((Number) right).doubleValue();
+                    return compareNumbers((Number) left, (Number) right) <= 0;
                 }
                 break;
             case GREATER_THAN:
                 if (left instanceof Number && right instanceof Number) {
-                    return ((Number) left).doubleValue() > ((Number) right).doubleValue();
+                    return compareNumbers((Number) left, (Number) right) > 0;
                 }
                 break;
             case GREATER_THAN_OR_EQUAL:
                 if (left instanceof Number && right instanceof Number) {
-                    return ((Number) left).doubleValue() >= ((Number) right).doubleValue();
+                    return compareNumbers((Number) left, (Number) right) >= 0;
                 }
                 break;
             case LOGICAL_AND:
                 return toBoolean(left) && toBoolean(right);
             case LOGICAL_OR:
                 return toBoolean(left) || toBoolean(right);
+            case BITWISE_AND:
+                if (left instanceof Number && right instanceof Number) {
+                    return ((Number) left).longValue() & ((Number) right).longValue();
+                }
+                break;
+            case BITWISE_OR:
+                if (left instanceof Number && right instanceof Number) {
+                    return ((Number) left).longValue() | ((Number) right).longValue();
+                }
+                break;
+            case BITWISE_XOR:
+                if (left instanceof Number && right instanceof Number) {
+                    return ((Number) left).longValue() ^ ((Number) right).longValue();
+                }
+                break;
+            case LEFT_SHIFT:
+                if (left instanceof Number && right instanceof Number) {
+                    return ((Number) left).longValue() << ((Number) right).intValue();
+                }
+                break;
+            case RIGHT_SHIFT:
+                if (left instanceof Number && right instanceof Number) {
+                    return ((Number) left).longValue() >> ((Number) right).intValue();
+                }
+                break;
+            case UNSIGNED_RIGHT_SHIFT:
+                if (left instanceof Number && right instanceof Number) {
+                    return ((Number) left).longValue() >>> ((Number) right).intValue();
+                }
+                break;
             default:
                 break;
         }
@@ -265,23 +337,107 @@ public class ASTEvaluator {
         );
     }
     
+    private static boolean isIntegerType(Number n) {
+        return n instanceof Integer || n instanceof Long || n instanceof Short || n instanceof Byte;
+    }
+    
+    private static boolean isFloatingType(Number n) {
+        return n instanceof Double || n instanceof Float;
+    }
+    
+    private static Number addNumbers(Number a, Number b) {
+        if (isFloatingType(a) || isFloatingType(b)) {
+            return a.doubleValue() + b.doubleValue();
+        }
+        if (a instanceof Long || b instanceof Long) {
+            return a.longValue() + b.longValue();
+        }
+        return a.intValue() + b.intValue();
+    }
+    
+    private static Number subtractNumbers(Number a, Number b) {
+        if (isFloatingType(a) || isFloatingType(b)) {
+            return a.doubleValue() - b.doubleValue();
+        }
+        if (a instanceof Long || b instanceof Long) {
+            return a.longValue() - b.longValue();
+        }
+        return a.intValue() - b.intValue();
+    }
+    
+    private static Number multiplyNumbers(Number a, Number b) {
+        if (isFloatingType(a) || isFloatingType(b)) {
+            return a.doubleValue() * b.doubleValue();
+        }
+        if (a instanceof Long || b instanceof Long) {
+            return a.longValue() * b.longValue();
+        }
+        return a.intValue() * b.intValue();
+    }
+    
+    private static Number divideNumbers(Number a, Number b) {
+        if (isFloatingType(a) || isFloatingType(b)) {
+            return a.doubleValue() / b.doubleValue();
+        }
+        if (a instanceof Long || b instanceof Long) {
+            return a.longValue() / b.longValue();
+        }
+        return a.intValue() / b.intValue();
+    }
+    
+    private static Number moduloNumbers(Number a, Number b) {
+        if (isFloatingType(a) || isFloatingType(b)) {
+            return a.doubleValue() % b.doubleValue();
+        }
+        if (a instanceof Long || b instanceof Long) {
+            return a.longValue() % b.longValue();
+        }
+        return a.intValue() % b.intValue();
+    }
+    
+    private static int compareNumbers(Number a, Number b) {
+        return Double.compare(a.doubleValue(), b.doubleValue());
+    }
+    
     private static Object evaluateUnaryOp(UnaryOpNode node, ExecutionContext context) throws EvaluationException {
-        Object operand = evaluate(node.getOperand(), context);
         UnaryOpNode.Operator op = node.getOperator();
         
         switch (op) {
-            case NEGATIVE:
+            case NEGATIVE: {
+                Object operand = evaluate(node.getOperand(), context);
                 if (operand instanceof Number) {
-                    return -((Number) operand).doubleValue();
+                    Number n = (Number) operand;
+                    if (isFloatingType(n)) {
+                        return -n.doubleValue();
+                    }
+                    if (n instanceof Long) {
+                        return -n.longValue();
+                    }
+                    return -n.intValue();
                 }
                 break;
-            case LOGICAL_NOT:
+            }
+            case LOGICAL_NOT: {
+                Object operand = evaluate(node.getOperand(), context);
                 return !toBoolean(operand);
-            case BITWISE_NOT:
+            }
+            case BITWISE_NOT: {
+                Object operand = evaluate(node.getOperand(), context);
                 if (operand instanceof Number) {
-                    return ~((Number) operand).intValue();
+                    Number n = (Number) operand;
+                    if (n instanceof Long) {
+                        return ~n.longValue();
+                    }
+                    return ~n.intValue();
                 }
                 break;
+            }
+            case PRE_INCREMENT:
+            case PRE_DECREMENT:
+            case POST_INCREMENT:
+            case POST_DECREMENT: {
+                return evaluateIncrementDecrement(node, context);
+            }
             default:
                 break;
         }
@@ -293,22 +449,203 @@ public class ASTEvaluator {
         );
     }
     
+    private static Object evaluateIncrementDecrement(UnaryOpNode node, ExecutionContext context) throws EvaluationException {
+        UnaryOpNode.Operator op = node.getOperator();
+        ASTNode operand = node.getOperand();
+        
+        if (!(operand instanceof VariableNode)) {
+            throw new EvaluationException(
+                "Increment/decrement operator requires a variable",
+                node.getLocation(),
+                ErrorCode.EVAL_INVALID_OPERATION
+            );
+        }
+        
+        String varName = ((VariableNode) operand).getName();
+        Object currentValue = context.getScopeManager().getVariable(varName).getValue();
+        
+        if (!(currentValue instanceof Number)) {
+            throw new EvaluationException(
+                "Increment/decrement operator requires a numeric variable",
+                node.getLocation(),
+                ErrorCode.EVAL_INVALID_OPERATION
+            );
+        }
+        
+        Number numValue = (Number) currentValue;
+        Number newValue;
+        
+        if (op == UnaryOpNode.Operator.PRE_INCREMENT || op == UnaryOpNode.Operator.POST_INCREMENT) {
+            if (currentValue instanceof Integer) {
+                newValue = numValue.intValue() + 1;
+            } else if (currentValue instanceof Long) {
+                newValue = numValue.longValue() + 1;
+            } else if (currentValue instanceof Double) {
+                newValue = numValue.doubleValue() + 1;
+            } else if (currentValue instanceof Float) {
+                newValue = numValue.floatValue() + 1;
+            } else {
+                newValue = numValue.intValue() + 1;
+            }
+        } else {
+            if (currentValue instanceof Integer) {
+                newValue = numValue.intValue() - 1;
+            } else if (currentValue instanceof Long) {
+                newValue = numValue.longValue() - 1;
+            } else if (currentValue instanceof Double) {
+                newValue = numValue.doubleValue() - 1;
+            } else if (currentValue instanceof Float) {
+                newValue = numValue.floatValue() - 1;
+            } else {
+                newValue = numValue.intValue() - 1;
+            }
+        }
+        
+        context.getScopeManager().setVariable(varName, newValue);
+        
+        if (op == UnaryOpNode.Operator.PRE_INCREMENT || op == UnaryOpNode.Operator.PRE_DECREMENT) {
+            return newValue;
+        } else {
+            return currentValue;
+        }
+    }
+    
     private static Object evaluateAssignment(AssignmentNode node, ExecutionContext context) throws EvaluationException {
-        Object value = evaluate(node.getValue(), context);
+        ASTNode valueNode = node.getValue();
+        
+        if (node.isDeclaration() && valueNode instanceof LambdaNode && node.getDeclaredClass() != null) {
+            Class<?> declaredClass = node.getDeclaredClass();
+            if (declaredClass.isInterface()) {
+                ((LambdaNode) valueNode).setFunctionalInterfaceType(declaredClass);
+            }
+        }
+        
+        Object value;
+        if (valueNode != null) {
+            if (node.isDeclaration() && valueNode instanceof LambdaNode) {
+                Class<?> declaredType = node.getDeclaredClass() != null ? node.getDeclaredClass() : Object.class;
+                context.getScopeManager().declareVariable(
+                    node.getVariableName(), 
+                    declaredType,
+                    null,
+                    false
+                );
+                value = evaluate(valueNode, context);
+                context.getScopeManager().setVariable(node.getVariableName(), value);
+                return value;
+            }
+            value = evaluate(valueNode, context);
+        } else if (node.isDeclaration()) {
+            value = getDefaultValue(node.getDeclaredClass());
+        } else {
+            value = null;
+        }
         
         if (node.isDeclaration()) {
-            Class<?> type = node.getDeclaredClass() != null ? node.getDeclaredClass() : Object.class;
+            Class<?> declaredType = node.getDeclaredClass() != null ? node.getDeclaredClass() : Object.class;
+            value = convertValue(value, declaredType, node.getLocation());
+            
             context.getScopeManager().declareVariable(
                 node.getVariableName(), 
-                type,
+                declaredType,
                 value, 
                 false
             );
         } else {
+            ScopeManager.Variable variable = context.getScopeManager().getVariable(node.getVariableName());
+            if (variable != null && variable.getType() != null) {
+                value = convertValue(value, variable.getType(), node.getLocation());
+            }
             context.getScopeManager().setVariable(node.getVariableName(), value);
         }
         
         return value;
+    }
+    
+    private static Object convertValue(Object value, Class<?> targetType, SourceLocation location) throws EvaluationException {
+        if (value == null) {
+            if (targetType.isPrimitive()) {
+                throw new EvaluationException(
+                    "Cannot assign null to primitive type: " + targetType.getName(),
+                    location,
+                    ErrorCode.EVAL_TYPE_MISMATCH
+                );
+            }
+            return null;
+        }
+        
+        if (targetType == null || targetType == Object.class) {
+            return value;
+        }
+        
+        Class<?> sourceType = value.getClass();
+        
+        if (targetType.isAssignableFrom(sourceType)) {
+            return value;
+        }
+        
+        if (targetType.isPrimitive() && sourceType.isAssignableFrom(getWrapperType(targetType))) {
+            return value;
+        }
+        
+        if (value instanceof Number) {
+            Number num = (Number) value;
+            
+            if (targetType == int.class || targetType == Integer.class) {
+                return num.intValue();
+            }
+            if (targetType == long.class || targetType == Long.class) {
+                return num.longValue();
+            }
+            if (targetType == float.class || targetType == Float.class) {
+                return num.floatValue();
+            }
+            if (targetType == double.class || targetType == Double.class) {
+                return num.doubleValue();
+            }
+            if (targetType == byte.class || targetType == Byte.class) {
+                return num.byteValue();
+            }
+            if (targetType == short.class || targetType == Short.class) {
+                return num.shortValue();
+            }
+        }
+        
+        if (targetType == boolean.class || targetType == Boolean.class) {
+            if (value instanceof Boolean) {
+                return value;
+            }
+        }
+        
+        if (targetType == char.class || targetType == Character.class) {
+            if (value instanceof Character) {
+                return value;
+            }
+            if (value instanceof Number) {
+                return (char) ((Number) value).intValue();
+            }
+        }
+        
+        throw new EvaluationException(
+            "Cannot convert " + sourceType.getName() + " to " + targetType.getName(),
+            location,
+            ErrorCode.EVAL_TYPE_MISMATCH
+        );
+    }
+    
+    private static Object getDefaultValue(Class<?> type) {
+        if (type == null) return null;
+        
+        if (type == int.class) return 0;
+        if (type == long.class) return 0L;
+        if (type == float.class) return 0.0f;
+        if (type == double.class) return 0.0;
+        if (type == boolean.class) return false;
+        if (type == char.class) return '\0';
+        if (type == byte.class) return (byte) 0;
+        if (type == short.class) return (short) 0;
+        
+        return null;
     }
     
     private static Object evaluateFieldAssignment(FieldAssignmentNode node, ExecutionContext context) throws EvaluationException {
@@ -339,8 +676,38 @@ public class ASTEvaluator {
         return value;
     }
     
+    private static Object evaluateFunctionCall(FunctionCallNode node, ExecutionContext context) throws EvaluationException {
+        String functionName = node.getFunctionName();
+        
+        Object[] args = new Object[node.getArguments().size()];
+        for (int i = 0; i < args.length; i++) {
+            args[i] = evaluate(node.getArguments().get(i), context);
+        }
+        
+        if (context.hasBuiltin(functionName)) {
+            List<Object> argList = new ArrayList<>();
+            for (Object arg : args) {
+                argList.add(arg);
+            }
+            return context.callBuiltin(functionName, argList);
+        }
+        
+        if (context.getScopeManager().hasVariable(functionName)) {
+            Object func = context.getScopeManager().getVariable(functionName).getValue();
+            if (func instanceof Lambda) {
+                return ((Lambda) func).invoke(args);
+            }
+        }
+        
+        throw new EvaluationException(
+            "Unknown function: " + functionName,
+            node.getLocation(),
+            ErrorCode.EVAL_UNDEFINED_VARIABLE
+        );
+    }
+    
     private static Object evaluateMethodCall(MethodCallNode node, ExecutionContext context) throws EvaluationException {
-        Object target = node.getTarget() != null ? evaluate(node.getTarget(), context) : null;
+        Object target = evaluate(node.getTarget(), context);
         String methodName = node.getMethodName();
         
         Object[] args = new Object[node.getArguments().size()];
@@ -349,22 +716,32 @@ public class ASTEvaluator {
         }
         
         try {
-            if (target == null) {
-                throw new EvaluationException("Cannot call method on null target", node.getLocation(), ErrorCode.EVAL_NULL_POINTER);
+            if (target instanceof Lambda) {
+                return ((Lambda) target).invoke(args);
             }
             
             if (target instanceof Class) {
-                Constructor<?> constructor = findConstructor((Class<?>) target, args);
-                if (constructor != null) {
-                    constructor.setAccessible(true);
-                    return constructor.newInstance(args);
+                Class<?> targetClass = (Class<?>) target;
+                
+                Method method = findMethod(targetClass, methodName, args);
+                if (method != null) {
+                    method.setAccessible(true);
+                    Object[] invokeArgs = prepareInvokeArguments(method, args);
+                    return method.invoke(null, invokeArgs);
                 }
+                
+                throw new EvaluationException(
+                    "Method not found: " + methodName,
+                    node.getLocation(),
+                    ErrorCode.METHOD_NOT_FOUND
+                );
             }
             
             Method method = findMethod(target.getClass(), methodName, args);
             if (method != null) {
                 method.setAccessible(true);
-                return method.invoke(target, args);
+                Object[] invokeArgs = prepareInvokeArguments(method, args);
+                return method.invoke(target, invokeArgs);
             }
             
             throw new EvaluationException(
@@ -383,11 +760,65 @@ public class ASTEvaluator {
         }
     }
     
+    private static Object[] prepareInvokeArguments(Method method, Object[] args) {
+        Class<?>[] paramTypes = method.getParameterTypes();
+        
+        if (!method.isVarArgs() || paramTypes.length == 0) {
+            return args;
+        }
+        
+        int fixedParamCount = paramTypes.length - 1;
+        Class<?> varArgsType = paramTypes[fixedParamCount];
+        Class<?> varArgsComponentType = varArgsType.getComponentType();
+        
+        if (args.length < fixedParamCount) {
+            return args;
+        }
+        
+        Object[] invokeArgs = new Object[paramTypes.length];
+        
+        for (int i = 0; i < fixedParamCount; i++) {
+            invokeArgs[i] = args[i];
+        }
+        
+        int varArgCount = args.length - fixedParamCount;
+        
+        if (varArgCount == 1) {
+            Object lastArg = args[fixedParamCount];
+            
+            if (lastArg != null && lastArg.getClass().isArray() &&
+                    varArgsComponentType.isAssignableFrom(lastArg.getClass().getComponentType())) {
+                invokeArgs[fixedParamCount] = lastArg;
+            } else {
+                Object varArgArray = Array.newInstance(varArgsComponentType, 1);
+                Array.set(varArgArray, 0, lastArg);
+                invokeArgs[fixedParamCount] = varArgArray;
+            }
+        } else if (varArgCount == 0) {
+            invokeArgs[fixedParamCount] = Array.newInstance(varArgsComponentType, 0);
+        } else {
+            Object varArgArray = Array.newInstance(varArgsComponentType, varArgCount);
+            for (int i = 0; i < varArgCount; i++) {
+                Array.set(varArgArray, i, args[fixedParamCount + i]);
+            }
+            invokeArgs[fixedParamCount] = varArgArray;
+        }
+        
+        return invokeArgs;
+    }
+    
     private static Object evaluateFieldAccess(FieldAccessNode node, ExecutionContext context) throws EvaluationException {
         Object target = evaluate(node.getTarget(), context);
         
         try {
-            Field field = target.getClass().getDeclaredField(node.getFieldName());
+            Class<?> targetClass;
+            if (target instanceof Class) {
+                targetClass = (Class<?>) target;
+            } else {
+                targetClass = target.getClass();
+            }
+            
+            Field field = targetClass.getDeclaredField(node.getFieldName());
             field.setAccessible(true);
             return field.get(target);
         } catch (Exception e) {
@@ -447,6 +878,12 @@ public class ASTEvaluator {
             }
             
             Class<?> clazz = type.getRawType();
+            
+            String originalTypeName = type.getOriginalTypeName();
+            if (originalTypeName != null && context.hasCustomClass(originalTypeName)) {
+                clazz = context.getCustomClass(originalTypeName);
+            }
+            
             Constructor<?> constructor = findConstructor(clazz, argTypes);
             return constructor.newInstance(args);
         } catch (EvaluationException e) {
@@ -659,26 +1096,23 @@ public class ASTEvaluator {
         context.incrementLoopDepth();
         
         try {
+            context.getScopeManager().declareVariable(
+                node.getItemName(), 
+                Object.class,
+                null, 
+                false
+            );
+            
             if (iterable instanceof Iterable) {
                 for (Object item : (Iterable<?>) iterable) {
-                    context.getScopeManager().declareVariable(
-                        node.getItemName(), 
-                        Object.class,
-                        item, 
-                        false
-                    );
+                    context.getScopeManager().setVariable(node.getItemName(), item);
                     evaluate(node.getBody(), context);
                 }
             } else if (iterable != null && iterable.getClass().isArray()) {
                 int length = Array.getLength(iterable);
                 for (int i = 0; i < length; i++) {
                     Object item = Array.get(iterable, i);
-                    context.getScopeManager().declareVariable(
-                        node.getItemName(), 
-                        Object.class,
-                        item, 
-                        false
-                    );
+                    context.getScopeManager().setVariable(node.getItemName(), item);
                     evaluate(node.getBody(), context);
                 }
             }
@@ -703,8 +1137,18 @@ public class ASTEvaluator {
     private static Object evaluateInstanceof(InstanceofNode node, ExecutionContext context) throws EvaluationException {
         Object value = evaluate(node.getExpression(), context);
         
+        if (value == null) {
+            return false;
+        }
+        
         try {
             Class<?> type = resolveType(node.getTypeName(), context);
+            
+            if (type.isPrimitive()) {
+                Class<?> wrapperType = getWrapperType(type);
+                return wrapperType.isInstance(value);
+            }
+            
             return type.isInstance(value);
         } catch (Exception e) {
             throw new EvaluationException(
@@ -713,6 +1157,18 @@ public class ASTEvaluator {
                 ErrorCode.EVAL_TYPE_MISMATCH
             );
         }
+    }
+    
+    private static Class<?> getWrapperType(Class<?> primitiveType) {
+        if (primitiveType == int.class) return Integer.class;
+        if (primitiveType == long.class) return Long.class;
+        if (primitiveType == double.class) return Double.class;
+        if (primitiveType == float.class) return Float.class;
+        if (primitiveType == boolean.class) return Boolean.class;
+        if (primitiveType == char.class) return Character.class;
+        if (primitiveType == byte.class) return Byte.class;
+        if (primitiveType == short.class) return Short.class;
+        return primitiveType;
     }
     
     private static Object evaluateCast(CastNode node, ExecutionContext context) throws EvaluationException {
@@ -741,7 +1197,14 @@ public class ASTEvaluator {
     }
     
     private static Object evaluateLambda(LambdaNode node, ExecutionContext context) {
-        return node;
+        Lambda func = new Lambda(node, context);
+        
+        Class<?> targetInterface = node.getFunctionalInterfaceType();
+        if (targetInterface != null) {
+            return func.asInterface(targetInterface);
+        }
+        
+        return func;
     }
     
     private static Object evaluateMethodReference(MethodReferenceNode node, ExecutionContext context) {
@@ -749,17 +1212,33 @@ public class ASTEvaluator {
     }
     
     private static Object evaluateTry(TryNode node, ExecutionContext context) throws EvaluationException {
+        List<Object> resources = new ArrayList<>();
+        List<Throwable> suppressedExceptions = new ArrayList<>();
+        
         try {
+            for (ResourceDeclaration resource : node.getResources()) {
+                Object value = evaluate(resource.getInitializer(), context);
+                resources.add(value);
+                context.getScopeManager().declareVariable(
+                    resource.getVariableName(),
+                    resource.getType() != null ? resource.getType() : Object.class,
+                    value,
+                    false
+                );
+            }
+            
             return evaluate(node.getTryBlock(), context);
-        } catch (Exception e) {
+        } catch (EvaluationException e) {
+            Throwable actualException = e.getCause() != null ? e.getCause() : e;
+            
             for (CatchClause catchClause : node.getCatchClauses()) {
                 for (Class<?> exceptionType : catchClause.getExceptionTypes()) {
-                    if (exceptionType.isInstance(e)) {
+                    if (exceptionType.isInstance(actualException)) {
                         context.getScopeManager().enterScope();
                         context.getScopeManager().declareVariable(
                             catchClause.getVariableName(),
                             exceptionType,
-                            e,
+                            actualException,
                             false
                         );
                         try {
@@ -772,6 +1251,22 @@ public class ASTEvaluator {
             }
             throw e;
         } finally {
+            for (int i = resources.size() - 1; i >= 0; i--) {
+                Object resource = resources.get(i);
+                if (resource != null) {
+                    try {
+                        if (resource instanceof AutoCloseable) {
+                            ((AutoCloseable) resource).close();
+                        } else {
+                            Method closeMethod = resource.getClass().getMethod("close");
+                            closeMethod.invoke(resource);
+                        }
+                    } catch (Exception closeException) {
+                        suppressedExceptions.add(closeException);
+                    }
+                }
+            }
+            
             if (node.getFinallyBlock() != null) {
                 evaluate(node.getFinallyBlock(), context);
             }
@@ -782,11 +1277,13 @@ public class ASTEvaluator {
         Object exception = evaluate(node.getExpression(), context);
         
         if (exception instanceof Throwable) {
+            Throwable t = (Throwable) exception;
+            String message = t.getClass().getSimpleName() + (t.getMessage() != null ? ": " + t.getMessage() : "");
             throw new EvaluationException(
-                ((Throwable) exception).getMessage(), 
+                message, 
                 node.getLocation(), 
-                ErrorCode.EVAL_INVALID_OPERATION,
-                (Throwable) exception
+                ErrorCode.EVAL_EXCEPTION_THROWN,
+                t
             );
         }
         
@@ -823,14 +1320,16 @@ public class ASTEvaluator {
     
     private static Object evaluateDelete(DeleteNode node, ExecutionContext context) throws EvaluationException {
         if (node.isDeleteAll()) {
-            context.getScopeManager().exitScope();
-            context.getScopeManager().enterScope();
+            context.getScopeManager().clearCurrentScope();
         } else {
-            throw new EvaluationException(
-                "Delete single variable not supported",
-                node.getLocation(),
-                ErrorCode.EVAL_INVALID_OPERATION
-            );
+            String varName = node.getVariableName();
+            if (!context.getScopeManager().deleteVariable(varName)) {
+                throw new EvaluationException(
+                    "Variable not found: " + varName,
+                    node.getLocation(),
+                    ErrorCode.SCOPE_VARIABLE_NOT_FOUND
+                );
+            }
         }
         return null;
     }
@@ -840,27 +1339,170 @@ public class ASTEvaluator {
         Class<?> generatedClass = generator.generateClass(node);
         
         String className = node.getClassName();
+        context.registerCustomClass(className, generatedClass);
         context.getScopeManager().declareVariable(className, Class.class, generatedClass, false);
         
         return generatedClass;
     }
     
     private static Method findMethod(Class<?> clazz, String name, Object[] args) {
+        List<Method> candidates = new ArrayList<>();
+        
         for (Method method : clazz.getMethods()) {
-            if (method.getName().equals(name) && 
-                method.getParameterCount() == args.length) {
-                return method;
+            if (method.getName().equals(name)) {
+                candidates.add(method);
             }
         }
         
+        Method bestMatch = null;
+        int bestScore = -1;
+        Method varArgsCandidate = null;
+        
+        for (Method method : candidates) {
+            Class<?>[] paramTypes = method.getParameterTypes();
+            boolean isVarArgs = method.isVarArgs();
+            
+            if (isApplicableArgs(paramTypes, args, isVarArgs)) {
+                if (!isVarArgs && paramTypes.length == args.length) {
+                    int matchScore = computeMatchScore(paramTypes, args);
+                    
+                    if (matchScore > bestScore) {
+                        bestScore = matchScore;
+                        bestMatch = method;
+                    }
+                }
+                
+                if (isVarArgs && varArgsCandidate == null) {
+                    varArgsCandidate = method;
+                }
+            }
+        }
+        
+        if (bestMatch != null) {
+            return bestMatch;
+        }
+        
+        if (varArgsCandidate != null) {
+            return varArgsCandidate;
+        }
+        
         for (Method method : clazz.getDeclaredMethods()) {
-            if (method.getName().equals(name) && 
-                method.getParameterCount() == args.length) {
-                return method;
+            if (method.getName().equals(name)) {
+                Class<?>[] paramTypes = method.getParameterTypes();
+                boolean isVarArgs = method.isVarArgs();
+                
+                if (isApplicableArgs(paramTypes, args, isVarArgs)) {
+                    return method;
+                }
             }
         }
         
         return null;
+    }
+    
+    private static int computeMatchScore(Class<?>[] paramTypes, Object[] args) {
+        int score = 0;
+        for (int i = 0; i < paramTypes.length; i++) {
+            if (args[i] == null) {
+                if (paramTypes[i].isPrimitive()) {
+                    return 0;
+                }
+                score += 1;
+            } else {
+                Class<?> argType = args[i].getClass();
+                
+                if (paramTypes[i].equals(argType)) {
+                    score += 3;
+                } else if (paramTypes[i].isPrimitive() && isExactWrapperFor(argType, paramTypes[i])) {
+                    score += 2;
+                } else if (paramTypes[i].isAssignableFrom(argType)) {
+                    score += 1;
+                } else if (paramTypes[i].isPrimitive() && isWrapperFor(argType, paramTypes[i])) {
+                    score += 1;
+                } else {
+                    return 0;
+                }
+            }
+        }
+        return score;
+    }
+    
+    private static boolean isExactWrapperFor(Class<?> wrapperType, Class<?> primitiveType) {
+        if (primitiveType == int.class) return wrapperType == Integer.class;
+        if (primitiveType == long.class) return wrapperType == Long.class;
+        if (primitiveType == double.class) return wrapperType == Double.class;
+        if (primitiveType == float.class) return wrapperType == Float.class;
+        if (primitiveType == boolean.class) return wrapperType == Boolean.class;
+        if (primitiveType == char.class) return wrapperType == Character.class;
+        if (primitiveType == byte.class) return wrapperType == Byte.class;
+        if (primitiveType == short.class) return wrapperType == Short.class;
+        return false;
+    }
+    
+    private static boolean isApplicableArgs(Class<?>[] paramTypes, Object[] args, boolean isVarArgs) {
+        int paramCount = paramTypes.length;
+        int argCount = args.length;
+        
+        if (isVarArgs) {
+            if (argCount < paramCount - 1) {
+                return false;
+            }
+            
+            for (int i = 0; i < paramCount - 1; i++) {
+                if (!isAssignable(paramTypes[i], args[i])) {
+                    return false;
+                }
+            }
+            
+            if (argCount >= paramCount) {
+                Class<?> varArgType = paramTypes[paramCount - 1].getComponentType();
+                for (int i = paramCount - 1; i < argCount; i++) {
+                    if (!isAssignable(varArgType, args[i])) {
+                        return false;
+                    }
+                }
+            }
+            
+            return true;
+        } else {
+            if (paramCount != argCount) {
+                return false;
+            }
+            
+            for (int i = 0; i < paramCount; i++) {
+                if (!isAssignable(paramTypes[i], args[i])) {
+                    return false;
+                }
+            }
+            
+            return true;
+        }
+    }
+    
+    private static boolean isAssignable(Class<?> targetType, Object arg) {
+        if (arg == null) {
+            return !targetType.isPrimitive();
+        }
+        
+        Class<?> argType = arg.getClass();
+        
+        if (targetType.isPrimitive()) {
+            return isWrapperFor(argType, targetType);
+        }
+        
+        return targetType.isAssignableFrom(argType);
+    }
+    
+    private static boolean isWrapperFor(Class<?> wrapperType, Class<?> primitiveType) {
+        if (primitiveType == int.class) return wrapperType == Integer.class;
+        if (primitiveType == long.class) return wrapperType == Long.class || wrapperType == Integer.class;
+        if (primitiveType == double.class) return wrapperType == Double.class || wrapperType == Float.class || wrapperType == Long.class || wrapperType == Integer.class;
+        if (primitiveType == float.class) return wrapperType == Float.class || wrapperType == Integer.class;
+        if (primitiveType == boolean.class) return wrapperType == Boolean.class;
+        if (primitiveType == char.class) return wrapperType == Character.class;
+        if (primitiveType == byte.class) return wrapperType == Byte.class;
+        if (primitiveType == short.class) return wrapperType == Short.class || wrapperType == Byte.class;
+        return false;
     }
     
     private static Constructor<?> findConstructor(Class<?> clazz, Object[] args) {
@@ -975,5 +1617,30 @@ public class ASTEvaluator {
         if (value == null) return 0;
         if (value instanceof Number) return ((Number) value).shortValue();
         return 0;
+    }
+    
+    private static Object evaluateReturn(ReturnNode node, ExecutionContext context) throws EvaluationException {
+        Object value = null;
+        if (node.getValue() != null) {
+            value = evaluate(node.getValue(), context);
+        }
+        throw new ReturnException(value);
+    }
+    
+    private static String formatValue(Object value) {
+        if (value == null) {
+            return "null";
+        }
+        if (value.getClass().isArray()) {
+            StringBuilder sb = new StringBuilder("[");
+            int length = Array.getLength(value);
+            for (int i = 0; i < length; i++) {
+                if (i > 0) sb.append(", ");
+                sb.append(formatValue(Array.get(value, i)));
+            }
+            sb.append("]");
+            return sb.toString();
+        }
+        return String.valueOf(value);
     }
 }

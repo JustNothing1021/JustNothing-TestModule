@@ -93,6 +93,18 @@ public class ScopeManager {
         enterScope();  // 创建全局作用域
     }
     
+    public ScopeManager(ScopeManager parent) {
+        this.scopeStack = new ArrayDeque<>();
+        this.currentLevel = parent.currentLevel;
+        for (Scope scope : parent.scopeStack) {
+            Scope newScope = new Scope(scope.getLevel());
+            for (Map.Entry<String, Variable> entry : scope.getVariables().entrySet()) {
+                newScope.getVariables().put(entry.getKey(), entry.getValue());
+            }
+            this.scopeStack.addLast(newScope);
+        }
+    }
+    
     /**
      * 进入新作用域
      */
@@ -155,7 +167,9 @@ public class ScopeManager {
             0,
             ErrorCode.SCOPE_VARIABLE_NOT_FOUND);
     }
-    
+
+
+        
     /**
      * 设置变量值
      * 
@@ -207,5 +221,64 @@ public class ScopeManager {
      */
     public int getCurrentScopeVariableCount() {
         return scopeStack.peek().getVariables().size();
+    }
+    
+    /**
+     * 删除单个变量
+     * 
+     * @param name 变量名
+     * @return 是否成功删除
+     */
+    public boolean deleteVariable(String name) {
+        for (Scope scope : scopeStack) {
+            if (scope.getVariables().containsKey(name)) {
+                scope.getVariables().remove(name);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 清空当前作用域的所有变量
+     */
+    public void clearCurrentScope() {
+        scopeStack.peek().getVariables().clear();
+    }
+    
+    /**
+     * 清空所有作用域的变量（保留全局作用域结构）
+     */
+    public void clearAllScopes() {
+        for (Scope scope : scopeStack) {
+            scope.getVariables().clear();
+        }
+    }
+    
+    /**
+     * 获取作用域深度
+     */
+    public int getScopeDepth() {
+        return scopeStack.size();
+    }
+    
+    /**
+     * 获取指定层级的变量
+     */
+    public Map<String, Variable> getVariablesAtLevel(int level) {
+        for (Scope scope : scopeStack) {
+            if (scope.getLevel() == level) {
+                return scope.getVariables();
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * 声明捕获的变量（用于闭包）
+     */
+    public void declareCapturedVariable(String name, Class<?> type, Variable capturedVar, boolean isFinal) {
+        Scope current = scopeStack.peek();
+        current.getVariables().put(name, capturedVar);
     }
 }

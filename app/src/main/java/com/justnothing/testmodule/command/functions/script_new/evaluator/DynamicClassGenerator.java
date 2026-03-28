@@ -100,6 +100,9 @@ public class DynamicClassGenerator {
         String fieldName = fieldDecl.getFieldName();
         String descriptor = getTypeDescriptor(fieldDecl.getTypeName());
         int modifiers = fieldDecl.getModifiers().toAccessFlags();
+        if (modifiers == 0) {
+            modifiers = ACC_PUBLIC;
+        }
         
         FieldVisitor fv = cw.visitField(modifiers, fieldName, descriptor, null, null);
         fv.visitEnd();
@@ -129,6 +132,9 @@ public class DynamicClassGenerator {
         descriptor.append(")V");
         
         int modifiers = constructorDecl.getModifiers().toAccessFlags();
+        if (modifiers == 0) {
+            modifiers = ACC_PUBLIC;
+        }
         String internalClassName = className.replace('.', '/');
         
         MethodVisitor mv = cw.visitMethod(modifiers, "<init>", descriptor.toString(), null, null);

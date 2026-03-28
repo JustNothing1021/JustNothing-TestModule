@@ -3,21 +3,10 @@ package com.justnothing.testmodule.command.functions.script_new.parser;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
-/**
- * 解析上下文
- * <p>
- * 在解析过程中维护的上下文信息，包括：
- * - 当前位置（行号、列号）
- * - 期望的参数类型（用于方法引用解析）
- * - 嵌套层级（用于括号、花括号等）
- * - 导入列表（用于类名解析）
- * </p>
- * 
- * @author JustNothing1021
- * @since 1.0.0
- */
 public class ParseContext {
     
     private int currentLine;
@@ -25,6 +14,7 @@ public class ParseContext {
     private Class<?> expectedParamType;
     private final Deque<NestingLevel> nestingStack;
     private final List<String> imports;
+    private final Set<String> declaredClassNames;
     
     public ParseContext() {
         this.currentLine = 1;
@@ -32,6 +22,7 @@ public class ParseContext {
         this.expectedParamType = null;
         this.nestingStack = new ArrayDeque<>();
         this.imports = new ArrayList<>();
+        this.declaredClassNames = new HashSet<>();
         addDefaultImports();
     }
     
@@ -94,9 +85,18 @@ public class ParseContext {
         }
     }
     
-    /**
-     * 嵌套层级类型
-     */
+    public void declareClass(String className) {
+        declaredClassNames.add(className);
+    }
+    
+    public boolean isClassDeclared(String className) {
+        return declaredClassNames.contains(className);
+    }
+    
+    public Set<String> getDeclaredClassNames() {
+        return declaredClassNames;
+    }
+    
     public enum NestingLevel {
         PARENTHESIS,  // 圆括号 ()
         BRACE,        // 花括号 {}

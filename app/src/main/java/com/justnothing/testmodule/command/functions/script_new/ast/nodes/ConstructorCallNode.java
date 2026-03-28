@@ -50,6 +50,9 @@ public class ConstructorCallNode extends ASTNode {
         StringBuilder sb = new StringBuilder();
         sb.append(indent(indent)).append("ConstructorCallNode\n");
         sb.append(indent(indent + 1)).append("className: ").append(type.getTypeName()).append("\n");
+        if (type.getOriginalTypeName() != null) {
+            sb.append(indent(indent + 1)).append("originalTypeName: ").append(type.getOriginalTypeName()).append("\n");
+        }
         sb.append(indent(indent + 1)).append("arguments: ").append(arguments.size()).append("\n");
         if (arrayInitializer != null) {
             sb.append(indent(indent + 1)).append("arrayInitializer:\n");
