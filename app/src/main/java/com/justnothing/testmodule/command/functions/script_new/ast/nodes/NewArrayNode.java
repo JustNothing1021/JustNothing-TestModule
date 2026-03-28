@@ -39,6 +39,6 @@ public class NewArrayNode extends ASTNode {
         sb.append(indent(indent + 1)).append("elementType: ").append(elementType.getSimpleName()).append("\n");
         sb.append(indent(indent + 1)).append("size:\n");
         sb.append(size.formatString(indent + 2)).append("\n");
-        return sb.toString().strip();
+        return sb.toString().stripTrailing();
     }
 }

@@ -64,6 +64,6 @@ public class ResourceDeclaration {
                 sb.append(initializer.formatString(indent + 2)).append("\n");
             }
         }
-        return sb.toString().strip();
+        return sb.toString().stripTrailing();
     }
 }

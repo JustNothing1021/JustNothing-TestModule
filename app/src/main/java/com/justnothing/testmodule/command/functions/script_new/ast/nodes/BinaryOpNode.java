@@ -90,7 +90,7 @@ public class BinaryOpNode extends ASTNode {
         sb.append(left.formatString(indent + 2)).append("\n");
         sb.append(indent(indent + 1)).append("right:\n");
         sb.append(right.formatString(indent + 2)).append("\n");
-        return sb.toString().strip();
+        return sb.toString().stripTrailing();
     }
     
     public static class Builder extends ASTNode.Builder<Builder> {

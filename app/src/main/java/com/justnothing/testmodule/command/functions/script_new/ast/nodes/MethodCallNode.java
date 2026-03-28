@@ -67,7 +67,7 @@ public class MethodCallNode extends ASTNode {
             sb.append(indent(indent + 2)).append("arg[").append(i).append("]:\n");
             sb.append(arguments.get(i).formatString(indent + 3)).append("\n");
         }
-        return sb.toString().strip();
+        return sb.toString().stripTrailing();
     }
     
     public static class Builder extends ASTNode.Builder<Builder> {

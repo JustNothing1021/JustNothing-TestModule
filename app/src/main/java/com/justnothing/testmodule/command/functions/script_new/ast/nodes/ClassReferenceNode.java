@@ -1,19 +1,24 @@
 package com.justnothing.testmodule.command.functions.script_new.ast.nodes;
 
 import com.justnothing.testmodule.command.functions.script_new.ast.ASTNode;
+import com.justnothing.testmodule.command.functions.script_new.ast.GenericType;
 import com.justnothing.testmodule.command.functions.script_new.ast.SourceLocation;
 import com.justnothing.testmodule.command.functions.script_new.ast.visitor.ASTVisitor;
 
 public class ClassReferenceNode extends ASTNode {
-    private final String className;
+    private final GenericType type;
     
-    public ClassReferenceNode(String className, SourceLocation location) {
+    public ClassReferenceNode(GenericType type, SourceLocation location) {
         super(location);
-        this.className = className;
+        this.type = type;
+    }
+    
+    public GenericType getType() {
+        return type;
     }
     
     public String getClassName() {
-        return className;
+        return type.getTypeName();
     }
     
     @Override
@@ -23,11 +28,11 @@ public class ClassReferenceNode extends ASTNode {
     
     @Override
     public String formatString(int indent) {
-        return indent(indent) + "ClassReferenceNode: " + className;
+        return indent(indent) + "ClassReferenceNode: " + type.getTypeName();
     }
     
     @Override
     public String toString() {
-        return "ClassReferenceNode(" + className + ")";
+        return "ClassReferenceNode(" + type.getTypeName() + ")";
     }
 }

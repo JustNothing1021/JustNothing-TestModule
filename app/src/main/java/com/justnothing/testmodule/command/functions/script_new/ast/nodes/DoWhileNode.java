@@ -40,7 +40,7 @@ public class DoWhileNode extends ASTNode {
         sb.append(body.formatString(indent + 2)).append("\n");
         sb.append(indent(indent + 1)).append("condition:\n");
         sb.append(condition.formatString(indent + 2)).append("\n");
-        return sb.toString().strip();
+        return sb.toString().stripTrailing();
 
     }
 }

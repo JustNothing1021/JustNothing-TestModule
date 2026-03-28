@@ -1,7 +1,9 @@
 package com.justnothing.testmodule.command.functions.script_new.parser;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
+import java.util.List;
 
 /**
  * 解析上下文
@@ -10,6 +12,7 @@ import java.util.Deque;
  * - 当前位置（行号、列号）
  * - 期望的参数类型（用于方法引用解析）
  * - 嵌套层级（用于括号、花括号等）
+ * - 导入列表（用于类名解析）
  * </p>
  * 
  * @author JustNothing1021
@@ -21,12 +24,20 @@ public class ParseContext {
     private int currentColumn;
     private Class<?> expectedParamType;
     private final Deque<NestingLevel> nestingStack;
+    private final List<String> imports;
     
     public ParseContext() {
         this.currentLine = 1;
         this.currentColumn = 1;
         this.expectedParamType = null;
         this.nestingStack = new ArrayDeque<>();
+        this.imports = new ArrayList<>();
+        addDefaultImports();
+    }
+    
+    private void addDefaultImports() {
+        imports.add("java.lang.*");
+        imports.add("java.util.*");
     }
     
     public int getCurrentLine() {
@@ -71,6 +82,16 @@ public class ParseContext {
     
     public boolean isNestingStackEmpty() {
         return nestingStack.isEmpty();
+    }
+    
+    public List<String> getImports() {
+        return imports;
+    }
+    
+    public void addImport(String importStmt) {
+        if (!imports.contains(importStmt)) {
+            imports.add(importStmt);
+        }
     }
     
     /**

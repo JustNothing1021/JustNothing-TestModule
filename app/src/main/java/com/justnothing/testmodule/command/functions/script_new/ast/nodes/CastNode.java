@@ -39,6 +39,6 @@ public class CastNode extends ASTNode {
         sb.append(indent(indent + 1)).append("targetType: ").append(targetType.getSimpleName()).append("\n");
         sb.append(indent(indent + 1)).append("expression:\n");
         sb.append(expression.formatString(indent + 2)).append("\n");
-        return sb.toString().strip();
+        return sb.toString().stripTrailing();
     }
 }

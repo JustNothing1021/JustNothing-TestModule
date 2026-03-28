@@ -51,6 +51,6 @@ public class CatchClause {
         sb.append(indent(indent + 1)).append("variableName: ").append(variableName).append("\n");
         sb.append(indent(indent + 1)).append("body:\n");
         sb.append(body.formatString(indent + 2)).append("\n");
-        return sb.toString().strip();
+        return sb.toString().stripTrailing();
     }
 }

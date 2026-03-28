@@ -350,7 +350,15 @@ public class Lexer {
         
         advance();
         SourceLocation location = new SourceLocation(startLine, startColumn);
-        addToken(TokenType.LITERAL_STRING, sb.toString(), location);
+        
+        if (quote == '\'') {
+            if (sb.length() != 1) {
+                throw error("Invalid character literal: must contain exactly one character");
+            }
+            addToken(TokenType.LITERAL_CHAR, sb.charAt(0), location);
+        } else {
+            addToken(TokenType.LITERAL_STRING, sb.toString(), location);
+        }
     }
     
     private void readIdentifier() {

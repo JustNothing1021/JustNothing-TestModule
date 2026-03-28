@@ -60,7 +60,7 @@ public class IfNode extends ASTNode {
             sb.append(indent(indent + 1)).append("else:\n");
             sb.append(elseBlock.formatString(indent + 2)).append("\n");
         }
-        return sb.toString().strip();
+        return sb.toString().stripTrailing();
     }
     
     public static class Builder extends ASTNode.Builder<Builder> {

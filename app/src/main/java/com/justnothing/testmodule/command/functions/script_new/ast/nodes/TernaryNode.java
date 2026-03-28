@@ -48,6 +48,6 @@ public class TernaryNode extends ASTNode {
         sb.append(thenExpr.formatString(indent + 2)).append("\n");
         sb.append(indent(indent + 1)).append("else:\n");
         sb.append(elseExpr.formatString(indent + 2)).append("\n");
-        return sb.toString().strip();
+        return sb.toString().stripTrailing();
     }
 }

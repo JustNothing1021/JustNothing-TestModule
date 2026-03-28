@@ -1,5 +1,6 @@
 package com.justnothing.testmodule.command.functions.script_new;
 
+import com.justnothing.testmodule.command.functions.script_new.ast.GenericType;
 import com.justnothing.testmodule.command.functions.script_new.ast.SourceLocation;
 import com.justnothing.testmodule.command.functions.script_new.ast.nodes.*;
 import com.justnothing.testmodule.command.functions.script_new.evaluator.ScopeManager;
@@ -57,7 +58,7 @@ public class ScriptNewTestRunner {
         assert unaryOp.getOperator() == UnaryOpNode.Operator.NEGATIVE : "Operator should be NEGATIVE";
         
         AssignmentNode assignment = new AssignmentNode(
-                "x", literal, true, int.class, loc);
+                "x", literal, true, GenericType.of(int.class), loc);
         assert assignment.getVariableName().equals("x") : "Variable name should be 'x'";
         assert assignment.isDeclaration() : "Should be a declaration";
         
@@ -175,7 +176,7 @@ public class ScriptNewTestRunner {
             
             AssignmentNode assignment = (AssignmentNode) block.getStatements().get(0);
             assert assignment.getVariableName().equals("cls") : "Variable name should be 'cls'";
-            assert assignment.getDeclaredType() == Object.class : "Auto type should be Object.class";
+            assert assignment.getDeclaredType().getRawType() == Object.class : "Auto type should be Object.class";
             assert assignment.isDeclaration() : "Should be a declaration";
             
             System.out.println("  ✓ Auto with class reference test passed");
@@ -200,7 +201,7 @@ public class ScriptNewTestRunner {
             
             AssignmentNode assignment = (AssignmentNode) block.getStatements().get(0);
             assert assignment.getVariableName().equals("b") : "Variable name should be 'b'";
-            assert assignment.getDeclaredType() == Object.class : "Auto type should be Object.class";
+            assert assignment.getDeclaredType().getRawType() == Object.class : "Auto type should be Object.class";
             assert assignment.isDeclaration() : "Should be a declaration";
             
             System.out.println("  ✓ Auto with field access test passed");
@@ -249,7 +250,7 @@ public class ScriptNewTestRunner {
             
             AssignmentNode assignment = (AssignmentNode) block.getStatements().get(0);
             assert assignment.getVariableName().equals("x") : "Variable name should be 'x'";
-            assert assignment.getDeclaredType() == Object.class : "Auto type should be Object.class";
+            assert assignment.getDeclaredType().getRawType() == Object.class : "Auto type should be Object.class";
             assert assignment.isDeclaration() : "Should be a declaration";
             
             System.out.println("  ✓ Auto type test passed");

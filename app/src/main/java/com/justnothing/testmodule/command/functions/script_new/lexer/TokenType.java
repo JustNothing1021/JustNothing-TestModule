@@ -52,6 +52,21 @@ public enum TokenType {
     KEYWORD_CATCH("catch"),
     KEYWORD_FINALLY("finally"),
     KEYWORD_THROW("throw"),
+    KEYWORD_IMPORT("import"),
+    KEYWORD_DELETE("delete"),
+    KEYWORD_CLASS("class"),
+    KEYWORD_INTERFACE("interface"),
+    KEYWORD_EXTENDS("extends"),
+    KEYWORD_IMPLEMENTS("implements"),
+    KEYWORD_PUBLIC("public"),
+    KEYWORD_PRIVATE("private"),
+    KEYWORD_PROTECTED("protected"),
+    KEYWORD_STATIC("static"),
+    KEYWORD_ABSTRACT("abstract"),
+    KEYWORD_NATIVE("native"),
+    KEYWORD_SYNCHRONIZED("synchronized"),
+    KEYWORD_SUPER("super"),
+    KEYWORD_THIS("this"),
     
     OPERATOR_ASSIGN("="),
     OPERATOR_PLUS_ASSIGN("+="),
@@ -110,6 +125,7 @@ public enum TokenType {
     LITERAL_INTEGER("integer literal"),
     LITERAL_DECIMAL("decimal literal"),
     LITERAL_STRING("string literal"),
+    LITERAL_CHAR("char literal"),
     LITERAL_BOOLEAN("boolean literal"),
     LITERAL_NULL("null literal"),
     
@@ -147,7 +163,10 @@ public enum TokenType {
             "void", "auto", "if", "else", "for", "while", "do",
             "return", "break", "continue", "true", "false", "null", "final",
             "new", "instanceof", "switch", "case", "default",
-            "try", "catch", "finally", "throw"
+            "try", "catch", "finally", "throw", "import", "delete",
+            "class", "interface", "extends", "implements",
+            "public", "private", "protected", "static", "abstract", "native", "synchronized",
+            "super", "this"
     ));
     
     public static boolean isKeyword(String text) {
@@ -187,6 +206,21 @@ public enum TokenType {
             case "catch": return KEYWORD_CATCH;
             case "finally": return KEYWORD_FINALLY;
             case "throw": return KEYWORD_THROW;
+            case "import": return KEYWORD_IMPORT;
+            case "delete": return KEYWORD_DELETE;
+            case "class": return KEYWORD_CLASS;
+            case "interface": return KEYWORD_INTERFACE;
+            case "extends": return KEYWORD_EXTENDS;
+            case "implements": return KEYWORD_IMPLEMENTS;
+            case "public": return KEYWORD_PUBLIC;
+            case "private": return KEYWORD_PRIVATE;
+            case "protected": return KEYWORD_PROTECTED;
+            case "static": return KEYWORD_STATIC;
+            case "abstract": return KEYWORD_ABSTRACT;
+            case "native": return KEYWORD_NATIVE;
+            case "synchronized": return KEYWORD_SYNCHRONIZED;
+            case "super": return KEYWORD_SUPER;
+            case "this": return KEYWORD_THIS;
             default: return IDENTIFIER;
         }
     }

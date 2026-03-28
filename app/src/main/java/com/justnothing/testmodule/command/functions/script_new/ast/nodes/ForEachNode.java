@@ -54,6 +54,6 @@ public class ForEachNode extends ASTNode {
         sb.append(collection.formatString(indent + 2)).append("\n");
         sb.append(indent(indent + 1)).append("body:\n");
         sb.append(body.formatString(indent + 2)).append("\n");
-        return sb.toString().strip();
+        return sb.toString().stripTrailing();
     }
 }

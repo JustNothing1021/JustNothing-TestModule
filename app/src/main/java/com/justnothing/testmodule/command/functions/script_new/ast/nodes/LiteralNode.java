@@ -45,6 +45,8 @@ public class LiteralNode extends ASTNode {
         
         if (value == null) {
             sb.append("null");
+        } else if (value instanceof Character) {
+            sb.append("'").append(value).append("'");
         } else if (value instanceof String) {
             sb.append("\"").append(value).append("\"");
         } else {
@@ -52,7 +54,7 @@ public class LiteralNode extends ASTNode {
         }
         
         sb.append(" (").append(type != null ? type.getSimpleName() : "void").append(")");
-        return sb.toString();
+        return sb.toString().stripTrailing();
     }
     
     public static class Builder extends ASTNode.Builder<Builder> {

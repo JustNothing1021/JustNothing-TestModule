@@ -39,6 +39,6 @@ public class FieldAccessNode extends ASTNode {
         sb.append(indent(indent + 1)).append("fieldName: ").append(fieldName).append("\n");
         sb.append(indent(indent + 1)).append("target:\n");
         sb.append(target.formatString(indent + 2)).append("\n");
-        return sb.toString().strip();
+        return sb.toString().stripTrailing();
     }
 }

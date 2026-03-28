@@ -68,6 +68,6 @@ public class TryNode extends ASTNode {
             sb.append(indent(indent + 1)).append("finallyBlock:\n");
             sb.append(finallyBlock.formatString(indent + 2)).append("\n");
         }
-        return sb.toString().strip();
+        return sb.toString().stripTrailing();
     }
 }

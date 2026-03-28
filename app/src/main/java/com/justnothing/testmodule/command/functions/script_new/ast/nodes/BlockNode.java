@@ -46,7 +46,7 @@ public class BlockNode extends ASTNode {
             sb.append(indent(indent + 1)).append("stmt[").append(i).append("]:\n");
             sb.append(statements.get(i).formatString(indent + 2)).append("\n");
         }
-        return sb.toString().strip();
+        return sb.toString().stripTrailing();
     }
     
     public static class Builder extends ASTNode.Builder<Builder> {

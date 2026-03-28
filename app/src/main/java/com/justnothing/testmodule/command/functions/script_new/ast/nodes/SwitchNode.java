@@ -55,6 +55,6 @@ public class SwitchNode extends ASTNode {
             sb.append(indent(indent + 1)).append("default:\n");
             sb.append(defaultCase.formatString(indent + 2)).append("\n");
         }
-        return sb.toString().strip();
+        return sb.toString().stripTrailing();
     }
 }

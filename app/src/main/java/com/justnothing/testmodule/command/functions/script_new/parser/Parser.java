@@ -1,16 +1,22 @@
 package com.justnothing.testmodule.command.functions.script_new.parser;
 
+import com.justnothing.testmodule.command.functions.script_new.ast.GenericType;
 import com.justnothing.testmodule.command.functions.script_new.ast.SourceLocation;
 import com.justnothing.testmodule.command.functions.script_new.ast.ASTNode;
 import com.justnothing.testmodule.command.functions.script_new.ast.nodes.*;
+import com.justnothing.testmodule.command.functions.script_new.evaluator.ClassFinder;
 import com.justnothing.testmodule.command.functions.script_new.exception.ParseException;
 import com.justnothing.testmodule.command.functions.script_new.lexer.Token;
 import com.justnothing.testmodule.command.functions.script_new.lexer.TokenType;
 
+import java.lang.reflect.Array;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Deque;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 语法分析器（Parser）
@@ -142,6 +148,10 @@ public class Parser {
      * 解析语句
      */
     private ASTNode parseStatement() throws ParseException {
+        if (match(TokenType.KEYWORD_CLASS)) {
+            return parseClassDeclaration();
+        }
+        
         if (check(TokenType.KEYWORD_INT) || check(TokenType.KEYWORD_LONG) ||
             check(TokenType.KEYWORD_FLOAT) || check(TokenType.KEYWORD_DOUBLE) ||
             check(TokenType.KEYWORD_BOOLEAN) || check(TokenType.KEYWORD_CHAR) ||
@@ -162,11 +172,11 @@ public class Parser {
                 }
                 return expression;
             } else {
-                savePosition();
+                int savedPos = position;
                 try {
                     return parseVariableDeclaration();
                 } catch (ParseException e) {
-                    restorePosition();
+                    position = savedPos;
                     ASTNode expression = parseExpression();
                     if (expression instanceof LambdaNode) {
                         if (check(TokenType.DELIMITER_SEMICOLON)) {
@@ -208,6 +218,14 @@ public class Parser {
             return parseThrowStatement();
         }
         
+        if (match(TokenType.KEYWORD_IMPORT)) {
+            return parseImportStatement();
+        }
+        
+        if (match(TokenType.KEYWORD_DELETE)) {
+            return parseDeleteStatement();
+        }
+        
         if (match(TokenType.KEYWORD_RETURN)) {
             return parseReturnStatement();
         }
@@ -221,21 +239,33 @@ public class Parser {
         }
         
         if (check(TokenType.DELIMITER_LEFT_BRACE)) {
-            savePosition();
+            int savedPos = position;
             try {
                 advance();
                 if (check(TokenType.DELIMITER_RIGHT_BRACE)) {
-                    restorePosition();
+                    advance();
+                    if (check(TokenType.DELIMITER_SEMICOLON)) {
+                        advance();
+                        return new ArrayLiteralNode(new ArrayList<>(), createLocation());
+                    }
+                    position = savedPos;
                     advance();
                     return parseBlock();
                 }
                 
-                savePosition();
+                int innerSavedPos = position;
                 try {
                     parseExpression();
+                    if (check(TokenType.OPERATOR_COLON)) {
+                        position = savedPos;
+                        ASTNode expr = parseExpression();
+                        if (check(TokenType.DELIMITER_SEMICOLON)) {
+                            advance();
+                        }
+                        return expr;
+                    }
                     if (check(TokenType.DELIMITER_COMMA) || check(TokenType.DELIMITER_RIGHT_BRACE)) {
-                        restorePosition();
-                        restorePosition();
+                        position = savedPos;
                         ASTNode expr = parseExpression();
                         if (check(TokenType.DELIMITER_SEMICOLON)) {
                             advance();
@@ -244,12 +274,11 @@ public class Parser {
                     }
                 } catch (ParseException e) {
                 }
-                restorePosition();
-                restorePosition();
+                position = savedPos;
                 advance();
                 return parseBlock();
             } catch (ParseException e) {
-                restorePosition();
+                position = savedPos;
                 advance();
                 return parseBlock();
             }
@@ -269,11 +298,11 @@ public class Parser {
     /**
      * 解析变量声明
      */
-    private AssignmentNode parseVariableDeclaration() throws ParseException {
+    private ASTNode parseVariableDeclaration() throws ParseException {
         return parseVariableDeclaration(true);
     }
     
-    private AssignmentNode parseVariableDeclaration(boolean consumeSemicolon) throws ParseException {
+    private ASTNode parseVariableDeclaration(boolean consumeSemicolon) throws ParseException {
         SourceLocation location = createLocation();
         boolean isFinal = false;
         
@@ -282,35 +311,47 @@ public class Parser {
             advance();
         }
         
-        Class<?> type;
+        GenericType type;
         boolean isAuto = false;
         
         if (peek().getType() == TokenType.KEYWORD_AUTO) {
             advance();
-            type = Object.class;
+            type = GenericType.of(Object.class);
             isAuto = true;
         } else {
-            type = parseType();
+            type = parseGenericType();
         }
         
-        String varName = consume(TokenType.IDENTIFIER, "Expected variable name").getText();
+        List<AssignmentNode> declarations = new ArrayList<>();
         
-        ASTNode value = null;
-        if (match(TokenType.OPERATOR_ASSIGN)) {
-            if (check(TokenType.DELIMITER_LEFT_BRACE)) {
-                value = parseArrayInitializer(type, location);
-            } else {
-                value = parseExpression();
+        do {
+            SourceLocation varLocation = createLocation();
+            String varName = consume(TokenType.IDENTIFIER, "Expected variable name").getText();
+            
+            ASTNode value = null;
+            if (match(TokenType.OPERATOR_ASSIGN)) {
+                if (check(TokenType.DELIMITER_LEFT_BRACE)) {
+                    value = parseArrayInitializer(type.getRuntimeType(), varLocation);
+                } else {
+                    value = parseExpression();
+                }
+            } else if (isAuto) {
+                throw error("Auto variable must have initial value");
             }
-        } else if (isAuto) {
-            throw error("Auto variable must have initial value");
-        }
+            
+            declarations.add(new AssignmentNode(varName, value, true, type, varLocation));
+            
+        } while (match(TokenType.DELIMITER_COMMA));
         
         if (consumeSemicolon) {
             consume(TokenType.DELIMITER_SEMICOLON, "Expected semicolon after variable declaration");
         }
         
-        return new AssignmentNode(varName, value, true, type, location);
+        if (declarations.size() == 1) {
+            return declarations.get(0);
+        }
+        
+        return new BlockNode(new ArrayList<>(declarations), location);
     }
     
     /**
@@ -376,13 +417,13 @@ public class Parser {
                 }
                 
                 if (check(TokenType.OPERATOR_LESS_THAN)) {
+                    String currentType = typeName.toString();
+                    if (isPrimitiveType(currentType)) {
+                        break;
+                    }
                     advance();
                     typeName.append("<");
                     parseTypeArguments(typeName);
-                    if (check(TokenType.OPERATOR_GREATER_THAN)) {
-                        advance();
-                        typeName.append(">");
-                    }
                     continue;
                 }
                 
@@ -419,132 +460,447 @@ public class Parser {
                type == TokenType.KEYWORD_FLOAT || type == TokenType.KEYWORD_DOUBLE ||
                type == TokenType.KEYWORD_BOOLEAN || type == TokenType.KEYWORD_CHAR ||
                type == TokenType.KEYWORD_BYTE || type == TokenType.KEYWORD_SHORT ||
-               type == TokenType.KEYWORD_VOID;
+               type == TokenType.KEYWORD_VOID || type == TokenType.KEYWORD_AUTO;
+    }
+    
+    private boolean isPrimitiveType(String typeName) {
+        return "int".equals(typeName) || "long".equals(typeName) ||
+               "float".equals(typeName) || "double".equals(typeName) ||
+               "boolean".equals(typeName) || "char".equals(typeName) ||
+               "byte".equals(typeName) || "short".equals(typeName) ||
+               "void".equals(typeName);
+    }
+    
+    /**
+     * 解析泛型类型，返回完整的类型信息
+     */
+    private GenericType parseGenericType() throws ParseException {
+        savePosition();
+        
+        try {
+            StringBuilder typeName = new StringBuilder();
+            
+            while (true) {
+                if (check(TokenType.IDENTIFIER) || isTypeKeyword(peek().getType())) {
+                    if (typeName.length() > 0 && !typeName.toString().endsWith(".")) {
+                        break;
+                    }
+                    String text = advance().getText();
+                    typeName.append(text);
+                    
+                    if (check(TokenType.OPERATOR_DOT)) {
+                        advance();
+                        typeName.append(".");
+                        continue;
+                    }
+                }
+                
+                if (check(TokenType.DELIMITER_LEFT_BRACKET)) {
+                    advance();
+                    if (check(TokenType.DELIMITER_RIGHT_BRACKET)) {
+                        advance();
+                        typeName.append("[]");
+                        continue;
+                    } else {
+                        position--;
+                        break;
+                    }
+                }
+                
+                if (check(TokenType.OPERATOR_LESS_THAN)) {
+                    String currentType = typeName.toString();
+                    if (isPrimitiveType(currentType)) {
+                        break;
+                    }
+                    advance();
+                    typeName.append("<");
+                    parseTypeArguments(typeName);
+                    continue;
+                }
+                
+                break;
+            }
+            
+            String typeStr = typeName.toString();
+            if (typeStr.isEmpty()) {
+                restorePosition();
+                throw error("Expected type");
+            }
+            
+            if (typeStr.endsWith(".")) {
+                typeStr = typeStr.substring(0, typeStr.length() - 1);
+            }
+            
+            try {
+                GenericType result = resolveGenericType(typeStr);
+                releasePosition();
+                return result;
+            } catch (ParseException e) {
+                restorePosition();
+                throw e;
+            }
+            
+        } catch (ParseException e) {
+            restorePosition();
+            throw e;
+        }
+    }
+    
+    /**
+     * 解析泛型类型参数列表
+     */
+    private List<GenericType> parseGenericTypeArguments() throws ParseException {
+        List<GenericType> typeArguments = new ArrayList<>();
+        int depth = 1;
+        
+        while (depth > 0 && !isAtEnd()) {
+            if (check(TokenType.OPERATOR_GREATER_THAN)) {
+                advance();
+                depth--;
+            } else if (check(TokenType.OPERATOR_RIGHT_SHIFT)) {
+                advance();
+                depth -= 2;
+            } else if (check(TokenType.OPERATOR_UNSIGNED_RIGHT_SHIFT)) {
+                advance();
+                depth -= 3;
+            } else if (check(TokenType.OPERATOR_LESS_THAN)) {
+                advance();
+                depth++;
+            } else if (check(TokenType.DELIMITER_COMMA)) {
+                advance();
+            } else if (check(TokenType.IDENTIFIER) || isTypeKeyword(peek().getType())) {
+                typeArguments.add(parseGenericType());
+            } else {
+                advance();
+            }
+        }
+        
+        return typeArguments;
     }
     
     /**
      * 解析泛型参数
      */
     private void parseTypeArguments(StringBuilder typeName) throws ParseException {
-        while (!check(TokenType.OPERATOR_GREATER_THAN) && !isAtEnd()) {
-            parseType();
-            
-            if (check(TokenType.DELIMITER_COMMA)) {
+        boolean first = true;
+        int depth = 1;
+        
+        while (depth > 0 && !isAtEnd()) {
+            if (check(TokenType.OPERATOR_GREATER_THAN)) {
+                advance();
+                depth--;
+                typeName.append(">");
+            } else if (check(TokenType.OPERATOR_RIGHT_SHIFT)) {
+                advance();
+                depth -= 2;
+                typeName.append(">>");
+            } else if (check(TokenType.OPERATOR_UNSIGNED_RIGHT_SHIFT)) {
+                advance();
+                depth -= 3;
+                typeName.append(">>>");
+            } else if (check(TokenType.OPERATOR_LESS_THAN)) {
+                advance();
+                depth++;
+                typeName.append("<");
+            } else if (check(TokenType.DELIMITER_COMMA)) {
                 advance();
                 typeName.append(", ");
+            } else {
+                typeName.append(parseTypeNameForGeneric());
             }
         }
     }
     
     /**
-     * 判断字符串是否是类引用，如果是简单类名则尝试添加java.lang前缀
+     * 解析泛型参数中的类型名称（返回字符串而非Class）
+     */
+    private String parseTypeNameForGeneric() throws ParseException {
+        StringBuilder typeName = new StringBuilder();
+        
+        if (check(TokenType.IDENTIFIER)) {
+            typeName.append(advance().getText());
+            
+            while (check(TokenType.OPERATOR_DOT)) {
+                advance();
+                typeName.append(".");
+                if (check(TokenType.IDENTIFIER)) {
+                    typeName.append(advance().getText());
+                } else {
+                    throw error("Expected identifier after '.'");
+                }
+            }
+        } else if (check(TokenType.KEYWORD_INT)) {
+            advance();
+            typeName.append("int");
+        } else if (check(TokenType.KEYWORD_LONG)) {
+            advance();
+            typeName.append("long");
+        } else if (check(TokenType.KEYWORD_FLOAT)) {
+            advance();
+            typeName.append("float");
+        } else if (check(TokenType.KEYWORD_DOUBLE)) {
+            advance();
+            typeName.append("double");
+        } else if (check(TokenType.KEYWORD_BOOLEAN)) {
+            advance();
+            typeName.append("boolean");
+        } else if (check(TokenType.KEYWORD_CHAR)) {
+            advance();
+            typeName.append("char");
+        } else if (check(TokenType.KEYWORD_BYTE)) {
+            advance();
+            typeName.append("byte");
+        } else if (check(TokenType.KEYWORD_SHORT)) {
+            advance();
+            typeName.append("short");
+        } else if (check(TokenType.KEYWORD_VOID)) {
+            advance();
+            typeName.append("void");
+        } else {
+            throw error("Expected type name in generic argument");
+        }
+        
+        while (check(TokenType.DELIMITER_LEFT_BRACKET)) {
+            advance();
+            consume(TokenType.DELIMITER_RIGHT_BRACKET, "Expected ']' in array type");
+            typeName.append("[]");
+        }
+        
+        return typeName.toString();
+    }
+    
+    /**
+     * 判断字符串是否是类引用，支持嵌套类和导入
      */
     private String resolveClassName(String className) {
-        try {
-            Class<?> clazz = Class.forName(className);
-            return className;
-        } catch (ClassNotFoundException e) {
-            try {
-                Class<?> clazz = Class.forName("java.lang." + className);
-                return "java.lang." + className;
-            } catch (ClassNotFoundException e2) {
-                return null;
-            }
+        Class<?> clazz = ClassFinder.findClassWithImports(className, null, context.getImports());
+        if (clazz != null) {
+            return clazz.getName();
         }
+        return null;
     }
     
     /**
      * 解析类型字符串为Class对象
      */
     private Class<?> resolveType(String typeName) throws ParseException {
-        if (typeName.endsWith("[]")) {
-            int dimensions = 0;
-            String baseTypeName = typeName;
-            
-            while (baseTypeName.endsWith("[]")) {
-                dimensions++;
-                baseTypeName = baseTypeName.substring(0, baseTypeName.length() - 2);
-            }
-            
-            Class<?> baseType = resolveType(baseTypeName);
-            
-            StringBuilder arrayTypeName = new StringBuilder();
-            for (int i = 0; i < dimensions; i++) {
-                arrayTypeName.append("[");
-            }
-            
-            if (baseType.isPrimitive()) {
-                if (baseType == int.class) arrayTypeName.append("I");
-                else if (baseType == long.class) arrayTypeName.append("J");
-                else if (baseType == float.class) arrayTypeName.append("F");
-                else if (baseType == double.class) arrayTypeName.append("D");
-                else if (baseType == boolean.class) arrayTypeName.append("Z");
-                else if (baseType == char.class) arrayTypeName.append("C");
-                else if (baseType == byte.class) arrayTypeName.append("B");
-                else if (baseType == short.class) arrayTypeName.append("S");
-            } else {
-                arrayTypeName.append("L").append(baseType.getName()).append(";");
-            }
-            
-            try {
-                return Class.forName(arrayTypeName.toString());
-            } catch (ClassNotFoundException e) {
-                throw error("Array type not found: " + typeName);
+        String baseTypeName = typeName;
+        int arrayDepth = 0;
+        
+        while (baseTypeName.endsWith("[]")) {
+            arrayDepth++;
+            baseTypeName = baseTypeName.substring(0, baseTypeName.length() - 2);
+        }
+        
+        int genericIndex = baseTypeName.indexOf('<');
+        if (genericIndex > 0) {
+            baseTypeName = baseTypeName.substring(0, genericIndex);
+        }
+        
+        Class<?> baseType;
+        switch (baseTypeName) {
+            case "int":
+                baseType = int.class;
+                break;
+            case "long":
+                baseType = long.class;
+                break;
+            case "float":
+                baseType = float.class;
+                break;
+            case "double":
+                baseType = double.class;
+                break;
+            case "boolean":
+                baseType = boolean.class;
+                break;
+            case "char":
+                baseType = char.class;
+                break;
+            case "byte":
+                baseType = byte.class;
+                break;
+            case "short":
+                baseType = short.class;
+                break;
+            case "void":
+                baseType = void.class;
+                break;
+            case "auto":
+                baseType = Object.class;
+                break;
+            case "Integer":
+                baseType = Integer.class;
+                break;
+            case "Long":
+                baseType = Long.class;
+                break;
+            case "Float":
+                baseType = Float.class;
+                break;
+            case "Double":
+                baseType = Double.class;
+                break;
+            case "Boolean":
+                baseType = Boolean.class;
+                break;
+            case "Character":
+                baseType = Character.class;
+                break;
+            case "Byte":
+                baseType = Byte.class;
+                break;
+            case "Short":
+                baseType = Short.class;
+                break;
+            case "String":
+                baseType = String.class;
+                break;
+            case "Object":
+                baseType = Object.class;
+                break;
+            default:
+                baseType = ClassFinder.findClassWithImports(baseTypeName, null, context.getImports());
+                if (baseType == null) {
+                    throw error("Class not found: " + baseTypeName);
+                }
+        }
+        
+        if (arrayDepth > 0) {
+            for (int i = 0; i < arrayDepth; i++) {
+                baseType = Array.newInstance(baseType, 0).getClass();
             }
         }
         
-        switch (typeName) {
+        return baseType;
+    }
+    
+    /**
+     * 解析类型字符串为GenericType对象
+     */
+    private GenericType resolveGenericType(String typeName) throws ParseException {
+        String baseTypeName = typeName;
+        int arrayDepth = 0;
+        
+        while (baseTypeName.endsWith("[]")) {
+            arrayDepth++;
+            baseTypeName = baseTypeName.substring(0, baseTypeName.length() - 2);
+        }
+        
+        List<GenericType> typeArguments = Collections.emptyList();
+        int genericStart = baseTypeName.indexOf('<');
+        if (genericStart > 0) {
+            int genericEnd = baseTypeName.lastIndexOf('>');
+            if (genericEnd > genericStart) {
+                String argsStr = baseTypeName.substring(genericStart + 1, genericEnd);
+                typeArguments = parseTypeArgumentStrings(argsStr);
+                baseTypeName = baseTypeName.substring(0, genericStart);
+            }
+        }
+        
+        Class<?> baseType;
+        switch (baseTypeName) {
             case "int":
-                return int.class;
+                baseType = int.class;
+                break;
             case "long":
-                return long.class;
+                baseType = long.class;
+                break;
             case "float":
-                return float.class;
+                baseType = float.class;
+                break;
             case "double":
-                return double.class;
+                baseType = double.class;
+                break;
             case "boolean":
-                return boolean.class;
+                baseType = boolean.class;
+                break;
             case "char":
-                return char.class;
+                baseType = char.class;
+                break;
             case "byte":
-                return byte.class;
+                baseType = byte.class;
+                break;
             case "short":
-                return short.class;
+                baseType = short.class;
+                break;
             case "void":
-                return void.class;
+                baseType = void.class;
+                break;
             case "auto":
-                return Object.class;
+                baseType = Object.class;
+                break;
             case "Integer":
-                return Integer.class;
+                baseType = Integer.class;
+                break;
             case "Long":
-                return Long.class;
+                baseType = Long.class;
+                break;
             case "Float":
-                return Float.class;
+                baseType = Float.class;
+                break;
             case "Double":
-                return Double.class;
+                baseType = Double.class;
+                break;
             case "Boolean":
-                return Boolean.class;
+                baseType = Boolean.class;
+                break;
             case "Character":
-                return Character.class;
+                baseType = Character.class;
+                break;
             case "Byte":
-                return Byte.class;
+                baseType = Byte.class;
+                break;
             case "Short":
-                return Short.class;
+                baseType = Short.class;
+                break;
             case "String":
-                return String.class;
+                baseType = String.class;
+                break;
             case "Object":
-                return Object.class;
+                baseType = Object.class;
+                break;
             default:
-                try {
-                    return Class.forName(typeName);
-                } catch (ClassNotFoundException e) {
-                    try {
-                        return Class.forName("java.lang." + typeName);
-                    } catch (ClassNotFoundException e2) {
-                        throw error("Class not found: " + typeName);
-                    }
+                baseType = ClassFinder.findClassWithImports(baseTypeName, null, context.getImports());
+                if (baseType == null) {
+                    throw error("Class not found: " + baseTypeName);
                 }
         }
+        
+        return new GenericType(baseType, typeArguments, arrayDepth);
+    }
+    
+    /**
+     * 解析泛型参数字符串为GenericType列表
+     */
+    private List<GenericType> parseTypeArgumentStrings(String argsStr) throws ParseException {
+        List<GenericType> result = new ArrayList<>();
+        int depth = 0;
+        int start = 0;
+        
+        for (int i = 0; i < argsStr.length(); i++) {
+            char c = argsStr.charAt(i);
+            if (c == '<') {
+                depth++;
+            } else if (c == '>') {
+                depth--;
+            } else if (c == ',' && depth == 0) {
+                String arg = argsStr.substring(start, i).trim();
+                if (!arg.isEmpty()) {
+                    result.add(resolveGenericType(arg));
+                }
+                start = i + 1;
+            }
+        }
+        
+        if (start < argsStr.length()) {
+            String arg = argsStr.substring(start).trim();
+            if (!arg.isEmpty()) {
+                result.add(resolveGenericType(arg));
+            }
+        }
+        
+        return result;
     }
     
     /**
@@ -835,6 +1191,330 @@ public class Parser {
     }
     
     /**
+     * 解析import语句
+     * 语法: import package.name.*; 或 import package.name.ClassName;
+     */
+    private ASTNode parseImportStatement() throws ParseException {
+        SourceLocation location = createLocation();
+        
+        StringBuilder packageName = new StringBuilder();
+        
+        while (true) {
+            if (check(TokenType.IDENTIFIER)) {
+                packageName.append(advance().getText());
+            } else if (check(TokenType.OPERATOR_MULTIPLY)) {
+                advance();
+                packageName.append("*");
+                break;
+            } else {
+                break;
+            }
+            
+            if (check(TokenType.OPERATOR_DOT)) {
+                advance();
+                packageName.append(".");
+            } else {
+                break;
+            }
+        }
+        
+        consume(TokenType.DELIMITER_SEMICOLON, "Expected semicolon after import");
+        
+        String importStmt = packageName.toString();
+        context.addImport(importStmt);
+        
+        return new ImportNode(importStmt, location);
+    }
+    
+    /**
+     * 解析delete语句
+     * 语法: delete variableName; 或 delete *;
+     */
+    private ASTNode parseDeleteStatement() throws ParseException {
+        SourceLocation location = createLocation();
+        
+        if (check(TokenType.OPERATOR_MULTIPLY)) {
+            advance();
+            consume(TokenType.DELIMITER_SEMICOLON, "Expected semicolon after delete *");
+            return new DeleteNode(true, location);
+        }
+        
+        String varName = consume(TokenType.IDENTIFIER, "Expected variable name after delete").getText();
+        consume(TokenType.DELIMITER_SEMICOLON, "Expected semicolon after delete");
+        
+        return new DeleteNode(varName, location);
+    }
+    
+    /**
+     * 解析class声明
+     * 语法: class ClassName [extends SuperClass] [implements Interface1, Interface2] { ... }
+     */
+    private ASTNode parseClassDeclaration() throws ParseException {
+        SourceLocation location = createLocation();
+        
+        String className = consume(TokenType.IDENTIFIER, "Expected class name").getText();
+        
+        String superClassName = null;
+        if (match(TokenType.KEYWORD_EXTENDS)) {
+            superClassName = parseTypeName();
+        }
+        
+        List<String> interfaceNames = new ArrayList<>();
+        if (match(TokenType.KEYWORD_IMPLEMENTS)) {
+            do {
+                interfaceNames.add(parseTypeName());
+            } while (match(TokenType.DELIMITER_COMMA));
+        }
+        
+        ClassDeclarationNode classDecl = new ClassDeclarationNode(className, superClassName, interfaceNames, location);
+        
+        consume(TokenType.DELIMITER_LEFT_BRACE, "Expected '{' after class declaration");
+        
+        while (!check(TokenType.DELIMITER_RIGHT_BRACE) && !isAtEnd()) {
+            ClassModifiers modifiers = parseModifiers();
+            
+            if (check(TokenType.IDENTIFIER) && checkNext(TokenType.DELIMITER_LEFT_PAREN)) {
+                String constructorName = consume(TokenType.IDENTIFIER, "Expected constructor name").getText();
+                if (!constructorName.equals(className)) {
+                    throw error("Constructor name must match class name");
+                }
+                ConstructorDeclarationNode constructor = parseConstructorDeclaration(className, modifiers);
+                classDecl.addConstructor(constructor);
+            } else if (isTypeStart()) {
+                String typeName = parseTypeName();
+                String memberName = consume(TokenType.IDENTIFIER, "Expected member name").getText();
+                
+                if (check(TokenType.DELIMITER_LEFT_PAREN)) {
+                    MethodDeclarationNode method = parseMethodDeclaration(memberName, typeName, modifiers);
+                    classDecl.addMethod(method);
+                } else {
+                    FieldDeclarationNode field = parseFieldDeclaration(memberName, typeName, modifiers);
+                    classDecl.addField(field);
+                }
+            } else {
+                throw error("Unexpected token in class body");
+            }
+        }
+        
+        consume(TokenType.DELIMITER_RIGHT_BRACE, "Expected '}' at end of class declaration");
+        
+        return classDecl;
+    }
+    
+    /**
+     * 解析修饰符
+     */
+    private ClassModifiers parseModifiers() throws ParseException {
+        ClassModifiers modifiers = new ClassModifiers();
+        
+        while (true) {
+            if (match(TokenType.KEYWORD_PUBLIC)) {
+                modifiers.setPublic(true);
+            } else if (match(TokenType.KEYWORD_PRIVATE)) {
+                modifiers.setPrivate(true);
+            } else if (match(TokenType.KEYWORD_PROTECTED)) {
+                modifiers.setProtected(true);
+            } else if (match(TokenType.KEYWORD_STATIC)) {
+                modifiers.setStatic(true);
+            } else if (match(TokenType.KEYWORD_FINAL)) {
+                modifiers.setFinal(true);
+            } else if (match(TokenType.KEYWORD_ABSTRACT)) {
+                modifiers.setAbstract(true);
+            } else if (match(TokenType.KEYWORD_NATIVE)) {
+                modifiers.setNative(true);
+            } else if (match(TokenType.KEYWORD_SYNCHRONIZED)) {
+                modifiers.setSynchronized(true);
+            } else {
+                break;
+            }
+        }
+        
+        return modifiers;
+    }
+    
+    /**
+     * 检查是否是类型开始
+     */
+    private boolean isTypeStart() {
+        return check(TokenType.KEYWORD_INT) || check(TokenType.KEYWORD_LONG) ||
+               check(TokenType.KEYWORD_FLOAT) || check(TokenType.KEYWORD_DOUBLE) ||
+               check(TokenType.KEYWORD_BOOLEAN) || check(TokenType.KEYWORD_CHAR) ||
+               check(TokenType.KEYWORD_BYTE) || check(TokenType.KEYWORD_SHORT) ||
+               check(TokenType.KEYWORD_VOID) || check(TokenType.IDENTIFIER);
+    }
+    
+    /**
+     * 解析类型名称
+     * 支持完整类名、泛型、数组等
+     * 例如: java.lang.String, List<String>, Map<String, Integer>, int[], java.util.List<java.lang.String>
+     */
+    private String parseTypeName() throws ParseException {
+        StringBuilder typeName = new StringBuilder();
+        
+        if (check(TokenType.IDENTIFIER)) {
+            typeName.append(advance().getText());
+            
+            while (check(TokenType.OPERATOR_DOT)) {
+                advance();
+                typeName.append(".");
+                if (check(TokenType.IDENTIFIER)) {
+                    typeName.append(advance().getText());
+                } else {
+                    throw error("Expected identifier after '.'");
+                }
+            }
+            
+            if (check(TokenType.OPERATOR_LESS_THAN)) {
+                typeName.append(parseGenericString());
+            }
+        } else if (check(TokenType.KEYWORD_INT)) {
+            advance();
+            typeName.append("int");
+        } else if (check(TokenType.KEYWORD_LONG)) {
+            advance();
+            typeName.append("long");
+        } else if (check(TokenType.KEYWORD_FLOAT)) {
+            advance();
+            typeName.append("float");
+        } else if (check(TokenType.KEYWORD_DOUBLE)) {
+            advance();
+            typeName.append("double");
+        } else if (check(TokenType.KEYWORD_BOOLEAN)) {
+            advance();
+            typeName.append("boolean");
+        } else if (check(TokenType.KEYWORD_CHAR)) {
+            advance();
+            typeName.append("char");
+        } else if (check(TokenType.KEYWORD_BYTE)) {
+            advance();
+            typeName.append("byte");
+        } else if (check(TokenType.KEYWORD_SHORT)) {
+            advance();
+            typeName.append("short");
+        } else if (check(TokenType.KEYWORD_VOID)) {
+            advance();
+            typeName.append("void");
+        } else {
+            throw error("Expected type name");
+        }
+        
+        while (check(TokenType.DELIMITER_LEFT_BRACKET)) {
+            advance();
+            consume(TokenType.DELIMITER_RIGHT_BRACKET, "Expected ']' in array type");
+            typeName.append("[]");
+        }
+        
+        return typeName.toString();
+    }
+    
+    /**
+     * 解析泛型参数字符串
+     * 例如: <String>, <String, Integer>, <?>, <? extends Number>
+     */
+    private String parseGenericString() throws ParseException {
+        StringBuilder generic = new StringBuilder();
+        
+        consume(TokenType.OPERATOR_LESS_THAN, "Expected '<'");
+        generic.append("<");
+        
+        int depth = 1;
+        while (depth > 0 && !isAtEnd()) {
+            if (check(TokenType.OPERATOR_GREATER_THAN)) {
+                advance();
+                depth--;
+                generic.append(">");
+            } else if (check(TokenType.OPERATOR_LESS_THAN)) {
+                advance();
+                depth++;
+                generic.append("<");
+            } else if (check(TokenType.DELIMITER_COMMA)) {
+                advance();
+                generic.append(", ");
+            } else if (check(TokenType.OPERATOR_MULTIPLY)) {
+                advance();
+                generic.append("?");
+                
+                if (match(TokenType.KEYWORD_EXTENDS)) {
+                    generic.append(" extends ");
+                    generic.append(parseTypeName());
+                } else if (match(TokenType.KEYWORD_SUPER)) {
+                    generic.append(" super ");
+                    generic.append(parseTypeName());
+                }
+            } else {
+                generic.append(parseTypeName());
+            }
+        }
+        
+        return generic.toString();
+    }
+    
+    /**
+     * 解析构造函数声明
+     */
+    private ConstructorDeclarationNode parseConstructorDeclaration(String className, ClassModifiers modifiers) throws ParseException {
+        SourceLocation location = createLocation();
+        
+        consume(TokenType.DELIMITER_LEFT_PAREN, "Expected '(' after constructor name");
+        List<ParameterNode> parameters = parseParameterList();
+        consume(TokenType.DELIMITER_RIGHT_PAREN, "Expected ')' after constructor parameters");
+        
+        consume(TokenType.DELIMITER_LEFT_BRACE, "Expected '{' before constructor body");
+        BlockNode body = parseBlock();
+        
+        return new ConstructorDeclarationNode(className, parameters, body, modifiers, location);
+    }
+    
+    /**
+     * 解析方法声明
+     */
+    private MethodDeclarationNode parseMethodDeclaration(String methodName, String returnTypeName, ClassModifiers modifiers) throws ParseException {
+        SourceLocation location = createLocation();
+        
+        consume(TokenType.DELIMITER_LEFT_PAREN, "Expected '(' after method name");
+        List<ParameterNode> parameters = parseParameterList();
+        consume(TokenType.DELIMITER_RIGHT_PAREN, "Expected ')' after method parameters");
+        
+        consume(TokenType.DELIMITER_LEFT_BRACE, "Expected '{' before method body");
+        BlockNode body = parseBlock();
+        
+        return new MethodDeclarationNode(methodName, returnTypeName, parameters, body, modifiers, location);
+    }
+    
+    /**
+     * 解析字段声明
+     */
+    private FieldDeclarationNode parseFieldDeclaration(String fieldName, String typeName, ClassModifiers modifiers) throws ParseException {
+        SourceLocation location = createLocation();
+        
+        ASTNode initialValue = null;
+        if (match(TokenType.OPERATOR_ASSIGN)) {
+            initialValue = parseExpression();
+        }
+        
+        consume(TokenType.DELIMITER_SEMICOLON, "Expected ';' after field declaration");
+        
+        return new FieldDeclarationNode(fieldName, typeName, initialValue, modifiers, location);
+    }
+    
+    /**
+     * 解析参数列表
+     */
+    private List<ParameterNode> parseParameterList() throws ParseException {
+        List<ParameterNode> parameters = new ArrayList<>();
+        
+        if (!check(TokenType.DELIMITER_RIGHT_PAREN)) {
+            do {
+                String typeName = parseTypeName();
+                String paramName = consume(TokenType.IDENTIFIER, "Expected parameter name").getText();
+                parameters.add(new ParameterNode(paramName, typeName, createLocation()));
+            } while (match(TokenType.DELIMITER_COMMA));
+        }
+        
+        return parameters;
+    }
+    
+    /**
      * 解析return语句
      */
     private ASTNode parseReturnStatement() throws ParseException {
@@ -912,6 +1592,16 @@ public class Parser {
                 if (left instanceof VariableNode) {
                     String varName = ((VariableNode) left).getName();
                     return new AssignmentNode(varName, right, false, null, left.getLocation());
+                }
+                
+                if (left instanceof FieldAccessNode) {
+                    FieldAccessNode fieldAccess = (FieldAccessNode) left;
+                    return new FieldAssignmentNode(fieldAccess.getTarget(), fieldAccess.getFieldName(), right, left.getLocation());
+                }
+                
+                if (left instanceof ArrayAccessNode) {
+                    ArrayAccessNode arrayAccess = (ArrayAccessNode) left;
+                    return new ArrayAssignmentNode(arrayAccess.getArray(), arrayAccess.getIndex(), right, left.getLocation());
                 }
                 
                 restorePosition();
@@ -1069,6 +1759,49 @@ public class Parser {
             }
             
             left = new BinaryOpNode(operator, left, right, location);
+        }
+        
+        if (match(TokenType.KEYWORD_INSTANCEOF)) {
+            SourceLocation location = createLocation();
+            
+            StringBuilder typeName = new StringBuilder();
+            
+            while (true) {
+                if (check(TokenType.IDENTIFIER) || isTypeKeyword(peek().getType())) {
+                    if (typeName.length() > 0 && !typeName.toString().endsWith(".")) {
+                        break;
+                    }
+                    String text = advance().getText();
+                    typeName.append(text);
+                    
+                    if (check(TokenType.OPERATOR_DOT)) {
+                        advance();
+                        typeName.append(".");
+                        continue;
+                    }
+                }
+                
+                if (check(TokenType.DELIMITER_LEFT_BRACKET)) {
+                    advance();
+                    if (check(TokenType.DELIMITER_RIGHT_BRACKET)) {
+                        advance();
+                        typeName.append("[]");
+                        continue;
+                    } else {
+                        position--;
+                        break;
+                    }
+                }
+                
+                break;
+            }
+            
+            String typeStr = typeName.toString();
+            if (typeStr.endsWith(".")) {
+                typeStr = typeStr.substring(0, typeStr.length() - 1);
+            }
+            
+            left = new InstanceofNode(left, typeStr, location);
         }
         
         return left;
@@ -1300,6 +2033,11 @@ public class Parser {
             return new LiteralNode(token.getValue(), String.class, token.getLocation());
         }
         
+        if (match(TokenType.LITERAL_CHAR)) {
+            Token token = tokens.get(position - 1);
+            return new LiteralNode(token.getValue(), char.class, token.getLocation());
+        }
+        
         if (match(TokenType.LITERAL_BOOLEAN)) {
             Token token = tokens.get(position - 1);
             return new LiteralNode(token.getValue(), boolean.class, token.getLocation());
@@ -1308,6 +2046,14 @@ public class Parser {
         if (match(TokenType.LITERAL_NULL)) {
             Token token = tokens.get(position - 1);
             return new LiteralNode(null, null, token.getLocation());
+        }
+        
+        if (match(TokenType.KEYWORD_THIS)) {
+            return new VariableNode("this", createLocation());
+        }
+        
+        if (match(TokenType.KEYWORD_SUPER)) {
+            return new VariableNode("super", createLocation());
         }
         
         if (check(TokenType.DELIMITER_LEFT_BRACKET)) {
@@ -1355,12 +2101,34 @@ public class Parser {
                 
                 if (lastValidClassName != null) {
                     position = lastValidPosition;
+                    
+                    if (check(TokenType.OPERATOR_LESS_THAN)) {
+                        advance();
+                        StringBuilder genericType = new StringBuilder(lastValidClassName).append("<");
+                        parseTypeArguments(genericType);
+                        releasePosition();
+                        return new ClassReferenceNode(resolveGenericType(genericType.toString()), token.getLocation());
+                    }
+                    
                     releasePosition();
-                    return new ClassReferenceNode(lastValidClassName, token.getLocation());
-                } else {
-                    restorePosition();
-                    return new VariableNode(token.getText(), token.getLocation());
+                    return new ClassReferenceNode(resolveGenericType(lastValidClassName), token.getLocation());
                 }
+                
+                String simpleClassName = token.getText();
+                if (resolveClassName(simpleClassName) != null) {
+                    if (check(TokenType.OPERATOR_LESS_THAN)) {
+                        advance();
+                        StringBuilder genericType = new StringBuilder(simpleClassName).append("<");
+                        parseTypeArguments(genericType);
+                        releasePosition();
+                        return new ClassReferenceNode(resolveGenericType(genericType.toString()), token.getLocation());
+                    }
+                    releasePosition();
+                    return new ClassReferenceNode(resolveGenericType(simpleClassName), token.getLocation());
+                }
+                
+                restorePosition();
+                return new VariableNode(token.getText(), token.getLocation());
             } catch (ParseException e) {
                 restorePosition();
                 return new VariableNode(token.getText(), token.getLocation());
@@ -1423,25 +2191,66 @@ public class Parser {
     }
     
     /**
-     * 解析花括号数组初始化器
-     * 语法: {element1, element2, ...}
+     * 解析花括号数组初始化器或Map字面量
+     * 语法: 
+     *   数组: {element1, element2, ...}
+     *   Map: {key: value, key2: value2, ...}
      */
-    private ArrayLiteralNode parseArrayInitializerBrace() throws ParseException {
+    private ASTNode parseArrayInitializerBrace() throws ParseException {
         SourceLocation location = createLocation();
         
         consume(TokenType.DELIMITER_LEFT_BRACE, "Expected '{'");
         
-        List<ASTNode> elements = new ArrayList<>();
+        if (check(TokenType.DELIMITER_RIGHT_BRACE)) {
+            consume(TokenType.DELIMITER_RIGHT_BRACE, "Expected '}'");
+            return new ArrayLiteralNode(new ArrayList<>(), location);
+        }
         
-        if (!check(TokenType.DELIMITER_RIGHT_BRACE)) {
-            do {
-                elements.add(parseExpression());
-            } while (match(TokenType.DELIMITER_COMMA));
+        ASTNode firstElement = parseExpression();
+        
+        if (check(TokenType.OPERATOR_COLON)) {
+            return parseMapLiteral(firstElement, location);
+        }
+        
+        List<ASTNode> elements = new ArrayList<>();
+        elements.add(firstElement);
+        
+        while (match(TokenType.DELIMITER_COMMA)) {
+            if (check(TokenType.DELIMITER_RIGHT_BRACE)) {
+                break;
+            }
+            elements.add(parseExpression());
         }
         
         consume(TokenType.DELIMITER_RIGHT_BRACE, "Expected '}' after array initializer");
         
         return new ArrayLiteralNode(elements, location);
+    }
+    
+    /**
+     * 解析Map字面量
+     * 语法: {key: value, key2: value2, ...}
+     */
+    private MapLiteralNode parseMapLiteral(ASTNode firstKey, SourceLocation location) throws ParseException {
+        Map<ASTNode, ASTNode> entries = new LinkedHashMap<>();
+        
+        consume(TokenType.OPERATOR_COLON, "Expected ':' in map literal");
+        ASTNode firstValue = parseExpression();
+        entries.put(firstKey, firstValue);
+        
+        while (match(TokenType.DELIMITER_COMMA)) {
+            if (check(TokenType.DELIMITER_RIGHT_BRACE)) {
+                break;
+            }
+            ASTNode key = parseExpression();
+            consume(TokenType.OPERATOR_COLON, "Expected ':' in map literal");
+            ASTNode value = parseExpression();
+            entries.put(key, value);
+        }
+        
+        consume(TokenType.DELIMITER_RIGHT_BRACE, "Expected '}' after map literal");
+        
+        return new MapLiteralNode(entries, location);
     }
     
     /**
@@ -1455,8 +2264,12 @@ public class Parser {
     private ASTNode parseConstructorCall() throws ParseException {
         SourceLocation location = createLocation();
         
-        Class<?> type = parseType();
-        boolean isArrayType = type.isArray();
+        GenericType genericType = parseGenericType();
+        String typeName = genericType.getTypeName();
+        
+        if (genericType.isArray() && check(TokenType.DELIMITER_LEFT_BRACE)) {
+            return parseArrayInitializer(genericType.getRuntimeType(), location);
+        }
         
         if (check(TokenType.DELIMITER_LEFT_BRACKET)) {
             advance();
@@ -1465,19 +2278,15 @@ public class Parser {
                 advance();
                 
                 if (check(TokenType.DELIMITER_LEFT_BRACE)) {
-                    return parseArrayInitializer(type, location);
+                    return parseArrayInitializer(genericType.getRuntimeType(), location);
                 } else {
                     throw error("Expected array initializer after 'new type[]'");
                 }
             } else {
                 ASTNode size = parseExpression();
                 consume(TokenType.DELIMITER_RIGHT_BRACKET, "Expected ']' after array size");
-                return new NewArrayNode(type, size, location);
+                return new NewArrayNode(genericType.getRuntimeType(), size, location);
             }
-        }
-        
-        if (isArrayType && check(TokenType.DELIMITER_LEFT_BRACE)) {
-            return parseArrayInitializer(type, location);
         }
         
         consume(TokenType.DELIMITER_LEFT_PAREN, "Expected '(' after type");
@@ -1491,7 +2300,7 @@ public class Parser {
         
         consume(TokenType.DELIMITER_RIGHT_PAREN, "Expected ')' after constructor arguments");
         
-        return new MethodCallNode(new VariableNode(type.getSimpleName(), location), "new", arguments, location);
+        return new ConstructorCallNode(genericType, arguments, null, location);
     }
     
     /**
@@ -1523,19 +2332,19 @@ public class Parser {
         
         if (target instanceof ClassReferenceNode) {
             ClassReferenceNode classRef = (ClassReferenceNode) target;
-            String nestedClassName = classRef.getClassName() + "." + memberName;
+            String nestedClassName = classRef.getType().getTypeName() + "." + memberName;
             
             if (resolveClassName(nestedClassName) != null) {
-                return new ClassReferenceNode(nestedClassName, location);
+                return new ClassReferenceNode(resolveGenericType(nestedClassName), location);
             }
             
-            String innerClassName = classRef.getClassName() + "$" + memberName;
+            String innerClassName = classRef.getType().getTypeName() + "$" + memberName;
             if (resolveClassName(innerClassName) != null) {
-                return new ClassReferenceNode(nestedClassName, location);
+                return new ClassReferenceNode(resolveGenericType(nestedClassName), location);
             }
             
             try {
-                Class<?> clazz = Class.forName(classRef.getClassName());
+                Class<?> clazz = Class.forName(classRef.getType().getTypeName());
                 try {
                     clazz.getDeclaredField(memberName);
                     return new FieldAccessNode(target, memberName, location);

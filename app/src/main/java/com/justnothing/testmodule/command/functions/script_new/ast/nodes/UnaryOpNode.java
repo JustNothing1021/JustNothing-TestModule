@@ -78,7 +78,7 @@ public class UnaryOpNode extends ASTNode {
         sb.append(indent(indent + 1)).append("operator: ").append(operator.getSymbol()).append("\n");
         sb.append(indent(indent + 1)).append("operand:\n");
         sb.append(operand.formatString(indent + 2)).append("\n");
-        return sb.toString().strip();
+        return sb.toString().stripTrailing();
     }
     
     public static class Builder extends ASTNode.Builder<Builder> {

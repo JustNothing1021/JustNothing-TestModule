@@ -37,6 +37,6 @@ public class ArrayLiteralNode extends ASTNode {
             sb.append(indent(indent + 1)).append("element[").append(i).append("]:\n");
             sb.append(elements.get(i).formatString(indent + 2)).append("\n");
         }
-        return sb.toString().strip();
+        return sb.toString().stripTrailing();
     }
 }

@@ -1,6 +1,7 @@
 package com.justnothing.testmodule.command.functions.script_new.ast.nodes;
 
 import com.justnothing.testmodule.command.functions.script_new.ast.ASTNode;
+import com.justnothing.testmodule.command.functions.script_new.ast.GenericType;
 import com.justnothing.testmodule.command.functions.script_new.ast.SourceLocation;
 import com.justnothing.testmodule.command.functions.script_new.ast.visitor.ASTVisitor;
 
@@ -18,10 +19,10 @@ public class AssignmentNode extends ASTNode {
     private final String variableName;
     private final ASTNode value;
     private final boolean isDeclaration;
-    private final Class<?> declaredType;
+    private final GenericType declaredType;
     
     public AssignmentNode(String variableName, ASTNode value, boolean isDeclaration, 
-                        Class<?> declaredType, SourceLocation location) {
+                        GenericType declaredType, SourceLocation location) {
         super(location);
         this.variableName = variableName;
         this.value = value;
@@ -41,8 +42,12 @@ public class AssignmentNode extends ASTNode {
         return isDeclaration;
     }
     
-    public Class<?> getDeclaredType() {
+    public GenericType getDeclaredType() {
         return declaredType;
+    }
+    
+    public Class<?> getDeclaredClass() {
+        return declaredType != null ? declaredType.getRuntimeType() : null;
     }
     
     @Override
@@ -55,7 +60,7 @@ public class AssignmentNode extends ASTNode {
         StringBuilder sb = new StringBuilder();
         sb.append(indent(indent)).append("AssignmentNode\n");
         sb.append(indent(indent + 1)).append("variable: ").append(variableName).append("\n");
-        sb.append(indent(indent + 1)).append("type: ").append(declaredType != null ? declaredType.getSimpleName() : "null").append("\n");
+        sb.append(indent(indent + 1)).append("type: ").append(declaredType != null ? declaredType.getTypeName() : "null").append("\n");
         sb.append(indent(indent + 1)).append("isDeclaration: ").append(isDeclaration).append("\n");
         if (value == null) {
             sb.append(indent(indent + 1)).append("value: null\n");
@@ -63,14 +68,14 @@ public class AssignmentNode extends ASTNode {
             sb.append(indent(indent + 1)).append("value:\n");
             sb.append(value.formatString(indent + 2));
         }
-        return sb.toString().strip();
+        return sb.toString().stripTrailing();
     }
     
     public static class Builder extends ASTNode.Builder<Builder> {
         private String variableName;
         private ASTNode value;
         private boolean isDeclaration;
-        private Class<?> declaredType;
+        private GenericType declaredType;
         
         public Builder variableName(String variableName) {
             this.variableName = variableName;
@@ -87,7 +92,7 @@ public class AssignmentNode extends ASTNode {
             return this;
         }
         
-        public Builder declaredType(Class<?> declaredType) {
+        public Builder declaredType(GenericType declaredType) {
             this.declaredType = declaredType;
             return this;
         }

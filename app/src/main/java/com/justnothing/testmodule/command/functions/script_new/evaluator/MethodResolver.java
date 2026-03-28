@@ -3,11 +3,14 @@ package com.justnothing.testmodule.command.functions.script_new.evaluator;
 import com.justnothing.testmodule.utils.reflect.ReflectionUtils;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.lang.reflect.Array;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -172,6 +175,7 @@ public class MethodResolver {
      * 查找候选方法
      * <p>
      * 在目标类及其父类中查找所有同名方法。
+     * 同时也通过接口查找方法。
      * </p>
      */
     private static List<Method> findCandidateMethods(Class<?> clazz, String methodName) {
@@ -187,7 +191,62 @@ public class MethodResolver {
             current = current.getSuperclass();
         }
         
+        Method interfaceMethod = findMethodThroughInterfaces(clazz, methodName);
+        if (interfaceMethod != null && !candidates.contains(interfaceMethod)) {
+            candidates.add(interfaceMethod);
+        }
+        
         return candidates;
+    }
+    
+    /**
+     * 通过接口查找方法（确保返回公共接口中的方法）
+     */
+    private static Method findMethodThroughInterfaces(Class<?> clazz, String methodName) {
+        Set<Class<?>> allInterfaces = new HashSet<>();
+        collectAllInterfaces(clazz, allInterfaces);
+        
+        for (Class<?> _interface : allInterfaces) {
+            if (!Modifier.isPublic(_interface.getModifiers())) {
+                continue;
+            }
+            Method method = findMethodInInterface(_interface, methodName);
+            if (method != null) {
+                return method;
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * 收集类实现的所有接口（包括父类实现的接口）
+     */
+    private static void collectAllInterfaces(Class<?> clazz, Set<Class<?>> interfaces) {
+        if (clazz == null || clazz == Object.class) {
+            return;
+        }
+        for (Class<?> _interface : clazz.getInterfaces()) {
+            interfaces.add(_interface);
+            collectAllInterfaces(_interface, interfaces);
+        }
+        collectAllInterfaces(clazz.getSuperclass(), interfaces);
+    }
+    
+    /**
+     * 在接口中查找匹配的方法
+     */
+    private static Method findMethodInInterface(Class<?> _interface, String methodName) {
+        try {
+            for (Method method : _interface.getMethods()) {
+                if (method.getName().equals(methodName)) {
+                    if (method.getDeclaringClass().isInterface()) {
+                        return method;
+                    }
+                }
+            }
+        } catch (Exception e) {
+        }
+        return null;
     }
     
     /**

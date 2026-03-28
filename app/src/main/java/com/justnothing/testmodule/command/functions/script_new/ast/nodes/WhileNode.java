@@ -40,6 +40,6 @@ public class WhileNode extends ASTNode {
         sb.append(condition.formatString(indent + 2)).append("\n");
         sb.append(indent(indent + 1)).append("body:\n");
         sb.append(body.formatString(indent + 2)).append("\n");
-        return sb.toString().strip();
+        return sb.toString().stripTrailing();
     }
 }

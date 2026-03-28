@@ -213,6 +213,26 @@ public class ClassResolver {
                 logger.debug("通过完整类名找到类: " + clazz.getName());
                 return clazz;
             }
+
+            String[] parts = className.split("\\.");
+            if (parts.length >= 2) {
+                for (int i = parts.length - 1; i >= 1; i--) {
+                    StringBuilder nestedClassName = new StringBuilder(parts[0]);
+                    for (int j = 1; j < parts.length; j++) {
+                        if (j < i) {
+                            nestedClassName.append('.').append(parts[j]);
+                        } else {
+                            nestedClassName.append('$').append(parts[j]);
+                        }
+                    }
+                    clazz = findClassInternal(nestedClassName.toString(), classLoader);
+
+                    if (clazz != null) {
+                        logger.debug("通过嵌套类名找到类: " + clazz.getName());
+                        return clazz;
+                    }
+                }
+            }
         }
 
         for (String importStmt : imports) {
@@ -231,6 +251,26 @@ public class ClassResolver {
             if (clazz != null) {
                 logger.debug("通过导入找到类: " + clazz.getName());
                 return clazz;
+            }
+
+            String[] parts = fullClassName.split("\\.");
+            if (parts.length >= 2) {
+                for (int i = parts.length - 1; i >= 1; i--) {
+                    StringBuilder nestedClassName = new StringBuilder(parts[0]);
+                    for (int j = 1; j < parts.length; j++) {
+                        if (j < i) {
+                            nestedClassName.append('.').append(parts[j]);
+                        } else {
+                            nestedClassName.append('$').append(parts[j]);
+                        }
+                    }
+                    clazz = findClassInternal(nestedClassName.toString(), classLoader);
+
+                    if (clazz != null) {
+                        logger.debug("通过嵌套类名找到类: " + clazz.getName());
+                        return clazz;
+                    }
+                }
             }
         }
         return null;
