@@ -22,6 +22,7 @@ public class UnaryOpNode extends ASTNode {
         NEGATIVE("-"),
         POSITIVE("+"),
         LOGICAL_NOT("!"),
+        NOT_NULL("!!"),
         BITWISE_NOT("~"),
         PRE_INCREMENT("++"),
         PRE_DECREMENT("--"),

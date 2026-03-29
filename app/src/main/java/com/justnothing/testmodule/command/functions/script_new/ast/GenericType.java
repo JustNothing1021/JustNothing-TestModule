@@ -65,6 +65,25 @@ public class GenericType {
     }
     
     public String getTypeName() {
+        if (originalTypeName != null) {
+            StringBuilder sb = new StringBuilder(originalTypeName);
+            
+            if (!typeArguments.isEmpty()) {
+                sb.append("<");
+                for (int i = 0; i < typeArguments.size(); i++) {
+                    if (i > 0) sb.append(", ");
+                    sb.append(typeArguments.get(i).getTypeName());
+                }
+                sb.append(">");
+            }
+            
+            for (int i = 0; i < arrayDepth; i++) {
+                sb.append("[]");
+            }
+            
+            return sb.toString();
+        }
+        
         StringBuilder sb = new StringBuilder();
         sb.append(rawType.getSimpleName());
         

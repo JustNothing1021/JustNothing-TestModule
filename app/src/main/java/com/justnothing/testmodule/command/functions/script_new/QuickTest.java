@@ -11,6 +11,8 @@ public class QuickTest {
     public static void main(String[] args) {
         System.out.println("=== Quick Tests ===\n");
         
+        testAutoTypeInference();
+        testLambdaAndMethodRef();
         testArrayConcat();
         testSimpleQuickSort();
         testFibonacci();
@@ -22,6 +24,90 @@ public class QuickTest {
         testCompose();
         testPipeline();
         testForEach();
+        testMagicOperators();
+    }
+    
+    private static void testAutoTypeInference() {
+        System.out.println("Testing Auto Type Inference...");
+        
+        try {
+            String source = """
+                auto a = 1;
+                auto b = 2L;
+                auto c = 3.14;
+                auto d = true;
+                auto e = "hello";
+                
+                println("a = " + a + " (type: int)");
+                println("b = " + b + " (type: long)");
+                println("c = " + c + " (type: double)");
+                println("d = " + d + " (type: boolean)");
+                println("e = " + e + " (type: String)");
+                
+                auto sum = a + 10;
+                println("a + 10 = " + sum);
+                """;
+            
+            Lexer lexer = new Lexer(source);
+            Parser parser = new Parser(lexer.tokenize());
+            BlockNode block = parser.parse();
+            
+            ExecutionContext context = new ExecutionContext(QuickTest.class.getClassLoader());
+            ASTEvaluator.evaluate(block, context);
+            
+            System.out.println("✓ Auto Type Inference test passed\n");
+        } catch (Exception e) {
+            System.err.println("✗ Auto Type Inference test failed: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    private static void testLambdaAndMethodRef() {
+        System.out.println("Testing Lambda and Method Reference...");
+        
+        try {
+            String source = """
+                import java.util.function.Function;
+                import java.util.function.Supplier;
+                import java.lang.reflect.Method;
+                
+                auto f = () -> 42;
+                println(f());
+                
+                auto add = (x, y) -> x + y;
+                println(add(3, 4));
+                
+                Function g = (x) -> x * 2;
+                println(g(5));
+                
+                Function<Integer, Integer> h = (x) -> x + 1;
+                println(h(10));
+                
+                Supplier time = System::currentTimeMillis;
+                println("Current time: " + time());
+                
+                auto stringClass = String.class;
+                println("String.class = " + stringClass);
+                
+                Function<Method, String> getName = Method::getName;
+                auto lengthMethod = stringClass.getMethod("length");
+                println("Method::getName test: " + getName(lengthMethod));
+                """;
+            
+            Lexer lexer = new Lexer(source);
+            Parser parser = new Parser(lexer.tokenize());
+            BlockNode block = parser.parse();
+            
+            System.out.println("AST: " + block.formatString(0));
+            
+            ExecutionContext context = new ExecutionContext(QuickTest.class.getClassLoader());
+            ASTEvaluator.evaluate(block, context);
+            
+            System.out.println("✓ Lambda and Method Reference test passed\n");
+        } catch (Exception e) {
+            System.err.println("✗ Lambda and Method Reference test failed: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
     
     private static void testArrayConcat() {
@@ -399,6 +485,58 @@ public class QuickTest {
             System.out.println("✓ For-Each test passed\n");
         } catch (Exception e) {
             System.err.println("✗ For-Each test failed: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    private static void testMagicOperators() {
+        System.out.println("Testing Magic Operators...");
+        
+        try {
+            String source = """
+                auto p = 2 ** 10;
+                auto d = 7 // 3;
+                auto m = -7 %% 3;
+                println(p);
+                println(d);
+                println(m);
+                
+                auto a = null;
+                auto b = "hello";
+                auto c = a ?? b;
+                println(c);
+                
+                auto x = null;
+                auto y = "default";
+                auto z = x ?: y;
+                println(z);
+                
+                auto arr1 = {1, 2, 3, 4};
+                auto arr2 = {3, 4, 5, 6};
+                auto diff = arr1 - arr2;
+                auto inter = arr1 & arr2;
+                auto union = arr1 | arr2;
+                auto symm = arr1 ^ arr2;
+                println(diff);
+                println(inter);
+                println(union);
+                println(symm);
+                
+                auto arr = {1, 2, 3, 4, 5};
+                auto rev = ~arr;
+                println(rev);
+                """;
+            
+            Lexer lexer = new Lexer(source);
+            Parser parser = new Parser(lexer.tokenize());
+            BlockNode block = parser.parse();
+            
+            ExecutionContext context = new ExecutionContext(QuickTest.class.getClassLoader());
+            ASTEvaluator.evaluate(block, context);
+            
+            System.out.println("✓ Magic Operators test passed\n");
+        } catch (Exception e) {
+            System.err.println("✗ Magic Operators test failed: " + e.getMessage());
             e.printStackTrace();
         }
     }

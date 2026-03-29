@@ -15,20 +15,38 @@ public class ParseContext {
     private final Deque<NestingLevel> nestingStack;
     private final List<String> imports;
     private final Set<String> declaredClassNames;
+    private ClassLoader classLoader;
     
     public ParseContext() {
+        this(Thread.currentThread().getContextClassLoader());
+    }
+    
+    public ParseContext(ClassLoader classLoader) {
         this.currentLine = 1;
         this.currentColumn = 1;
         this.expectedParamType = null;
         this.nestingStack = new ArrayDeque<>();
         this.imports = new ArrayList<>();
         this.declaredClassNames = new HashSet<>();
+        this.classLoader = classLoader != null ? classLoader : Thread.currentThread().getContextClassLoader();
         addDefaultImports();
     }
     
     private void addDefaultImports() {
         imports.add("java.lang.*");
         imports.add("java.util.*");
+        imports.add("java.lang.reflect.*");
+        imports.add("java.util.function.*");
+        imports.add("android.os.*");
+        imports.add("android.util.*");
+    }
+    
+    public ClassLoader getClassLoader() {
+        return classLoader;
+    }
+    
+    public void setClassLoader(ClassLoader classLoader) {
+        this.classLoader = classLoader;
     }
     
     public int getCurrentLine() {

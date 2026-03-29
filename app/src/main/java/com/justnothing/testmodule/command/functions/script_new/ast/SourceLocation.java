@@ -44,9 +44,9 @@ public class SourceLocation {
     
     @Override
     public String toString() {
-        return "SourceLocation{" +
+        return "SourceLocation[" +
                 "line=" + line +
                 ", column=" + column +
-                '}';
+                ']';
     }
 }

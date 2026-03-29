@@ -10,6 +10,7 @@ import com.justnothing.testmodule.command.functions.script_new.evaluator.Executi
 import com.justnothing.testmodule.command.functions.script_new.exception.ParseException;
 import com.justnothing.testmodule.command.functions.script_new.exception.EvaluationException;
 import com.justnothing.testmodule.command.functions.script_new.lexer.Lexer;
+import com.justnothing.testmodule.command.functions.script_new.parser.ParseContext;
 import com.justnothing.testmodule.command.functions.script_new.parser.Parser;
 
 public class REPL {
@@ -28,9 +29,12 @@ public class REPL {
         
         Scanner scanner = new Scanner(System.in);
         ExecutionContext context = new ExecutionContext(REPL.class.getClassLoader());
+        ParseContext parseContext = new ParseContext();
+        List<String> pendingLines = new ArrayList<>();
         
         while (true) {
-            System.out.print("> ");
+            String prompt = pendingLines.isEmpty() ? "> " : "... ";
+            System.out.print(prompt);
             String input;
             try {
                 input = scanner.nextLine().trim();
@@ -85,7 +89,7 @@ public class REPL {
                         }
                         
                         String code = String.join("\n", lines);
-                        executeCode(code, context);
+                        executeCode(code, context, parseContext);
                         lines.clear();
                         continue;
                     }
@@ -112,16 +116,79 @@ public class REPL {
                 continue;
             }
             
-            executeCode(input, context);
+            pendingLines.add(input);
+            String code = String.join("\n", pendingLines);
+            
+            if (!isCodeComplete(code)) {
+                continue;
+            }
+            
+            executeCode(code, context, parseContext);
+            pendingLines.clear();
         }
         
         scanner.close();
     }
     
-    private static void executeCode(String input, ExecutionContext context) {
+    private static boolean isCodeComplete(String code) {
+        int braceCount = 0;
+        int parenCount = 0;
+        int bracketCount = 0;
+        boolean inString = false;
+        boolean inChar = false;
+        boolean inFString = false;
+        boolean escape = false;
+        
+        for (int i = 0; i < code.length(); i++) {
+            char c = code.charAt(i);
+            
+            if (escape) {
+                escape = false;
+                continue;
+            }
+            
+            if (c == '\\' && (inString || inChar || inFString)) {
+                escape = true;
+                continue;
+            }
+            
+            if (c == '"' && !inChar) {
+                if (i > 0 && code.charAt(i - 1) == 'f' && !inString && !inFString) {
+                    inFString = !inFString;
+                } else if (inFString) {
+                    inFString = false;
+                } else {
+                    inString = !inString;
+                }
+                continue;
+            }
+            
+            if (c == '\'' && !inString && !inFString) {
+                inChar = !inChar;
+                continue;
+            }
+            
+            if (inString || inChar || inFString) {
+                continue;
+            }
+            
+            switch (c) {
+                case '{': braceCount++; break;
+                case '}': braceCount--; break;
+                case '(': parenCount++; break;
+                case ')': parenCount--; break;
+                case '[': bracketCount++; break;
+                case ']': bracketCount--; break;
+            }
+        }
+        
+        return braceCount <= 0 && parenCount <= 0 && bracketCount <= 0;
+    }
+    
+    private static void executeCode(String input, ExecutionContext context, ParseContext parseContext) {
         try {
             Lexer lexer = new Lexer(input);
-            Parser parser = new Parser(lexer.tokenize());
+            Parser parser = new Parser(lexer.tokenize(), parseContext);
             BlockNode ast = parser.parse();
             
             System.out.println("AST:");

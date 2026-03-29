@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.script_new.evaluator;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -71,10 +72,10 @@ public class Builtins {
         }
         if (value.getClass().isArray()) {
             StringBuilder sb = new StringBuilder("[");
-            int length = java.lang.reflect.Array.getLength(value);
+            int length = Array.getLength(value);
             for (int i = 0; i < length; i++) {
                 if (i > 0) sb.append(", ");
-                sb.append(formatValue(java.lang.reflect.Array.get(value, i)));
+                sb.append(formatValue(Array.get(value, i)));
             }
             sb.append("]");
             return sb.toString();
@@ -206,6 +207,129 @@ public class Builtins {
             }
             throw new RuntimeException("join() first argument must be a Collection or Array");
         });
+        
+        functions.put("filter", args -> {
+            if (args.size() != 2) {
+                throw new RuntimeException("filter() requires exactly 2 arguments: collection and predicate");
+            }
+            Object collection = args.get(0);
+            Object predicate = args.get(1);
+            
+            List<Object> result = new ArrayList<>();
+            
+            if (collection instanceof Collection) {
+                for (Object item : (Collection<?>) collection) {
+                    if (callPredicate(predicate, item)) {
+                        result.add(item);
+                    }
+                }
+            } else if (collection != null && collection.getClass().isArray()) {
+                int length = java.lang.reflect.Array.getLength(collection);
+                for (int i = 0; i < length; i++) {
+                    Object item = java.lang.reflect.Array.get(collection, i);
+                    if (callPredicate(predicate, item)) {
+                        result.add(item);
+                    }
+                }
+            } else {
+                throw new RuntimeException("filter() first argument must be a Collection or Array");
+            }
+            
+            return result.toArray();
+        });
+        
+        functions.put("map", args -> {
+            if (args.size() != 2) {
+                throw new RuntimeException("map() requires exactly 2 arguments: collection and mapper");
+            }
+            Object collection = args.get(0);
+            Object mapper = args.get(1);
+            
+            List<Object> result = new ArrayList<>();
+            
+            if (collection instanceof Collection) {
+                for (Object item : (Collection<?>) collection) {
+                    result.add(callFunction(mapper, item));
+                }
+            } else if (collection != null && collection.getClass().isArray()) {
+                int length = java.lang.reflect.Array.getLength(collection);
+                for (int i = 0; i < length; i++) {
+                    Object item = java.lang.reflect.Array.get(collection, i);
+                    result.add(callFunction(mapper, item));
+                }
+            } else {
+                throw new RuntimeException("map() first argument must be a Collection or Array");
+            }
+            
+            return result.toArray();
+        });
+        
+        functions.put("reduce", args -> {
+            if (args.size() < 2 || args.size() > 3) {
+                throw new RuntimeException("reduce() requires 2 or 3 arguments: collection, reducer, and optional initial value");
+            }
+            Object collection = args.get(0);
+            Object reducer = args.get(1);
+            Object accumulator = args.size() > 2 ? args.get(2) : null;
+            
+            if (collection instanceof Collection) {
+                boolean first = (accumulator == null);
+                for (Object item : (Collection<?>) collection) {
+                    if (first) {
+                        accumulator = item;
+                        first = false;
+                    } else {
+                        accumulator = callFunction(reducer, accumulator, item);
+                    }
+                }
+            } else if (collection != null && collection.getClass().isArray()) {
+                int length = java.lang.reflect.Array.getLength(collection);
+                boolean first = (accumulator == null);
+                for (int i = 0; i < length; i++) {
+                    Object item = java.lang.reflect.Array.get(collection, i);
+                    if (first) {
+                        accumulator = item;
+                        first = false;
+                    } else {
+                        accumulator = callFunction(reducer, accumulator, item);
+                    }
+                }
+            } else {
+                throw new RuntimeException("reduce() first argument must be a Collection or Array");
+            }
+            
+            return accumulator;
+        });
+    }
+    
+    private boolean callPredicate(Object predicate, Object item) {
+        if (predicate instanceof Lambda) {
+            Object result = ((Lambda) predicate).invoke(new Object[]{item});
+            return result instanceof Boolean ? (Boolean) result : result != null;
+        } else if (predicate instanceof java.lang.reflect.Method) {
+            try {
+                java.lang.reflect.Method method = (java.lang.reflect.Method) predicate;
+                Object result = method.invoke(null, item);
+                return result instanceof Boolean ? (Boolean) result : result != null;
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to call predicate: " + e.getMessage());
+            }
+        }
+        throw new RuntimeException("Predicate must be a Lambda or Method");
+    }
+    
+    private Object callFunction(Object func, Object... args) {
+        if (func instanceof Lambda) {
+            return ((Lambda) func).invoke(args);
+        } else if (func instanceof java.lang.reflect.Method) {
+            try {
+                java.lang.reflect.Method method = (java.lang.reflect.Method) func;
+                return method.invoke(null, args);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to call function: " + e.getMessage());
+            }
+        }
+        throw new RuntimeException("Function must be a Lambda or Method");
     }
     
     private void registerReflectionFunctions() {

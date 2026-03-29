@@ -4,10 +4,13 @@ import com.justnothing.testmodule.command.functions.script_new.ast.GenericType;
 import com.justnothing.testmodule.command.functions.script_new.ast.SourceLocation;
 import com.justnothing.testmodule.command.functions.script_new.ast.ASTNode;
 import com.justnothing.testmodule.command.functions.script_new.ast.nodes.*;
+import com.justnothing.testmodule.command.functions.script_new.evaluator.AutoClass;
 import com.justnothing.testmodule.command.functions.script_new.evaluator.ClassFinder;
 import com.justnothing.testmodule.command.functions.script_new.exception.ParseException;
+import com.justnothing.testmodule.command.functions.script_new.lexer.Lexer;
 import com.justnothing.testmodule.command.functions.script_new.lexer.Token;
 import com.justnothing.testmodule.command.functions.script_new.lexer.TokenType;
+import com.justnothing.testmodule.command.functions.script_new.exception.ErrorCode;
 
 import java.lang.reflect.Array;
 import java.util.ArrayDeque;
@@ -116,7 +119,17 @@ public class Parser {
                 message,
                 token.getLocation().getLine(),
                 token.getLocation().getColumn(),
-                com.justnothing.testmodule.command.functions.script_new.exception.ErrorCode.PARSE_INVALID_SYNTAX
+                ErrorCode.PARSE_INVALID_SYNTAX
+        );
+    }
+
+    private ParseException error(String message, ErrorCode errorCode) {
+        Token token = peek();
+        return new ParseException(
+                message,
+                token.getLocation().getLine(),
+                token.getLocation().getColumn(),
+                errorCode
         );
     }
     
@@ -158,6 +171,10 @@ public class Parser {
             check(TokenType.KEYWORD_BYTE) || check(TokenType.KEYWORD_SHORT) ||
             check(TokenType.KEYWORD_AUTO) || check(TokenType.KEYWORD_FINAL)) {
             return parseVariableDeclaration();
+        }
+        
+        if (check(TokenType.IDENTIFIER) && checkNext(TokenType.OPERATOR_DECLARE_ASSIGN)) {
+            return parseShortDeclaration();
         }
         
         if (check(TokenType.IDENTIFIER)) {
@@ -253,7 +270,6 @@ public class Parser {
                     return parseBlock();
                 }
                 
-                int innerSavedPos = position;
                 try {
                     parseExpression();
                     if (check(TokenType.OPERATOR_COLON)) {
@@ -302,6 +318,17 @@ public class Parser {
         return parseVariableDeclaration(true);
     }
     
+    private ASTNode parseShortDeclaration() throws ParseException {
+        SourceLocation location = createLocation();
+        String varName = consume(TokenType.IDENTIFIER, "Expected variable name").getText();
+        consume(TokenType.OPERATOR_DECLARE_ASSIGN, "Expected :=");
+        ASTNode value = parseExpression();
+        consume(TokenType.DELIMITER_SEMICOLON, "Expected semicolon after short declaration");
+        
+        return new AssignmentNode(varName, value, true, 
+            new GenericType(AutoClass.class, Collections.emptyList(), 0, "auto"), location);
+    }
+    
     private ASTNode parseVariableDeclaration(boolean consumeSemicolon) throws ParseException {
         SourceLocation location = createLocation();
         boolean isFinal = false;
@@ -316,7 +343,7 @@ public class Parser {
         
         if (peek().getType() == TokenType.KEYWORD_AUTO) {
             advance();
-            type = GenericType.of(Object.class);
+            type = new GenericType(AutoClass.class, Collections.emptyList(), 0, "auto");
             isAuto = true;
         } else {
             type = parseGenericType();
@@ -349,31 +376,7 @@ public class Parser {
         
         return new BlockNode(new ArrayList<>(declarations), location);
     }
-    
-    /**
-     * 从token解析类型
-     * 支持基本类型、类名、数组类型、泛型
-     */
-    private Class<?> parseTypeFromToken(Token token) throws ParseException {
-        TokenType type = token.getType();
-        
-        if (type == TokenType.KEYWORD_INT) return int.class;
-        if (type == TokenType.KEYWORD_LONG) return long.class;
-        if (type == TokenType.KEYWORD_FLOAT) return float.class;
-        if (type == TokenType.KEYWORD_DOUBLE) return double.class;
-        if (type == TokenType.KEYWORD_BOOLEAN) return boolean.class;
-        if (type == TokenType.KEYWORD_CHAR) return char.class;
-        if (type == TokenType.KEYWORD_BYTE) return byte.class;
-        if (type == TokenType.KEYWORD_SHORT) return short.class;
-        if (type == TokenType.KEYWORD_VOID) return void.class;
-        if (type == TokenType.KEYWORD_AUTO) return Object.class;
-        
-        if (type == TokenType.IDENTIFIER) {
-            return resolveType(token.getText());
-        }
-        
-        throw error("Expected type");
-    }
+
     
     /**
      * 解析类型表达式
@@ -542,43 +545,11 @@ public class Parser {
         }
     }
     
-    /**
-     * 解析泛型类型参数列表
-     */
-    private List<GenericType> parseGenericTypeArguments() throws ParseException {
-        List<GenericType> typeArguments = new ArrayList<>();
-        int depth = 1;
-        
-        while (depth > 0 && !isAtEnd()) {
-            if (check(TokenType.OPERATOR_GREATER_THAN)) {
-                advance();
-                depth--;
-            } else if (check(TokenType.OPERATOR_RIGHT_SHIFT)) {
-                advance();
-                depth -= 2;
-            } else if (check(TokenType.OPERATOR_UNSIGNED_RIGHT_SHIFT)) {
-                advance();
-                depth -= 3;
-            } else if (check(TokenType.OPERATOR_LESS_THAN)) {
-                advance();
-                depth++;
-            } else if (check(TokenType.DELIMITER_COMMA)) {
-                advance();
-            } else if (check(TokenType.IDENTIFIER) || isTypeKeyword(peek().getType())) {
-                typeArguments.add(parseGenericType());
-            } else {
-                advance();
-            }
-        }
-        
-        return typeArguments;
-    }
     
     /**
      * 解析泛型参数
      */
     private void parseTypeArguments(StringBuilder typeName) throws ParseException {
-        boolean first = true;
         int depth = 1;
         
         while (depth > 0 && !isAtEnd()) {
@@ -693,77 +664,19 @@ public class Parser {
             baseTypeName = baseTypeName.substring(0, genericIndex);
         }
         
+        if ("auto".equals(baseTypeName)) {
+            return AutoClass.class;
+        }
+        
         Class<?> baseType;
-        switch (baseTypeName) {
-            case "int":
-                baseType = int.class;
-                break;
-            case "long":
-                baseType = long.class;
-                break;
-            case "float":
-                baseType = float.class;
-                break;
-            case "double":
-                baseType = double.class;
-                break;
-            case "boolean":
-                baseType = boolean.class;
-                break;
-            case "char":
-                baseType = char.class;
-                break;
-            case "byte":
-                baseType = byte.class;
-                break;
-            case "short":
-                baseType = short.class;
-                break;
-            case "void":
-                baseType = void.class;
-                break;
-            case "auto":
+
+        baseType = ClassFinder.findClassWithImports(baseTypeName, null, context.getImports());
+        if (baseType == null) {
+            if (context.isClassDeclared(baseTypeName)) {
                 baseType = Object.class;
-                break;
-            case "Integer":
-                baseType = Integer.class;
-                break;
-            case "Long":
-                baseType = Long.class;
-                break;
-            case "Float":
-                baseType = Float.class;
-                break;
-            case "Double":
-                baseType = Double.class;
-                break;
-            case "Boolean":
-                baseType = Boolean.class;
-                break;
-            case "Character":
-                baseType = Character.class;
-                break;
-            case "Byte":
-                baseType = Byte.class;
-                break;
-            case "Short":
-                baseType = Short.class;
-                break;
-            case "String":
-                baseType = String.class;
-                break;
-            case "Object":
-                baseType = Object.class;
-                break;
-            default:
-                baseType = ClassFinder.findClassWithImports(baseTypeName, null, context.getImports());
-                if (baseType == null) {
-                    if (context.isClassDeclared(baseTypeName)) {
-                        baseType = Object.class;
-                    } else {
-                        throw error("Class not found: " + baseTypeName);
-                    }
-                }
+            } else {
+                throw error("Class not found: " + baseTypeName, ErrorCode.PARSE_CLASS_NOT_FOUND);
+            }
         }
         
         if (arrayDepth > 0) {
@@ -798,78 +711,19 @@ public class Parser {
             }
         }
         
+        if ("auto".equals(baseTypeName)) {
+            return new GenericType(AutoClass.class, typeArguments, arrayDepth, "auto");
+        }
+        
         Class<?> baseType;
-        switch (baseTypeName) {
-            case "int":
-                baseType = int.class;
-                break;
-            case "long":
-                baseType = long.class;
-                break;
-            case "float":
-                baseType = float.class;
-                break;
-            case "double":
-                baseType = double.class;
-                break;
-            case "boolean":
-                baseType = boolean.class;
-                break;
-            case "char":
-                baseType = char.class;
-                break;
-            case "byte":
-                baseType = byte.class;
-                break;
-            case "short":
-                baseType = short.class;
-                break;
-            case "void":
-                baseType = void.class;
-                break;
-            case "auto":
+        baseType = ClassFinder.findClassWithImports(baseTypeName, null, context.getImports());
+        if (baseType == null) {
+            if (context.isClassDeclared(baseTypeName)) {
                 baseType = Object.class;
-                break;
-            case "Integer":
-                baseType = Integer.class;
-                break;
-            case "Long":
-                baseType = Long.class;
-                break;
-            case "Float":
-                baseType = Float.class;
-                break;
-            case "Double":
-                baseType = Double.class;
-                break;
-            case "Boolean":
-                baseType = Boolean.class;
-                break;
-            case "Character":
-                baseType = Character.class;
-                break;
-            case "Byte":
-                baseType = Byte.class;
-                break;
-            case "Short":
-                baseType = Short.class;
-                break;
-            case "String":
-                baseType = String.class;
-                break;
-            case "Object":
-                baseType = Object.class;
-                break;
-            default:
-                baseType = ClassFinder.findClassWithImports(baseTypeName, null, context.getImports());
-                if (baseType == null) {
-                    if (context.isClassDeclared(baseTypeName)) {
-                        baseType = Object.class;
-                        return new GenericType(baseType, typeArguments, arrayDepth, baseTypeName);
-                    } else {
-                        throw error("Class not found: " + baseTypeName);
-                    }
-                }
+            } else {
+                throw error("Class not found: " + baseTypeName, ErrorCode.PARSE_CLASS_NOT_FOUND);
+            }
+            return new GenericType(baseType, typeArguments, arrayDepth, baseTypeName);
         }
         
         return new GenericType(baseType, typeArguments, arrayDepth);
@@ -1574,6 +1428,18 @@ public class Parser {
      * 解析表达式（最低优先级）
      */
     private ASTNode parseExpression() throws ParseException {
+        if (match(TokenType.KEYWORD_ASYNC)) {
+            SourceLocation location = createLocation();
+            ASTNode expr = parseExpression();
+            return new AsyncNode(expr, location);
+        }
+        
+        if (match(TokenType.KEYWORD_AWAIT)) {
+            SourceLocation location = createLocation();
+            ASTNode expr = parseExpression();
+            return new AwaitNode(expr, location);
+        }
+        
         return parseAssignment();
     }
     
@@ -1581,7 +1447,7 @@ public class Parser {
      * 解析赋值表达式
      */
     private ASTNode parseAssignment() throws ParseException {
-        int savedPos = savePosition();
+        savePosition();
         
         try {
             ASTNode left = parseTernary();
@@ -1651,6 +1517,20 @@ public class Parser {
                 }
             }
             
+            if (match(TokenType.OPERATOR_CONDITIONAL_ASSIGN)) {
+                ASTNode right = parseTernary();
+                if (left instanceof VariableNode) {
+                    return new ConditionalAssignNode(((VariableNode) left).getName(), right, left.getLocation());
+                }
+            }
+            
+            if (match(TokenType.OPERATOR_NULL_COALESCING_ASSIGN)) {
+                ASTNode right = parseTernary();
+                if (left instanceof VariableNode) {
+                    return new NullCoalescingAssignNode(((VariableNode) left).getName(), right, left.getLocation());
+                }
+            }
+            
             return left;
         } finally {
             releasePosition();
@@ -1662,7 +1542,7 @@ public class Parser {
      * condition ? thenExpr : elseExpr
      */
     private ASTNode parseTernary() throws ParseException {
-        ASTNode condition = parseLogicalOr();
+        ASTNode condition = parseNullCoalescing();
         
         if (match(TokenType.OPERATOR_QUESTION)) {
             SourceLocation location = createLocation();
@@ -1672,7 +1552,58 @@ public class Parser {
             return new TernaryNode(condition, thenExpr, elseExpr, location);
         }
         
+        while (match(TokenType.DELIMITER_ARROW)) {
+            SourceLocation location = createLocation();
+            ASTNode function = parsePipelineFunction();
+            condition = new PipelineNode(condition, function, location);
+        }
+        
         return condition;
+    }
+    
+    private ASTNode parsePipelineFunction() throws ParseException {
+        if (check(TokenType.DELIMITER_LEFT_PAREN)) {
+            return tryParseLambda();
+        }
+        
+        if (check(TokenType.IDENTIFIER)) {
+            Token token = advance();
+            String name = token.getText();
+            
+            if (check(TokenType.DELIMITER_LEFT_PAREN)) {
+                advance();
+                List<ASTNode> arguments = new ArrayList<>();
+                if (!check(TokenType.DELIMITER_RIGHT_PAREN)) {
+                    do {
+                        arguments.add(parseExpression());
+                    } while (match(TokenType.DELIMITER_COMMA));
+                }
+                consume(TokenType.DELIMITER_RIGHT_PAREN, "Expected ')' after arguments");
+                return new MethodCallNode(null, name, arguments, token.getLocation());
+            }
+            
+            return new VariableNode(name, token.getLocation());
+        }
+        
+        return parseNullCoalescing();
+    }
+    
+    private ASTNode parseNullCoalescing() throws ParseException {
+        ASTNode left = parseLogicalOr();
+        
+        while (match(TokenType.OPERATOR_NULL_COALESCING) || match(TokenType.OPERATOR_ELVIS)) {
+            Token opToken = tokens.get(position - 1);
+            SourceLocation location = createLocation();
+            ASTNode right = parseLogicalOr();
+            
+            if (opToken.getType() == TokenType.OPERATOR_NULL_COALESCING) {
+                left = new BinaryOpNode(BinaryOpNode.Operator.NULL_COALESCING, left, right, location);
+            } else {
+                left = new BinaryOpNode(BinaryOpNode.Operator.ELVIS, left, right, location);
+            }
+        }
+        
+        return left;
     }
     
     /**
@@ -1750,20 +1681,35 @@ public class Parser {
         return left;
     }
     
-    /**
-     * 解析相等性表达式
-     */
     private ASTNode parseEquality() throws ParseException {
-        ASTNode left = parseComparison();
+        ASTNode left = parseRange();
         
         while (match(TokenType.OPERATOR_EQUAL) || match(TokenType.OPERATOR_NOT_EQUAL)) {
             Token opToken = tokens.get(position - 1);
             SourceLocation location = createLocation();
-            ASTNode right = parseComparison();
+            ASTNode right = parseRange();
             
             BinaryOpNode.Operator operator = opToken.getType() == TokenType.OPERATOR_EQUAL ? 
                     BinaryOpNode.Operator.EQUAL : BinaryOpNode.Operator.NOT_EQUAL;
             left = new BinaryOpNode(operator, left, right, location);
+        }
+        
+        return left;
+    }
+    
+    private ASTNode parseRange() throws ParseException {
+        ASTNode left = parseComparison();
+        
+        if (match(TokenType.OPERATOR_RANGE)) {
+            SourceLocation location = createLocation();
+            ASTNode right = parseComparison();
+            return new BinaryOpNode(BinaryOpNode.Operator.RANGE, left, right, location);
+        }
+        
+        if (match(TokenType.OPERATOR_RANGE_EXCLUSIVE)) {
+            SourceLocation location = createLocation();
+            ASTNode right = parseComparison();
+            return new BinaryOpNode(BinaryOpNode.Operator.RANGE_EXCLUSIVE, left, right, location);
         }
         
         return left;
@@ -1778,7 +1724,8 @@ public class Parser {
         while (match(TokenType.OPERATOR_LESS_THAN) || 
                match(TokenType.OPERATOR_LESS_THAN_OR_EQUAL) ||
                match(TokenType.OPERATOR_GREATER_THAN) ||
-               match(TokenType.OPERATOR_GREATER_THAN_OR_EQUAL)) {
+               match(TokenType.OPERATOR_GREATER_THAN_OR_EQUAL) ||
+               match(TokenType.OPERATOR_SPACESHIP)) {
             
             Token opToken = tokens.get(position - 1);
             SourceLocation location = createLocation();
@@ -1797,6 +1744,9 @@ public class Parser {
                     break;
                 case OPERATOR_GREATER_THAN_OR_EQUAL:
                     operator = BinaryOpNode.Operator.GREATER_THAN_OR_EQUAL;
+                    break;
+                case OPERATOR_SPACESHIP:
+                    operator = BinaryOpNode.Operator.SPACESHIP;
                     break;
                 default:
                     throw error("Invalid comparison operator");
@@ -1909,15 +1859,17 @@ public class Parser {
      * 解析乘法表达式
      */
     private ASTNode parseMultiplicative() throws ParseException {
-        ASTNode left = parseUnary();
+        ASTNode left = parsePower();
         
         while (match(TokenType.OPERATOR_MULTIPLY) || 
                match(TokenType.OPERATOR_DIVIDE) || 
-               match(TokenType.OPERATOR_MODULO)) {
+               match(TokenType.OPERATOR_MODULO) ||
+               match(TokenType.OPERATOR_INT_DIVIDE) ||
+               match(TokenType.OPERATOR_MATH_MODULO)) {
             
             Token opToken = tokens.get(position - 1);
             SourceLocation location = createLocation();
-            ASTNode right = parseUnary();
+            ASTNode right = parsePower();
             
             BinaryOpNode.Operator operator;
             switch (opToken.getType()) {
@@ -1930,11 +1882,32 @@ public class Parser {
                 case OPERATOR_MODULO:
                     operator = BinaryOpNode.Operator.MODULO;
                     break;
+                case OPERATOR_INT_DIVIDE:
+                    operator = BinaryOpNode.Operator.INT_DIVIDE;
+                    break;
+                case OPERATOR_MATH_MODULO:
+                    operator = BinaryOpNode.Operator.MATH_MODULO;
+                    break;
                 default:
                     throw error("Invalid multiplicative operator");
             }
             
             left = new BinaryOpNode(operator, left, right, location);
+        }
+        
+        return left;
+    }
+    
+    /**
+     * 解析幂运算表达式（右结合）
+     */
+    private ASTNode parsePower() throws ParseException {
+        ASTNode left = parseUnary();
+        
+        if (match(TokenType.OPERATOR_POWER)) {
+            SourceLocation location = createLocation();
+            ASTNode right = parsePower();
+            return new BinaryOpNode(BinaryOpNode.Operator.POWER, left, right, location);
         }
         
         return left;
@@ -1954,6 +1927,12 @@ public class Parser {
             SourceLocation location = createLocation();
             ASTNode operand = parseUnary();
             return new UnaryOpNode(UnaryOpNode.Operator.PRE_DECREMENT, operand, location);
+        }
+        
+        if (match(TokenType.OPERATOR_NOT_NULL)) {
+            SourceLocation location = createLocation();
+            ASTNode operand = parseUnary();
+            return new UnaryOpNode(UnaryOpNode.Operator.NOT_NULL, operand, location);
         }
         
         if (match(TokenType.OPERATOR_PLUS) || match(TokenType.OPERATOR_MINUS) ||
@@ -1985,7 +1964,7 @@ public class Parser {
         }
         
         if (check(TokenType.DELIMITER_LEFT_PAREN)) {
-            int savedPos = savePosition();
+            savePosition();
             try {
                 advance();
                 Class<?> targetType = parseType();
@@ -2027,6 +2006,9 @@ public class Parser {
             } else if (match(TokenType.OPERATOR_DOT)) {
                 expr = parseMemberAccess(expr);
                 matched = true;
+            } else if (match(TokenType.OPERATOR_SAFE_DOT)) {
+                expr = parseSafeMemberAccess(expr);
+                matched = true;
             } else if (match(TokenType.DELIMITER_LEFT_PAREN)) {
                 expr = parseMethodCall(expr);
                 matched = true;
@@ -2058,6 +2040,27 @@ public class Parser {
         return expr;
     }
     
+    private ASTNode parseInterpolatedString(Token token) throws ParseException {
+        List<?> parts = (List<?>) token.getValue();
+        InterpolatedStringNode.Builder builder = new InterpolatedStringNode.Builder();
+        builder.location(token.getLocation());
+        
+        for (Object part : parts) {
+            if (part instanceof String) {
+                builder.addLiteral((String) part);
+            } else if (part instanceof Lexer.InterpolationPart) {
+                String exprStr = ((Lexer.InterpolationPart) part).getExpression();
+                Lexer subLexer = new Lexer(exprStr);
+                List<Token> subTokens = subLexer.tokenize();
+                Parser subParser = new Parser(subTokens, context);
+                ASTNode expr = subParser.parseExpression();
+                builder.addExpression(expr);
+            }
+        }
+        
+        return builder.build();
+    }
+    
     /**
      * 解析主表达式
      */
@@ -2080,6 +2083,11 @@ public class Parser {
         if (match(TokenType.LITERAL_STRING)) {
             Token token = tokens.get(position - 1);
             return new LiteralNode(token.getValue(), String.class, token.getLocation());
+        }
+        
+        if (match(TokenType.LITERAL_INTERPOLATED_STRING)) {
+            Token token = tokens.get(position - 1);
+            return parseInterpolatedString(token);
         }
         
         if (match(TokenType.LITERAL_CHAR)) {
@@ -2310,7 +2318,6 @@ public class Parser {
         SourceLocation location = createLocation();
         
         GenericType genericType = parseGenericType();
-        String typeName = genericType.getTypeName();
         
         if (genericType.isArray() && check(TokenType.DELIMITER_LEFT_BRACE)) {
             return parseArrayInitializer(genericType.getRuntimeType(), location);
@@ -2373,6 +2380,27 @@ public class Parser {
      */
     private ASTNode parseMemberAccess(ASTNode target) throws ParseException {
         SourceLocation location = createLocation();
+        
+        if (check(TokenType.KEYWORD_CLASS)) {
+            advance();
+            if (target instanceof ClassReferenceNode) {
+                ClassReferenceNode classRef = (ClassReferenceNode) target;
+                Class<?> clazz = classRef.getType().getRawType();
+                return new LiteralNode(clazz, Class.class, location);
+            } else if (target instanceof VariableNode) {
+                String varName = ((VariableNode) target).getName();
+                Class<?> clazz = ClassFinder.findClassWithImports(varName, null, context.getImports());
+                if (clazz != null) {
+                    return new LiteralNode(clazz, Class.class, location);
+                }
+            }
+            throw new ParseException(
+                "Cannot resolve .class for: " + target,
+                location,
+                ErrorCode.PARSE_INVALID_SYNTAX
+            );
+        }
+        
         String memberName = consume(TokenType.IDENTIFIER, "Expected member name").getText();
         
         if (target instanceof ClassReferenceNode) {
@@ -2435,6 +2463,27 @@ public class Parser {
         }
     }
     
+    private ASTNode parseSafeMemberAccess(ASTNode target) throws ParseException {
+        SourceLocation location = createLocation();
+        String memberName = consume(TokenType.IDENTIFIER, "Expected member name").getText();
+        
+        if (check(TokenType.DELIMITER_LEFT_PAREN)) {
+            advance();
+            List<ASTNode> arguments = new ArrayList<>();
+            
+            if (!check(TokenType.DELIMITER_RIGHT_PAREN)) {
+                do {
+                    arguments.add(parseExpression());
+                } while (match(TokenType.DELIMITER_COMMA));
+            }
+            
+            consume(TokenType.DELIMITER_RIGHT_PAREN, "Expected ')' after method arguments");
+            return new SafeMethodCallNode(target, memberName, arguments, location);
+        }
+        
+        return new SafeFieldAccessNode(target, memberName, location);
+    }
+    
     /**
      * 解析方法调用
      */
@@ -2488,8 +2537,14 @@ public class Parser {
         List<LambdaNode.Parameter> parameters = new ArrayList<>();
         
         if (check(TokenType.IDENTIFIER) && checkNext(TokenType.DELIMITER_ARROW)) {
-            Token paramToken = advance();
+            Token paramToken = peek();
             String paramName = paramToken.getText();
+            
+            if (context != null && context.isClassDeclared(paramName)) {
+                return null;
+            }
+            
+            advance();
             parameters.add(new LambdaNode.Parameter(paramName, Object.class));
             advance();
         } else if (check(TokenType.DELIMITER_LEFT_PAREN)) {
@@ -2574,6 +2629,10 @@ public class Parser {
         
         if (match(TokenType.DELIMITER_LEFT_BRACE)) {
             return parseLambdaBlock();
+        }
+        
+        if (check(TokenType.IDENTIFIER) && checkNext(TokenType.OPERATOR_DECLARE_ASSIGN)) {
+            return parseShortDeclaration();
         }
         
         if (check(TokenType.KEYWORD_INT) || check(TokenType.KEYWORD_LONG) ||

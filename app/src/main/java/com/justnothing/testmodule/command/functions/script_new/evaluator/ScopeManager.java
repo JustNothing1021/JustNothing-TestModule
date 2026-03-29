@@ -148,6 +148,41 @@ public class ScopeManager {
     }
     
     /**
+     * 声明变量（便捷方法，自动推断类型）
+     * 
+     * @param name 变量名
+     * @param value 初始值
+     */
+    public void declareVariable(String name, Object value) {
+        Class<?> type = value != null ? value.getClass() : Object.class;
+        declareVariable(name, type, value, false);
+    }
+    
+    /**
+     * 获取所有变量（用于导出）
+     * 
+     * @return 变量名到值的映射
+     */
+    public Map<String, Object> getAllVariables() {
+        Map<String, Object> result = new HashMap<>();
+        for (Scope scope : scopeStack) {
+            for (Map.Entry<String, Variable> entry : scope.getVariables().entrySet()) {
+                result.put(entry.getKey(), entry.getValue().getValue());
+            }
+        }
+        return result;
+    }
+    
+    /**
+     * 清空所有变量
+     */
+    public void clearAll() {
+        for (Scope scope : scopeStack) {
+            scope.getVariables().clear();
+        }
+    }
+    
+    /**
      * 获取变量
      * 
      * @param name 变量名

@@ -32,6 +32,7 @@ public enum ErrorCode {
     PARSE_INVALID_TYPE("PARSE_011", "Invalid type"),
     PARSE_INVALID_CAST("PARSE_012", "Invalid cast"),
     PARSE_INVALID_METHOD_REFERENCE("PARSE_013", "Invalid method reference"),
+    PARSE_CLASS_NOT_FOUND("PARSE_014", "Class not found"),
     
     // 求值错误 (EVAL_xxx)
     EVAL_UNDEFINED_VARIABLE("EVAL_001", "Undefined variable"),

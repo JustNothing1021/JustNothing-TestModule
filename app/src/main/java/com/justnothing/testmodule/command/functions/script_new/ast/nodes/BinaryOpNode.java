@@ -24,6 +24,11 @@ public class BinaryOpNode extends ASTNode {
         MULTIPLY("*"),
         DIVIDE("/"),
         MODULO("%"),
+        POWER("**"),
+        INT_DIVIDE("//"),
+        MATH_MODULO("%%"),
+        RANGE(".."),
+        RANGE_EXCLUSIVE("..<"),
         
         EQUAL("=="),
         NOT_EQUAL("!="),
@@ -31,6 +36,7 @@ public class BinaryOpNode extends ASTNode {
         LESS_THAN_OR_EQUAL("<="),
         GREATER_THAN(">"),
         GREATER_THAN_OR_EQUAL(">="),
+        SPACESHIP("<=>"),
         
         LOGICAL_AND("&&"),
         LOGICAL_OR("||"),
@@ -40,7 +46,10 @@ public class BinaryOpNode extends ASTNode {
         BITWISE_XOR("^"),
         LEFT_SHIFT("<<"),
         RIGHT_SHIFT(">>"),
-        UNSIGNED_RIGHT_SHIFT(">>>");
+        UNSIGNED_RIGHT_SHIFT(">>>"),
+        
+        NULL_COALESCING("??"),
+        ELVIS("?:");
         
         private final String symbol;
         

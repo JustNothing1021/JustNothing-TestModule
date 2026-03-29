@@ -10,11 +10,21 @@ import com.justnothing.testmodule.command.functions.script_new.exception.ReturnE
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.lang.reflect.Constructor;
+import java.util.function.Function;
+import java.util.function.Consumer;
+import java.util.function.BiFunction;
+import java.util.function.Supplier;
+    
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * AST求值器
@@ -40,6 +50,10 @@ public class ASTEvaluator {
             return evaluateLiteral((LiteralNode) node);
         }
         
+        if (node instanceof InterpolatedStringNode) {
+            return evaluateInterpolatedString((InterpolatedStringNode) node, context);
+        }
+        
         if (node instanceof VariableNode) {
             return evaluateVariable((VariableNode) node, context);
         }
@@ -54,6 +68,14 @@ public class ASTEvaluator {
         
         if (node instanceof AssignmentNode) {
             return evaluateAssignment((AssignmentNode) node, context);
+        }
+        
+        if (node instanceof ConditionalAssignNode) {
+            return evaluateConditionalAssign((ConditionalAssignNode) node, context);
+        }
+        
+        if (node instanceof NullCoalescingAssignNode) {
+            return evaluateNullCoalescingAssign((NullCoalescingAssignNode) node, context);
         }
         
         if (node instanceof FieldAssignmentNode) {
@@ -74,6 +96,14 @@ public class ASTEvaluator {
         
         if (node instanceof FieldAccessNode) {
             return evaluateFieldAccess((FieldAccessNode) node, context);
+        }
+        
+        if (node instanceof SafeFieldAccessNode) {
+            return evaluateSafeFieldAccess((SafeFieldAccessNode) node, context);
+        }
+        
+        if (node instanceof SafeMethodCallNode) {
+            return evaluateSafeMethodCall((SafeMethodCallNode) node, context);
         }
         
         if (node instanceof ArrayAccessNode) {
@@ -120,6 +150,10 @@ public class ASTEvaluator {
             return evaluateTernary((TernaryNode) node, context);
         }
         
+        if (node instanceof PipelineNode) {
+            return evaluatePipeline((PipelineNode) node, context);
+        }
+        
         if (node instanceof InstanceofNode) {
             return evaluateInstanceof((InstanceofNode) node, context);
         }
@@ -153,6 +187,8 @@ public class ASTEvaluator {
         }
         
         if (node instanceof ImportNode) {
+            ImportNode importNode = (ImportNode) node;
+            context.addImport(importNode.getPackageName());
             return null;
         }
         
@@ -166,6 +202,14 @@ public class ASTEvaluator {
         
         if (node instanceof ConstructorCallNode) {
             return evaluateConstructorCall((ConstructorCallNode) node, context);
+        }
+        
+        if (node instanceof AsyncNode) {
+            return evaluateAsync((AsyncNode) node, context);
+        }
+        
+        if (node instanceof AwaitNode) {
+            return evaluateAwait((AwaitNode) node, context);
         }
         
         throw new EvaluationException(
@@ -187,6 +231,12 @@ public class ASTEvaluator {
             for (ASTNode stmt : node.getStatements()) {
                 result = evaluate(stmt, context);
             }
+        } catch (ReturnException e) {
+            if (isGlobalScope) {
+                result = e.getValue();
+            } else {
+                throw e;
+            }
         } finally {
             if (!isGlobalScope) {
                 context.getScopeManager().exitScope();
@@ -197,6 +247,19 @@ public class ASTEvaluator {
     
     private static Object evaluateLiteral(LiteralNode node) {
         return node.getValue();
+    }
+    
+    private static Object evaluateInterpolatedString(InterpolatedStringNode node, ExecutionContext context) throws EvaluationException {
+        StringBuilder sb = new StringBuilder();
+        for (InterpolatedStringNode.Part part : node.getParts()) {
+            if (part.isExpression()) {
+                Object value = evaluate(part.getExpression(), context);
+                sb.append(value != null ? value.toString() : "null");
+            } else {
+                sb.append(part.getLiteralText());
+            }
+        }
+        return sb.toString();
     }
     
     private static Object evaluateVariable(VariableNode node, ExecutionContext context) throws EvaluationException {
@@ -237,6 +300,9 @@ public class ASTEvaluator {
                 if (left instanceof Number && right instanceof Number) {
                     return subtractNumbers((Number) left, (Number) right);
                 }
+                if (left instanceof Object[] && right instanceof Object[]) {
+                    return arrayDifference((Object[]) left, (Object[]) right);
+                }
                 break;
             case MULTIPLY:
                 if (left instanceof Number && right instanceof Number) {
@@ -266,6 +332,40 @@ public class ASTEvaluator {
                     return moduloNumbers((Number) left, (Number) right);
                 }
                 break;
+            case POWER:
+                if (left instanceof Number && right instanceof Number) {
+                    double result = Math.pow(((Number) left).doubleValue(), ((Number) right).doubleValue());
+                    if (isFloatingType((Number) left) || isFloatingType((Number) right)) {
+                        return result;
+                    }
+                    if (result == Math.floor(result) && result <= Long.MAX_VALUE && result >= Long.MIN_VALUE) {
+                        return (long) result;
+                    }
+                    return result;
+                }
+                if (left instanceof Object[] && right instanceof Object[]) {
+                    return cartesianProduct((Object[]) left, (Object[]) right);
+                }
+                break;
+            case INT_DIVIDE:
+                if (left instanceof Number && right instanceof Number) {
+                    double a = ((Number) left).doubleValue();
+                    double b = ((Number) right).doubleValue();
+                    return (long) Math.floor(a / b);
+                }
+                break;
+            case MATH_MODULO:
+                if (left instanceof Number && right instanceof Number) {
+                    double a = ((Number) left).doubleValue();
+                    double b = ((Number) right).doubleValue();
+                    double result = a - b * Math.floor(a / b);
+                    return result;
+                }
+                break;
+            case RANGE:
+                return createRange(left, right, false);
+            case RANGE_EXCLUSIVE:
+                return createRange(left, right, true);
             case EQUAL:
                 return left == null ? right == null : left.equals(right);
             case NOT_EQUAL:
@@ -290,6 +390,14 @@ public class ASTEvaluator {
                     return compareNumbers((Number) left, (Number) right) >= 0;
                 }
                 break;
+            case SPACESHIP:
+                if (left instanceof Number && right instanceof Number) {
+                    return compareNumbers((Number) left, (Number) right);
+                }
+                if (left instanceof Comparable && right != null) {
+                    return ((Comparable) left).compareTo(right);
+                }
+                break;
             case LOGICAL_AND:
                 return toBoolean(left) && toBoolean(right);
             case LOGICAL_OR:
@@ -298,15 +406,24 @@ public class ASTEvaluator {
                 if (left instanceof Number && right instanceof Number) {
                     return ((Number) left).longValue() & ((Number) right).longValue();
                 }
+                if (left instanceof Object[] && right instanceof Object[]) {
+                    return arrayIntersection((Object[]) left, (Object[]) right);
+                }
                 break;
             case BITWISE_OR:
                 if (left instanceof Number && right instanceof Number) {
                     return ((Number) left).longValue() | ((Number) right).longValue();
                 }
+                if (left instanceof Object[] && right instanceof Object[]) {
+                    return arrayUnion((Object[]) left, (Object[]) right);
+                }
                 break;
             case BITWISE_XOR:
                 if (left instanceof Number && right instanceof Number) {
                     return ((Number) left).longValue() ^ ((Number) right).longValue();
+                }
+                if (left instanceof Object[] && right instanceof Object[]) {
+                    return arraySymmetricDifference((Object[]) left, (Object[]) right);
                 }
                 break;
             case LEFT_SHIFT:
@@ -324,6 +441,19 @@ public class ASTEvaluator {
                     return ((Number) left).longValue() >>> ((Number) right).intValue();
                 }
                 break;
+            case NULL_COALESCING:
+                return left != null ? left : right;
+            case ELVIS:
+                if (left == null) {
+                    return right;
+                }
+                if (left instanceof Boolean) {
+                    return (Boolean) left ? left : right;
+                }
+                if (left instanceof String && ((String) left).isEmpty()) {
+                    return right;
+                }
+                return left;
             default:
                 break;
         }
@@ -343,6 +473,76 @@ public class ASTEvaluator {
     
     private static boolean isFloatingType(Number n) {
         return n instanceof Double || n instanceof Float;
+    }
+    
+    private static Object createRange(Object start, Object end, boolean exclusive) {
+        if (start instanceof Number && end instanceof Number) {
+            int startVal = ((Number) start).intValue();
+            int endVal = ((Number) end).intValue();
+            int actualEnd = exclusive ? endVal - 1 : endVal;
+            
+            if (startVal <= actualEnd) {
+                int size = actualEnd - startVal + 1;
+                Object[] result = new Object[size];
+                for (int i = 0; i < size; i++) {
+                    result[i] = startVal + i;
+                }
+                return result;
+            } else {
+                int size = startVal - actualEnd + 1;
+                Object[] result = new Object[size];
+                for (int i = 0; i < size; i++) {
+                    result[i] = startVal - i;
+                }
+                return result;
+            }
+        }
+        
+        if (start instanceof Character && end instanceof Character) {
+            char startChar = (Character) start;
+            char endChar = (Character) end;
+            char actualEnd = exclusive ? (char)(endChar - 1) : endChar;
+            
+            if (startChar <= actualEnd) {
+                int size = actualEnd - startChar + 1;
+                Object[] result = new Object[size];
+                for (int i = 0; i < size; i++) {
+                    result[i] = (char)(startChar + i);
+                }
+                return result;
+            } else {
+                int size = startChar - actualEnd + 1;
+                Object[] result = new Object[size];
+                for (int i = 0; i < size; i++) {
+                    result[i] = (char)(startChar - i);
+                }
+                return result;
+            }
+        }
+        
+        throw new EvaluationException(
+            "Range operator requires numeric or character operands",
+            null,
+            ErrorCode.EVAL_TYPE_MISMATCH
+        );
+    }
+    
+    private static Object[] cartesianProduct(Object[] arr1, Object[] arr2) {
+        int len1 = arr1.length;
+        int len2 = arr2.length;
+        Object[] result = new Object[len1 * len2];
+        
+        int index = 0;
+        for (int i = 0; i < len1; i++) {
+            for (int j = 0; j < len2; j++) {
+                Object[] pair = new Object[2];
+                pair[0] = arr1[i];
+                pair[1] = arr2[j];
+                result[index++] = pair;
+            }
+        }
+        
+        return result;
     }
     
     private static Number addNumbers(Number a, Number b) {
@@ -421,6 +621,17 @@ public class ASTEvaluator {
                 Object operand = evaluate(node.getOperand(), context);
                 return !toBoolean(operand);
             }
+            case NOT_NULL: {
+                Object operand = evaluate(node.getOperand(), context);
+                if (operand == null) {
+                    throw new EvaluationException(
+                        "Non-null assertion failed: value is null",
+                        node.getLocation(),
+                        ErrorCode.EVAL_NULL_POINTER
+                    );
+                }
+                return operand;
+            }
             case BITWISE_NOT: {
                 Object operand = evaluate(node.getOperand(), context);
                 if (operand instanceof Number) {
@@ -429,6 +640,9 @@ public class ASTEvaluator {
                         return ~n.longValue();
                     }
                     return ~n.intValue();
+                }
+                if (operand instanceof Object[]) {
+                    return arrayReverse((Object[]) operand);
                 }
                 break;
             }
@@ -520,10 +734,19 @@ public class ASTEvaluator {
             }
         }
         
+        if (node.isDeclaration() && valueNode instanceof MethodReferenceNode && node.getDeclaredClass() != null) {
+            Class<?> declaredClass = node.getDeclaredClass();
+            if (declaredClass.isInterface()) {
+            }
+        }
+        
         Object value;
         if (valueNode != null) {
             if (node.isDeclaration() && valueNode instanceof LambdaNode) {
                 Class<?> declaredType = node.getDeclaredClass() != null ? node.getDeclaredClass() : Object.class;
+                if (AutoClass.isAutoType(declaredType)) {
+                    declaredType = Object.class;
+                }
                 context.getScopeManager().declareVariable(
                     node.getVariableName(), 
                     declaredType,
@@ -531,6 +754,24 @@ public class ASTEvaluator {
                     false
                 );
                 value = evaluate(valueNode, context);
+                context.getScopeManager().setVariable(node.getVariableName(), value);
+                return value;
+            }
+            if (node.isDeclaration() && valueNode instanceof MethodReferenceNode) {
+                Class<?> declaredType = node.getDeclaredClass() != null ? node.getDeclaredClass() : Object.class;
+                if (AutoClass.isAutoType(declaredType)) {
+                    declaredType = Object.class;
+                }
+                context.getScopeManager().declareVariable(
+                    node.getVariableName(), 
+                    declaredType,
+                    null,
+                    false
+                );
+                value = evaluate(valueNode, context);
+                if (declaredType.isInterface() && value instanceof MethodReference) {
+                    value = ((MethodReference) value).asInterface(declaredType);
+                }
                 context.getScopeManager().setVariable(node.getVariableName(), value);
                 return value;
             }
@@ -543,6 +784,11 @@ public class ASTEvaluator {
         
         if (node.isDeclaration()) {
             Class<?> declaredType = node.getDeclaredClass() != null ? node.getDeclaredClass() : Object.class;
+            
+            if (AutoClass.isAutoType(declaredType)) {
+                declaredType = AutoClass.inferStrictType(value);
+            }
+            
             value = convertValue(value, declaredType, node.getLocation());
             
             context.getScopeManager().declareVariable(
@@ -560,6 +806,44 @@ public class ASTEvaluator {
         }
         
         return value;
+    }
+    
+    private static Object evaluateConditionalAssign(ConditionalAssignNode node, ExecutionContext context) throws EvaluationException {
+        String varName = node.getVariableName();
+        
+        if (!context.getScopeManager().hasVariable(varName)) {
+            Object value = evaluate(node.getValue(), context);
+            context.getScopeManager().declareVariable(varName, Object.class, value, false);
+            return value;
+        }
+        
+        ScopeManager.Variable existing = context.getScopeManager().getVariable(varName);
+        if (existing.getValue() == null) {
+            Object value = evaluate(node.getValue(), context);
+            context.getScopeManager().setVariable(varName, value);
+            return value;
+        }
+        
+        return existing.getValue();
+    }
+    
+    private static Object evaluateNullCoalescingAssign(NullCoalescingAssignNode node, ExecutionContext context) throws EvaluationException {
+        String varName = node.getVariableName();
+        
+        if (!context.getScopeManager().hasVariable(varName)) {
+            Object value = evaluate(node.getValue(), context);
+            context.getScopeManager().declareVariable(varName, Object.class, value, false);
+            return value;
+        }
+        
+        ScopeManager.Variable existing = context.getScopeManager().getVariable(varName);
+        if (existing.getValue() == null) {
+            Object value = evaluate(node.getValue(), context);
+            context.getScopeManager().setVariable(varName, value);
+            return value;
+        }
+        
+        return existing.getValue();
     }
     
     private static Object convertValue(Object value, Class<?> targetType, SourceLocation location) throws EvaluationException {
@@ -697,6 +981,36 @@ public class ASTEvaluator {
             if (func instanceof Lambda) {
                 return ((Lambda) func).invoke(args);
             }
+            if (func instanceof MethodReference) {
+                return ((MethodReference) func).invoke(args);
+            }
+            if (func instanceof Function) {
+                return ((Function) func).apply(args.length == 1 ? args[0] : args);
+            }
+            if (func instanceof Supplier) {
+                return ((Supplier) func).get();
+            }
+            if (func instanceof Consumer) {
+                ((Consumer) func).accept(args.length > 0 ? args[0] : null);
+                return null;
+            }
+            if (func instanceof BiFunction) {
+                return ((BiFunction) func).apply(args.length > 0 ? args[0] : null, args.length > 1 ? args[1] : null);
+            }
+            if (func != null && Proxy.isProxyClass(func.getClass())) {
+                try {
+                    InvocationHandler handler = Proxy.getInvocationHandler(func);
+                    if (handler instanceof Lambda.LambdaInvocationHandler) {
+                        Lambda lambda = ((Lambda.LambdaInvocationHandler) handler).getLambda();
+                        return lambda.invoke(args);
+                    }
+                    if (handler instanceof MethodReference.MethodReferenceInvocationHandler) {
+                        MethodReference mr = ((MethodReference.MethodReferenceInvocationHandler) handler).getMethodReference();
+                        return mr.invoke(args);
+                    }
+                } catch (Exception e) {
+                }
+            }
         }
         
         throw new EvaluationException(
@@ -720,28 +1034,28 @@ public class ASTEvaluator {
                 return ((Lambda) target).invoke(args);
             }
             
-            if (target instanceof Class) {
-                Class<?> targetClass = (Class<?>) target;
-                
-                Method method = findMethod(targetClass, methodName, args);
-                if (method != null) {
-                    method.setAccessible(true);
-                    Object[] invokeArgs = prepareInvokeArguments(method, args);
-                    return method.invoke(null, invokeArgs);
-                }
-                
-                throw new EvaluationException(
-                    "Method not found: " + methodName,
-                    node.getLocation(),
-                    ErrorCode.METHOD_NOT_FOUND
-                );
+            if (target instanceof MethodReference) {
+                return ((MethodReference) target).invoke(args);
             }
             
-            Method method = findMethod(target.getClass(), methodName, args);
+            Class<?> targetClass;
+            Object targetInstance;
+            boolean isStatic = false;
+            
+            if (target instanceof Class) {
+                targetClass = (Class<?>) target;
+                targetInstance = null;
+                isStatic = true;
+            } else {
+                targetClass = target.getClass();
+                targetInstance = target;
+            }
+            
+            Method method = findMethod(targetClass, methodName, args);
             if (method != null) {
                 method.setAccessible(true);
                 Object[] invokeArgs = prepareInvokeArguments(method, args);
-                return method.invoke(target, invokeArgs);
+                return method.invoke(targetInstance, invokeArgs);
             }
             
             throw new EvaluationException(
@@ -757,6 +1071,53 @@ public class ASTEvaluator {
                 node.getLocation(),
                 ErrorCode.EVAL_METHOD_INVOCATION_FAILED
             );
+        }
+    }
+    
+    private static Object evaluateSafeMethodCall(SafeMethodCallNode node, ExecutionContext context) throws EvaluationException {
+        Object target = evaluate(node.getTarget(), context);
+        
+        if (target == null) {
+            return null;
+        }
+        
+        String methodName = node.getMethodName();
+        
+        Object[] args = new Object[node.getArguments().size()];
+        for (int i = 0; i < args.length; i++) {
+            args[i] = evaluate(node.getArguments().get(i), context);
+        }
+        
+        try {
+            if (target instanceof Lambda) {
+                return ((Lambda) target).invoke(args);
+            }
+            
+            if (target instanceof MethodReference) {
+                return ((MethodReference) target).invoke(args);
+            }
+            
+            Class<?> targetClass;
+            Object targetInstance;
+            
+            if (target instanceof Class) {
+                targetClass = (Class<?>) target;
+                targetInstance = null;
+            } else {
+                targetClass = target.getClass();
+                targetInstance = target;
+            }
+            
+            Method method = findMethod(targetClass, methodName, args);
+            if (method != null) {
+                method.setAccessible(true);
+                Object[] invokeArgs = prepareInvokeArguments(method, args);
+                return method.invoke(targetInstance, invokeArgs);
+            }
+            
+            return null;
+        } catch (Exception e) {
+            return null;
         }
     }
     
@@ -817,16 +1178,43 @@ public class ASTEvaluator {
             } else {
                 targetClass = target.getClass();
             }
+
+            if (node.getFieldName().equals("length") && targetClass.isArray()) {
+                return Array.getLength(target);
+            }
             
             Field field = targetClass.getDeclaredField(node.getFieldName());
             field.setAccessible(true);
             return field.get(target);
         } catch (Exception e) {
             throw new EvaluationException(
-                "Failed to access field: " + node.getFieldName() + " - " + e.getMessage(),
+                "Failed to access field: " + e.getMessage(),
                 node.getLocation(),
                 ErrorCode.EVAL_FIELD_ACCESS_FAILED
             );
+        }
+    }
+    
+    private static Object evaluateSafeFieldAccess(SafeFieldAccessNode node, ExecutionContext context) throws EvaluationException {
+        Object target = evaluate(node.getTarget(), context);
+        
+        if (target == null) {
+            return null;
+        }
+        
+        try {
+            Class<?> targetClass;
+            if (target instanceof Class) {
+                targetClass = (Class<?>) target;
+            } else {
+                targetClass = target.getClass();
+            }
+            
+            Field field = targetClass.getDeclaredField(node.getFieldName());
+            field.setAccessible(true);
+            return field.get(target);
+        } catch (Exception e) {
+            return null;
         }
     }
     
@@ -1134,6 +1522,112 @@ public class ASTEvaluator {
         }
     }
     
+    private static Object evaluatePipeline(PipelineNode node, ExecutionContext context) throws EvaluationException {
+        Object input = evaluate(node.getInput(), context);
+        ASTNode functionNode = node.getFunction();
+        
+        if (functionNode instanceof VariableNode) {
+            String funcName = ((VariableNode) functionNode).getName();
+            ScopeManager.Variable funcVar = context.getScopeManager().getVariable(funcName);
+            
+            if (funcVar != null && funcVar.getValue() != null) {
+                Object func = funcVar.getValue();
+                
+                if (func instanceof Lambda) {
+                    return ((Lambda) func).invoke(new Object[]{input});
+                }
+                
+                if (func instanceof MethodReference) {
+                    return ((MethodReference) func).invoke(new Object[]{input});
+                }
+            }
+        }
+        
+        if (functionNode instanceof MethodReferenceNode) {
+            MethodReferenceNode methodRef = (MethodReferenceNode) functionNode;
+            Object target = evaluate(methodRef.getTarget(), context);
+            String methodName = methodRef.getMethodName();
+            
+            if (target instanceof Class) {
+                Class<?> clazz = (Class<?>) target;
+                try {
+                    java.lang.reflect.Method method = findMethod(clazz, methodName, new Object[]{input});
+                    if (method != null) {
+                        method.setAccessible(true);
+                        return method.invoke(null, new Object[]{input});
+                    }
+                } catch (Exception e) {
+                    throw new EvaluationException(
+                        "Failed to invoke static method in pipeline: " + methodName,
+                        node.getLocation(),
+                        ErrorCode.EVAL_METHOD_INVOCATION_FAILED
+                    );
+                }
+            }
+        }
+        
+        if (functionNode instanceof MethodCallNode) {
+            MethodCallNode methodCall = (MethodCallNode) functionNode;
+            List<ASTNode> args = new ArrayList<>();
+            args.add(new LiteralNode(input, input != null ? input.getClass() : Object.class, node.getLocation()));
+            args.addAll(methodCall.getArguments());
+            
+            MethodCallNode newCall = new MethodCallNode(
+                methodCall.getTarget(),
+                methodCall.getMethodName(),
+                args,
+                methodCall.getLocation()
+            );
+            return evaluateMethodCall(newCall, context);
+        }
+        
+        if (functionNode instanceof LambdaNode) {
+            Lambda lambda = (Lambda) evaluate(functionNode, context);
+            return lambda.invoke(new Object[]{input});
+        }
+        
+        throw new EvaluationException(
+            "Pipeline requires a function, got: " + functionNode.getClass().getSimpleName(),
+            node.getLocation(),
+            ErrorCode.EVAL_TYPE_MISMATCH
+        );
+    }
+    
+    private static final ExecutorService asyncExecutor = Executors.newCachedThreadPool();
+    
+    private static Object evaluateAsync(AsyncNode node, ExecutionContext context) throws EvaluationException {
+        CompletableFuture<Object> future = CompletableFuture.supplyAsync(() -> {
+            try {
+                return evaluate(node.getExpression(), context);
+            } catch (EvaluationException e) {
+                throw new RuntimeException(e);
+            }
+        }, asyncExecutor);
+        
+        return future;
+    }
+    
+    private static Object evaluateAwait(AwaitNode node, ExecutionContext context) throws EvaluationException {
+        Object value = evaluate(node.getExpression(), context);
+        
+        if (value instanceof CompletableFuture) {
+            try {
+                return ((CompletableFuture<?>) value).join();
+            } catch (RuntimeException e) {
+                if (e.getCause() instanceof EvaluationException) {
+                    throw (EvaluationException) e.getCause();
+                }
+                throw new EvaluationException(
+                    "Error awaiting future: " + e.getMessage(),
+                    node.getLocation(),
+                    ErrorCode.EVAL_INVALID_OPERATION
+                );
+            }
+        }
+        
+        return value;
+    }
+    
     private static Object evaluateInstanceof(InstanceofNode node, ExecutionContext context) throws EvaluationException {
         Object value = evaluate(node.getExpression(), context);
         
@@ -1207,8 +1701,58 @@ public class ASTEvaluator {
         return func;
     }
     
-    private static Object evaluateMethodReference(MethodReferenceNode node, ExecutionContext context) {
-        return node;
+    private static Object evaluateMethodReference(MethodReferenceNode node, ExecutionContext context) throws EvaluationException {
+        ASTNode targetNode = node.getTarget();
+        String methodName = node.getMethodName();
+        
+        Class<?> targetClass = null;
+        Object targetInstance = null;
+        boolean isStatic = false;
+        
+        if (targetNode instanceof ClassReferenceNode) {
+            ClassReferenceNode classRef = (ClassReferenceNode) targetNode;
+            targetClass = classRef.getType().getRawType();
+            isStatic = true;
+        } else if (targetNode instanceof VariableNode) {
+            String varName = ((VariableNode) targetNode).getName();
+            
+            if (context.getScopeManager().hasVariable(varName)) {
+                targetInstance = context.getScopeManager().getVariable(varName).getValue();
+                targetClass = targetInstance != null ? targetInstance.getClass() : Object.class;
+            } else {
+                targetClass = ClassFinder.findClassWithImports(varName, null, context.getImports());
+                if (targetClass != null) {
+                    isStatic = true;
+                } else {
+                    throw new EvaluationException(
+                        "Cannot resolve method reference target: " + varName,
+                        node.getLocation(),
+                        ErrorCode.EVAL_UNDEFINED_VARIABLE
+                    );
+                }
+            }
+        } else {
+            targetInstance = evaluate(targetNode, context);
+            targetClass = targetInstance != null ? targetInstance.getClass() : Object.class;
+        }
+        
+        if (isStatic && targetClass != null) {
+            java.lang.reflect.Method actualMethod = findMethodInClass(targetClass, methodName);
+            if (actualMethod != null && !java.lang.reflect.Modifier.isStatic(actualMethod.getModifiers())) {
+                return MethodReference.createUnboundInstanceMethod(targetClass, methodName, node.getLocation());
+            }
+        }
+        
+        return new MethodReference(targetClass, targetInstance, methodName, isStatic, node.getLocation());
+    }
+    
+    private static java.lang.reflect.Method findMethodInClass(Class<?> clazz, String methodName) {
+        for (java.lang.reflect.Method method : clazz.getMethods()) {
+            if (method.getName().equals(methodName)) {
+                return method;
+            }
+        }
+        return null;
     }
     
     private static Object evaluateTry(TryNode node, ExecutionContext context) throws EvaluationException {
@@ -1625,6 +2169,78 @@ public class ASTEvaluator {
             value = evaluate(node.getValue(), context);
         }
         throw new ReturnException(value);
+    }
+
+    private static Object[] arrayDifference(Object[] left, Object[] right) {
+        java.util.Set<Object> rightSet = new java.util.HashSet<>();
+        for (Object obj : right) {
+            rightSet.add(obj);
+        }
+        java.util.List<Object> result = new java.util.ArrayList<>();
+        for (Object obj : left) {
+            if (!rightSet.contains(obj)) {
+                result.add(obj);
+            }
+        }
+        return result.toArray();
+    }
+    
+    private static Object[] arrayIntersection(Object[] left, Object[] right) {
+        java.util.Set<Object> rightSet = new java.util.HashSet<>();
+        for (Object obj : right) {
+            rightSet.add(obj);
+        }
+        java.util.List<Object> result = new java.util.ArrayList<>();
+        java.util.Set<Object> seen = new java.util.HashSet<>();
+        for (Object obj : left) {
+            if (rightSet.contains(obj) && !seen.contains(obj)) {
+                result.add(obj);
+                seen.add(obj);
+            }
+        }
+        return result.toArray();
+    }
+    
+    private static Object[] arrayUnion(Object[] left, Object[] right) {
+        java.util.Set<Object> resultSet = new java.util.LinkedHashSet<>();
+        for (Object obj : left) {
+            resultSet.add(obj);
+        }
+        for (Object obj : right) {
+            resultSet.add(obj);
+        }
+        return resultSet.toArray();
+    }
+    
+    private static Object[] arraySymmetricDifference(Object[] left, Object[] right) {
+        java.util.Set<Object> leftSet = new java.util.HashSet<>();
+        for (Object obj : left) {
+            leftSet.add(obj);
+        }
+        java.util.Set<Object> rightSet = new java.util.HashSet<>();
+        for (Object obj : right) {
+            rightSet.add(obj);
+        }
+        java.util.List<Object> result = new java.util.ArrayList<>();
+        for (Object obj : left) {
+            if (!rightSet.contains(obj)) {
+                result.add(obj);
+            }
+        }
+        for (Object obj : right) {
+            if (!leftSet.contains(obj)) {
+                result.add(obj);
+            }
+        }
+        return result.toArray();
+    }
+    
+    private static Object[] arrayReverse(Object[] arr) {
+        Object[] result = new Object[arr.length];
+        for (int i = 0; i < arr.length; i++) {
+            result[i] = arr[arr.length - 1 - i];
+        }
+        return result;
     }
     
     private static String formatValue(Object value) {

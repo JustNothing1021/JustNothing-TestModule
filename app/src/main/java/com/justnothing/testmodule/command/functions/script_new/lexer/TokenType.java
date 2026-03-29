@@ -67,6 +67,8 @@ public enum TokenType {
     KEYWORD_SYNCHRONIZED("synchronized"),
     KEYWORD_SUPER("super"),
     KEYWORD_THIS("this"),
+    KEYWORD_ASYNC("async"),
+    KEYWORD_AWAIT("await"),
     
     OPERATOR_ASSIGN("="),
     OPERATOR_PLUS_ASSIGN("+="),
@@ -87,10 +89,12 @@ public enum TokenType {
     OPERATOR_LESS_THAN_OR_EQUAL("<="),
     OPERATOR_GREATER_THAN(">"),
     OPERATOR_GREATER_THAN_OR_EQUAL(">="),
+    OPERATOR_SPACESHIP("<=>"),
     
     OPERATOR_LOGICAL_AND("&&"),
     OPERATOR_LOGICAL_OR("||"),
     OPERATOR_LOGICAL_NOT("!"),
+    OPERATOR_NOT_NULL("!!"),
     
     OPERATOR_BITWISE_AND("&"),
     OPERATOR_BITWISE_OR("|"),
@@ -107,13 +111,25 @@ public enum TokenType {
     OPERATOR_DIVIDE("/"),
     OPERATOR_MODULO("%"),
     
+    OPERATOR_POWER("**"),
+    OPERATOR_INT_DIVIDE("//"),
+    OPERATOR_MATH_MODULO("%%"),
+    OPERATOR_RANGE(".."),
+    OPERATOR_RANGE_EXCLUSIVE("..<"),
+    
     OPERATOR_INCREMENT("++"),
     OPERATOR_DECREMENT("--"),
     
     OPERATOR_DOT("."),
+    OPERATOR_SAFE_DOT("?."),
     OPERATOR_DOUBLE_COLON("::"),
     OPERATOR_QUESTION("?"),
     OPERATOR_COLON(":"),
+    OPERATOR_DECLARE_ASSIGN(":="),
+    OPERATOR_CONDITIONAL_ASSIGN("?="),
+    OPERATOR_NULL_COALESCING_ASSIGN("??="),
+    OPERATOR_NULL_COALESCING("??"),
+    OPERATOR_ELVIS("?:"),
     
     DELIMITER_SEMICOLON(";"),
     DELIMITER_COMMA(","),
@@ -132,6 +148,7 @@ public enum TokenType {
     LITERAL_LONG("long literal"),
     LITERAL_DECIMAL("decimal literal"),
     LITERAL_STRING("string literal"),
+    LITERAL_INTERPOLATED_STRING("interpolated string literal"),
     LITERAL_CHAR("char literal"),
     LITERAL_BOOLEAN("boolean literal"),
     LITERAL_NULL("null literal"),
@@ -173,7 +190,7 @@ public enum TokenType {
             "try", "catch", "finally", "throw", "import", "delete",
             "class", "interface", "extends", "implements",
             "public", "private", "protected", "static", "abstract", "native", "synchronized",
-            "super", "this"
+            "super", "this", "async", "await"
     ));
     
     public static boolean isKeyword(String text) {
@@ -228,6 +245,8 @@ public enum TokenType {
             case "synchronized": return KEYWORD_SYNCHRONIZED;
             case "super": return KEYWORD_SUPER;
             case "this": return KEYWORD_THIS;
+            case "async": return KEYWORD_ASYNC;
+            case "await": return KEYWORD_AWAIT;
             default: return IDENTIFIER;
         }
     }

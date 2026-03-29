@@ -1,5 +1,8 @@
 package com.justnothing.testmodule.command.functions.script_new.evaluator;
 
+import com.justnothing.testmodule.command.output.IOutputHandler;
+import com.justnothing.testmodule.command.output.SystemOutputCollector;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -16,6 +19,9 @@ public class ExecutionContext {
     private int loopDepth;
     private static final int MAX_LOOP_DEPTH = 1000;
     
+    private IOutputHandler outputBuffer;
+    private IOutputHandler warnMsgBuffer;
+    
     public ExecutionContext(ClassLoader classLoader) {
         this.classLoader = classLoader;
         this.scopeManager = new ScopeManager();
@@ -23,6 +29,20 @@ public class ExecutionContext {
         this.customClasses = new HashMap<>();
         this.builtins = new Builtins();
         this.loopDepth = 0;
+        this.outputBuffer = new SystemOutputCollector(System.out, System.in);
+        this.warnMsgBuffer = new SystemOutputCollector(System.err, System.in);
+        addDefaultImports();
+    }
+    
+    public ExecutionContext(ClassLoader classLoader, IOutputHandler outputHandler, IOutputHandler errorHandler) {
+        this.classLoader = classLoader;
+        this.scopeManager = new ScopeManager();
+        this.imports = new ArrayList<>();
+        this.customClasses = new HashMap<>();
+        this.builtins = new Builtins();
+        this.loopDepth = 0;
+        this.outputBuffer = outputHandler != null ? outputHandler : new SystemOutputCollector(System.out, System.in);
+        this.warnMsgBuffer = errorHandler != null ? errorHandler : new SystemOutputCollector(System.err, System.in);
         addDefaultImports();
     }
     
@@ -33,6 +53,8 @@ public class ExecutionContext {
         this.customClasses = new HashMap<>();
         this.builtins = new Builtins();
         this.loopDepth = 0;
+        this.outputBuffer = new SystemOutputCollector(System.out, System.in);
+        this.warnMsgBuffer = new SystemOutputCollector(System.err, System.in);
         if (this.imports.isEmpty()) {
             addDefaultImports();
         }
@@ -45,11 +67,17 @@ public class ExecutionContext {
         this.customClasses = new HashMap<>(parent.customClasses);
         this.builtins = parent.builtins;
         this.loopDepth = parent.loopDepth;
+        this.outputBuffer = parent.outputBuffer;
+        this.warnMsgBuffer = parent.warnMsgBuffer;
     }
     
     private void addDefaultImports() {
         imports.add("java.lang.*");
         imports.add("java.util.*");
+        imports.add("java.lang.reflect.*");
+        imports.add("java.util.function.*");
+        imports.add("android.os.*");
+        imports.add("android.util.*");
     }
     
     public ClassLoader getClassLoader() {
@@ -62,6 +90,12 @@ public class ExecutionContext {
     
     public List<String> getImports() {
         return Collections.unmodifiableList(imports);
+    }
+    
+    public void addImport(String importStmt) {
+        if (!imports.contains(importStmt)) {
+            imports.add(importStmt);
+        }
     }
     
     public int getLoopDepth() {
@@ -116,5 +150,69 @@ public class ExecutionContext {
             throw new RuntimeException("Unknown builtin function: " + name);
         }
         return func.call(args);
+    }
+    
+    public String getOutput() {
+        return outputBuffer.getString();
+    }
+    
+    public void clearOutput() {
+        outputBuffer.clear();
+    }
+    
+    public void print(String text) {
+        outputBuffer.print(text);
+    }
+    
+    public void printf(String format, Object... args) {
+        outputBuffer.printf(format, args);
+    }
+    
+    public void println(String text) {
+        outputBuffer.println(text);
+    }
+    
+    public void printStackTrace(Throwable th) {
+        outputBuffer.printStackTrace(th);
+    }
+    
+    public String getWarnMessages() {
+        return warnMsgBuffer.getString();
+    }
+    
+    public void clearWarnMessages() {
+        warnMsgBuffer.clear();
+    }
+    
+    public void printWarn(String text) {
+        warnMsgBuffer.print(text);
+    }
+    
+    public void printfWarn(String format, Object... args) {
+        warnMsgBuffer.printf(format, args);
+    }
+    
+    public void printlnWarn(String text) {
+        warnMsgBuffer.println(text);
+    }
+    
+    public void printStackTraceWarn(Throwable th) {
+        warnMsgBuffer.printStackTrace(th);
+    }
+    
+    public IOutputHandler getOutputBuffer() {
+        return outputBuffer;
+    }
+    
+    public void setOutputBuffer(IOutputHandler outputBuffer) {
+        this.outputBuffer = outputBuffer;
+    }
+    
+    public IOutputHandler getWarnMsgBuffer() {
+        return warnMsgBuffer;
+    }
+    
+    public void setWarnMsgBuffer(IOutputHandler warnMsgBuffer) {
+        this.warnMsgBuffer = warnMsgBuffer;
     }
 }

@@ -84,10 +84,13 @@ public class Lambda implements Function<Object[], Object> {
         
         try {
             for (Map.Entry<String, ScopeManager.Variable> entry : capturedVariables.entrySet()) {
-                ScopeManager.Variable var = entry.getValue();
-                callContext.getScopeManager().declareCapturedVariable(
-                    var.getName(), var.getType(), var, var.isFinal()
-                );
+                String varName = entry.getKey();
+                if (!parameterNames.contains(varName)) {
+                    ScopeManager.Variable var = entry.getValue();
+                    callContext.getScopeManager().declareCapturedVariable(
+                        var.getName(), var.getType(), var, var.isFinal()
+                    );
+                }
             }
             
             for (int i = 0; i < parameterNames.size(); i++) {
@@ -126,11 +129,15 @@ public class Lambda implements Function<Object[], Object> {
         );
     }
     
-    private static class LambdaInvocationHandler implements InvocationHandler {
+    public static class LambdaInvocationHandler implements InvocationHandler {
         private final Lambda lambda;
         
         LambdaInvocationHandler(Lambda lambda) {
             this.lambda = lambda;
+        }
+        
+        public Lambda getLambda() {
+            return lambda;
         }
         
         @Override

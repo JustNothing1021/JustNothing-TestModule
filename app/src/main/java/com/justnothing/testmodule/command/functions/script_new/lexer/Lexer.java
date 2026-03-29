@@ -46,6 +46,9 @@ public class Lexer {
             
             if (Character.isDigit(c)) {
                 readNumber();
+            } else if (c == 'f' && (peekNext() == '"' || peekNext() == '\'')) {
+                advance();
+                readInterpolatedString();
             } else if (c == '"' || c == '\'') {
                 readString();
             } else if (Character.isLetter(c) || c == '_') {
@@ -190,8 +193,19 @@ public class Lexer {
             }
         }
         
-        while (!isAtEnd() && (Character.isDigit(peek()) || peek() == '.')) {
+        while (!isAtEnd() && Character.isDigit(peek())) {
             sb.append(advance());
+        }
+        
+        if (!isAtEnd() && peek() == '.') {
+            char nextNext = position + 1 < length ? source.charAt(position + 1) : '\0';
+            if (nextNext == '.') {
+            } else if (Character.isDigit(nextNext)) {
+                sb.append(advance());
+                while (!isAtEnd() && Character.isDigit(peek())) {
+                    sb.append(advance());
+                }
+            }
         }
         
         if (!isAtEnd() && (peek() == 'e' || peek() == 'E')) {
@@ -276,7 +290,9 @@ public class Lexer {
         StringBuilder sb = new StringBuilder();
         
         while (!isAtEnd() && peek() != quote) {
-            char c = advance();
+            char c = peek();
+            
+            advance();
             if (c == '\\') {
                 if (!isAtEnd()) {
                     char next = advance();
@@ -289,6 +305,7 @@ public class Lexer {
                         case '\\': sb.append('\\'); break;
                         case '\'': sb.append('\''); break;
                         case '\"': sb.append('\"'); break;
+                        case '$': sb.append('$'); break;
                         case 'x': {
                             StringBuilder hex = new StringBuilder();
                             for (int i = 0; i < 2 && !isAtEnd(); i++) {
@@ -376,6 +393,95 @@ public class Lexer {
         }
     }
     
+    private void readInterpolatedString() {
+        char quote = advance();
+        int startLine = line;
+        int startColumn = column;
+        StringBuilder sb = new StringBuilder();
+        List<Object> interpolatedParts = new ArrayList<>();
+        
+        while (!isAtEnd() && peek() != quote) {
+            char c = peek();
+            
+            if (c == '$') {
+                if (sb.length() > 0) {
+                    interpolatedParts.add(sb.toString());
+                    sb = new StringBuilder();
+                }
+                advance();
+                
+                if (peek() == '{') {
+                    advance();
+                    StringBuilder expr = new StringBuilder();
+                    int braceCount = 1;
+                    while (!isAtEnd() && braceCount > 0) {
+                        char ec = advance();
+                        if (ec == '{') braceCount++;
+                        else if (ec == '}') braceCount--;
+                        if (braceCount > 0) {
+                            expr.append(ec);
+                        }
+                    }
+                    interpolatedParts.add(new InterpolationPart(expr.toString().trim()));
+                } else {
+                    StringBuilder varName = new StringBuilder();
+                    while (!isAtEnd() && (Character.isLetterOrDigit(peek()) || peek() == '_')) {
+                        varName.append(advance());
+                    }
+                    if (varName.length() > 0) {
+                        interpolatedParts.add(new InterpolationPart(varName.toString()));
+                    }
+                }
+                continue;
+            }
+            
+            advance();
+            if (c == '\\') {
+                if (!isAtEnd()) {
+                    char next = advance();
+                    switch (next) {
+                        case 'n': sb.append('\n'); break;
+                        case 't': sb.append('\t'); break;
+                        case 'r': sb.append('\r'); break;
+                        case 'b': sb.append('\b'); break;
+                        case 'f': sb.append('\f'); break;
+                        case '\\': sb.append('\\'); break;
+                        case '\'': sb.append('\''); break;
+                        case '\"': sb.append('\"'); break;
+                        case '$': sb.append('$'); break;
+                        default: sb.append(next); break;
+                    }
+                }
+            } else {
+                sb.append(c);
+            }
+        }
+        
+        if (isAtEnd()) {
+            throw error("Unterminated interpolated string literal");
+        }
+        
+        advance();
+        SourceLocation location = new SourceLocation(startLine, startColumn);
+        
+        if (sb.length() > 0) {
+            interpolatedParts.add(sb.toString());
+        }
+        addToken(TokenType.LITERAL_INTERPOLATED_STRING, interpolatedParts, location);
+    }
+    
+    public static class InterpolationPart {
+        private final String expression;
+        
+        public InterpolationPart(String expression) {
+            this.expression = expression;
+        }
+        
+        public String getExpression() {
+            return expression;
+        }
+    }
+    
     private void readIdentifier() {
         int startLine = line;
         int startColumn = column;
@@ -426,14 +532,17 @@ public class Lexer {
                 break;
             case '*':
                 if (match('=')) addToken(TokenType.OPERATOR_MULTIPLY_ASSIGN, location);
+                else if (match('*')) addToken(TokenType.OPERATOR_POWER, location);
                 else addToken(TokenType.OPERATOR_MULTIPLY, location);
                 break;
             case '/':
                 if (match('=')) addToken(TokenType.OPERATOR_DIVIDE_ASSIGN, location);
+                else if (match('/')) addToken(TokenType.OPERATOR_INT_DIVIDE, location);
                 else addToken(TokenType.OPERATOR_DIVIDE, location);
                 break;
             case '%':
                 if (match('=')) addToken(TokenType.OPERATOR_MODULO_ASSIGN, location);
+                else if (match('%')) addToken(TokenType.OPERATOR_MATH_MODULO, location);
                 else addToken(TokenType.OPERATOR_MODULO, location);
                 break;
             case '=':
@@ -442,15 +551,19 @@ public class Lexer {
                 break;
             case '!':
                 if (match('=')) addToken(TokenType.OPERATOR_NOT_EQUAL, location);
+                else if (match('!')) addToken(TokenType.OPERATOR_NOT_NULL, location);
                 else addToken(TokenType.OPERATOR_LOGICAL_NOT, location);
                 break;
             case '<':
-                if (match('=')) addToken(TokenType.OPERATOR_LESS_THAN_OR_EQUAL, location);
-                else if (match('<')) {
+                if (match('=')) {
+                    if (match('>')) addToken(TokenType.OPERATOR_SPACESHIP, location);
+                    else addToken(TokenType.OPERATOR_LESS_THAN_OR_EQUAL, location);
+                } else if (match('<')) {
                     if (match('=')) addToken(TokenType.OPERATOR_LEFT_SHIFT_ASSIGN, location);
                     else addToken(TokenType.OPERATOR_LEFT_SHIFT, location);
+                } else {
+                    addToken(TokenType.OPERATOR_LESS_THAN, location);
                 }
-                else addToken(TokenType.OPERATOR_LESS_THAN, location);
                 break;
             case '>':
                 if (match('=')) addToken(TokenType.OPERATOR_GREATER_THAN_OR_EQUAL, location);
@@ -486,8 +599,10 @@ public class Lexer {
                 break;
             case '.':
                 if (match('.')) {
-                    if (match('.')) {
-                        throw error("Spread operator not supported");
+                    if (match('<')) {
+                        addToken(TokenType.OPERATOR_RANGE_EXCLUSIVE, location);
+                    } else {
+                        addToken(TokenType.OPERATOR_RANGE, location);
                     }
                 } else {
                     addToken(TokenType.OPERATOR_DOT, location);
@@ -495,10 +610,17 @@ public class Lexer {
                 break;
             case ':':
                 if (match(':')) addToken(TokenType.OPERATOR_DOUBLE_COLON, location);
+                else if (match('=')) addToken(TokenType.OPERATOR_DECLARE_ASSIGN, location);
                 else addToken(TokenType.OPERATOR_COLON, location);
                 break;
             case '?':
-                addToken(TokenType.OPERATOR_QUESTION, location);
+                if (match('?')) {
+                    if (match('=')) addToken(TokenType.OPERATOR_NULL_COALESCING_ASSIGN, location);
+                    else addToken(TokenType.OPERATOR_NULL_COALESCING, location);
+                } else if (match(':')) addToken(TokenType.OPERATOR_ELVIS, location);
+                else if (match('=')) addToken(TokenType.OPERATOR_CONDITIONAL_ASSIGN, location);
+                else if (match('.')) addToken(TokenType.OPERATOR_SAFE_DOT, location);
+                else addToken(TokenType.OPERATOR_QUESTION, location);
                 break;
             default:
                 throw error("Unknown operator: '" + c + "'");
