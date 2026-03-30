@@ -69,13 +69,10 @@ public class ScriptRunner {
             }
             return ASTEvaluator.evaluate(ast, context);
         } catch (ParseException e) {
-            context.printlnWarn("Parse error: " + e.getMessage());
             throw new RuntimeException("Parse error: " + e.getMessage(), e);
         } catch (EvaluationException e) {
-            context.printlnWarn("Evaluation error: " + e.getMessage());
             throw new RuntimeException("Evaluation error: " + e.getMessage(), e);
         } catch (Exception e) {
-            context.printlnWarn("Error: " + e.getMessage());
             throw new RuntimeException("Error: " + e.getMessage(), e);
         }
     }
@@ -96,13 +93,10 @@ public class ScriptRunner {
             BlockNode ast = parser.parse();
             ASTEvaluator.evaluate(ast, context);
         } catch (ParseException e) {
-            context.printlnWarn("Parse error: " + e.getMessage());
             throw new RuntimeException("Parse error: " + e.getMessage(), e);
         } catch (EvaluationException e) {
-            context.printlnWarn("Evaluation error: " + e.getMessage());
             throw new RuntimeException("Evaluation error: " + e.getMessage(), e);
         } catch (Exception e) {
-            context.printlnWarn("Error: " + e.getMessage());
             throw new RuntimeException("Error: " + e.getMessage(), e);
         }
     }

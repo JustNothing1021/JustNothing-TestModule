@@ -704,6 +704,10 @@ public class ScriptExecutorMain extends CommandBase {
         return sdf.format(new java.util.Date(timestamp));
     }
 
+    private static final String ANSI_RESET = "\u001B[0m";
+    private static final String ANSI_RED = "\u001B[31m";
+    private static final String ANSI_GRAY = "\u001B[90m";
+
     private String runInteractiveMode(CommandExecutor.CmdExecContext context) {
         ClassLoader classLoader = context.classLoader();
         ScriptRunner runner = getScriptExecutor(classLoader);
@@ -717,9 +721,10 @@ public class ScriptExecutorMain extends CommandBase {
 
         StringBuilder multiLineBuffer = new StringBuilder();
         boolean multiLineMode = false;
+        boolean autoMultiLine = false;
 
         while (true) {
-            String prompt = multiLineMode ? "... " : ">>> ";
+            String prompt = (multiLineMode || autoMultiLine) ? "... " : ">>> ";
             String code = context.readLine(prompt);
             
             if (code == null) {
@@ -735,66 +740,152 @@ public class ScriptExecutorMain extends CommandBase {
             }
             
             if (code.isEmpty()) {
+                if (autoMultiLine) {
+                    continue;
+                }
                 continue;
             }
             
             if (code.equals(":multi")) {
                 multiLineMode = true;
+                autoMultiLine = false;
                 context.output().println("进入多行模式, 输入 ':eval' 执行, ':clear' 清空, ':exit' 退出多行模式");
                 continue;
             }
             
-            if (code.equals(":exit") && multiLineMode) {
+            if (code.equals(":exit") && (multiLineMode || autoMultiLine)) {
                 multiLineMode = false;
+                autoMultiLine = false;
                 multiLineBuffer.setLength(0);
                 context.output().println("退出多行模式");
                 continue;
             }
             
-            if (code.equals(":clear") && multiLineMode) {
+            if (code.equals(":clear") && (multiLineMode || autoMultiLine)) {
                 multiLineBuffer.setLength(0);
                 context.output().println("已清空");
                 continue;
             }
             
-            if (code.equals(":eval") && multiLineMode) {
+            if (code.equals(":eval") && (multiLineMode || autoMultiLine)) {
                 String fullCode = multiLineBuffer.toString();
                 multiLineBuffer.setLength(0);
                 multiLineMode = false;
+                autoMultiLine = false;
                 
                 if (fullCode.isEmpty()) {
                     context.output().println("没有代码可执行");
                     continue;
                 }
                 
-                try {
-                    Object result = runner.executeWithResult(fullCode, context.output(), context.output());
-                    if (result != null) {
-                        context.output().println(result.toString());
-                    }
-                } catch (Exception e) {
-                    context.output().println("执行出错: " + e.getMessage());
-                    logger.error("脚本执行失败", e);
-                }
+                executeCode(runner, fullCode, context);
                 continue;
             }
             
-            if (multiLineMode) {
+            if (multiLineMode || autoMultiLine) {
                 multiLineBuffer.append(code).append("\n");
+                
+                if (autoMultiLine && isCodeComplete(multiLineBuffer.toString())) {
+                    String fullCode = multiLineBuffer.toString();
+                    multiLineBuffer.setLength(0);
+                    autoMultiLine = false;
+                    
+                    executeCode(runner, fullCode, context);
+                }
                 continue;
             }
             
-            try {
-                Object result = runner.executeWithResult(code, context.output(), context.output());
-                if (result != null) {
-                    context.output().println(result.toString());
-                }
-            } catch (Exception e) {
-                context.output().println("执行出错: " + e.getMessage());
-                logger.error("脚本执行失败", e);
+            if (!isCodeComplete(code)) {
+                multiLineBuffer.append(code).append("\n");
+                autoMultiLine = true;
+                continue;
             }
+            
+            executeCode(runner, code, context);
         }
         return "交互式模式已退出";
+    }
+    
+    private void executeCode(ScriptRunner runner, String code, CommandExecutor.CmdExecContext context) {
+        try {
+            Object result = runner.executeWithResult(code, context.output(), context.output());
+            if (result != null) {
+                context.output().println(ANSI_GRAY + result.toString() + ANSI_RESET);
+            }
+        } catch (Exception e) {
+            context.output().print(ANSI_RED);
+            Throwable cause = e.getCause();
+            if (cause instanceof com.justnothing.testmodule.command.functions.script_new.exception.EvaluationException evalEx) {
+                Throwable userThrown = evalEx.getCause();
+                if (userThrown != null) {
+                    context.output().println("错误: " + userThrown.getClass().getSimpleName() + 
+                        (userThrown.getMessage() != null ? ": " + userThrown.getMessage() : ""));
+                    context.output().printStackTrace(userThrown);
+                } else {
+                    context.output().println("错误: " + evalEx.getMessage());
+                }
+            } else if (cause != null) {
+                context.output().println("错误: " + cause.getMessage());
+            } else {
+                context.output().println("错误: " + e.getMessage());
+            }
+            context.output().print(ANSI_RESET);
+        }
+    }
+    
+    private static boolean isCodeComplete(String code) {
+        int braceCount = 0;
+        int parenCount = 0;
+        int bracketCount = 0;
+        boolean inString = false;
+        boolean inChar = false;
+        boolean inFString = false;
+        boolean escape = false;
+        
+        for (int i = 0; i < code.length(); i++) {
+            char c = code.charAt(i);
+            
+            if (escape) {
+                escape = false;
+                continue;
+            }
+            
+            if (c == '\\' && (inString || inChar || inFString)) {
+                escape = true;
+                continue;
+            }
+            
+            if (c == '"' && !inChar) {
+                if (i > 0 && code.charAt(i - 1) == 'f' && !inString && !inFString) {
+                    inFString = !inFString;
+                } else if (inFString) {
+                    inFString = false;
+                } else {
+                    inString = !inString;
+                }
+                continue;
+            }
+            
+            if (c == '\'' && !inString && !inFString) {
+                inChar = !inChar;
+                continue;
+            }
+            
+            if (inString || inChar || inFString) {
+                continue;
+            }
+            
+            switch (c) {
+                case '{': braceCount++; break;
+                case '}': braceCount--; break;
+                case '(': parenCount++; break;
+                case ')': parenCount--; break;
+                case '[': bracketCount++; break;
+                case ']': bracketCount--; break;
+            }
+        }
+        
+        return braceCount <= 0 && parenCount <= 0 && bracketCount <= 0;
     }
 
 }
