@@ -443,7 +443,6 @@ public class Parser {
             
             String typeStr = typeName.toString();
             if (typeStr.isEmpty()) {
-                restorePosition();
                 throw error("Expected type");
             }
             
@@ -451,14 +450,9 @@ public class Parser {
                 typeStr = typeStr.substring(0, typeStr.length() - 1);
             }
             
-            try {
-                Class<?> result = resolveType(typeStr);
-                releasePosition();
-                return result;
-            } catch (ParseException e) {
-                restorePosition();
-                throw e;
-            }
+            Class<?> result = resolveType(typeStr);
+            releasePosition();
+            return result;
             
         } catch (ParseException e) {
             restorePosition();

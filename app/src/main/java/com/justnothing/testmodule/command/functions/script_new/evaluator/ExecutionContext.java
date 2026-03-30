@@ -36,6 +36,7 @@ public class ExecutionContext {
     
     private IOutputHandler outputBuffer;
     private IOutputHandler warnMsgBuffer;
+    private boolean printAST = false;
 
     public ExecutionContext() {
         this(Thread.currentThread().getContextClassLoader());
@@ -52,6 +53,7 @@ public class ExecutionContext {
         this.warnMsgBuffer = new SystemOutputCollector(System.err, System.in);
         this.builtins.setOutputHandler(outputBuffer);
         this.builtins.setErrorHandler(warnMsgBuffer);
+        this.builtins.setExecutionContext(this);
         addDefaultImports();
     }
     
@@ -66,6 +68,7 @@ public class ExecutionContext {
         this.warnMsgBuffer = errorHandler != null ? errorHandler : new SystemOutputCollector(System.err, System.in);
         this.builtins.setOutputHandler(outputBuffer);
         this.builtins.setErrorHandler(warnMsgBuffer);
+        this.builtins.setExecutionContext(this);
         addDefaultImports();
     }
     
@@ -80,6 +83,7 @@ public class ExecutionContext {
         this.warnMsgBuffer = new SystemOutputCollector(System.err, System.in);
         this.builtins.setOutputHandler(outputBuffer);
         this.builtins.setErrorHandler(warnMsgBuffer);
+        this.builtins.setExecutionContext(this);
         if (this.imports.isEmpty()) {
             addDefaultImports();
         }
@@ -285,6 +289,14 @@ public class ExecutionContext {
     
     public void clearVariables() {
         scopeManager.clearCurrentScope();
+    }
+    
+    public boolean isPrintAST() {
+        return printAST;
+    }
+    
+    public void setPrintAST(boolean printAST) {
+        this.printAST = printAST;
     }
     
     public void enterScope() {

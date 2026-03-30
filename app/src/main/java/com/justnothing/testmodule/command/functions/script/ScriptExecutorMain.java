@@ -5,6 +5,7 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_SCRIPT_VER;
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.functions.script_new.ScriptRunner;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.data.DataBridge;
 import com.justnothing.testmodule.utils.io.IOManager;
@@ -710,10 +711,16 @@ public class ScriptExecutorMain extends CommandBase {
         logger.info("进入交互式脚本执行模式");
         context.output().println("====== 脚本交互执行模式 =====");
         context.output().println("输入 'exit' 或 'quit' 退出 (你不会闲到拿这俩做变量名, 对吧)");
+        context.output().println("输入 ':multi' 进入多行模式, ':eval' 执行, ':clear' 清空");
+        context.output().println("输入 'setPrintAST(true)' 开启 AST 打印");
         context.output().println("");
 
+        StringBuilder multiLineBuffer = new StringBuilder();
+        boolean multiLineMode = false;
+
         while (true) {
-            String code = context.readLine(">>> ");
+            String prompt = multiLineMode ? "... " : ">>> ";
+            String code = context.readLine(prompt);
             
             if (code == null) {
                 context.output().println("");
@@ -728,6 +735,52 @@ public class ScriptExecutorMain extends CommandBase {
             }
             
             if (code.isEmpty()) {
+                continue;
+            }
+            
+            if (code.equals(":multi")) {
+                multiLineMode = true;
+                context.output().println("进入多行模式, 输入 ':eval' 执行, ':clear' 清空, ':exit' 退出多行模式");
+                continue;
+            }
+            
+            if (code.equals(":exit") && multiLineMode) {
+                multiLineMode = false;
+                multiLineBuffer.setLength(0);
+                context.output().println("退出多行模式");
+                continue;
+            }
+            
+            if (code.equals(":clear") && multiLineMode) {
+                multiLineBuffer.setLength(0);
+                context.output().println("已清空");
+                continue;
+            }
+            
+            if (code.equals(":eval") && multiLineMode) {
+                String fullCode = multiLineBuffer.toString();
+                multiLineBuffer.setLength(0);
+                multiLineMode = false;
+                
+                if (fullCode.isEmpty()) {
+                    context.output().println("没有代码可执行");
+                    continue;
+                }
+                
+                try {
+                    Object result = runner.executeWithResult(fullCode, context.output(), context.output());
+                    if (result != null) {
+                        context.output().println(result.toString());
+                    }
+                } catch (Exception e) {
+                    context.output().println("执行出错: " + e.getMessage());
+                    logger.error("脚本执行失败", e);
+                }
+                continue;
+            }
+            
+            if (multiLineMode) {
+                multiLineBuffer.append(code).append("\n");
                 continue;
             }
             

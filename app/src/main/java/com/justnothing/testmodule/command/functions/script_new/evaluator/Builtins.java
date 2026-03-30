@@ -7,13 +7,19 @@ import com.justnothing.testmodule.utils.reflect.ClassResolver;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Array;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
 
 public class Builtins {
     
@@ -26,6 +32,7 @@ public class Builtins {
     private ClassLoader contextClassLoader;
     private IOutputHandler outputHandler;
     private IOutputHandler errorHandler;
+    private ExecutionContext executionContext;
     
     public Builtins() {
         this.functions = new HashMap<>();
@@ -45,6 +52,10 @@ public class Builtins {
     
     public void setErrorHandler(IOutputHandler errorHandler) {
         this.errorHandler = errorHandler;
+    }
+    
+    public void setExecutionContext(ExecutionContext context) {
+        this.executionContext = context;
     }
     
     public void registerFunction(String name, BuiltinFunction function) {
@@ -659,6 +670,26 @@ public class Builtins {
             }
             return Boolean.parseBoolean(obj.toString());
         });
+        
+        functions.put("setPrintAST", args -> {
+            if (args.size() != 1) {
+                throw new RuntimeException("setPrintAST() requires exactly 1 argument");
+            }
+            if (executionContext == null) {
+                throw new RuntimeException("ExecutionContext not set");
+            }
+            Object value = args.get(0);
+            boolean enabled = value instanceof Boolean ? (Boolean) value : Boolean.parseBoolean(value.toString());
+            executionContext.setPrintAST(enabled);
+            return enabled;
+        });
+        
+        functions.put("isPrintAST", args -> {
+            if (executionContext == null) {
+                return false;
+            }
+            return executionContext.isPrintAST();
+        });
     }
     
     private List<Integer> createRange(int start, int end, int step) {
@@ -690,6 +721,428 @@ public class Builtins {
     private void registerLegacyFunctions() {
         functions.put("getInterpreterClassLoader", args -> contextClassLoader);
         
-        functions.put("enableLog", args -> null); // TODO
+        functions.put("enableLog", args -> null);
+        
+        functions.put("deepAnalyze", args -> {
+            if (args.size() != 1) {
+                throw new RuntimeException("deepAnalyze() requires exactly 1 argument");
+            }
+            
+            Object target = args.get(0);
+            StringBuilder result = new StringBuilder();
+            
+            if (target == null) {
+                result.append("Target object is null\n");
+                outputHandler.println(result.toString());
+                return null;
+            }
+            
+            Class<?> clazz = target.getClass();
+            result.append("=== Deep Object Analysis ===\n");
+            result.append("String: ").append(target).append("\n");
+            result.append("Class Name: ").append(clazz.getName()).append("\n");
+            result.append("Simple Name: ").append(clazz.getSimpleName()).append("\n");
+            result.append("Package: ").append(clazz.getPackage() != null ? clazz.getPackage().getName() : "None").append("\n");
+            result.append("Is Array: ").append(clazz.isArray()).append("\n");
+            result.append("Is Interface: ").append(clazz.isInterface()).append("\n");
+            result.append("Is Annotation: ").append(clazz.isAnnotation()).append("\n");
+            result.append("Is Enum: ").append(clazz.isEnum()).append("\n");
+            result.append("Is Primitive: ").append(clazz.isPrimitive()).append("\n\n");
+            
+            Set<Field> allFields = new LinkedHashSet<>();
+            Set<Method> allMethods = new LinkedHashSet<>();
+            Map<Field, Class<?>> fieldSources = new HashMap<>();
+            Map<Method, Class<?>> methodSources = new HashMap<>();
+            
+            Class<?> currentClass = clazz;
+            while (currentClass != null) {
+                for (Field field : currentClass.getDeclaredFields()) {
+                    allFields.add(field);
+                    fieldSources.put(field, currentClass);
+                }
+                for (Method method : currentClass.getDeclaredMethods()) {
+                    allMethods.add(method);
+                    methodSources.put(method, currentClass);
+                }
+                for (Class<?> iface : currentClass.getInterfaces()) {
+                    collectInterfaceMembers(iface, allFields, allMethods, fieldSources, methodSources);
+                }
+                currentClass = currentClass.getSuperclass();
+            }
+            
+            result.append("=== Fields (with inheritance) ===\n");
+            if (allFields.isEmpty()) {
+                result.append("No fields\n");
+            } else {
+                for (Field field : allFields) {
+                    Class<?> sourceClass = fieldSources.get(field);
+                    result.append("  ").append(field.toString());
+                    try {
+                        field.setAccessible(true);
+                        Object value = field.get(target);
+                        result.append(" = ").append(value != null ? value.toString() : "null");
+                    } catch (Exception e) {
+                        result.append(" = [Cannot access: ").append(e.getMessage()).append("]");
+                    }
+                    if (sourceClass != clazz) {
+                        if (sourceClass.isInterface()) {
+                            result.append("\n    └─> implements ").append(sourceClass.getName());
+                        } else {
+                            result.append("\n    └─> extends ").append(sourceClass.getName());
+                        }
+                    }
+                    result.append("\n");
+                }
+            }
+            result.append("Total Fields: ").append(allFields.size()).append("\n\n");
+            
+            result.append("=== Methods (with inheritance) ===\n");
+            if (allMethods.isEmpty()) {
+                result.append("No methods\n");
+            } else {
+                for (Method method : allMethods) {
+                    Class<?> sourceClass = methodSources.get(method);
+                    result.append("  ").append(method.toString());
+                    if (sourceClass != clazz) {
+                        if (sourceClass.isInterface()) {
+                            result.append("\n    └─> implements ").append(sourceClass.getName());
+                        } else {
+                            result.append("\n    └─> extends ").append(sourceClass.getName());
+                        }
+                    }
+                    result.append("\n");
+                }
+            }
+            result.append("Total Methods: ").append(allMethods.size()).append("\n\n");
+            
+            result.append("=== Superclass Hierarchy ===\n");
+            Class<?> superClass = clazz.getSuperclass();
+            int level = 0;
+            while (superClass != null) {
+                result.append("  ").append("  ".repeat(level)).append("└─> ").append(superClass.getName()).append("\n");
+                superClass = superClass.getSuperclass();
+                level++;
+            }
+            if (level == 0) {
+                result.append("No superclass\n");
+            }
+            result.append("\n");
+            
+            result.append("=== Implemented Interfaces ===\n");
+            Class<?>[] interfaces = clazz.getInterfaces();
+            if (interfaces.length == 0) {
+                result.append("No interfaces\n");
+            } else {
+                for (Class<?> _interface : interfaces) {
+                    result.append("  └─> ").append(_interface.getName()).append("\n");
+                }
+            }
+            result.append("Total Interfaces: ").append(interfaces.length).append("\n");
+            
+            outputHandler.println(result.toString());
+            return null;
+        });
+        
+        functions.put("getContext", args -> {
+            try {
+                Class<?> activityThreadClass = ClassResolver.findClassOrFail("android.app.ActivityThread", contextClassLoader);
+                Method currentActivityThreadMethod = activityThreadClass.getMethod("currentActivityThread");
+                Object activityThread = currentActivityThreadMethod.invoke(null);
+                Method getApplicationMethod = activityThreadClass.getMethod("getApplication");
+                return getApplicationMethod.invoke(activityThread);
+            } catch (Exception e1) {
+                try {
+                    Class<?> contextImplClass = ClassResolver.findClassOrFail("android.app.ContextImpl", contextClassLoader);
+                    Method getSystemContextMethod = contextImplClass.getMethod("getSystemContext");
+                    return getSystemContextMethod.invoke(null);
+                } catch (Exception e2) {
+                    throw new RuntimeException("Failed to get Context. Are you running in an Android environment?");
+                }
+            }
+        });
+        
+        functions.put("getApplicationInfo", args -> {
+            try {
+                Object context = functions.get("getContext").call(Collections.emptyList());
+                Method getApplicationInfoMethod = context.getClass().getMethod("getApplicationInfo");
+                return getApplicationInfoMethod.invoke(context);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to get ApplicationInfo: " + e.getMessage());
+            }
+        });
+        
+        functions.put("getPackageName", args -> {
+            try {
+                Object context = functions.get("getContext").call(Collections.emptyList());
+                Method getPackageNameMethod = context.getClass().getMethod("getPackageName");
+                return getPackageNameMethod.invoke(context);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to get package name: " + e.getMessage());
+            }
+        });
+        
+        functions.put("createSafeExecutor", args -> new Object() {
+            private Object createLooperThread() throws Exception {
+                Class<?> handlerThreadClass = ClassResolver.findClassOrFail("android.os.HandlerThread", contextClassLoader);
+                Constructor<?> constructor = handlerThreadClass.getConstructor(String.class);
+                Object handlerThread = constructor.newInstance("SafeExecutor-Thread");
+                handlerThreadClass.getMethod("start").invoke(handlerThread);
+                return handlerThread;
+            }
+            
+            private Object getThreadLooper(Object handlerThread) throws Exception {
+                return handlerThread.getClass().getMethod("getLooper").invoke(handlerThread);
+            }
+            
+            private Object createHandler(Object looper) throws Exception {
+                Class<?> handlerClass = ClassResolver.findClassOrFail("android.os.Handler", contextClassLoader);
+                Class<?> looperClass = ClassResolver.findClassOrFail("android.os.Looper", contextClassLoader);
+                Constructor<?> constructor = handlerClass.getConstructor(looperClass);
+                return constructor.newInstance(looper);
+            }
+            
+            public Object runOnMainThread(Callable<Object> task) throws Exception {
+                Class<?> looperClass = ClassResolver.findClassOrFail("android.os.Looper", contextClassLoader);
+                Class<?> handlerClass = ClassResolver.findClassOrFail("android.os.Handler", contextClassLoader);
+                Class<?> runnableClass = Runnable.class;
+                
+                Method getMainLooperMethod = looperClass.getMethod("getMainLooper");
+                Object mainLooper = getMainLooperMethod.invoke(null);
+                
+                Constructor<?> handlerConstructor = handlerClass.getConstructor(looperClass);
+                Object mainHandler = handlerConstructor.newInstance(mainLooper);
+                
+                CountDownLatch latch = new CountDownLatch(1);
+                final Object[] result = new Object[1];
+                final Exception[] exception = new Exception[1];
+                
+                Object runnable = Proxy.newProxyInstance(
+                    contextClassLoader,
+                    new Class[] { runnableClass },
+                    (proxy, method, params) -> {
+                        if (method.getName().equals("run")) {
+                            try {
+                                result[0] = task.call();
+                            } catch (Exception e) {
+                                exception[0] = e;
+                            } finally {
+                                latch.countDown();
+                            }
+                        }
+                        return null;
+                    });
+                
+                Method postMethod = handlerClass.getMethod("post", runnableClass);
+                postMethod.invoke(mainHandler, runnable);
+                
+                latch.await();
+                
+                if (exception[0] != null) {
+                    throw exception[0];
+                }
+                
+                return result[0];
+            }
+            
+            public Object runOnLooperThread(Callable<Object> task) throws Exception {
+                Object handlerThread = createLooperThread();
+                try {
+                    Object looper = getThreadLooper(handlerThread);
+                    Object handler = createHandler(looper);
+                    
+                    CountDownLatch latch = new CountDownLatch(1);
+                    final Object[] result = new Object[1];
+                    final Exception[] exception = new Exception[1];
+                    
+                    Object runnable = Proxy.newProxyInstance(
+                        contextClassLoader,
+                        new Class[] { Runnable.class },
+                        (proxy, method, params) -> {
+                            if (method.getName().equals("run")) {
+                                try {
+                                    result[0] = task.call();
+                                } catch (Exception e) {
+                                    exception[0] = e;
+                                } finally {
+                                    latch.countDown();
+                                }
+                            }
+                            return null;
+                        });
+                    
+                    Method postMethod = handler.getClass().getMethod("post", Runnable.class);
+                    postMethod.invoke(handler, runnable);
+                    
+                    latch.await();
+                    
+                    if (exception[0] != null) {
+                        throw exception[0];
+                    }
+                    
+                    return result[0];
+                } finally {
+                    try {
+                        handlerThread.getClass().getMethod("quit").invoke(handlerThread);
+                    } catch (Exception e) {
+                        // ignore
+                    }
+                }
+            }
+            
+            public Object runWithLooper(Callable<Object> task) throws Exception {
+                Class<?> looperClass = ClassResolver.findClassOrFail("android.os.Looper", contextClassLoader);
+                Method myLooperMethod = looperClass.getMethod("myLooper");
+                Object currentLooper = myLooperMethod.invoke(null);
+                
+                boolean needPrepare = currentLooper == null;
+                boolean needLoop = false;
+                
+                if (needPrepare) {
+                    Method prepareMethod = looperClass.getMethod("prepare");
+                    prepareMethod.invoke(null);
+                    needLoop = true;
+                }
+                
+                try {
+                    Object result = task.call();
+                    
+                    if (needLoop) {
+                        Object handler = createHandler(myLooperMethod.invoke(null));
+                        
+                        Class<?> handlerClass = ClassResolver.findClassOrFail("android.os.Handler", contextClassLoader);
+                        Method postDelayedMethod = handlerClass.getMethod("postDelayed", Runnable.class, long.class);
+                        
+                        Object quitRunnable = Proxy.newProxyInstance(
+                            contextClassLoader,
+                            new Class[] { Runnable.class },
+                            (proxy, method, params) -> {
+                                if (method.getName().equals("run")) {
+                                    try {
+                                        Method quitMethod = looperClass.getMethod("quit");
+                                        quitMethod.invoke(currentLooper);
+                                    } catch (Exception e) {
+                                        // ignore
+                                    }
+                                }
+                                return null;
+                            });
+                        
+                        postDelayedMethod.invoke(handler, quitRunnable, 100L);
+                        
+                        Method loopMethod = looperClass.getMethod("loop");
+                        loopMethod.invoke(null);
+                    }
+                    
+                    return result;
+                } catch (Exception e) {
+                    if (needLoop) {
+                        try {
+                            Method quitMethod = looperClass.getMethod("quit");
+                            quitMethod.invoke(currentLooper);
+                        } catch (Exception e2) {
+                            // ignore
+                        }
+                    }
+                    throw e;
+                }
+            }
+            
+            public Object createInstanceWithHandler(String className, Object... args) throws Exception {
+                return runWithLooper(() -> {
+                    Class<?> clazz = ClassResolver.findClassOrFail(className, contextClassLoader);
+                    
+                    for (Constructor<?> constructor : clazz.getConstructors()) {
+                        if (constructor.getParameterTypes().length == args.length) {
+                            boolean match = true;
+                            for (int i = 0; i < args.length; i++) {
+                                if (args[i] != null && !constructor.getParameterTypes()[i].isAssignableFrom(args[i].getClass())) {
+                                    match = false;
+                                    break;
+                                }
+                            }
+                            if (match) {
+                                return constructor.newInstance(args);
+                            }
+                        }
+                    }
+                    
+                    throw new RuntimeException("No matching constructor found");
+                });
+            }
+        });
+        
+        functions.put("asRunnable", args -> {
+            if (args.size() != 1) {
+                throw new RuntimeException("asRunnable() requires one parameter: lambda expression or function");
+            }
+            
+            Object func = args.get(0);
+            return Proxy.newProxyInstance(
+                contextClassLoader,
+                new Class[] { Runnable.class },
+                (proxy, method, params) -> {
+                    if (method.getName().equals("run")) {
+                        if (func instanceof Lambda) {
+                            ((Lambda) func).invoke(new Object[0]);
+                        }
+                    }
+                    return null;
+                });
+        });
+        
+        functions.put("asFunction", args -> {
+            if (args.size() != 1) {
+                throw new RuntimeException("asFunction() requires one parameter: lambda expression or function");
+            }
+            
+            Object func = args.get(0);
+            return Proxy.newProxyInstance(
+                contextClassLoader,
+                new Class[] { java.util.function.Function.class },
+                (proxy, method, params) -> {
+                    if (method.getName().equals("apply")) {
+                        if (func instanceof Lambda) {
+                            return ((Lambda) func).invoke(new Object[]{params[0]});
+                        }
+                    }
+                    return null;
+                });
+        });
+        
+        functions.put("runLater", args -> {
+            if (args.size() != 1) {
+                throw new RuntimeException("runLater() requires one parameter: Runnable");
+            }
+            
+            Object runnable = args.get(0);
+            Thread thread = new Thread(() -> {
+                try {
+                    if (runnable instanceof Lambda) {
+                        ((Lambda) runnable).invoke(new Object[0]);
+                    } else if (runnable instanceof Runnable) {
+                        ((Runnable) runnable).run();
+                    }
+                } catch (Exception e) {
+                    errorHandler.println("runLater error: " + e.getMessage());
+                }
+            });
+            thread.start();
+            return null;
+        });
+    }
+    
+    private void collectInterfaceMembers(Class<?> iface, Set<Field> allFields, Set<Method> allMethods,
+                                         Map<Field, Class<?>> fieldSources, Map<Method, Class<?>> methodSources) {
+        for (Field field : iface.getDeclaredFields()) {
+            allFields.add(field);
+            fieldSources.put(field, iface);
+        }
+        for (Method method : iface.getDeclaredMethods()) {
+            allMethods.add(method);
+            methodSources.put(method, iface);
+        }
+        for (Class<?> superIface : iface.getInterfaces()) {
+            collectInterfaceMembers(superIface, allFields, allMethods, fieldSources, methodSources);
+        }
     }
 }

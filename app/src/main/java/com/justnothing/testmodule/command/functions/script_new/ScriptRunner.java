@@ -43,7 +43,7 @@ public class ScriptRunner {
     
     public ExecutionContext setContext(ExecutionContext context) {
         this.context = context;
-        this.context.getBuiltins().setContextClassLoader(classLoader);
+        this.context.getBuiltins().setContextClassLoader(context.getClassLoader());
         return context;
     }
     
@@ -63,6 +63,10 @@ public class ScriptRunner {
             Lexer lexer = new Lexer(code);
             Parser parser = new Parser(lexer.tokenize(), parseContext, classLoader);
             BlockNode ast = parser.parse();
+            if (context.isPrintAST()) {
+                context.getOutputBuffer().println("AST:");
+                context.getOutputBuffer().println(ast.formatString());
+            }
             return ASTEvaluator.evaluate(ast, context);
         } catch (ParseException e) {
             context.printlnWarn("Parse error: " + e.getMessage());
