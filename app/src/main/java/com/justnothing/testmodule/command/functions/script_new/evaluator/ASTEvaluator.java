@@ -14,6 +14,11 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.Constructor;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Consumer;
 import java.util.function.BiFunction;
@@ -186,8 +191,7 @@ public class ASTEvaluator {
             return evaluateSwitch((SwitchNode) node, context);
         }
         
-        if (node instanceof ImportNode) {
-            ImportNode importNode = (ImportNode) node;
+        if (node instanceof ImportNode importNode) {
             context.addImport(importNode.getPackageName());
             return null;
         }
@@ -286,10 +290,8 @@ public class ASTEvaluator {
                     // 单纯的数字运算
                     return addNumbers((Number) left, (Number) right);
                 }
-                if (left instanceof Object[] && right instanceof Object[]) {
+                if (left instanceof Object[] leftArr && right instanceof Object[] rightArr) {
                     // 合并数组
-                    Object[] leftArr = (Object[]) left;
-                    Object[] rightArr = (Object[]) right;
                     Object[] result = new Object[leftArr.length + rightArr.length];
                     System.arraycopy(leftArr, 0, result, 0, leftArr.length);
                     System.arraycopy(rightArr, 0, result, leftArr.length, rightArr.length);
@@ -358,8 +360,7 @@ public class ASTEvaluator {
                 if (left instanceof Number && right instanceof Number) {
                     double a = ((Number) left).doubleValue();
                     double b = ((Number) right).doubleValue();
-                    double result = a - b * Math.floor(a / b);
-                    return result;
+                    return a - b * Math.floor(a / b);
                 }
                 break;
             case RANGE:
@@ -367,9 +368,9 @@ public class ASTEvaluator {
             case RANGE_EXCLUSIVE:
                 return createRange(left, right, true);
             case EQUAL:
-                return left == null ? right == null : left.equals(right);
+                return Objects.equals(left, right);
             case NOT_EQUAL:
-                return left == null ? right != null : !left.equals(right);
+                return !Objects.equals(left, right);
             case LESS_THAN:
                 if (left instanceof Number && right instanceof Number) {
                     return compareNumbers((Number) left, (Number) right) < 0;
@@ -448,7 +449,7 @@ public class ASTEvaluator {
                     return right;
                 }
                 if (left instanceof Boolean) {
-                    return (Boolean) left ? left : right;
+                    return (Boolean) left ? true : right;
                 }
                 if (left instanceof String && ((String) left).isEmpty()) {
                     return right;
@@ -533,11 +534,11 @@ public class ASTEvaluator {
         Object[] result = new Object[len1 * len2];
         
         int index = 0;
-        for (int i = 0; i < len1; i++) {
-            for (int j = 0; j < len2; j++) {
+        for (Object o : arr1) {
+            for (Object object : arr2) {
                 Object[] pair = new Object[2];
-                pair[0] = arr1[i];
-                pair[1] = arr2[j];
+                pair[0] = o;
+                pair[1] = object;
                 result[index++] = pair;
             }
         }
@@ -605,8 +606,7 @@ public class ASTEvaluator {
         switch (op) {
             case NEGATIVE: {
                 Object operand = evaluate(node.getOperand(), context);
-                if (operand instanceof Number) {
-                    Number n = (Number) operand;
+                if (operand instanceof Number n) {
                     if (isFloatingType(n)) {
                         return -n.doubleValue();
                     }
@@ -634,8 +634,7 @@ public class ASTEvaluator {
             }
             case BITWISE_NOT: {
                 Object operand = evaluate(node.getOperand(), context);
-                if (operand instanceof Number) {
-                    Number n = (Number) operand;
+                if (operand instanceof Number n) {
                     if (n instanceof Long) {
                         return ~n.longValue();
                     }
@@ -678,15 +677,14 @@ public class ASTEvaluator {
         String varName = ((VariableNode) operand).getName();
         Object currentValue = context.getScopeManager().getVariable(varName).getValue();
         
-        if (!(currentValue instanceof Number)) {
+        if (!(currentValue instanceof Number numValue)) {
             throw new EvaluationException(
                 "Increment/decrement operator requires a numeric variable",
                 node.getLocation(),
                 ErrorCode.EVAL_INVALID_OPERATION
             );
         }
-        
-        Number numValue = (Number) currentValue;
+
         Number newValue;
         
         if (op == UnaryOpNode.Operator.PRE_INCREMENT || op == UnaryOpNode.Operator.POST_INCREMENT) {
@@ -737,6 +735,7 @@ public class ASTEvaluator {
         if (node.isDeclaration() && valueNode instanceof MethodReferenceNode && node.getDeclaredClass() != null) {
             Class<?> declaredClass = node.getDeclaredClass();
             if (declaredClass.isInterface()) {
+                // TODO
             }
         }
         
@@ -872,9 +871,8 @@ public class ASTEvaluator {
             return value;
         }
         
-        if (value instanceof Number) {
-            Number num = (Number) value;
-            
+        if (value instanceof Number num) {
+
             if (targetType == int.class || targetType == Integer.class) {
                 return num.intValue();
             }
@@ -969,10 +967,7 @@ public class ASTEvaluator {
         }
         
         if (context.hasBuiltin(functionName)) {
-            List<Object> argList = new ArrayList<>();
-            for (Object arg : args) {
-                argList.add(arg);
-            }
+            List<Object> argList = new ArrayList<>(Arrays.asList(args));
             return context.callBuiltin(functionName, argList);
         }
         
@@ -988,7 +983,7 @@ public class ASTEvaluator {
                 return ((Function) func).apply(args.length == 1 ? args[0] : args);
             }
             if (func instanceof Supplier) {
-                return ((Supplier) func).get();
+                return ((Supplier<?>) func).get();
             }
             if (func instanceof Consumer) {
                 ((Consumer) func).accept(args.length > 0 ? args[0] : null);
@@ -1137,10 +1132,8 @@ public class ASTEvaluator {
         }
         
         Object[] invokeArgs = new Object[paramTypes.length];
-        
-        for (int i = 0; i < fixedParamCount; i++) {
-            invokeArgs[i] = args[i];
-        }
+
+        System.arraycopy(args, 0, invokeArgs, 0, fixedParamCount);
         
         int varArgCount = args.length - fixedParamCount;
         
@@ -1148,16 +1141,19 @@ public class ASTEvaluator {
             Object lastArg = args[fixedParamCount];
             
             if (lastArg != null && lastArg.getClass().isArray() &&
-                    varArgsComponentType.isAssignableFrom(lastArg.getClass().getComponentType())) {
+                    Objects.requireNonNull(varArgsComponentType).isAssignableFrom(Objects.requireNonNull(lastArg.getClass().getComponentType()))) {
                 invokeArgs[fixedParamCount] = lastArg;
             } else {
+                assert varArgsComponentType != null;
                 Object varArgArray = Array.newInstance(varArgsComponentType, 1);
                 Array.set(varArgArray, 0, lastArg);
                 invokeArgs[fixedParamCount] = varArgArray;
             }
         } else if (varArgCount == 0) {
+            assert varArgsComponentType != null;
             invokeArgs[fixedParamCount] = Array.newInstance(varArgsComponentType, 0);
         } else {
+            assert varArgsComponentType != null;
             Object varArgArray = Array.newInstance(varArgsComponentType, varArgCount);
             for (int i = 0; i < varArgCount; i++) {
                 Array.set(varArgArray, i, args[fixedParamCount + i]);
@@ -1322,7 +1318,6 @@ public class ASTEvaluator {
                     return false;
                 }
             }
-            return true;
         } else {
             if (paramTypes.length != argTypes.length) {
                 return false;
@@ -1332,8 +1327,8 @@ public class ASTEvaluator {
                     return false;
                 }
             }
-            return true;
         }
+        return true;
     }
     
     private static boolean isAssignable(Class<?> targetType, Class<?> sourceType) {
@@ -1538,23 +1533,21 @@ public class ASTEvaluator {
                 }
                 
                 if (func instanceof MethodReference) {
-                    return ((MethodReference) func).invoke(new Object[]{input});
+                    return ((MethodReference) func).invoke(input);
                 }
             }
         }
         
-        if (functionNode instanceof MethodReferenceNode) {
-            MethodReferenceNode methodRef = (MethodReferenceNode) functionNode;
+        if (functionNode instanceof MethodReferenceNode methodRef) {
             Object target = evaluate(methodRef.getTarget(), context);
             String methodName = methodRef.getMethodName();
             
-            if (target instanceof Class) {
-                Class<?> clazz = (Class<?>) target;
+            if (target instanceof Class<?> clazz) {
                 try {
                     java.lang.reflect.Method method = findMethod(clazz, methodName, new Object[]{input});
                     if (method != null) {
                         method.setAccessible(true);
-                        return method.invoke(null, new Object[]{input});
+                        return method.invoke(null, input);
                     }
                 } catch (Exception e) {
                     throw new EvaluationException(
@@ -1566,8 +1559,7 @@ public class ASTEvaluator {
             }
         }
         
-        if (functionNode instanceof MethodCallNode) {
-            MethodCallNode methodCall = (MethodCallNode) functionNode;
+        if (functionNode instanceof MethodCallNode methodCall) {
             List<ASTNode> args = new ArrayList<>();
             args.add(new LiteralNode(input, input != null ? input.getClass() : Object.class, node.getLocation()));
             args.addAll(methodCall.getArguments());
@@ -1596,15 +1588,14 @@ public class ASTEvaluator {
     private static final ExecutorService asyncExecutor = Executors.newCachedThreadPool();
     
     private static Object evaluateAsync(AsyncNode node, ExecutionContext context) throws EvaluationException {
-        CompletableFuture<Object> future = CompletableFuture.supplyAsync(() -> {
+
+        return CompletableFuture.supplyAsync(() -> {
             try {
                 return evaluate(node.getExpression(), context);
             } catch (EvaluationException e) {
                 throw new RuntimeException(e);
             }
         }, asyncExecutor);
-        
-        return future;
     }
     
     private static Object evaluateAwait(AwaitNode node, ExecutionContext context) throws EvaluationException {
@@ -1705,12 +1696,11 @@ public class ASTEvaluator {
         ASTNode targetNode = node.getTarget();
         String methodName = node.getMethodName();
         
-        Class<?> targetClass = null;
+        Class<?> targetClass;
         Object targetInstance = null;
         boolean isStatic = false;
         
-        if (targetNode instanceof ClassReferenceNode) {
-            ClassReferenceNode classRef = (ClassReferenceNode) targetNode;
+        if (targetNode instanceof ClassReferenceNode classRef) {
             targetClass = classRef.getType().getRawType();
             isStatic = true;
         } else if (targetNode instanceof VariableNode) {
@@ -1720,7 +1710,7 @@ public class ASTEvaluator {
                 targetInstance = context.getScopeManager().getVariable(varName).getValue();
                 targetClass = targetInstance != null ? targetInstance.getClass() : Object.class;
             } else {
-                targetClass = ClassFinder.findClassWithImports(varName, null, context.getImports());
+                targetClass = ClassFinder.findClassWithImports(varName, context.getClassLoader(), context.getImports());
                 if (targetClass != null) {
                     isStatic = true;
                 } else {
@@ -1820,8 +1810,7 @@ public class ASTEvaluator {
     private static Object evaluateThrow(ThrowNode node, ExecutionContext context) throws EvaluationException {
         Object exception = evaluate(node.getExpression(), context);
         
-        if (exception instanceof Throwable) {
-            Throwable t = (Throwable) exception;
+        if (exception instanceof Throwable t) {
             String message = t.getClass().getSimpleName() + (t.getMessage() != null ? ": " + t.getMessage() : "");
             throw new EvaluationException(
                 message, 
@@ -1842,7 +1831,7 @@ public class ASTEvaluator {
                 continue;
             }
             Object caseValue = evaluate(caseNode.getValue(), context);
-            if (value == null ? caseValue == null : value.equals(caseValue)) {
+            if (Objects.equals(value, caseValue)) {
                 for (ASTNode stmt : caseNode.getStatements()) {
                     evaluate(stmt, context);
                 }
@@ -2006,8 +1995,7 @@ public class ASTEvaluator {
                     }
                 }
             }
-            
-            return true;
+
         } else {
             if (paramCount != argCount) {
                 return false;
@@ -2018,9 +2006,9 @@ public class ASTEvaluator {
                     return false;
                 }
             }
-            
-            return true;
+
         }
+        return true;
     }
     
     private static boolean isAssignable(Class<?> targetType, Object arg) {
@@ -2172,11 +2160,8 @@ public class ASTEvaluator {
     }
 
     private static Object[] arrayDifference(Object[] left, Object[] right) {
-        java.util.Set<Object> rightSet = new java.util.HashSet<>();
-        for (Object obj : right) {
-            rightSet.add(obj);
-        }
-        java.util.List<Object> result = new java.util.ArrayList<>();
+        Set<Object> rightSet = new HashSet<>(Arrays.asList(right));
+        List<Object> result = new ArrayList<>();
         for (Object obj : left) {
             if (!rightSet.contains(obj)) {
                 result.add(obj);
@@ -2186,12 +2171,9 @@ public class ASTEvaluator {
     }
     
     private static Object[] arrayIntersection(Object[] left, Object[] right) {
-        java.util.Set<Object> rightSet = new java.util.HashSet<>();
-        for (Object obj : right) {
-            rightSet.add(obj);
-        }
-        java.util.List<Object> result = new java.util.ArrayList<>();
-        java.util.Set<Object> seen = new java.util.HashSet<>();
+        Set<Object> rightSet = new HashSet<>(Arrays.asList(right));
+        List<Object> result = new ArrayList<>();
+        Set<Object> seen = new HashSet<>();
         for (Object obj : left) {
             if (rightSet.contains(obj) && !seen.contains(obj)) {
                 result.add(obj);
@@ -2202,26 +2184,16 @@ public class ASTEvaluator {
     }
     
     private static Object[] arrayUnion(Object[] left, Object[] right) {
-        java.util.Set<Object> resultSet = new java.util.LinkedHashSet<>();
-        for (Object obj : left) {
-            resultSet.add(obj);
-        }
-        for (Object obj : right) {
-            resultSet.add(obj);
-        }
+        Set<Object> resultSet = new LinkedHashSet<>();
+        resultSet.addAll(Arrays.asList(left));
+        resultSet.addAll(Arrays.asList(right));
         return resultSet.toArray();
     }
     
     private static Object[] arraySymmetricDifference(Object[] left, Object[] right) {
-        java.util.Set<Object> leftSet = new java.util.HashSet<>();
-        for (Object obj : left) {
-            leftSet.add(obj);
-        }
-        java.util.Set<Object> rightSet = new java.util.HashSet<>();
-        for (Object obj : right) {
-            rightSet.add(obj);
-        }
-        java.util.List<Object> result = new java.util.ArrayList<>();
+        Set<Object> leftSet = new HashSet<>(Arrays.asList(left));
+        Set<Object> rightSet = new HashSet<>(Arrays.asList(right));
+        List<Object> result = new ArrayList<>();
         for (Object obj : left) {
             if (!rightSet.contains(obj)) {
                 result.add(obj);

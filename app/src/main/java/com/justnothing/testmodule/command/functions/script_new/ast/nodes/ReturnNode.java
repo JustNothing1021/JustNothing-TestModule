@@ -1,5 +1,7 @@
 package com.justnothing.testmodule.command.functions.script_new.ast.nodes;
 
+import androidx.annotation.NonNull;
+
 import com.justnothing.testmodule.command.functions.script_new.ast.ASTNode;
 import com.justnothing.testmodule.command.functions.script_new.ast.SourceLocation;
 import com.justnothing.testmodule.command.functions.script_new.ast.visitor.ASTVisitor;
@@ -30,6 +32,7 @@ public class ReturnNode extends ASTNode {
         return ind + "ReturnNode{null}";
     }
     
+    @NonNull
     @Override
     public String toString() {
         return "ReturnNode{value=" + value + "}";

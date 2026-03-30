@@ -1,12 +1,13 @@
 package com.justnothing.testmodule.command.functions.script_new.evaluator;
 
+import androidx.annotation.NonNull;
+
 import com.justnothing.testmodule.command.functions.script_new.ast.SourceLocation;
 import com.justnothing.testmodule.command.functions.script_new.exception.ErrorCode;
 import com.justnothing.testmodule.command.functions.script_new.exception.EvaluationException;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.lang.reflect.Proxy;
 import java.util.Arrays;
 
@@ -196,6 +197,7 @@ public class MethodReference {
         }
     }
     
+    @NonNull
     @Override
     public String toString() {
         String type;

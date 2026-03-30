@@ -10,6 +10,7 @@ import com.justnothing.testmodule.command.functions.script_new.exception.ParseEx
 import com.justnothing.testmodule.command.functions.script_new.lexer.Lexer;
 import com.justnothing.testmodule.command.functions.script_new.lexer.Token;
 import com.justnothing.testmodule.command.functions.script_new.lexer.TokenType;
+import com.justnothing.testmodule.utils.reflect.ClassResolver;
 import com.justnothing.testmodule.command.functions.script_new.exception.ErrorCode;
 
 import java.lang.reflect.Array;
@@ -36,19 +37,30 @@ public class Parser {
     private int position;
     private final ParseContext context;
     private final Deque<Integer> savedPositions;
-    
+    private final ClassLoader classLoader;
+
     public Parser(List<Token> tokens) {
+        this(tokens, Thread.currentThread().getContextClassLoader());
+    }
+    
+    public Parser(List<Token> tokens, ClassLoader classLoader) {
         this.tokens = tokens;
         this.position = 0;
         this.context = new ParseContext();
         this.savedPositions = new ArrayDeque<>();
+        this.classLoader = classLoader;
+    }
+
+    public Parser(List<Token> tokens, ParseContext context) {
+        this(tokens, context, Thread.currentThread().getContextClassLoader());
     }
     
-    public Parser(List<Token> tokens, ParseContext context) {
+    public Parser(List<Token> tokens, ParseContext context, ClassLoader classLoader) {
         this.tokens = tokens;
         this.position = 0;
         this.context = context;
         this.savedPositions = new ArrayDeque<>();
+        this.classLoader = classLoader;
     }
     
     /**
@@ -288,7 +300,7 @@ public class Parser {
                         }
                         return expr;
                     }
-                } catch (ParseException e) {
+                } catch (ParseException ignored) {
                 }
                 position = savedPos;
                 advance();
@@ -640,7 +652,7 @@ public class Parser {
      * 判断字符串是否是类引用，支持嵌套类和导入
      */
     private String resolveClassName(String className) {
-        Class<?> clazz = ClassFinder.findClassWithImports(className, null, context.getImports());
+        Class<?> clazz = ClassFinder.findClassWithImports(className, context.getClassLoader(), context.getImports());
         if (clazz != null) {
             return clazz.getName();
         }
@@ -670,7 +682,7 @@ public class Parser {
         
         Class<?> baseType;
 
-        baseType = ClassFinder.findClassWithImports(baseTypeName, null, context.getImports());
+        baseType = ClassFinder.findClassWithImports(baseTypeName, context.getClassLoader(), context.getImports());
         if (baseType == null) {
             if (context.isClassDeclared(baseTypeName)) {
                 baseType = Object.class;
@@ -716,7 +728,7 @@ public class Parser {
         }
         
         Class<?> baseType;
-        baseType = ClassFinder.findClassWithImports(baseTypeName, null, context.getImports());
+        baseType = ClassFinder.findClassWithImports(baseTypeName, context.getClassLoader(), context.getImports());
         if (baseType == null) {
             if (context.isClassDeclared(baseTypeName)) {
                 baseType = Object.class;
@@ -809,7 +821,7 @@ public class Parser {
                     ASTNode body = parseStatement();
                     return new ForEachNode(itemType, itemName, collection, body, location);
                 }
-            } catch (ParseException e) {
+            } catch (ParseException ignored) {
             }
             
             position = savedPos;
@@ -1001,7 +1013,7 @@ public class Parser {
                     ASTNode initializer = parseExpression();
                     return new ResourceDeclaration(type, varName, initializer, location);
                 }
-            } catch (ParseException e) {
+            } catch (ParseException ignored) {
             }
             position = savedPos;
         }
@@ -1020,11 +1032,10 @@ public class Parser {
         consume(TokenType.DELIMITER_LEFT_PAREN, "Expected '(' after catch");
         
         List<Class<?>> exceptionTypes = new ArrayList<>();
-        exceptionTypes.add(parseType());
-        
-        while (match(TokenType.OPERATOR_BITWISE_OR)) {
+
+        do {
             exceptionTypes.add(parseType());
-        }
+        } while (match(TokenType.OPERATOR_BITWISE_OR));
         
         String variableName = consume(TokenType.IDENTIFIER, "Expected exception variable name").getText();
         
@@ -1461,13 +1472,11 @@ public class Parser {
                     return new AssignmentNode(varName, right, false, null, left.getLocation());
                 }
                 
-                if (left instanceof FieldAccessNode) {
-                    FieldAccessNode fieldAccess = (FieldAccessNode) left;
+                if (left instanceof FieldAccessNode fieldAccess) {
                     return new FieldAssignmentNode(fieldAccess.getTarget(), fieldAccess.getFieldName(), right, left.getLocation());
                 }
                 
-                if (left instanceof ArrayAccessNode) {
-                    ArrayAccessNode arrayAccess = (ArrayAccessNode) left;
+                if (left instanceof ArrayAccessNode arrayAccess) {
                     return new ArrayAssignmentNode(arrayAccess.getArray(), arrayAccess.getIndex(), right, left.getLocation());
                 }
             }
@@ -1506,13 +1515,11 @@ public class Parser {
                     return new AssignmentNode(varName, combinedValue, false, null, left.getLocation());
                 }
                 
-                if (left instanceof FieldAccessNode) {
-                    FieldAccessNode fieldAccess = (FieldAccessNode) left;
+                if (left instanceof FieldAccessNode fieldAccess) {
                     return new FieldAssignmentNode(fieldAccess.getTarget(), fieldAccess.getFieldName(), combinedValue, left.getLocation());
                 }
                 
-                if (left instanceof ArrayAccessNode) {
-                    ArrayAccessNode arrayAccess = (ArrayAccessNode) left;
+                if (left instanceof ArrayAccessNode arrayAccess) {
                     return new ArrayAssignmentNode(arrayAccess.getArray(), arrayAccess.getIndex(), combinedValue, left.getLocation());
                 }
             }
@@ -1731,27 +1738,15 @@ public class Parser {
             SourceLocation location = createLocation();
             ASTNode right = parseShift();
             
-            BinaryOpNode.Operator operator;
-            switch (opToken.getType()) {
-                case OPERATOR_LESS_THAN:
-                    operator = BinaryOpNode.Operator.LESS_THAN;
-                    break;
-                case OPERATOR_LESS_THAN_OR_EQUAL:
-                    operator = BinaryOpNode.Operator.LESS_THAN_OR_EQUAL;
-                    break;
-                case OPERATOR_GREATER_THAN:
-                    operator = BinaryOpNode.Operator.GREATER_THAN;
-                    break;
-                case OPERATOR_GREATER_THAN_OR_EQUAL:
-                    operator = BinaryOpNode.Operator.GREATER_THAN_OR_EQUAL;
-                    break;
-                case OPERATOR_SPACESHIP:
-                    operator = BinaryOpNode.Operator.SPACESHIP;
-                    break;
-                default:
-                    throw error("Invalid comparison operator");
-            }
-            
+            BinaryOpNode.Operator operator = switch (opToken.getType()) {
+                case OPERATOR_LESS_THAN -> BinaryOpNode.Operator.LESS_THAN;
+                case OPERATOR_LESS_THAN_OR_EQUAL -> BinaryOpNode.Operator.LESS_THAN_OR_EQUAL;
+                case OPERATOR_GREATER_THAN -> BinaryOpNode.Operator.GREATER_THAN;
+                case OPERATOR_GREATER_THAN_OR_EQUAL -> BinaryOpNode.Operator.GREATER_THAN_OR_EQUAL;
+                case OPERATOR_SPACESHIP -> BinaryOpNode.Operator.SPACESHIP;
+                default -> throw error("Invalid comparison operator");
+            };
+
             left = new BinaryOpNode(operator, left, right, location);
         }
         
@@ -1815,21 +1810,13 @@ public class Parser {
             SourceLocation location = createLocation();
             ASTNode right = parseAdditive();
             
-            BinaryOpNode.Operator operator;
-            switch (opToken.getType()) {
-                case OPERATOR_LEFT_SHIFT:
-                    operator = BinaryOpNode.Operator.LEFT_SHIFT;
-                    break;
-                case OPERATOR_RIGHT_SHIFT:
-                    operator = BinaryOpNode.Operator.RIGHT_SHIFT;
-                    break;
-                case OPERATOR_UNSIGNED_RIGHT_SHIFT:
-                    operator = BinaryOpNode.Operator.UNSIGNED_RIGHT_SHIFT;
-                    break;
-                default:
-                    throw error("Invalid shift operator");
-            }
-            
+            BinaryOpNode.Operator operator = switch (opToken.getType()) {
+                case OPERATOR_LEFT_SHIFT -> BinaryOpNode.Operator.LEFT_SHIFT;
+                case OPERATOR_RIGHT_SHIFT -> BinaryOpNode.Operator.RIGHT_SHIFT;
+                case OPERATOR_UNSIGNED_RIGHT_SHIFT -> BinaryOpNode.Operator.UNSIGNED_RIGHT_SHIFT;
+                default -> throw error("Invalid shift operator");
+            };
+
             left = new BinaryOpNode(operator, left, right, location);
         }
         
@@ -1871,27 +1858,15 @@ public class Parser {
             SourceLocation location = createLocation();
             ASTNode right = parsePower();
             
-            BinaryOpNode.Operator operator;
-            switch (opToken.getType()) {
-                case OPERATOR_MULTIPLY:
-                    operator = BinaryOpNode.Operator.MULTIPLY;
-                    break;
-                case OPERATOR_DIVIDE:
-                    operator = BinaryOpNode.Operator.DIVIDE;
-                    break;
-                case OPERATOR_MODULO:
-                    operator = BinaryOpNode.Operator.MODULO;
-                    break;
-                case OPERATOR_INT_DIVIDE:
-                    operator = BinaryOpNode.Operator.INT_DIVIDE;
-                    break;
-                case OPERATOR_MATH_MODULO:
-                    operator = BinaryOpNode.Operator.MATH_MODULO;
-                    break;
-                default:
-                    throw error("Invalid multiplicative operator");
-            }
-            
+            BinaryOpNode.Operator operator = switch (opToken.getType()) {
+                case OPERATOR_MULTIPLY -> BinaryOpNode.Operator.MULTIPLY;
+                case OPERATOR_DIVIDE -> BinaryOpNode.Operator.DIVIDE;
+                case OPERATOR_MODULO -> BinaryOpNode.Operator.MODULO;
+                case OPERATOR_INT_DIVIDE -> BinaryOpNode.Operator.INT_DIVIDE;
+                case OPERATOR_MATH_MODULO -> BinaryOpNode.Operator.MATH_MODULO;
+                default -> throw error("Invalid multiplicative operator");
+            };
+
             left = new BinaryOpNode(operator, left, right, location);
         }
         
@@ -1942,24 +1917,14 @@ public class Parser {
             SourceLocation location = createLocation();
             ASTNode operand = parseUnary();
             
-            UnaryOpNode.Operator operator;
-            switch (opToken.getType()) {
-                case OPERATOR_PLUS:
-                    operator = UnaryOpNode.Operator.POSITIVE;
-                    break;
-                case OPERATOR_MINUS:
-                    operator = UnaryOpNode.Operator.NEGATIVE;
-                    break;
-                case OPERATOR_LOGICAL_NOT:
-                    operator = UnaryOpNode.Operator.LOGICAL_NOT;
-                    break;
-                case OPERATOR_BITWISE_NOT:
-                    operator = UnaryOpNode.Operator.BITWISE_NOT;
-                    break;
-                default:
-                    throw error("Invalid unary operator");
-            }
-            
+            UnaryOpNode.Operator operator = switch (opToken.getType()) {
+                case OPERATOR_PLUS -> UnaryOpNode.Operator.POSITIVE;
+                case OPERATOR_MINUS -> UnaryOpNode.Operator.NEGATIVE;
+                case OPERATOR_LOGICAL_NOT -> UnaryOpNode.Operator.LOGICAL_NOT;
+                case OPERATOR_BITWISE_NOT -> UnaryOpNode.Operator.BITWISE_NOT;
+                default -> throw error("Invalid unary operator");
+            };
+
             return new UnaryOpNode(operator, operand, location);
         }
         
@@ -2052,7 +2017,7 @@ public class Parser {
                 String exprStr = ((Lexer.InterpolationPart) part).getExpression();
                 Lexer subLexer = new Lexer(exprStr);
                 List<Token> subTokens = subLexer.tokenize();
-                Parser subParser = new Parser(subTokens, context);
+                Parser subParser = new Parser(subTokens, context, classLoader);
                 ASTNode expr = subParser.parseExpression();
                 builder.addExpression(expr);
             }
@@ -2383,13 +2348,12 @@ public class Parser {
         
         if (check(TokenType.KEYWORD_CLASS)) {
             advance();
-            if (target instanceof ClassReferenceNode) {
-                ClassReferenceNode classRef = (ClassReferenceNode) target;
+            if (target instanceof ClassReferenceNode classRef) {
                 Class<?> clazz = classRef.getType().getRawType();
                 return new LiteralNode(clazz, Class.class, location);
             } else if (target instanceof VariableNode) {
                 String varName = ((VariableNode) target).getName();
-                Class<?> clazz = ClassFinder.findClassWithImports(varName, null, context.getImports());
+                Class<?> clazz = ClassFinder.findClassWithImports(varName, context.getClassLoader(), context.getImports());
                 if (clazz != null) {
                     return new LiteralNode(clazz, Class.class, location);
                 }
@@ -2403,8 +2367,7 @@ public class Parser {
         
         String memberName = consume(TokenType.IDENTIFIER, "Expected member name").getText();
         
-        if (target instanceof ClassReferenceNode) {
-            ClassReferenceNode classRef = (ClassReferenceNode) target;
+        if (target instanceof ClassReferenceNode classRef) {
             String nestedClassName = classRef.getType().getTypeName() + "." + memberName;
             
             String resolved = resolveClassName(nestedClassName);
@@ -2419,7 +2382,7 @@ public class Parser {
             }
             
             try {
-                Class<?> clazz = Class.forName(classRef.getType().getTypeName());
+                Class<?> clazz = ClassResolver.findClassOrFail(classRef.getType().getTypeName(), classLoader);
                 try {
                     clazz.getDeclaredField(memberName);
                     FieldAccessNode fieldAccess = new FieldAccessNode(target, memberName, location);

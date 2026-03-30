@@ -24,9 +24,8 @@ public class ImportNode extends ASTNode {
     
     @Override
     public String formatString(int indent) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(indent(indent)).append("ImportNode\n");
-        sb.append(indent(indent + 1)).append("packageName: ").append(packageName).append("\n");
-        return sb.toString().stripTrailing();
+        String sb = indent(indent) + "ImportNode\n" +
+                indent(indent + 1) + "packageName: " + packageName + "\n";
+        return sb.stripTrailing();
     }
 }

@@ -30,12 +30,11 @@ public class PipelineNode extends ASTNode {
     
     @Override
     public String formatString(int indent) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(indent(indent)).append("PipelineNode\n");
-        sb.append(indent(indent + 1)).append("input:\n");
-        sb.append(input.formatString(indent + 2));
-        sb.append("\n").append(indent(indent + 1)).append("function:\n");
-        sb.append(function.formatString(indent + 2));
-        return sb.toString().stripTrailing();
+        String sb = indent(indent) + "PipelineNode\n" +
+                indent(indent + 1) + "input:\n" +
+                input.formatString(indent + 2) +
+                "\n" + indent(indent + 1) + "function:\n" +
+                function.formatString(indent + 2);
+        return sb.stripTrailing();
     }
 }

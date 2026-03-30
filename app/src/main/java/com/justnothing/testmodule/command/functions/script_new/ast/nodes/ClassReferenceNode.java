@@ -1,5 +1,7 @@
 package com.justnothing.testmodule.command.functions.script_new.ast.nodes;
 
+import androidx.annotation.NonNull;
+
 import com.justnothing.testmodule.command.functions.script_new.ast.ASTNode;
 import com.justnothing.testmodule.command.functions.script_new.ast.GenericType;
 import com.justnothing.testmodule.command.functions.script_new.ast.SourceLocation;
@@ -31,6 +33,7 @@ public class ClassReferenceNode extends ASTNode {
         return indent(indent) + "ClassReferenceNode: " + type.getTypeName();
     }
     
+    @NonNull
     @Override
     public String toString() {
         return "ClassReferenceNode(" + type.getTypeName() + ")";

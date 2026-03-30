@@ -1,5 +1,7 @@
 package com.justnothing.testmodule.command.functions.script_new.exception;
 
+import androidx.annotation.NonNull;
+
 /**
  * 错误代码枚举
  * <p>
@@ -78,6 +80,7 @@ public enum ErrorCode {
         return description;
     }
     
+    @NonNull
     @Override
     public String toString() {
         return code + ": " + description;

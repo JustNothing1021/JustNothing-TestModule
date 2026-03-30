@@ -34,11 +34,10 @@ public class CastNode extends ASTNode {
     
     @Override
     public String formatString(int indent) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(indent(indent)).append("CastNode\n");
-        sb.append(indent(indent + 1)).append("targetType: ").append(targetType.getSimpleName()).append("\n");
-        sb.append(indent(indent + 1)).append("expression:\n");
-        sb.append(expression.formatString(indent + 2)).append("\n");
-        return sb.toString().stripTrailing();
+        String sb = indent(indent) + "CastNode\n" +
+                indent(indent + 1) + "targetType: " + targetType.getSimpleName() + "\n" +
+                indent(indent + 1) + "expression:\n" +
+                expression.formatString(indent + 2) + "\n";
+        return sb.stripTrailing();
     }
 }

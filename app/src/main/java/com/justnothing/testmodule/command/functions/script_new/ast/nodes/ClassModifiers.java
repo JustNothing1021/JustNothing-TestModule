@@ -1,5 +1,7 @@
 package com.justnothing.testmodule.command.functions.script_new.ast.nodes;
 
+import androidx.annotation.NonNull;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -66,6 +68,7 @@ public class ClassModifiers {
         return flags;
     }
     
+    @NonNull
     @Override
     public String toString() {
         return toModifierString();

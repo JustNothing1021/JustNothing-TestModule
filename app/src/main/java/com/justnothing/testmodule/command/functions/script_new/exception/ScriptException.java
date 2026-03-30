@@ -2,6 +2,8 @@ package com.justnothing.testmodule.command.functions.script_new.exception;
 
 import com.justnothing.testmodule.command.functions.script_new.ast.SourceLocation;
 
+import java.util.Locale;
+
 /**
  * 脚本异常基类
  * <p>
@@ -32,7 +34,7 @@ public abstract class ScriptException extends RuntimeException {
     }
     
     public ScriptException(String message, SourceLocation location, ErrorCode errorCode) {
-        this(message, location.getLine(), location.getColumn(), errorCode);
+        this(message, location != null ? location.getLine() : -1, location != null ? location.getColumn() : -1, errorCode);
     }
     
     public ScriptException(String message, SourceLocation location, ErrorCode errorCode, Throwable cause) {
@@ -53,7 +55,9 @@ public abstract class ScriptException extends RuntimeException {
     
     @Override
     public String getMessage() {
-        return String.format("%s (Line %d, Column %d) [%s]", 
+        return String.format(
+                Locale.getDefault(),
+                "%s (Line %d, Column %d) [%s]",
                 super.getMessage(), line, column, errorCode);
     }
 }

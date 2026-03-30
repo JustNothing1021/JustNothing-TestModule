@@ -1,6 +1,5 @@
 package com.justnothing.testmodule.command.functions.script_new.exception;
 
-import com.justnothing.testmodule.command.functions.script_new.ast.SourceLocation;
 
 public class ReturnException extends RuntimeException {
     private final Object value;

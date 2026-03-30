@@ -30,11 +30,10 @@ public class SafeFieldAccessNode extends ASTNode {
     
     @Override
     public String formatString(int indent) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(indent(indent)).append("SafeFieldAccessNode\n");
-        sb.append(indent(indent + 1)).append("target:\n");
-        sb.append(target.formatString(indent + 2));
-        sb.append("\n").append(indent(indent + 1)).append("field: ").append(fieldName);
-        return sb.toString().stripTrailing();
+        String sb = indent(indent) + "SafeFieldAccessNode\n" +
+                indent(indent + 1) + "target:\n" +
+                target.formatString(indent + 2) +
+                "\n" + indent(indent + 1) + "field: " + fieldName;
+        return sb.stripTrailing();
     }
 }

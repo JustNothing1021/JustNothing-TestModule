@@ -201,10 +201,9 @@ public class Lexer {
             char nextNext = position + 1 < length ? source.charAt(position + 1) : '\0';
             if (nextNext == '.') {
             } else if (Character.isDigit(nextNext)) {
-                sb.append(advance());
-                while (!isAtEnd() && Character.isDigit(peek())) {
+                do {
                     sb.append(advance());
-                }
+                } while (!isAtEnd() && Character.isDigit(peek()));
             }
         }
         

@@ -174,6 +174,21 @@ public class ScopeManager {
     }
     
     /**
+     * 获取所有变量详细信息（用于导出）
+     * 
+     * @return 变量名到Variable的映射
+     */
+    public Map<String, Variable> getAllVariablesDetailed() {
+        Map<String, Variable> result = new HashMap<>();
+        for (Scope scope : scopeStack) {
+            for (Map.Entry<String, Variable> entry : scope.getVariables().entrySet()) {
+                result.put(entry.getKey(), entry.getValue());
+            }
+        }
+        return result;
+    }
+    
+    /**
      * 清空所有变量
      */
     public void clearAll() {

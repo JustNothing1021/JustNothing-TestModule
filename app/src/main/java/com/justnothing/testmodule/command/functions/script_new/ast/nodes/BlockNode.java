@@ -23,8 +23,8 @@ public class BlockNode extends ASTNode {
     
     public BlockNode(List<ASTNode> statements, SourceLocation location) {
         super(location);
-        this.statements = statements != null ? 
-            Collections.unmodifiableList(new ArrayList<>(statements)) : 
+        this.statements = statements != null ?
+                List.copyOf(statements) :
             Collections.emptyList();
     }
     

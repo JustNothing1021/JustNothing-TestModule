@@ -89,6 +89,7 @@ public class ForNode extends ASTNode {
         if (isEnhanced) {
             sb.append(indent(indent + 1)).append("variable: ").append(variableName).append("\n");
             sb.append(indent(indent + 1)).append("iterable:\n");
+            assert iterable != null;
             sb.append(iterable.formatString(indent + 2)).append("\n");
         } else {
             sb.append(indent(indent + 1)).append("initialization:\n");

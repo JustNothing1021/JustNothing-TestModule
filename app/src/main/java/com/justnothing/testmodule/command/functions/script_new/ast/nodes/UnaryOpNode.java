@@ -74,12 +74,11 @@ public class UnaryOpNode extends ASTNode {
     
     @Override
     public String formatString(int indent) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(indent(indent)).append("UnaryOpNode\n");
-        sb.append(indent(indent + 1)).append("operator: ").append(operator.getSymbol()).append("\n");
-        sb.append(indent(indent + 1)).append("operand:\n");
-        sb.append(operand.formatString(indent + 2)).append("\n");
-        return sb.toString().stripTrailing();
+        String sb = indent(indent) + "UnaryOpNode\n" +
+                indent(indent + 1) + "operator: " + operator.getSymbol() + "\n" +
+                indent(indent + 1) + "operand:\n" +
+                operand.formatString(indent + 2) + "\n";
+        return sb.stripTrailing();
     }
     
     public static class Builder extends ASTNode.Builder<Builder> {

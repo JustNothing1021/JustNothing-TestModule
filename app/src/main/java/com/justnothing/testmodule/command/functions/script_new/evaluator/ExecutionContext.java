@@ -11,6 +11,21 @@ import java.util.Map;
 
 public class ExecutionContext {
     
+    public static class Variable {
+        public Object value;
+        public Class<?> type;
+        
+        public Variable(Object value) {
+            this.value = value;
+            this.type = value != null ? value.getClass() : Void.class;
+        }
+        
+        public Variable(Object value, Class<?> type) {
+            this.value = value;
+            this.type = type;
+        }
+    }
+    
     private final ClassLoader classLoader;
     private final ScopeManager scopeManager;
     private final List<String> imports;
@@ -21,6 +36,10 @@ public class ExecutionContext {
     
     private IOutputHandler outputBuffer;
     private IOutputHandler warnMsgBuffer;
+
+    public ExecutionContext() {
+        this(Thread.currentThread().getContextClassLoader());
+    }
     
     public ExecutionContext(ClassLoader classLoader) {
         this.classLoader = classLoader;
@@ -31,6 +50,8 @@ public class ExecutionContext {
         this.loopDepth = 0;
         this.outputBuffer = new SystemOutputCollector(System.out, System.in);
         this.warnMsgBuffer = new SystemOutputCollector(System.err, System.in);
+        this.builtins.setOutputHandler(outputBuffer);
+        this.builtins.setErrorHandler(warnMsgBuffer);
         addDefaultImports();
     }
     
@@ -43,6 +64,8 @@ public class ExecutionContext {
         this.loopDepth = 0;
         this.outputBuffer = outputHandler != null ? outputHandler : new SystemOutputCollector(System.out, System.in);
         this.warnMsgBuffer = errorHandler != null ? errorHandler : new SystemOutputCollector(System.err, System.in);
+        this.builtins.setOutputHandler(outputBuffer);
+        this.builtins.setErrorHandler(warnMsgBuffer);
         addDefaultImports();
     }
     
@@ -55,6 +78,8 @@ public class ExecutionContext {
         this.loopDepth = 0;
         this.outputBuffer = new SystemOutputCollector(System.out, System.in);
         this.warnMsgBuffer = new SystemOutputCollector(System.err, System.in);
+        this.builtins.setOutputHandler(outputBuffer);
+        this.builtins.setErrorHandler(warnMsgBuffer);
         if (this.imports.isEmpty()) {
             addDefaultImports();
         }
@@ -152,6 +177,10 @@ public class ExecutionContext {
         return func.call(args);
     }
     
+    public void addBuiltIn(String name, Builtins.BuiltinFunction function) {
+        builtins.registerFunction(name, function);
+    }
+    
     public String getOutput() {
         return outputBuffer.getString();
     }
@@ -206,6 +235,7 @@ public class ExecutionContext {
     
     public void setOutputBuffer(IOutputHandler outputBuffer) {
         this.outputBuffer = outputBuffer;
+        this.builtins.setOutputHandler(outputBuffer);
     }
     
     public IOutputHandler getWarnMsgBuffer() {
@@ -214,5 +244,54 @@ public class ExecutionContext {
     
     public void setWarnMsgBuffer(IOutputHandler warnMsgBuffer) {
         this.warnMsgBuffer = warnMsgBuffer;
+        this.builtins.setErrorHandler(warnMsgBuffer);
+    }
+    
+    public void setBuiltInOutputBuffer(IOutputHandler stream) {
+        this.outputBuffer = stream;
+        this.builtins.setOutputHandler(stream);
+    }
+    
+    public void setBuiltInErrorBuffer(IOutputHandler stream) {
+        this.warnMsgBuffer = stream;
+        this.builtins.setErrorHandler(stream);
+    }
+    
+    public void setVariable(String name, Object value, Class<?> type) {
+        scopeManager.declareVariable(name, type, value, false);
+    }
+    
+    public Variable getVariable(String name) {
+        ScopeManager.Variable var = scopeManager.getVariable(name);
+        return new Variable(var.getValue(), var.getType());
+    }
+    
+    public boolean hasVariable(String name) {
+        return scopeManager.hasVariable(name);
+    }
+    
+    public void deleteVariable(String name) {
+        scopeManager.deleteVariable(name);
+    }
+    
+    public Map<String, Variable> getAllVariables() {
+        Map<String, Variable> result = new HashMap<>();
+        Map<String, ScopeManager.Variable> vars = scopeManager.getAllVariablesDetailed();
+        for (Map.Entry<String, ScopeManager.Variable> entry : vars.entrySet()) {
+            result.put(entry.getKey(), new Variable(entry.getValue().getValue(), entry.getValue().getType()));
+        }
+        return result;
+    }
+    
+    public void clearVariables() {
+        scopeManager.clearCurrentScope();
+    }
+    
+    public void enterScope() {
+        scopeManager.enterScope();
+    }
+    
+    public void exitScope() {
+        scopeManager.exitScope();
     }
 }

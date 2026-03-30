@@ -34,13 +34,12 @@ public class DoWhileNode extends ASTNode {
     
     @Override
     public String formatString(int indent) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(indent(indent)).append("DoWhileNode\n");
-        sb.append(indent(indent + 1)).append("body:\n");
-        sb.append(body.formatString(indent + 2)).append("\n");
-        sb.append(indent(indent + 1)).append("condition:\n");
-        sb.append(condition.formatString(indent + 2)).append("\n");
-        return sb.toString().stripTrailing();
+        String sb = indent(indent) + "DoWhileNode\n" +
+                indent(indent + 1) + "body:\n" +
+                body.formatString(indent + 2) + "\n" +
+                indent(indent + 1) + "condition:\n" +
+                condition.formatString(indent + 2) + "\n";
+        return sb.stripTrailing();
 
     }
 }

@@ -76,27 +76,18 @@ public class AssignmentNode extends ASTNode {
         private ASTNode value;
         private boolean isDeclaration;
         private GenericType declaredType;
-        
+
         public Builder variableName(String variableName) {
             this.variableName = variableName;
             return this;
         }
-        
+
         public Builder value(ASTNode value) {
             this.value = value;
             return this;
         }
         
-        public Builder isDeclaration(boolean isDeclaration) {
-            this.isDeclaration = isDeclaration;
-            return this;
-        }
-        
-        public Builder declaredType(GenericType declaredType) {
-            this.declaredType = declaredType;
-            return this;
-        }
-        
+
         @Override
         public AssignmentNode build() {
             return new AssignmentNode(variableName, value, isDeclaration, declaredType, location);

@@ -24,10 +24,9 @@ public class AsyncNode extends ASTNode {
     
     @Override
     public String formatString(int indent) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(indent(indent)).append("AsyncNode\n");
-        sb.append(indent(indent + 1)).append("expression:\n");
-        sb.append(expression.formatString(indent + 2));
-        return sb.toString().stripTrailing();
+        String sb = indent(indent) + "AsyncNode\n" +
+                indent(indent + 1) + "expression:\n" +
+                expression.formatString(indent + 2);
+        return sb.stripTrailing();
     }
 }

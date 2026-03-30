@@ -46,14 +46,13 @@ public class ForEachNode extends ASTNode {
     
     @Override
     public String formatString(int indent) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(indent(indent)).append("ForEachNode\n");
-        sb.append(indent(indent + 1)).append("itemType: ").append(itemType != null ? itemType.getSimpleName() : "auto").append("\n");
-        sb.append(indent(indent + 1)).append("itemName: ").append(itemName).append("\n");
-        sb.append(indent(indent + 1)).append("collection:\n");
-        sb.append(collection.formatString(indent + 2)).append("\n");
-        sb.append(indent(indent + 1)).append("body:\n");
-        sb.append(body.formatString(indent + 2)).append("\n");
-        return sb.toString().stripTrailing();
+        String sb = indent(indent) + "ForEachNode\n" +
+                indent(indent + 1) + "itemType: " + (itemType != null ? itemType.getSimpleName() : "auto") + "\n" +
+                indent(indent + 1) + "itemName: " + itemName + "\n" +
+                indent(indent + 1) + "collection:\n" +
+                collection.formatString(indent + 2) + "\n" +
+                indent(indent + 1) + "body:\n" +
+                body.formatString(indent + 2) + "\n";
+        return sb.stripTrailing();
     }
 }

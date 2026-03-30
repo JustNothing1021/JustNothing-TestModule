@@ -21,23 +21,30 @@ public class ScriptRunner {
     
     private ExecutionContext context;
     private ParseContext parseContext;
+    private final ClassLoader classLoader;
     
     public ScriptRunner(ClassLoader classLoader) {
         this.context = new ExecutionContext(classLoader);
         this.parseContext = new ParseContext(classLoader);
+        this.classLoader = classLoader;
+        this.context.getBuiltins().setContextClassLoader(classLoader);
     }
     
     public ScriptRunner(ClassLoader classLoader, IOutputHandler outputHandler, IOutputHandler errorHandler) {
         this.context = new ExecutionContext(classLoader, outputHandler, errorHandler);
         this.parseContext = new ParseContext(classLoader);
+        this.classLoader = classLoader;
+        this.context.getBuiltins().setContextClassLoader(classLoader);
     }
     
     public ExecutionContext getContext() {
         return context;
     }
     
-    public void setContext(ExecutionContext context) {
+    public ExecutionContext setContext(ExecutionContext context) {
         this.context = context;
+        this.context.getBuiltins().setContextClassLoader(classLoader);
+        return context;
     }
     
     public ParseContext getParseContext() {
@@ -54,7 +61,7 @@ public class ScriptRunner {
         
         try {
             Lexer lexer = new Lexer(code);
-            Parser parser = new Parser(lexer.tokenize(), parseContext);
+            Parser parser = new Parser(lexer.tokenize(), parseContext, classLoader);
             BlockNode ast = parser.parse();
             return ASTEvaluator.evaluate(ast, context);
         } catch (ParseException e) {
@@ -76,24 +83,43 @@ public class ScriptRunner {
     }
     
     public void execute(String code) {
-        executeWithResult(code);
+        context.clearOutput();
+        context.clearWarnMessages();
+        
+        try {
+            Lexer lexer = new Lexer(code);
+            Parser parser = new Parser(lexer.tokenize(), parseContext, classLoader);
+            BlockNode ast = parser.parse();
+            ASTEvaluator.evaluate(ast, context);
+        } catch (ParseException e) {
+            context.printlnWarn("Parse error: " + e.getMessage());
+            throw new RuntimeException("Parse error: " + e.getMessage(), e);
+        } catch (EvaluationException e) {
+            context.printlnWarn("Evaluation error: " + e.getMessage());
+            throw new RuntimeException("Evaluation error: " + e.getMessage(), e);
+        } catch (Exception e) {
+            context.printlnWarn("Error: " + e.getMessage());
+            throw new RuntimeException("Error: " + e.getMessage(), e);
+        }
     }
     
     public void execute(String code, IOutputHandler outputHandler, IOutputHandler errorHandler) {
-        executeWithResult(code, outputHandler, errorHandler);
+        context.setOutputBuffer(outputHandler);
+        context.setWarnMsgBuffer(errorHandler);
+        execute(code);
     }
     
     public Map<String, Object> getAllVariablesAsObject() {
         Map<String, Object> result = new HashMap<>();
-        Map<String, Object> variables = context.getScopeManager().getAllVariables();
-        for (Map.Entry<String, Object> entry : variables.entrySet()) {
-            result.put(entry.getKey(), entry.getValue());
+        Map<String, ExecutionContext.Variable> variables = context.getAllVariables();
+        for (Map.Entry<String, ExecutionContext.Variable> entry : variables.entrySet()) {
+            result.put(entry.getKey(), entry.getValue().value);
         }
         return result;
     }
     
     public void clearVariables() {
-        context.getScopeManager().clearAll();
+        context.clearVariables();
     }
     
     public List<ASTNode> tryParse(String code) {
@@ -102,7 +128,7 @@ public class ScriptRunner {
         
         try {
             Lexer lexer = new Lexer(code);
-            Parser parser = new Parser(lexer.tokenize(), parseContext);
+            Parser parser = new Parser(lexer.tokenize(), parseContext, classLoader);
             BlockNode ast = parser.parse();
             List<ASTNode> nodes = new ArrayList<>();
             if (ast.getStatements() != null) {
@@ -129,18 +155,18 @@ public class ScriptRunner {
     }
     
     public void setVariable(String name, Object value) {
-        context.getScopeManager().declareVariable(name, value);
+        context.setVariable(name, value, value != null ? value.getClass() : Object.class);
     }
     
     public Object getVariable(String name) {
-        return context.getScopeManager().getVariable(name).getValue();
+        return context.getVariable(name).value;
     }
     
     public boolean hasVariable(String name) {
-        return context.getScopeManager().hasVariable(name);
+        return context.hasVariable(name);
     }
     
     public void deleteVariable(String name) {
-        context.getScopeManager().deleteVariable(name);
+        context.deleteVariable(name);
     }
 }

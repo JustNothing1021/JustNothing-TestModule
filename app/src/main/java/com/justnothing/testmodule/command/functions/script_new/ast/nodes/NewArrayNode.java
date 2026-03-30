@@ -34,11 +34,10 @@ public class NewArrayNode extends ASTNode {
     
     @Override
     public String formatString(int indent) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(indent(indent)).append("NewArrayNode\n");
-        sb.append(indent(indent + 1)).append("elementType: ").append(elementType.getSimpleName()).append("\n");
-        sb.append(indent(indent + 1)).append("size:\n");
-        sb.append(size.formatString(indent + 2)).append("\n");
-        return sb.toString().stripTrailing();
+        String sb = indent(indent) + "NewArrayNode\n" +
+                indent(indent + 1) + "elementType: " + elementType.getSimpleName() + "\n" +
+                indent(indent + 1) + "size:\n" +
+                size.formatString(indent + 2) + "\n";
+        return sb.stripTrailing();
     }
 }

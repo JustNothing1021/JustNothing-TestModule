@@ -1,5 +1,9 @@
 package com.justnothing.testmodule.command.functions.script_new.evaluator;
 
+import com.justnothing.testmodule.command.output.IOutputHandler;
+import com.justnothing.testmodule.command.output.SystemOutputCollector;
+import com.justnothing.testmodule.utils.reflect.ClassResolver;
+
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Array;
@@ -19,10 +23,32 @@ public class Builtins {
     }
     
     private final Map<String, BuiltinFunction> functions;
+    private ClassLoader contextClassLoader;
+    private IOutputHandler outputHandler;
+    private IOutputHandler errorHandler;
     
     public Builtins() {
         this.functions = new HashMap<>();
+        this.contextClassLoader = Thread.currentThread().getContextClassLoader();
+        this.outputHandler = new SystemOutputCollector(System.out, System.in);
+        this.errorHandler = new SystemOutputCollector(System.err, System.in);
         registerAll();
+    }
+    
+    public void setContextClassLoader(ClassLoader classLoader) {
+        this.contextClassLoader = classLoader;
+    }
+    
+    public void setOutputHandler(IOutputHandler outputHandler) {
+        this.outputHandler = outputHandler;
+    }
+    
+    public void setErrorHandler(IOutputHandler errorHandler) {
+        this.errorHandler = errorHandler;
+    }
+    
+    public void registerFunction(String name, BuiltinFunction function) {
+        functions.put(name, function);
     }
     
     private void registerAll() {
@@ -32,6 +58,7 @@ public class Builtins {
         registerMathFunctions();
         registerTimeFunctions();
         registerUtilityFunctions();
+        registerLegacyFunctions();
     }
     
     private void registerOutputFunctions() {
@@ -41,7 +68,7 @@ public class Builtins {
                 if (i > 0) sb.append(" ");
                 sb.append(formatValue(args.get(i)));
             }
-            System.out.println(sb.toString());
+            outputHandler.println(sb.toString());
             return null;
         });
         
@@ -51,7 +78,7 @@ public class Builtins {
                 if (i > 0) sb.append(" ");
                 sb.append(formatValue(args.get(i)));
             }
-            System.out.print(sb.toString());
+            outputHandler.print(sb.toString());
             return null;
         });
         
@@ -61,7 +88,7 @@ public class Builtins {
             }
             String format = args.get(0).toString();
             Object[] params = args.subList(1, args.size()).toArray();
-            System.out.printf(format, params);
+            outputHandler.printf(format, params);
             return null;
         });
     }
@@ -181,7 +208,7 @@ public class Builtins {
         });
         
         functions.put("join", args -> {
-            if (args.size() < 1 || args.size() > 2) {
+            if (args.isEmpty() || args.size() > 2) {
                 throw new RuntimeException("join() requires 1 or 2 arguments");
             }
             Object collection = args.get(0);
@@ -306,9 +333,8 @@ public class Builtins {
         if (predicate instanceof Lambda) {
             Object result = ((Lambda) predicate).invoke(new Object[]{item});
             return result instanceof Boolean ? (Boolean) result : result != null;
-        } else if (predicate instanceof java.lang.reflect.Method) {
+        } else if (predicate instanceof Method method) {
             try {
-                java.lang.reflect.Method method = (java.lang.reflect.Method) predicate;
                 Object result = method.invoke(null, item);
                 return result instanceof Boolean ? (Boolean) result : result != null;
             } catch (Exception e) {
@@ -321,9 +347,8 @@ public class Builtins {
     private Object callFunction(Object func, Object... args) {
         if (func instanceof Lambda) {
             return ((Lambda) func).invoke(args);
-        } else if (func instanceof java.lang.reflect.Method) {
+        } else if (func instanceof Method method) {
             try {
-                java.lang.reflect.Method method = (java.lang.reflect.Method) func;
                 return method.invoke(null, args);
             } catch (Exception e) {
                 throw new RuntimeException("Failed to call function: " + e.getMessage());
@@ -342,7 +367,7 @@ public class Builtins {
             
             if (target == null) {
                 result.append("Target object is null\n");
-                System.out.println(result.toString());
+                outputHandler.println(result.toString());
                 return null;
             }
             
@@ -386,7 +411,7 @@ public class Builtins {
             }
             result.append("Total Methods: ").append(methods.length).append("\n");
             
-            System.out.println(result.toString());
+            outputHandler.println(result.toString());
             return null;
         });
         
@@ -415,7 +440,7 @@ public class Builtins {
                 if (className instanceof Class) {
                     targetClass = (Class<?>) className;
                 } else {
-                    targetClass = Class.forName(className.toString());
+                    targetClass = ClassResolver.findClassOrFail(className.toString(), contextClassLoader);
                 }
                 return targetClass.isInstance(obj);
             } catch (Exception e) {
@@ -437,7 +462,7 @@ public class Builtins {
                 if (className instanceof Class) {
                     targetClass = (Class<?>) className;
                 } else {
-                    targetClass = Class.forName(className.toString());
+                    targetClass = ClassResolver.findClassOrFail(className.toString(), contextClassLoader);
                 }
                 if (!targetClass.isInstance(obj)) {
                     throw new RuntimeException("Cannot cast " + obj.getClass().getName() + " to " + targetClass.getName());
@@ -660,5 +685,11 @@ public class Builtins {
     
     public Map<String, BuiltinFunction> getAllFunctions() {
         return Collections.unmodifiableMap(functions);
+    }
+    
+    private void registerLegacyFunctions() {
+        functions.put("getInterpreterClassLoader", args -> contextClassLoader);
+        
+        functions.put("enableLog", args -> null); // TODO
     }
 }

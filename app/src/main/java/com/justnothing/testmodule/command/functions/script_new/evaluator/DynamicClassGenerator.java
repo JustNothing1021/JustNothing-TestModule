@@ -230,21 +230,19 @@ public class DynamicClassGenerator {
             baseType = baseType.substring(0, genericIndex);
         }
         
-        String descriptor;
-        switch (baseType) {
-            case "int": descriptor = "I"; break;
-            case "long": descriptor = "J"; break;
-            case "float": descriptor = "F"; break;
-            case "double": descriptor = "D"; break;
-            case "boolean": descriptor = "Z"; break;
-            case "char": descriptor = "C"; break;
-            case "byte": descriptor = "B"; break;
-            case "short": descriptor = "S"; break;
-            case "void": descriptor = "V"; break;
-            default:
-                descriptor = "L" + baseType.replace('.', '/') + ";";
-        }
-        
+        String descriptor = switch (baseType) {
+            case "int" -> "I";
+            case "long" -> "J";
+            case "float" -> "F";
+            case "double" -> "D";
+            case "boolean" -> "Z";
+            case "char" -> "C";
+            case "byte" -> "B";
+            case "short" -> "S";
+            case "void" -> "V";
+            default -> "L" + baseType.replace('.', '/') + ";";
+        };
+
         StringBuilder result = new StringBuilder();
         for (int i = 0; i < arrayDepth; i++) {
             result.append("[");
@@ -283,23 +281,14 @@ public class DynamicClassGenerator {
         if (genericIndex > 0) {
             baseType = baseType.substring(0, genericIndex);
         }
-        
-        switch (baseType) {
-            case "int":
-            case "byte":
-            case "short":
-            case "char":
-            case "boolean":
-                return ILOAD;
-            case "long":
-                return LLOAD;
-            case "float":
-                return FLOAD;
-            case "double":
-                return DLOAD;
-            default:
-                return ALOAD;
-        }
+
+        return switch (baseType) {
+            case "int", "byte", "short", "char", "boolean" -> ILOAD;
+            case "long" -> LLOAD;
+            case "float" -> FLOAD;
+            case "double" -> DLOAD;
+            default -> ALOAD;
+        };
     }
     
     /**

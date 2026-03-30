@@ -34,12 +34,11 @@ public class ArrayAccessNode extends ASTNode {
     
     @Override
     public String formatString(int indent) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(indent(indent)).append("ArrayAccessNode\n");
-        sb.append(indent(indent + 1)).append("array:\n");
-        sb.append(array.formatString(indent + 2)).append("\n");
-        sb.append(indent(indent + 1)).append("index:\n");
-        sb.append(index.formatString(indent + 2)).append("\n");
-        return sb.toString().stripTrailing();
+        String sb = indent(indent) + "ArrayAccessNode\n" +
+                indent(indent + 1) + "array:\n" +
+                array.formatString(indent + 2) + "\n" +
+                indent(indent + 1) + "index:\n" +
+                index.formatString(indent + 2) + "\n";
+        return sb.stripTrailing();
     }
 }

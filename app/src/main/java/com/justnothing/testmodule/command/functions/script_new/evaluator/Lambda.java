@@ -1,5 +1,7 @@
 package com.justnothing.testmodule.command.functions.script_new.evaluator;
 
+import androidx.annotation.NonNull;
+
 import com.justnothing.testmodule.command.functions.script_new.ast.nodes.LambdaNode;
 import com.justnothing.testmodule.command.functions.script_new.exception.ErrorCode;
 import com.justnothing.testmodule.command.functions.script_new.exception.EvaluationException;
@@ -157,6 +159,7 @@ public class Lambda implements Function<Object[], Object> {
         }
     }
     
+    @NonNull
     @Override
     public String toString() {
         return "Lambda(params=" + parameterNames + ")";

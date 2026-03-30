@@ -1,5 +1,7 @@
 package com.justnothing.testmodule.command.functions.script_new.ast;
 
+import androidx.annotation.NonNull;
+
 import java.util.Objects;
 
 /**
@@ -42,6 +44,7 @@ public class SourceLocation {
         return Objects.hash(line, column);
     }
     
+    @NonNull
     @Override
     public String toString() {
         return "SourceLocation[" +

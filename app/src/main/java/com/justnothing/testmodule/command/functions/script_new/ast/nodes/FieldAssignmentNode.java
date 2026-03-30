@@ -36,13 +36,12 @@ public class FieldAssignmentNode extends ASTNode {
     
     @Override
     public String formatString(int indent) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(indent(indent)).append("FieldAssignmentNode\n");
-        sb.append(indent(indent + 1)).append("fieldName: ").append(fieldName).append("\n");
-        sb.append(indent(indent + 1)).append("target:\n");
-        sb.append(target.formatString(indent + 2)).append("\n");
-        sb.append(indent(indent + 1)).append("value:\n");
-        sb.append(value.formatString(indent + 2)).append("\n");
-        return sb.toString().stripTrailing();
+        String sb = indent(indent) + "FieldAssignmentNode\n" +
+                indent(indent + 1) + "fieldName: " + fieldName + "\n" +
+                indent(indent + 1) + "target:\n" +
+                target.formatString(indent + 2) + "\n" +
+                indent(indent + 1) + "value:\n" +
+                value.formatString(indent + 2) + "\n";
+        return sb.stripTrailing();
     }
 }

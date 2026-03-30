@@ -40,14 +40,13 @@ public class TernaryNode extends ASTNode {
     
     @Override
     public String formatString(int indent) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(indent(indent)).append("TernaryNode\n");
-        sb.append(indent(indent + 1)).append("condition:\n");
-        sb.append(condition.formatString(indent + 2)).append("\n");
-        sb.append(indent(indent + 1)).append("then:\n");
-        sb.append(thenExpr.formatString(indent + 2)).append("\n");
-        sb.append(indent(indent + 1)).append("else:\n");
-        sb.append(elseExpr.formatString(indent + 2)).append("\n");
-        return sb.toString().stripTrailing();
+        String sb = indent(indent) + "TernaryNode\n" +
+                indent(indent + 1) + "condition:\n" +
+                condition.formatString(indent + 2) + "\n" +
+                indent(indent + 1) + "then:\n" +
+                thenExpr.formatString(indent + 2) + "\n" +
+                indent(indent + 1) + "else:\n" +
+                elseExpr.formatString(indent + 2) + "\n";
+        return sb.stripTrailing();
     }
 }

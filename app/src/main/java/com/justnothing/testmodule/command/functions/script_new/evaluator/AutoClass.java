@@ -1,5 +1,7 @@
 package com.justnothing.testmodule.command.functions.script_new.evaluator;
 
+import androidx.annotation.NonNull;
+
 public class AutoClass {
     private static final AutoClass INSTANCE = new AutoClass();
     
@@ -84,6 +86,7 @@ public class AutoClass {
         return type == AutoClass.class;
     }
     
+    @NonNull
     @Override
     public String toString() {
         return "auto";

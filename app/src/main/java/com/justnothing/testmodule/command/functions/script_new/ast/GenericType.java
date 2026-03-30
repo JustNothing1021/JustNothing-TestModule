@@ -1,5 +1,7 @@
 package com.justnothing.testmodule.command.functions.script_new.ast;
 
+import androidx.annotation.NonNull;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -123,9 +125,10 @@ public class GenericType {
         return sb.toString();
     }
     
+    @NonNull
     @Override
     public String toString() {
-        return getTypeName();
+        return "GenericType[" + getTypeName() + "]";
     }
     
     @Override

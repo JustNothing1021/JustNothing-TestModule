@@ -30,11 +30,10 @@ public class ConditionalAssignNode extends ASTNode {
     
     @Override
     public String formatString(int indent) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(indent(indent)).append("ConditionalAssignNode\n");
-        sb.append(indent(indent + 1)).append("variable: ").append(variableName).append("\n");
-        sb.append(indent(indent + 1)).append("value:\n");
-        sb.append(value.formatString(indent + 2));
-        return sb.toString().stripTrailing();
+        String sb = indent(indent) + "ConditionalAssignNode\n" +
+                indent(indent + 1) + "variable: " + variableName + "\n" +
+                indent(indent + 1) + "value:\n" +
+                value.formatString(indent + 2);
+        return sb.stripTrailing();
     }
 }

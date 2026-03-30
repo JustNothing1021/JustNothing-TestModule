@@ -4,9 +4,8 @@ package com.justnothing.testmodule.command.functions.hook;
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
-import com.justnothing.testmodule.command.functions.script.ScriptModels;
-import com.justnothing.testmodule.command.functions.script.ScriptRunner;
-import com.justnothing.testmodule.command.functions.script.ScriptModels.*;
+import com.justnothing.testmodule.command.functions.script_new.ScriptRunner;
+import com.justnothing.testmodule.command.functions.script_new.evaluator.ExecutionContext;
 import com.justnothing.testmodule.command.output.IOutputHandler;
 import com.justnothing.testmodule.command.output.OutputHandler;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
@@ -46,7 +45,7 @@ public class HookManager {
         currentLoadPackageParam = param;
     }
 
-    public static void addHookBuiltIn(ScriptModels.ExecutionContext context,
+    public static void addHookBuiltIn(ExecutionContext context,
                                       MethodHookParam methodHookParam,
                                       LoadPackageParam loadPackageParam,
                                       HookInfo hookInfo,

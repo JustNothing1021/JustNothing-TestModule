@@ -2,6 +2,9 @@ package com.justnothing.testmodule.command.functions.script_new.lexer;
 
 import com.justnothing.testmodule.command.functions.script_new.ast.SourceLocation;
 
+import java.util.Locale;
+import java.util.Objects;
+
 /**
  * Token类
  * <p>
@@ -80,10 +83,14 @@ public class Token {
     @Override
     public String toString() {
         if (value != null && !value.equals(text)) {
-            return String.format("Token[%s, %s, value=%s, line=%d, col=%d]",
+            return String.format(
+                    Locale.getDefault(),
+                    "Token[%s, %s, value=%s, line=%d, col=%d]",
                     type, text, value, location.getLine(), location.getColumn());
         }
-        return String.format("Token[%s, %s, line=%d, col=%d]",
+        return String.format(
+                Locale.getDefault(),
+                "Token[%s, %s, line=%d, col=%d]",
                 type, text, location.getLine(), location.getColumn());
     }
     
@@ -93,8 +100,8 @@ public class Token {
         if (obj == null || getClass() != obj.getClass()) return false;
         Token token = (Token) obj;
         return type == token.type &&
-               (text != null ? text.equals(token.text) : token.text == null) &&
-               (value != null ? value.equals(token.value) : token.value == null);
+               (Objects.equals(text, token.text)) &&
+               (Objects.equals(value, token.value));
     }
     
     @Override

@@ -1,6 +1,8 @@
 package com.justnothing.testmodule.command.functions.script_new.ast.nodes;
 
 
+import androidx.annotation.NonNull;
+
 import com.justnothing.testmodule.command.functions.script_new.ast.ASTNode;
 import com.justnothing.testmodule.command.functions.script_new.ast.SourceLocation;
 import com.justnothing.testmodule.command.functions.script_new.ast.visitor.ASTVisitor;
@@ -35,14 +37,14 @@ public class MethodReferenceNode extends ASTNode {
     
     @Override
     public String formatString(int indent) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(indent(indent)).append("MethodReferenceNode\n");
-        sb.append(indent(indent + 1)).append("methodName: ").append(methodName).append("\n");
-        sb.append(indent(indent + 1)).append("target:\n");
-        sb.append(target.formatString(indent + 2)).append("\n");
-        return sb.toString().stripTrailing();
+        String sb = indent(indent) + "MethodReferenceNode\n" +
+                indent(indent + 1) + "methodName: " + methodName + "\n" +
+                indent(indent + 1) + "target:\n" +
+                target.formatString(indent + 2) + "\n";
+        return sb.stripTrailing();
     }
 
+    @NonNull
     @Override
     public String toString() {
         return "MethodReferenceNode[" +
