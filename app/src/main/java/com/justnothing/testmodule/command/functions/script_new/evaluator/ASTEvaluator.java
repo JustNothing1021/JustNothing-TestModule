@@ -1035,12 +1035,17 @@ public class ASTEvaluator {
             
             Class<?> targetClass;
             Object targetInstance;
-            boolean isStatic = false;
             
-            if (target instanceof Class) {
-                targetClass = (Class<?>) target;
+            if (target instanceof Class<?> targetClassObj) {
+                Method classMethod = findMethod(Class.class, methodName, args);
+                if (classMethod != null) {
+                    classMethod.setAccessible(true);
+                    Object[] invokeArgs = prepareInvokeArguments(classMethod, args);
+                    return classMethod.invoke(targetClassObj, invokeArgs);
+                }
+                
+                targetClass = targetClassObj;
                 targetInstance = null;
-                isStatic = true;
             } else {
                 targetClass = target.getClass();
                 targetInstance = target;
@@ -1061,10 +1066,12 @@ public class ASTEvaluator {
         } catch (EvaluationException e) {
             throw e;
         } catch (Exception e) {
+            Throwable cause = e.getCause() != null ? e.getCause() : e;
             throw new EvaluationException(
-                "Failed to call method: " + methodName + " - " + e.getMessage(),
+                "Failed to call method: " + methodName + " - " + cause.getMessage(),
                 node.getLocation(),
-                ErrorCode.EVAL_METHOD_INVOCATION_FAILED
+                ErrorCode.EVAL_METHOD_INVOCATION_FAILED,
+                cause
             );
         }
     }
@@ -1095,8 +1102,15 @@ public class ASTEvaluator {
             Class<?> targetClass;
             Object targetInstance;
             
-            if (target instanceof Class) {
-                targetClass = (Class<?>) target;
+            if (target instanceof Class<?> targetClassObj) {
+                Method classMethod = findMethod(Class.class, methodName, args);
+                if (classMethod != null) {
+                    classMethod.setAccessible(true);
+                    Object[] invokeArgs = prepareInvokeArguments(classMethod, args);
+                    return classMethod.invoke(targetClassObj, invokeArgs);
+                }
+                
+                targetClass = targetClassObj;
                 targetInstance = null;
             } else {
                 targetClass = target.getClass();
@@ -1887,6 +1901,12 @@ public class ASTEvaluator {
             }
         }
         
+        for (Method method : clazz.getDeclaredMethods()) {
+            if (method.getName().equals(name) && !candidates.contains(method)) {
+                candidates.add(method);
+            }
+        }
+        
         Method bestMatch = null;
         int bestScore = -1;
         Method varArgsCandidate = null;
@@ -1915,22 +1935,7 @@ public class ASTEvaluator {
             return bestMatch;
         }
         
-        if (varArgsCandidate != null) {
-            return varArgsCandidate;
-        }
-        
-        for (Method method : clazz.getDeclaredMethods()) {
-            if (method.getName().equals(name)) {
-                Class<?>[] paramTypes = method.getParameterTypes();
-                boolean isVarArgs = method.isVarArgs();
-                
-                if (isApplicableArgs(paramTypes, args, isVarArgs)) {
-                    return method;
-                }
-            }
-        }
-        
-        return null;
+        return varArgsCandidate;
     }
     
     private static int computeMatchScore(Class<?>[] paramTypes, Object[] args) {

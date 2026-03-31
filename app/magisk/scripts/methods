@@ -2,7 +2,7 @@
 
 
 # 常量定义
-VERSION="0.4.0"
+VERSION="0.4.1"
 SERVICE_NAME="justnothing_xposed_method_cli"
 METHODS_WORKDIR="/data/local/tmp/methods"
 JAVA_CLIENT_JAR="/system/framework/methods-client.jar"
@@ -359,13 +359,11 @@ start_interactive_terminal() {
     color_cyan "║                                                      ║"
     echo -e "${CYAN}║  ${GREEN}输入命令直接执行，支持以下操作：${CYAN}                    ║"
     color_cyan "║                                                      ║"
-    echo -e "${CYAN}║  ${YELLOW}• ${CYAN}invoke   - 调用方法                               ║"
-    echo -e "${CYAN}║  ${YELLOW}• ${CYAN}list     - 列出方法                               ║"
-    echo -e "${CYAN}║  ${YELLOW}• ${CYAN}bsh      - 执行BeanShell代码                      ║"
-    echo -e "${CYAN}║  ${YELLOW}• ${CYAN}script   - 执行脚本代码                           ║"
-    echo -e "${CYAN}║  ${YELLOW}• ${CYAN}packages - 列出包名                               ║"
+    echo -e "${CYAN}║  ${YELLOW}• ${CYAN}class    - 查询类型                               ║"
+    echo -e "${CYAN}║  ${YELLOW}• ${CYAN}script   - 执行代码                               ║"
+    echo -e "${CYAN}║  ${GREEN}输入命令直接执行，支持以下操作：${CYAN}                    ║"
+    echo -e "║ • ...                                                ║"
     echo -e "${CYAN}║  ${YELLOW}• ${CYAN}help     - 显示帮助, 查看服务端支持的更多命令     ║"
-    color_cyan "║                                                      ║"
     echo -e "${CYAN}║  ${YELLOW}终端命令：${CYAN}                                          ║"
     echo -e "${CYAN}║  ${YELLOW}• ${CYAN}exit/quit      - 退出终端                         ║"
     echo -e "${CYAN}║  ${YELLOW}• ${CYAN}clear          - 清屏                             ║"
