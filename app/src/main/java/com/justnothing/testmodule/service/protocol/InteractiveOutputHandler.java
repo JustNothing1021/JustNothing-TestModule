@@ -78,7 +78,6 @@ public class InteractiveOutputHandler implements IOutputHandler {
         logger.debug("发送输入请求: " + requestId + " - " + prompt);
 
         try {
-            // 发送输入请求
             String requestData = requestId + ":" + prompt;
             synchronized (writeLock) {
                 InteractiveProtocol.writeMessage(outputStream,
@@ -86,17 +85,15 @@ public class InteractiveOutputHandler implements IOutputHandler {
                         requestData.getBytes(StandardCharsets.UTF_8));
             }
 
-            // 启动心跳定时任务
             ScheduledFuture<?> pingFuture = ThreadPoolManager.scheduleAtFixedRate(
                     this::runInputPing,
                     INPUT_PING_PONG_INTERVAL, INPUT_PING_PONG_INTERVAL, TimeUnit.MILLISECONDS);
+            pingFutureRef.set(pingFuture);
 
             while (!closed.get() && (System.currentTimeMillis() - lastResponseTime.get()) < PING_PONG_TIMEOUT) {
                 String response = inputQueue.poll(500, TimeUnit.MILLISECONDS);
                 if (response != null) {
                     logger.debug("收到输入响应: " + requestId + " - " + response);
-                    assert pingFuture != null;
-                    pingFuture.cancel(true);
                     return response;
                 }
 
@@ -112,6 +109,7 @@ public class InteractiveOutputHandler implements IOutputHandler {
                 throw new RuntimeException("输入请求" + requestId + "超时 (" + PING_PONG_TIMEOUT + "秒)");
             }
 
+
             return null;
 
         } catch (InterruptedException e) {
@@ -121,6 +119,8 @@ public class InteractiveOutputHandler implements IOutputHandler {
         } catch (IOException e) {
             logger.error("发送输入请求失败", e);
             throw new RuntimeException("通信失败");
+        } finally {
+            stopPingFuture();
         }
     }
 
@@ -166,6 +166,7 @@ public class InteractiveOutputHandler implements IOutputHandler {
                 String response = inputQueue.poll(1, TimeUnit.SECONDS);
                 if (response != null) {
                     pingFuture.cancel(true);
+                    pingFutureRef.set(null);
                     return response;
                 }
             }
