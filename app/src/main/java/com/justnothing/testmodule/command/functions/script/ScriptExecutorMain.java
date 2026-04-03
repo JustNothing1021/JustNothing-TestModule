@@ -5,12 +5,12 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_SCRIPT_VER;
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
-import com.justnothing.testmodule.command.functions.script_new.ScriptRunner;
+import com.justnothing.testmodule.command.functions.script.engine_new.ScriptRunner;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.data.DataBridge;
 import com.justnothing.testmodule.utils.io.IOManager;
-import com.justnothing.testmodule.command.functions.script_new.exception.EvaluationException;
-import com.justnothing.testmodule.command.functions.script_new.exception.ParseException;
+import com.justnothing.testmodule.command.functions.script.engine_new.exception.EvaluationException;
+import com.justnothing.testmodule.command.functions.script.engine_new.exception.ParseException;
 
 import java.io.File;
 import java.io.IOException;
@@ -100,7 +100,7 @@ public class ScriptExecutorMain extends CommandBase {
             return String.format("""
                     语法: script <subcmd> [args...] | script <code>
                     
-                    用JustNothing1021写的解释器跑Java代码.
+                    用JustNothing1021 (在GLM4.7和GLM5的帮助下) 写的解释器跑Java代码.
                     就是目前还有一些语法不支持...习惯就好, 不会写AST(
                     
                     另外, 这玩意的性能很低, 不建议执行超过100次循环的代码
@@ -116,7 +116,7 @@ public class ScriptExecutorMain extends CommandBase {
                         run_code <code>            - 直接执行代码字符串（备用）
                         import <file>              - 导入脚本文件
                         export <name> <file>       - 导出脚本文件
-                        interactive                - 启动交互式脚本执行模式
+                        manage                     - 启动交互式脚本管理器
                 
                     选项:
                         name              - 脚本名称
@@ -124,7 +124,7 @@ public class ScriptExecutorMain extends CommandBase {
 
 
                     ═══════════════════════════════════════════════════════════════
-                    语法糖说明 (不同于原版Java的新特性)
+                                      语法糖说明 (不同于原版Java的新特性)
                     ═══════════════════════════════════════════════════════════════
 
                     [0] 某些神秘的运算符
@@ -163,24 +163,24 @@ public class ScriptExecutorMain extends CommandBase {
                     
                     [5] Pipeline管道操作符
                         auto result = "  hello  " 
-                            -> String::trim 
-                            -> String::toUpperCase;
+                            |> String::trim 
+                            |> String::toUpperCase;
                         // "HELLO"
                         
                         [1, 2, 3, 4, 5] 
-                            -> filter((x) -> x > 2) 
-                            -> map((x) -> x * 2);  // [6, 8, 10]
+                            |> filter((x) -> x > 2) 
+                            |> map((x) -> x * 2);  // [6, 8, 10]
 
                         auto twice = x -> x * 2;
                         auto addOne = x -> x + 1;
                         auto square = x -> x ** 2;
 
-                        auto result = 3 -> twice -> addOne -> square;  // 49 (3 -> 6 -> 7 -> 49)
+                        auto result = 3 |> twice |> addOne |> square;  // 49 (3 -> 6 -> 7 -> 49)
                     
                     [6] 安全调用操作符 (在非null的时候调用, 不然返回null)
                         auto obj = null;
-                        obj?.method();   // null (不报错)
-                        obj?.field;      // null
+                        obj?.method();                   // null (不报错)
+                        obj?.field;                      // null
                         obj?.method()?.anotherMethod();  // 链式安全调用
                     
                     [7] Elvis操作符 (空值合并)
@@ -189,7 +189,7 @@ public class ScriptExecutorMain extends CommandBase {
                     
                     [8] 非空断言
                         auto value = null;
-                        value!!;  // 抛出 NullPointerException
+                        !!value;  // 抛出 NullPointerException
                     
                     [9] 条件赋值操作符
                         Integer a = null;
@@ -198,9 +198,10 @@ public class ScriptExecutorMain extends CommandBase {
                     [10] 集合操作符
                         auto a = [1, 2, 3];
                         auto b = [3, 4, 5];
-                        a | b;  // 并集 [1, 2, 3, 4, 5]
-                        a - b;  // 差集 [1,2]
-                        a & b;  // 交集 [3]
+                        a | b;  // 并集   [1, 2, 3, 4, 5]
+                        a - b;  // 差集   [1, 2]
+                        a & b;  // 交集   [3]
+                        a ^ b;  // 异或集 [1, 2, 4, 5]
                     
                     [11] Async/Await 异步支持
                         auto future = async {
@@ -236,12 +237,18 @@ public class ScriptExecutorMain extends CommandBase {
                         arr := [1, 2, 3];  // Object[], 这个是例外
                     
                     ═══════════════════════════════════════════════════════════════
-                    内置函数
+                                              内置函数
                     ═══════════════════════════════════════════════════════════════
                     
                     输出:
-                        print(s)          - 输出到缓冲区
-                        println(s)        - 输出并换行
+                        print(s)                 - 输出到缓冲区
+                        println(s)               - 输出并换行
+                    
+                    输入:
+                        readLine(prompt?)        - 读取用户输入 (可选提示)
+                        readPassword(prompt?)    - 读取密码 (隐藏输入)
+                        setupInteractiveInput()  - 重定向System.in到交互输入
+                                                   (调用后Scanner等可正常使用)
                     
                     集合操作:
                         map(collection, fn)      - 映射
@@ -263,9 +270,9 @@ public class ScriptExecutorMain extends CommandBase {
                         abs(n), min(a,b), max(a,b), clamp(v,min,max)
                     
                     反射:
-                        getField(obj, name)      - 获取字段
-                        setField(obj, name, val) - 设置字段
-                        invokeMethod(obj, name, args...) - 调用方法
+                        getField(obj, name)                 - 获取字段
+                        setField(obj, name, val)            - 设置字段
+                        invokeMethod(obj, name, args...)    - 调用方法
                     
                     类型:
                         typeOf(obj)              - 类型名称
@@ -295,7 +302,7 @@ public class ScriptExecutorMain extends CommandBase {
                         asFunction(lambda)       - Lambda转Function
                     
                     ═══════════════════════════════════════════════════════════════
-                    注意事项
+                                              注意事项
                     ═══════════════════════════════════════════════════════════════
                     
                     (1) auto类型必须有初始值
@@ -325,14 +332,13 @@ public class ScriptExecutorMain extends CommandBase {
                     
                     示例:
                         script create my_hook
-                        script edit my_hook
                         script list
                         script show my_hook
                         script run my_hook
                         script import /sdcard/script.java
                         script export my_hook /sdcard/backup.java
                         script delete my_hook
-                        script interactive
+                        script manage
                         script 'String a = "114514"; println(a);'
 
                     注:
@@ -401,8 +407,6 @@ public class ScriptExecutorMain extends CommandBase {
         switch (subCommand) {
             case "create":
                 return handleCreate(args);
-            case "edit":
-                return handleEdit(args);
             case "list":
                 return handleList();
             case "show":
@@ -417,8 +421,8 @@ public class ScriptExecutorMain extends CommandBase {
                 return handleImport(args);
             case "export":
                 return handleExport(args);
-            case "interactive":
-                return handleInteractive(context);
+            case "manage":
+                return handleManage(context);
             default:
                 return "未知子命令: " + subCommand + "\n" + getHelpText();
         }
@@ -485,25 +489,7 @@ public class ScriptExecutorMain extends CommandBase {
         IOManager.writeFile(scriptFile.getAbsolutePath(), content.toString());
 
         return "脚本 '" + scriptName + "' 创建成功\n" +
-                "路径: " + scriptFile.getAbsolutePath() + "\n" +
-                "提示: 使用 'script edit " + scriptName + "' 编辑脚本";
-    }
-
-    private String handleEdit(String[] args) throws IOException {
-        if (args.length < 2) {
-            return "错误: 需要指定脚本名称\n用法: script edit <name>";
-        }
-
-        String scriptName = args[1];
-        File scriptFile = getScriptFile(scriptName);
-
-        if (!scriptFile.exists()) {
-            return "错误: 脚本 '" + scriptName + "' 不存在";
-        }
-
-        return "脚本 '" + scriptName + "' 已准备好编辑\n" +
-                "路径: " + scriptFile.getAbsolutePath() + "\n" +
-                "提示: 使用外部编辑器编辑脚本文件";
+                "路径: " + scriptFile.getAbsolutePath();
     }
 
     private String handleList() throws IOException {
@@ -718,21 +704,183 @@ public class ScriptExecutorMain extends CommandBase {
                 "导出路径: " + exportFile.getAbsolutePath();
     }
 
-    private String handleInteractive(CommandExecutor.CmdExecContext context) {
-        StringBuilder result = new StringBuilder();
-        result.append("===== 交互式脚本管理器 =====\n\n");
-        result.append("可用命令:\n");
-        result.append("  1. create - 创建新脚本\n");
-        result.append("  2. edit - 编辑脚本\n");
-        result.append("  3. list - 列出所有脚本和codebase文件\n");
-        result.append("  4. show - 显示文件内容\n");
-        result.append("  5. delete - 删除文件\n");
-        result.append("  6. run - 执行脚本或codebase文件\n");
-        result.append("  7. import - 导入文件（可指定codebase）\n");
-        result.append("  8. export - 导出文件\n");
-        result.append("  0. exit - 退出\n\n");
-        result.append("提示: 输入命令编号或命令名称\n");
+    private String handleManage(CommandExecutor.CmdExecContext context) {
+        context.output().println("===== 交互式脚本管理器 =====");
+        context.output().println("输入 'help' 查看可用命令, 'exit' 或 'quit' 退出\n");
         
+        while (true) {
+            String input = context.readLine("manage> ");
+            
+            if (input == null) {
+                break;
+            }
+            
+            input = input.trim();
+            
+            if (input.isEmpty()) {
+                continue;
+            }
+            
+            if (input.equals("exit") || input.equals("quit") || input.equals("0")) {
+                context.output().println("退出脚本管理器");
+                break;
+            }
+            
+            if (input.equals("help") || input.equals("?")) {
+                showManageHelp(context);
+                continue;
+            }
+            
+            String result = handleManageCommand(input, context);
+            if (result != null) {
+                context.output().println(result);
+            }
+        }
+        
+        return "脚本管理器已退出";
+    }
+    
+    private void showManageHelp(CommandExecutor.CmdExecContext context) {
+        context.output().println("");
+        context.output().println("可用命令:");
+        context.output().println("  create <name>        - 创建新脚本");
+        context.output().println("  list                 - 列出所有脚本和codebase文件");
+        context.output().println("  show <name>          - 显示文件内容");
+        context.output().println("  edit <name>          - 编辑脚本内容");
+        context.output().println("  delete <name>        - 删除文件");
+        context.output().println("  run <name>           - 执行脚本或codebase文件");
+        context.output().println("  import <path>        - 导入文件");
+        context.output().println("  export <name> <path> - 导出文件");
+        context.output().println("  codebase             - 列出codebase文件");
+        context.output().println("  help                 - 显示此帮助");
+        context.output().println("  exit / quit          - 退出管理器");
+        context.output().println("");
+    }
+    
+    private String handleManageCommand(String input, CommandExecutor.CmdExecContext context) {
+        String[] parts = input.split("\\s+", 3);
+        String cmd = parts[0].toLowerCase();
+        
+        try {
+            switch (cmd) {
+                case "1":
+                case "create": {
+                    if (parts.length < 2) {
+                        return "用法: create <name>";
+                    }
+                    return handleCreate(new String[]{"create", parts[1]});
+                }
+                case "2":
+                case "list": {
+                    return handleList();
+                }
+                case "3":
+                case "show": {
+                    if (parts.length < 2) {
+                        return "用法: show <name>";
+                    }
+                    return handleShow(new String[]{"show", parts[1]});
+                }
+                case "edit": {
+                    if (parts.length < 2) {
+                        return "用法: edit <name>";
+                    }
+                    return handleEdit(parts[1], context);
+                }
+                case "4":
+                case "delete": {
+                    if (parts.length < 2) {
+                        return "用法: delete <name>";
+                    }
+                    return handleDelete(new String[]{"delete", parts[1]});
+                }
+                case "5":
+                case "run": {
+                    if (parts.length < 2) {
+                        return "用法: run <name>";
+                    }
+                    return handleRun(new String[]{"run", parts[1]}, context);
+                }
+                case "6":
+                case "import": {
+                    if (parts.length < 2) {
+                        return "用法: import <path>";
+                    }
+                    return handleImport(new String[]{"import", parts[1]});
+                }
+                case "7":
+                case "export": {
+                    if (parts.length < 3) {
+                        return "用法: export <name> <path>";
+                    }
+                    return handleExport(new String[]{"export", parts[1], parts[2]});
+                }
+                case "codebase": {
+                    return handleCodebaseList();
+                }
+                default:
+                    return "未知命令: " + cmd + " (输入 'help' 查看帮助)";
+            }
+        } catch (Exception e) {
+            return "错误: " + e.getMessage();
+        }
+    }
+    
+    private String handleEdit(String name, CommandExecutor.CmdExecContext context) throws IOException {
+        File scriptFile = getScriptFile(name);
+        
+        if (!scriptFile.exists()) {
+            return "错误: 脚本 '" + name + "' 不存在";
+        }
+        
+        String existingContent = IOManager.readFile(scriptFile.getAbsolutePath());
+        context.output().println("编辑脚本: " + name);
+        context.output().println("当前内容 (输入空行结束编辑):\n");
+        context.output().println(existingContent);
+        context.output().println("\n--- 开始编辑 (输入空行保存并退出) ---\n");
+        
+        StringBuilder newContent = new StringBuilder();
+        
+        while (true) {
+            String line = context.readLine("");
+            if (line == null || line.isEmpty()) {
+                break;
+            }
+            newContent.append(line).append("\n");
+        }
+        
+        if (newContent.length() > 0) {
+            IOManager.writeFile(scriptFile.getAbsolutePath(), newContent.toString());
+            return "脚本已保存";
+        } else {
+            return "编辑已取消 (未做更改)";
+        }
+    }
+    
+    private String handleCodebaseList() {
+        File codebaseDir = DataBridge.getCodebaseDirectory();
+        
+        if (!codebaseDir.exists()) {
+            return "Codebase目录不存在";
+        }
+        
+        File[] files = codebaseDir.listFiles();
+        if (files == null || files.length == 0) {
+            return "Codebase目录为空";
+        }
+        
+        StringBuilder result = new StringBuilder();
+        result.append("===== Codebase文件列表 =====\n\n");
+        
+        for (File file : files) {
+            result.append("  ").append(file.getName());
+            if (file.isDirectory()) {
+                result.append("/");
+            }
+            result.append("\n");
+        }
+        
+        result.append("\n总计: ").append(files.length).append(" 个文件");
         return result.toString();
     }
 

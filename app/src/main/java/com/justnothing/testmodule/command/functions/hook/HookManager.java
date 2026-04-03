@@ -4,8 +4,8 @@ package com.justnothing.testmodule.command.functions.hook;
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
-import com.justnothing.testmodule.command.functions.script_new.ScriptRunner;
-import com.justnothing.testmodule.command.functions.script_new.evaluator.ExecutionContext;
+import com.justnothing.testmodule.command.functions.script.engine_new.ScriptRunner;
+import com.justnothing.testmodule.command.functions.script.engine_new.evaluator.ExecutionContext;
 import com.justnothing.testmodule.command.output.IOutputHandler;
 import com.justnothing.testmodule.command.output.OutputHandler;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.Map;
 
 import de.robv.android.xposed.XC_MethodHook;
@@ -49,7 +50,8 @@ public class HookManager {
                                       MethodHookParam methodHookParam,
                                       LoadPackageParam loadPackageParam,
                                       HookInfo hookInfo,
-                                      String phase
+                                      String phase,
+                                      AtomicBoolean returnValueSet
     ) {
             context.addBuiltIn("getMethodHookParam", args -> {
                 if (!args.isEmpty()) {
@@ -94,6 +96,9 @@ public class HookManager {
                     logger.warn("setReturnValue() 只接受一个参数，忽略其他参数");
                 }
                 methodHookParam.setResult(args.get(0));
+                if (returnValueSet != null) {
+                    returnValueSet.set(true);
+                }
                 return null;
             });
 
@@ -274,56 +279,65 @@ public class HookManager {
             XC_MethodHook replacementHook = new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                    if (!hasBefore) {
-                        return;
-                    }
                     if (!hookInfo.isEnabled() || !hookInfo.isActive()) {
-                        logger.debug("hook未启用或未激活，跳过before Hook执行，id = " + hookInfo.getId());
+                        logger.debug("hook未启用或未激活，跳过Hook执行，id = " + hookInfo.getId());
                         return;
                     }
                     
-                    logger.info("准备执行before Hook，id = " + hookInfo.getId());
+                    if (hasBefore) {
+                        logger.info("准备执行before Hook，id = " + hookInfo.getId());
+                        hookInfo.incrementCallCount();
+                        
+                        if (hookInfo.getBeforeCode() != null && !hookInfo.getBeforeCode().isEmpty()) {
+                            executeHookCode(hookInfo, hookInfo.getBeforeCode(), param, "before");
+                        } else if (hookInfo.getBeforeCodebase() != null && !hookInfo.getBeforeCodebase().isEmpty()) {
+                            String code = loadCodeFromCodebase(hookInfo.getBeforeCodebase());
+                            if (code != null) {
+                                executeHookCode(hookInfo, code, param, "before");
+                            }
+                        }
+                    }
+                    
+                    logger.info("准备执行replace Hook，id = " + hookInfo.getId());
                     hookInfo.incrementCallCount();
                     
-                    if (hookInfo.getBeforeCode() != null && !hookInfo.getBeforeCode().isEmpty()) {
-                        executeHookCode(hookInfo, hookInfo.getBeforeCode(), param, "before");
-                    } else if (hookInfo.getBeforeCodebase() != null && !hookInfo.getBeforeCodebase().isEmpty()) {
-                        String code = loadCodeFromCodebase(hookInfo.getBeforeCodebase());
+                    java.util.concurrent.atomic.AtomicBoolean returnValueSet = new java.util.concurrent.atomic.AtomicBoolean(false);
+                    
+                    if (hookInfo.getReplaceCode() != null && !hookInfo.getReplaceCode().isEmpty()) {
+                        executeHookCodeWithReturnFlag(hookInfo, hookInfo.getReplaceCode(), param, "replace", returnValueSet);
+                    } else if (hookInfo.getReplaceCodebase() != null && !hookInfo.getReplaceCodebase().isEmpty()) {
+                        String code = loadCodeFromCodebase(hookInfo.getReplaceCodebase());
                         if (code != null) {
-                            executeHookCode(hookInfo, code, param, "before");
+                            executeHookCodeWithReturnFlag(hookInfo, code, param, "replace", returnValueSet);
                         }
+                    }
+                    
+                    if (!returnValueSet.get() && !param.hasThrowable()) {
+                        logger.info("replace代码未调用setReturnValue()，原方法将继续执行");
+                        logger.info("提示: 调用 setReturnValue(value) 设置返回值并阻止原方法执行");
+                        logger.info("      对于void方法，调用 setReturnValue(null) 阻止原方法执行");
                     }
                 }
                 
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                    if (!hookInfo.isEnabled() || !hookInfo.isActive()) {
-                        logger.debug("hook未启用或未激活，跳过替换Hook执行，id = " + hookInfo.getId());
+                    if (!hasAfter) {
                         return;
                     }
-                    logger.info("准备执行replace Hook，id = " + hookInfo.getId());
-                    hookInfo.incrementCallCount();
-                    
-                    if (hookInfo.getReplaceCode() != null && !hookInfo.getReplaceCode().isEmpty()) {
-                        executeHookCode(hookInfo, hookInfo.getReplaceCode(), param, "replace");
-                    } else if (hookInfo.getReplaceCodebase() != null && !hookInfo.getReplaceCodebase().isEmpty()) {
-                        String code = loadCodeFromCodebase(hookInfo.getReplaceCodebase());
-                        if (code != null) {
-                            executeHookCode(hookInfo, code, param, "replace");
-                        }
+                    if (!hookInfo.isEnabled() || !hookInfo.isActive()) {
+                        logger.debug("hook未启用或未激活，跳过after Hook执行，id = " + hookInfo.getId());
+                        return;
                     }
                     
-                    if (hasAfter) {
-                        logger.info("准备执行after Hook，id = " + hookInfo.getId());
-                        hookInfo.incrementCallCount();
-                        
-                        if (hookInfo.getAfterCode() != null && !hookInfo.getAfterCode().isEmpty()) {
-                            executeHookCode(hookInfo, hookInfo.getAfterCode(), param, "after");
-                        } else if (hookInfo.getAfterCodebase() != null && !hookInfo.getAfterCodebase().isEmpty()) {
-                            String code = loadCodeFromCodebase(hookInfo.getAfterCodebase());
-                            if (code != null) {
-                                executeHookCode(hookInfo, code, param, "after");
-                            }
+                    logger.info("准备执行after Hook，id = " + hookInfo.getId());
+                    hookInfo.incrementCallCount();
+                    
+                    if (hookInfo.getAfterCode() != null && !hookInfo.getAfterCode().isEmpty()) {
+                        executeHookCode(hookInfo, hookInfo.getAfterCode(), param, "after");
+                    } else if (hookInfo.getAfterCodebase() != null && !hookInfo.getAfterCodebase().isEmpty()) {
+                        String code = loadCodeFromCodebase(hookInfo.getAfterCodebase());
+                        if (code != null) {
+                            executeHookCode(hookInfo, code, param, "after");
                         }
                     }
                 }
@@ -413,6 +427,12 @@ public class HookManager {
 
     private static void executeHookCode(HookInfo hookInfo, String code,
                                         MethodHookParam param, String phase) {
+        executeHookCodeWithReturnFlag(hookInfo, code, param, phase, null);
+    }
+
+    private static void executeHookCodeWithReturnFlag(HookInfo hookInfo, String code,
+                                        MethodHookParam param, String phase,
+                                        java.util.concurrent.atomic.AtomicBoolean returnValueSet) {
         try {
             ClassLoader cl = hookInfo.getClassLoader();
             ScriptRunner runner = scriptRunners.computeIfAbsent(
@@ -422,7 +442,7 @@ public class HookManager {
             IOutputHandler outputHandler = new OutputHandler(logger, prefix);
             IOutputHandler errorHandler = new OutputHandler(logger, prefix);
             ExecutionContext context = new ExecutionContext(cl, outputHandler, errorHandler);
-            addHookBuiltIn(context, param, getLoadPackageParam(), hookInfo, phase);
+            addHookBuiltIn(context, param, getLoadPackageParam(), hookInfo, phase, returnValueSet);
             runner.setContext(context);
             runner.execute(code);
             runner.getAllVariablesAsObject().get("result");

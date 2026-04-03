@@ -86,9 +86,9 @@ public class HookMain extends CommandBase {
                         getHookInfo() -> HookInfo                 - 获取当前Hook的信息
                         getPhase() -> String                      - 获取当前Hook的阶段
                         getHookId() -> String                     - 获取当前Hook的ID
-                        setReturnValue() -> void                  - 设置返回值
-                        setThrowable() -> void                    - 抛出异常
-                        getReturnValue() -> Object                - 获取返回值
+                        setReturnValue(value) -> void             - 设置返回值并阻止原方法执行
+                        setThrowable(exc) -> void                 - 抛出异常并阻止原方法执行
+                        getReturnValue() -> Object                - 获取返回值（after阶段可用）
 
                 
                 (Submodule hook %s)

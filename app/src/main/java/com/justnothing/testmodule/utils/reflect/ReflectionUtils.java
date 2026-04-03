@@ -12,10 +12,14 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.StringJoiner;
+
+
 
 public class ReflectionUtils {
 
@@ -272,6 +276,22 @@ public class ReflectionUtils {
         return result;
     }
 
+
+    static String typeVarBounds(TypeVariable<?> typeVar) {
+        Type[] bounds = typeVar.getBounds();
+        if (bounds.length == 1 && bounds[0].equals(Object.class)) {
+            return typeVar.getName();
+        } else {
+            return typeVar.getName() + " extends " +
+                Arrays.stream(bounds)
+                .map(Type::toString)
+                .collect(Collectors.joining(" & "));
+        }
+    }
+
+
+
+
     public static String getDescriptor(Member member) {
         return getDescriptor(member, false);
     }
@@ -296,33 +316,59 @@ public class ReflectionUtils {
         if (Modifier.isTransient(modifiers)) sb.append("transient ");
 
         if (member instanceof Method method) {
-            sb.append(simple ? method.getReturnType().getSimpleName() :
-                               method.getReturnType().getName()).append(" ");
-            sb.append(method.getName()).append("(");
 
-            Class<?>[] params = method.getParameterTypes();
-            for (int i = 0; i < params.length; i++) {
-                sb.append(simple ? params[i].getSimpleName() : params[i].getName());
-                if (i < params.length - 1) sb.append(", ");
+            TypeVariable<?>[] typeparms = method.getTypeParameters();
+            if (typeparms.length > 0) {
+                sb.append(Arrays.stream(typeparms)
+                          .map(typeVar -> typeVarBounds(typeVar))
+                          .collect(Collectors.joining(",", "<", "> ")));
             }
-            sb.append(")");
+
+            sb.append(simple ? method.getReturnType().getSimpleName() : method.getReturnType().getTypeName()).append(' ');
+            sb.append(simple ? method.getDeclaringClass().getSimpleName() : method.getDeclaringClass().getTypeName()).append('.');
+            sb.append(method.getName());
+
+
+            if (simple) {
+                Class<?>[] params = method.getParameterTypes();
+                sb.append(Arrays.stream(params)
+                      .map(Class::getSimpleName)
+                      .collect(Collectors.joining(", ", "(", ")")));
+
+            } else {
+                sb.append('(');
+                StringJoiner sj = new StringJoiner(", ");
+                Type[] params = method.getGenericParameterTypes();
+                for (int j = 0; j < params.length; j++) {
+                    String param = params[j].toString();
+                    if (method.isVarArgs() && (j == params.length - 1)) // replace T[] with T...
+                        param = param.replaceFirst("\\[]$", "...");
+                    sj.add(param);
+                }
+                sb.append(sj);
+                sb.append(')');
+            }
+
+            Type[] exceptionTypes = method.getGenericExceptionTypes();
+            if (exceptionTypes.length > 0) {
+                sb.append(Arrays.stream(exceptionTypes)
+                          .map(Type::toString)
+                          .collect(Collectors.joining(", ", " throws ", "")));
+            }
         } else if (member instanceof Field field) {
-            sb.append(simple ? member.getDeclaringClass().getName() + "." + field.getName() : field.getName())
+            sb.append(simple ? field.getType().getSimpleName() : field.getType().getName()).append(' ');
+            sb.append(simple ? field.getName() : member.getDeclaringClass().getName() + "." + field.getName())
                     .append(" ");
-            sb.append(field.getName());
         } else if (member instanceof Constructor<?> constructor) {
             sb.append(simple ? constructor.getDeclaringClass().getSimpleName() :
                                constructor.getDeclaringClass().getName());
-            sb.append(" (");
-            Class<?>[] params = constructor.getParameterTypes();
-            for (int i = 0; i < params.length; i++) {
-                sb.append(simple ? params[i].getSimpleName() : params[i].getName());
-                if (i < params.length - 1) sb.append(", ");
-            }
-            sb.append(")");
+            sb.append(Arrays.stream(constructor.getParameterTypes())
+                      .map(simple ? Class::getSimpleName : Class::getName)
+                      .collect(Collectors.joining(", ", "(", ")")));
+            
         }
 
-        return sb.toString();
+        return sb.toString().stripTrailing();
     }
 
 

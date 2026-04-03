@@ -30,7 +30,7 @@ public class AnalyzeCommand extends AbstractClassCommand {
         boolean showFields = false;
         boolean showMethods = false;
         boolean showAll = true;
-        String className = args[0];
+        String className = args[args.length - 1];
 
         for (int i = 0; i < args.length - 1; i++) {
             String arg = args[i];
@@ -68,7 +68,7 @@ public class AnalyzeCommand extends AbstractClassCommand {
             } else {
                 for (Map.Entry<String, FieldInfo> entry : fieldMap.entrySet()) {
                     FieldInfo fieldInfo = entry.getValue();
-                    sb.append("  ").append(getFieldDescriptor(fieldInfo.field));
+                    sb.append("  ").append(ReflectionUtils.getDescriptor(fieldInfo.field));
                     if (Modifier.isStatic(fieldInfo.field.getModifiers())) {
                         try {
                             sb.append(" = ");
@@ -88,7 +88,7 @@ public class AnalyzeCommand extends AbstractClassCommand {
                     sb.append("\n");
 
                     if (fieldInfo.fromClass != targetClass) {
-                        sb.append("    └─> 继承自 ").append(fieldInfo.fromClass.getSimpleName()).append("\n");
+                        sb.append("    └─> 继承自 ").append(fieldInfo.fromClass.getName()).append("\n");
                     }
                 }
             }
@@ -110,14 +110,14 @@ public class AnalyzeCommand extends AbstractClassCommand {
                         boolean first = true;
                         for (Class<?> _interface : methodInfo.fromInterfaces) {
                             if (!first) sb.append(", ");
-                            sb.append(_interface.getSimpleName());
+                            sb.append(_interface.getName());
                             first = false;
                         }
                         sb.append("\n");
                     }
 
                     if (methodInfo.fromClass != targetClass) {
-                        sb.append("    └─> 继承自 ").append(methodInfo.fromClass.getSimpleName()).append("\n");
+                        sb.append("    └─> 继承自 ").append(methodInfo.fromClass.getName()).append("\n");
                     }
                 }
             }
@@ -330,10 +330,5 @@ public class AnalyzeCommand extends AbstractClassCommand {
         sb.append(")");
         return sb.toString();
     }
-
-    private String getFieldDescriptor(Field field) {
-        return Modifier.toString(field.getModifiers()) + field.getType().getSimpleName() + " " + field.getName();
-    }
-
 
 }

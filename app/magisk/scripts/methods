@@ -177,7 +177,7 @@ execute_java_client_direct() {
     # 设置类路径
     local classpath="/system/framework/core-oj.jar:/system/framework/core-libart.jar:/system/framework/framework.jar:$JAVA_CLIENT_JAR"
     
-    log "DEBUG" "执行Java命令: app_process -cp $classpath /system/bin $CLASS_NAME $@"
+    log "DEBUG" "执行Java命令: app_process -cp $classpath /system/bin $CLASS_NAME " "$@"
     
     # 执行Java客户端，直接传递所有参数
     /system/bin/app_process -cp "$classpath" /system/bin $CLASS_NAME "$@"
@@ -202,7 +202,7 @@ execute_cpp_client_direct() {
         log "DEBUG" "启用C++客户端调试模式"
     fi
     
-    log "DEBUG" "执行C++命令: $CPP_CLIENT $cpp_args $@"
+    log "DEBUG" "执行C++命令: $CPP_CLIENT $cpp_args " "$@"
     
     # 执行C++客户端，直接传递所有参数
     "$CPP_CLIENT" $cpp_args "$@"
@@ -361,8 +361,7 @@ start_interactive_terminal() {
     color_cyan "║                                                      ║"
     echo -e "${CYAN}║  ${YELLOW}• ${CYAN}class    - 查询类型                               ║"
     echo -e "${CYAN}║  ${YELLOW}• ${CYAN}script   - 执行代码                               ║"
-    echo -e "${CYAN}║  ${GREEN}输入命令直接执行，支持以下操作：${CYAN}                    ║"
-    echo -e "║ • ...                                                ║"
+    echo -e "${CYAN}║  ${YELLOW}• ${CYAN}...                                               ║"
     echo -e "${CYAN}║  ${YELLOW}• ${CYAN}help     - 显示帮助, 查看服务端支持的更多命令     ║"
     echo -e "${CYAN}║  ${YELLOW}终端命令：${CYAN}                                          ║"
     echo -e "${CYAN}║  ${YELLOW}• ${CYAN}exit/quit      - 退出终端                         ║"

@@ -45,9 +45,13 @@ public class FieldCommand extends AbstractClassCommand {
                 case "-s", "--set" -> {
                     setValue = true;
                     showAll = false;
-                    if (i + 1 < args.length - 1) {
-                        valueToSet = args[i + 1];
-                        i++;
+                    if (i + 3 < args.length - 1) {
+                        className = args[i + 1];
+                        fieldName = args[i + 2];
+                        valueToSet = args[i + 3];   // TODO: 解析类型
+                    } else {
+                        context.getLogger().warn("提供给-s的参数不足, 需要至少3个");
+                        return "提供给-s的参数不足, 需要至少3个\n" + getHelpText();
                     }
                 }
                 case "-v", "--value" -> {

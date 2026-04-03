@@ -270,9 +270,9 @@ public class ClassMain extends CommandBase {
                         class field -g java.lang.System out
                         class field -s java.lang.System out "test"
                         class field -v com.example.MyClass myField
-                        class constructor java.lang.Integer Integer:"123"
+                        class constructor java.lang.Integer Integer:114514
                         class constructor java.lang.String String:"hello"
-                        class constructor java.util.ArrayList Integer:"10"
+                        class constructor java.util.ArrayList Integer:1 Integer:2 Integer:3
                         class search class *Activity
                         class search method onCreate
                         class search field m*

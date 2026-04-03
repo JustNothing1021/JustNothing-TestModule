@@ -84,7 +84,7 @@ public class ConstructorCommand extends AbstractClassCommand {
         Object instance = constructor.newInstance(params.toArray());
 
         context.getLogger().info("创建实例成功: " + instance);
-        return "创建实例成功\n============================" + instance +
+        return "创建实例成功\n============================\n" + instance +
                 "\n============================" +
                 "\n类型: " + instance.getClass().getName() +
                 "\nHash: " + System.identityHashCode(instance);
