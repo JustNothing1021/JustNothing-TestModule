@@ -332,8 +332,8 @@ public class CommandExecutor {
               watch                             - 监控字段或方法的变化
               trace                             - 跟踪方法调用链
               profile                           - 性能分析
-              export-context                    - 导出设备xtchttp上下文信息）
-              threads                          - 列出所有线程及其状态
+              export-context                    - 导出设备xtchttp上下文信息
+              threads                           - 列出所有线程及其状态
               system                            - 显示系统信息
               breakpoint                        - 设置和管理断点
               packages                          - 列出已知包名
