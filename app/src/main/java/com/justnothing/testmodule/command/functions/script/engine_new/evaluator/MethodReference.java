@@ -206,7 +206,7 @@ public class MethodReference {
         } else if (isStatic) {
             type = "static ";
         } else {
-            type = "";
+            type = "bound=" + targetInstance + " ";
         }
         return "MethodReference[" + type + targetClass.getSimpleName() + "::" + methodName + "]";
     }

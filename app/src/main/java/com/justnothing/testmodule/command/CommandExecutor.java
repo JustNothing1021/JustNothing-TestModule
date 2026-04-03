@@ -10,6 +10,7 @@ import com.justnothing.testmodule.command.functions.examples.InteractiveExampleM
 import com.justnothing.testmodule.command.functions.examples.OutputExampleMain;
 import com.justnothing.testmodule.command.functions.exportcontext.ExportContextMain;
 import com.justnothing.testmodule.command.functions.help.HelpMain;
+import com.justnothing.testmodule.command.functions.alias.AliasMain;
 import com.justnothing.testmodule.command.functions.hook.HookMain;
 import com.justnothing.testmodule.command.functions.memory.MemoryMain;
 import com.justnothing.testmodule.command.functions.nativecmd.NativeMain;
@@ -24,6 +25,7 @@ import com.justnothing.testmodule.command.functions.CommandBase;
 import com.justnothing.testmodule.command.output.StringBuilderCollector;
 import com.justnothing.testmodule.command.output.IOutputHandler;
 import com.justnothing.testmodule.command.output.SystemOutputRedirector;
+import com.justnothing.testmodule.command.utils.ArgumentGroup;
 import com.justnothing.testmodule.command.utils.CommandArgumentParser;
 import com.justnothing.testmodule.utils.reflect.ClassLoaderManager;
 import com.justnothing.testmodule.utils.functions.Logger;
@@ -67,6 +69,7 @@ public class CommandExecutor {
         registerCommand("bytecode", new BytecodeMain());
         registerCommand("native", new NativeMain());
         registerCommand("performance", new PerformanceMain());
+        registerCommand("alias", new AliasMain());
         
         BytecodeMain bytecodeExecutor = new BytecodeMain("bytecode");
         registerCommand("binfo", bytecodeExecutor);
@@ -224,6 +227,8 @@ public class CommandExecutor {
             output.println("没有指定命令 (可以用help来获取帮助)");
             return;
         }
+        
+        fullCommand = AliasMain.resolveAlias(fullCommand);
 
         CommandArgumentParser.ParseResult parseResult = CommandArgumentParser.parseOptions(fullCommand, logger);
         
@@ -244,6 +249,9 @@ public class CommandExecutor {
         // 去掉命令本身，只保留参数
         String[] args = new String[commandParams.length - 1];
         System.arraycopy(commandParams, 1, args, 0, args.length);
+        
+        // 解析 ArgumentGroup（提供多种参数格式）
+        ArgumentGroup argGroup = ArgumentGroup.parse(commandString.trim());
 
         // 创建执行上下文
         CmdExecContext context = new CmdExecContext(
@@ -252,7 +260,8 @@ public class CommandExecutor {
             commandString,
             getTargetPackage(),
             getClassLoader(),
-            output
+            output,
+            argGroup
         );
 
         try {
@@ -286,7 +295,8 @@ public class CommandExecutor {
             String origCommand, // 除去命令名外完整的请求命令行
             String targetPackage, // 请求的目标包名
             ClassLoader classLoader, // 指定的类加载器
-            IOutputHandler output // 输出流
+            IOutputHandler output, // 输出流
+            ArgumentGroup argGroup // 多格式参数组
     ) {
 
         public void print(Object obj) {
@@ -330,6 +340,7 @@ public class CommandExecutor {
               hook                              - 动态Hook注入器
               reflect                           - 使用反射访问和操作类的私有成员
               native                            - 查看和调试Native代码
+              alias                             - 管理命令别名
 
               bytecode                          - 查看和分析Java字节码 (未正式使用, 很可能实现不了)
                 binfo                           - 查看类的字节码信息 (快捷方式)

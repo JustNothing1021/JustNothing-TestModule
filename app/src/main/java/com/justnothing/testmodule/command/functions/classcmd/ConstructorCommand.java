@@ -30,31 +30,21 @@ public class ConstructorCommand extends AbstractClassCommand {
 
         for (int i = 1; i < args.length; i++) {
             String paramStr = args[i];
-            int colonIndex = paramStr.indexOf(':');
-            if (colonIndex <= 0) {
-                context.getLogger().warn("参数形式不正确，获取到的: " + paramStr);
-                return "参数形式不正确: " + paramStr +
-                        "; 应为Type:value" +
-                        "\n\n示例: " +
-                        "\n    Integer:114514, Boolean:true";
-            }
-
-            String typeName = paramStr.substring(0, colonIndex);
-            String valueExpr = paramStr.substring(colonIndex + 1);
 
             try {
-                Object parsedValue = TypeParser.parse(typeName, valueExpr, context.getClassLoader());
-                params.add(parsedValue);
-                assert parsedValue != null;
-                paramTypes.add(parsedValue.getClass());
+                ExpressionParser.ParseResult result = ExpressionParser.parse(paramStr, context.getClassLoader());
+                params.add(result.value);
+                paramTypes.add(result.type);
+                
+                String typeHint = result.hasTypeHint ? " (有类型提示)" : "";
+                String valueStr = result.value != null ? result.value.toString() : "null";
                 context.getLogger().info("参数" + (params.size() - 1) +
-                        ": (" + paramTypes.get(paramTypes.size()-1).getName() +")" +
-                        params.get(paramTypes.size()-1).toString());
+                        ": (" + result.type.getName() + ")" + valueStr + typeHint);
             } catch (Exception e) {
-                context.getLogger().warn("无法解析参数" + paramStr);
+                context.getLogger().warn("无法解析参数: " + paramStr);
                 Map<String, Object> errContext = new HashMap<>();
-                errContext.put("参数索引", i-1);
-                errContext.put("参数字符串", paramStr);
+                errContext.put("参数索引", i - 1);
+                errContext.put("参数表达式", paramStr);
                 return CommandExceptionHandler.handleException("class constructor", e, context.getLogger(), errContext, "解析参数失败");
             }
         }
@@ -95,13 +85,28 @@ public class ConstructorCommand extends AbstractClassCommand {
         return """
             语法: class constructor <class_name> [params...]
             
-            创建类的实例.
-            提供参数的格式: Type:value (e.g. Integer:114514)
+            创建类的实例。
+            参数支持表达式语法，可以直接写值或使用类型提示。
+            
+            参数格式:
+                - 直接表达式: 123, "hello", true, null
+                - 带类型提示: int:123, String:"hello", boolean:true
+            
+            表达式支持:
+                - 字面量: 123, 3.14, "text", true, null
+                - 算术运算: 1 + 2, 10 * 5
+                - 字符串拼接: "Hello " + "World"
+                - 方法调用: Math.abs(-5)
+                - 字段访问: SomeClass.FIELD
+                - 对象创建: new ArrayList()
             
             示例:
-                class constructor java.lang.Integer Integer:114514
+                class constructor java.lang.Integer 114514
+                class constructor java.lang.Integer int:114514
+                class constructor java.lang.String "1919810"
                 class constructor java.lang.String String:"1919810"
-                class constructor java.util.ArrayList Integer:1 Integer:2 Integer:3
+                class constructor java.util.ArrayList
+                class constructor java.io.File "/sdcard/test.txt"
             """;
     }
 

@@ -3,7 +3,6 @@ package com.justnothing.testmodule.command.functions.classcmd;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.reflect.ReflectionUtils;
 
-import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -63,33 +62,23 @@ public class InvokeCommand extends AbstractClassCommand {
 
         for (int i = argIndex; i < args.length; i++) {
             String paramStr = args[i];
-            int colonIndex = paramStr.indexOf(':');
-            if (colonIndex <= 0) {
-                context.getLogger().warn("参数形式不正确，获取到的: " + paramStr);
-                return "参数形式不正确: " + paramStr +
-                        "; 应为Type:value" +
-                        "\n\n示例: " +
-                        "\n    Integer:123, String:\"hello\", Boolean:true";
-            }
-
-            String typeName = paramStr.substring(0, colonIndex);
-            String valueExpr = paramStr.substring(colonIndex + 1);
 
             try {
-                Object parsedValue = TypeParser.parse(typeName, valueExpr, context.getClassLoader());
-                params.add(parsedValue);
-                paramTypes.add(parsedValue == null ? Void.class : parsedValue.getClass());
+                ExpressionParser.ParseResult result = ExpressionParser.parse(paramStr, context.getClassLoader());
+                params.add(result.value);
+                paramTypes.add(result.type);
+                
+                String typeHint = result.hasTypeHint ? " (有类型提示)" : "";
+                String valueStr = result.value != null ? result.value.toString() : "null";
                 context.getLogger().info("参数" + (params.size() - 1) +
-                        ": (" + paramTypes.get(paramTypes.size()-1).getName() +")" +
-                        params.get(paramTypes.size()-1).toString());
+                        ": (" + result.type.getName() + ")" + valueStr + typeHint);
             } catch (Exception e) {
                 Map<String, Object> errContext = Map.of(
-                        "参数索引", i-1,
-                        "参数类型", typeName,
-                        "参数值表达式", valueExpr,
-                        "错误信息", e.getMessage() == null ? e.getMessage() : "没有详细信息"
+                        "参数索引", i - argIndex,
+                        "参数表达式", paramStr,
+                        "错误信息", e.getMessage() != null ? e.getMessage() : "没有详细信息"
                 );
-                return CommandExceptionHandler.handleException("class invoke", e, context.getLogger(), errContext, "无法解析参数" + paramStr);
+                return CommandExceptionHandler.handleException("class invoke", e, context.getLogger(), errContext, "无法解析参数: " + paramStr);
             }
         }
 
@@ -127,7 +116,6 @@ public class InvokeCommand extends AbstractClassCommand {
         }
 
         method.setAccessible(true);
-        context.getExecContext().output().println("找到了对应方法, 开始调用...");
         Object result;
 
         if (Modifier.isStatic(method.getModifiers())) {
@@ -141,6 +129,7 @@ public class InvokeCommand extends AbstractClassCommand {
                     Map<String, Object> errContext = Map.of(
                             "类名", className,
                             "方法名", methodName,
+                            "参数", params,
                             "错误信息", e.getMessage() == null ? e.getMessage() : "没有详细信息"
                     );
                     return CommandExceptionHandler.handleException("class invoke", e, context.getLogger(), errContext, "非静态方法需要一个示例，在创建实例的时候出现错误");
@@ -165,14 +154,36 @@ public class InvokeCommand extends AbstractClassCommand {
     @Override
     public String getHelpText() {
         return """
-            语法: class invoke <class> <method> [params...]
+            语法: class invoke [--super] [--interfaces] <class> <method> [params...]
             
-            调用某个类中的单一方法.
-            提供参数的格式: Type:value (e.g. Integer:114514)
+            调用某个类中的单一方法。
+            参数支持表达式语法，可以直接写值或使用类型提示。
+            
+            参数格式:
+                - 直接表达式: 123, "hello", true, null
+                - 带类型提示: int:123, String:"hello", boolean:true
+            
+            表达式支持:
+                - 字面量: 123, 3.14, "text", true, null
+                - 算术运算: 1 + 2, 10 * 5
+                - 字符串拼接: "Hello " + "World"
+                - 方法调用: Math.abs(-5)
+                - 字段访问: SomeClass.FIELD
+                - 对象创建: new ArrayList()
+                - 三元运算: x > 0 ? x : -x
+            
+            选项:
+                --super       查找父类方法
+                --interfaces  查找接口方法
             
             示例:
+                class invoke java.lang.Integer parseInt "123"
                 class invoke java.lang.Integer parseInt String:"123"
+                class invoke java.lang.Math max 10 20
+                class invoke java.lang.Math max int:10 int:20
                 class invoke android.app.ActivityThread currentActivityThread
+                class invoke com.example.MyClass myMethod "text" 123 true
+                class invoke com.example.Utils calculate 1 + 2 * 3
             """;
     }
 

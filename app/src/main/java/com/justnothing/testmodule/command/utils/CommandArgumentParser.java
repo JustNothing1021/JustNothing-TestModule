@@ -1,6 +1,8 @@
 package com.justnothing.testmodule.command.utils;
 
 import com.justnothing.testmodule.utils.functions.Logger;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 public class CommandArgumentParser {
@@ -43,7 +45,57 @@ public class CommandArgumentParser {
     }
     
     public static String[] splitArguments(String cmdline) {
-        return cmdline.split(" ");
+        if (cmdline == null || cmdline.trim().isEmpty()) {
+            return new String[0];
+        }
+        
+        List<String> args = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        boolean inQuotes = false;
+        boolean inSingleQuotes = false;
+        char quoteChar = '"';
+        
+        for (int i = 0; i < cmdline.length(); i++) {
+            char c = cmdline.charAt(i);
+            
+            if (inQuotes || inSingleQuotes) {
+                current.append(c);
+                
+                if (c == '\\' && i + 1 < cmdline.length()) {
+                    char next = cmdline.charAt(i + 1);
+                    if (next == quoteChar || next == '\\') {
+                        current.append(next);
+                        i++;
+                        continue;
+                    }
+                }
+                
+                if (c == quoteChar) {
+                    if (inQuotes) inQuotes = false;
+                    else if (inSingleQuotes) inSingleQuotes = false;
+                }
+            } else {
+                if (c == '"' || c == '\'') {
+                    inQuotes = (c == '"');
+                    inSingleQuotes = (c == '\'');
+                    quoteChar = c;
+                    current.append(c);
+                } else if (c == ' ' || c == '\t') {
+                    if (current.length() > 0) {
+                        args.add(current.toString());
+                        current.setLength(0);
+                    }
+                } else {
+                    current.append(c);
+                }
+            }
+        }
+        
+        if (current.length() > 0) {
+            args.add(current.toString());
+        }
+        
+        return args.toArray(new String[0]);
     }
     
     public static String getOptionValue(String[] args, String... optionNames) {
