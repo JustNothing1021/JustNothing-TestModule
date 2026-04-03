@@ -1,0 +1,444 @@
+// 迷失森林 - 文字冒险游戏
+// 分支剧情，你的选择决定命运！
+
+auto random = Random.new();
+
+auto hp = 100;
+auto gold = 0;
+auto hasSword = false;
+auto hasTorch = false;
+auto hasKey = false;
+auto hasAmulet = false;
+auto savedVillager = false;
+auto defeatedBoss = false;
+auto endings = 0;
+auto reputation = 0;
+
+println("╔════════════════════════════════════╗");
+println("║          迷失森林                  ║");
+println("║        The Lost Forest             ║");
+println("╚════════════════════════════════════╝");
+println("");
+println("你在一片神秘的森林中醒来...");
+println("四周是高大的古树，阳光透过树叶洒下。");
+println("你完全不记得自己是怎么来到这里的。");
+println("");
+Thread.sleep(1500);
+
+auto showStatus = () -> {
+    println("");
+    print("[HP:" + hp);
+    if (hasSword) print(" 剑");
+    if (hasTorch) print(" 火把");
+    if (hasKey) print(" 钥匙");
+    if (hasAmulet) print(" 护身符");
+    println(" 金币:" + gold + "]");
+};
+
+auto getChoice = (options) -> {
+    auto i = 0;
+    while (i < size(options)) {
+        println((i + 1) + ". " + options[i]);
+        i = i + 1;
+    }
+    print("> ");
+    return Integer.parseInt(readLine());
+};
+
+auto takeDamage = (amount) -> {
+    hp = hp - amount;
+    println("你受到了 " + amount + " 点伤害！");
+    if (hp <= 0) {
+        println("");
+        println("═════════════════════════");
+        println("    你倒下了...         ");
+        println("    结局: 森林亡魂      ");
+        println("═════════════════════════");
+        endings = -1;
+    }
+};
+
+auto scene1 = () -> {
+    println("");
+    println("═════════════════════════════════════");
+    println("你站起身来，环顾四周。");
+    println("东边传来潺潺水声，西边似乎有炊烟。");
+    println("北边是一条阴暗的小路，南边是茂密的灌木丛。");
+    showStatus();
+    
+    auto choice = getChoice(["向东走(溪流)", "向西走(炊烟)", "向北走(小路)", "向南走(灌木丛)"]);
+    
+    if (choice == 1) {
+        sceneStream();
+    } else if (choice == 2) {
+        sceneVillage();
+    } else if (choice == 3) {
+        sceneDarkPath();
+    } else {
+        sceneBushes();
+    }
+};
+
+auto sceneStream = () -> {
+    println("");
+    println("═════════════════════════════════════");
+    println("你来到一条清澈的小溪边。");
+    println("溪水冰凉甘甜，你喝了几口，感觉精神了许多。");
+    
+    if (hp < 100) {
+        hp = Math.min(hp + 20, 100);
+        println("恢复了 20 HP！");
+    }
+    
+    println("溪边有一个老渔夫在钓鱼。");
+    println("他看了你一眼，说：'迷路了吧？这片森林很危险。'");
+    
+    showStatus();
+    auto choice = getChoice(["询问出路", "询问森林的秘密", "离开"]);
+    
+    if (choice == 1) {
+        println("");
+        println("老渔夫：'往西走有个村庄，那里也许能帮你。'");
+        println("'不过要小心，最近森林里出现了怪物。'");
+        sceneStream();
+    } else if (choice == 2) {
+        println("");
+        println("老渔夫压低声音：'传说森林深处有一座古堡...'");
+        println("'那里藏着一件神器，但也有可怕的守护者。'");
+        println("他递给你一把生锈的钥匙。");
+        println("'这是我多年前捡到的，也许对你有用。'");
+        hasKey = true;
+        sceneStream();
+    } else {
+        scene1();
+    }
+};
+
+auto sceneVillage = () -> {
+    println("");
+    println("═════════════════════════════════════");
+    
+    if (!savedVillager) {
+        println("你来到一个小村庄，但这里一片死寂。");
+        println("房屋破败，到处是打斗的痕迹。");
+        println("突然，你听到废墟中传来微弱的呼救声！");
+        
+        showStatus();
+        auto choice = getChoice(["去救人", "谨慎观察", "离开"]);
+        
+        if (choice == 1) {
+            println("");
+            println("你冲向废墟，发现一个村民被困在倒塌的房梁下。");
+            println("你用力搬开木头，救出了他。");
+            savedVillager = true;
+            println("");
+            println("村民感激地说：'谢谢你！怪物袭击了村庄...'");
+            println("'它们把其他人抓走了，往北边的古堡去了！'");
+            println("他给你一把剑：'拿着这个，也许能帮到你。'");
+            hasSword = true;
+            gold = gold + 50;
+            println("获得 50 金币！");
+            sceneVillage();
+        } else if (choice == 2) {
+            println("");
+            println("你小心翼翼地观察，发现脚印通向北边。");
+            println("看来这里发生过战斗，有人被带走了。");
+            sceneVillage();
+        } else {
+            scene1();
+        }
+    } else {
+        println("村庄依然安静，但你救的村民还在这里。");
+        println("'你要去古堡吗？请小心...'");
+        
+        showStatus();
+        auto choice = getChoice(["询问古堡", "休息恢复", "离开"]);
+        
+        if (choice == 1) {
+            println("");
+            println("'古堡在森林最北边，那里有个邪恶的巫师...'");
+            println("'他收集灵魂来维持自己的生命。'");
+            println("'如果你要去，一定要找到护身符，它能保护你！'");
+            sceneVillage();
+        } else if (choice == 2) {
+            hp = 100;
+            println("你休息了一会，HP 完全恢复！");
+            sceneVillage();
+        } else {
+            scene1();
+        }
+    }
+};
+
+auto sceneDarkPath = () -> {
+    println("");
+    println("═════════════════════════════════════");
+    println("你走进阴暗的小路，四周越来越黑。");
+    
+    if (!hasTorch) {
+        println("你几乎看不清路，只能摸索着前进。");
+        println("突然，你踩到了什么，发出咔嚓一声！");
+        takeDamage(10);
+        
+        if (endings < 0) return;
+        
+        println("原来是陷阱...你需要光源。");
+        scene1();
+    } else {
+        println("火把的光芒驱散了黑暗。");
+        println("你发现路边有一个宝箱！");
+        
+        if (!hasAmulet) {
+            println("里面有一枚神秘的护身符，散发着微弱的光芒。");
+            
+            showStatus();
+            auto choice = getChoice(["拿走护身符", "不碰它"]);
+            
+            if (choice == 1) {
+                hasAmulet = true;
+                println("你拿起了护身符，感觉一股暖流涌入身体。");
+                println("护身符似乎在指引你向北...");
+                sceneCastleGate();
+            } else {
+                scene1();
+            }
+        } else {
+            sceneCastleGate();
+        }
+    }
+};
+
+auto sceneBushes = () -> {
+    println("");
+    println("═════════════════════════════════════");
+    println("你拨开灌木丛，发现一个隐蔽的洞穴。");
+    println("洞穴里似乎有微弱的光芒...");
+    
+    showStatus();
+    auto choice = getChoice(["进入洞穴", "在洞口观察", "离开"]);
+    
+    if (choice == 1) {
+        println("");
+        println("你走进洞穴，发现里面是一个强盗的藏身处！");
+        println("强盗们发现了你！");
+        
+        if (hasSword) {
+            println("你拔出剑，与他们战斗！");
+            auto roll = random.nextInt(100);
+            if (roll < 60) {
+                println("你击败了强盗！");
+                gold = gold + 100;
+                hasTorch = true;
+                println("获得 100 金币和一把火把！");
+            } else {
+                takeDamage(30);
+                if (endings < 0) return;
+                println("你勉强逃脱了...");
+            }
+        } else {
+            println("你没有武器，只能逃跑！");
+            takeDamage(20);
+            if (endings < 0) return;
+        }
+        scene1();
+    } else if (choice == 2) {
+        println("");
+        println("你仔细观察，发现洞穴里有火把和宝箱。");
+        println("强盗们正在睡觉...");
+        println("你悄悄溜进去，拿走了一把火把。");
+        hasTorch = true;
+        scene1();
+    } else {
+        scene1();
+    }
+};
+
+auto sceneCastleGate = () -> {
+    println("");
+    println("═════════════════════════════════════");
+    println("你来到一座阴森的古堡前。");
+    println("巨大的铁门紧闭着，门上有一个锁孔。");
+    
+    if (hasKey) {
+        println("你试着用那把生锈的钥匙...");
+        println("咔嚓！门开了！");
+        sceneCastle();
+    } else {
+        println("门锁着，你需要找到钥匙。");
+        scene1();
+    }
+};
+
+auto sceneCastle = () -> {
+    println("");
+    println("═════════════════════════════════════");
+    println("你走进古堡，大厅里空荡荡的。");
+    println("楼梯通向上层，那里传来奇怪的声音。");
+    println("角落里有一扇小门，似乎通往地下室。");
+    
+    showStatus();
+    auto choice = getChoice(["上楼", "去地下室", "搜索大厅"]);
+    
+    if (choice == 1) {
+        sceneBoss();
+    } else if (choice == 2) {
+        sceneDungeon();
+    } else {
+        println("");
+        println("你在大厅搜索，发现了一些金币。");
+        gold = gold + 30;
+        sceneCastle();
+    }
+};
+
+auto sceneDungeon = () -> {
+    println("");
+    println("═════════════════════════════════════");
+    println("地下室是一个地牢，关着许多村民。");
+    println("他们看到你，眼中充满希望。");
+    
+    showStatus();
+    auto choice = getChoice(["释放村民", "继续探索", "返回"]);
+    
+    if (choice == 1) {
+        println("");
+        println("你打开了牢门，村民们感激地逃走了。");
+        println("其中一人告诉你：'巫师在楼上！小心他的魔法！'");
+        reputation = reputation + 50;
+        sceneCastle();
+    } else if (choice == 2) {
+        println("");
+        println("你在角落发现了一个宝箱！");
+        gold = gold + 80;
+        println("获得 80 金币！");
+        sceneDungeon();
+    } else {
+        sceneCastle();
+    }
+};
+
+auto sceneBoss = () -> {
+    println("");
+    println("═════════════════════════════════════");
+    println("你走上楼梯，来到一个巨大的房间。");
+    println("一个穿着黑袍的巫师站在中央，周围环绕着紫色的光芒。");
+    println("");
+    println("'又一个愚蠢的冒险者...' 巫师冷笑道。");
+    println("'你的灵魂将成为我永恒生命的一部分！'");
+    println("");
+    
+    showStatus();
+    auto choice = getChoice(["战斗！", "尝试谈判", "逃跑"]);
+    
+    if (choice == 1) {
+        if (hasSword && hasAmulet) {
+            println("");
+            println("你拔出剑，护身符发出耀眼的光芒！");
+            println("巫师的魔法被护身符阻挡了！");
+            println("");
+            println("你冲向巫师，一剑刺穿了他的心脏！");
+            defeatedBoss = true;
+            endingVictory();
+        } else if (hasSword) {
+            println("");
+            println("你拔出剑，但巫师的魔法太强了！");
+            takeDamage(40);
+            if (endings < 0) return;
+            println("你勉强击退了巫师，但身受重伤...");
+            defeatedBoss = true;
+            endingPyrrhic();
+        } else {
+            println("");
+            println("你没有武器，根本无法对抗巫师！");
+            takeDamage(50);
+            if (endings < 0) return;
+            endingSoul();
+        }
+    } else if (choice == 2) {
+        println("");
+        println("巫师大笑：'谈判？你以为我会和你谈判？'");
+        println("'不过...如果你愿意成为我的仆人...'");
+        println("");
+        auto choice2 = getChoice(["同意", "拒绝"]);
+        
+        if (choice2 == 1) {
+            endingServant();
+        } else {
+            takeDamage(30);
+            if (endings < 0) return;
+            sceneBoss();
+        }
+    } else {
+        println("");
+        println("你转身逃跑，但巫师的魔法击中了你的背！");
+        takeDamage(30);
+        if (endings < 0) return;
+        sceneCastle();
+    }
+};
+
+auto endingVictory = () -> {
+    println("");
+    println("╔════════════════════════════════════╗");
+    println("║          ★ 真结局 ★               ║");
+    println("║        英雄的胜利                  ║");
+    println("╠════════════════════════════════════╣");
+    println("║ 你击败了邪恶的巫师，解救了村民！   ║");
+    println("║ 森林恢复了和平，                  ║");
+    println("║ 你成为了传说中的英雄！            ║");
+    println("║                                    ║");
+    println("║ 收集物品: 剑、火把、钥匙、护身符  ║");
+    println("║ 金币: " + gold);
+    println("╚════════════════════════════════════╝");
+    endings = 1;
+};
+
+auto endingPyrrhic = () -> {
+    println("");
+    println("╔════════════════════════════════════╗");
+    println("║          普通结局                 ║");
+    println("║        惨胜                       ║");
+    println("╠════════════════════════════════════╣");
+    println("║ 你击败了巫师，但付出了惨重代价。  ║");
+    println("║ 你带着伤痛离开了森林，            ║");
+    println("║ 但这段经历将永远困扰你...         ║");
+    println("╚════════════════════════════════════╝");
+    endings = 2;
+};
+
+auto endingSoul = () -> {
+    println("");
+    println("╔════════════════════════════════════╗");
+    println("║          坏结局                   ║");
+    println("║        灵魂囚徒                   ║");
+    println("╠════════════════════════════════════╣");
+    println("║ 巫师的魔法击中了你...             ║");
+    println("║ 你的灵魂被永远囚禁在古堡中，      ║");
+    println("║ 成为巫师永恒生命的祭品。          ║");
+    println("╚════════════════════════════════════╝");
+    endings = 3;
+};
+
+auto endingServant = () -> {
+    println("");
+    println("╔════════════════════════════════════╗");
+    println("║          黑暗结局                 ║");
+    println("║        巫师的仆人                 ║");
+    println("╠════════════════════════════════════╣");
+    println("║ 你成为了巫师的仆人，              ║");
+    println("║ 永远侍奉他，失去了自由...         ║");
+    println("║ 但至少，你还活着。                ║");
+    println("╚════════════════════════════════════╝");
+    endings = 4;
+};
+
+scene1();
+
+if (endings == 0) {
+    println("");
+    println("你离开了森林，回到了熟悉的世界。");
+    println("虽然你没能解开森林的秘密，");
+    println("但至少你活了下来。");
+    println("");
+    println("结局: 平凡归途");
+}

@@ -175,6 +175,17 @@ public class ScriptRunner {
             message = message + " -> " + rootCause.getClass().getSimpleName() + ": " + rootCause.getMessage();
         }
         
+        String scriptCallStack = "";
+        if (e instanceof EvaluationException) {
+            scriptCallStack = ((EvaluationException) e).formatScriptCallStack();
+        } else if (rootCause instanceof EvaluationException) {
+            scriptCallStack = ((EvaluationException) rootCause).formatScriptCallStack();
+        }
+        
+        if (!scriptCallStack.isEmpty()) {
+            message = message + "\n\n" + scriptCallStack;
+        }
+        
         RuntimeException simplified = new RuntimeException(message);
         simplified.setStackTrace(rootCause != null ? rootCause.getStackTrace() : e.getStackTrace());
         return simplified;

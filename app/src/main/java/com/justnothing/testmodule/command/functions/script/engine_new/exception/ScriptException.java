@@ -2,6 +2,9 @@ package com.justnothing.testmodule.command.functions.script.engine_new.exception
 
 import com.justnothing.testmodule.command.functions.script.engine_new.ast.SourceLocation;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
 
 /**
@@ -18,6 +21,7 @@ public abstract class ScriptException extends RuntimeException {
     private final int line;
     private final int column;
     private final ErrorCode errorCode;
+    private List<String> scriptCallStack = new ArrayList<>();
     
     public ScriptException(String message, int line, int column, ErrorCode errorCode) {
         super(message);
@@ -51,6 +55,30 @@ public abstract class ScriptException extends RuntimeException {
     
     public ErrorCode getErrorCode() {
         return errorCode;
+    }
+    
+    public void setScriptCallStack(List<String> callStack) {
+        this.scriptCallStack = callStack != null ? new ArrayList<>(callStack) : new ArrayList<>();
+    }
+    
+    public List<String> getScriptCallStack() {
+        return Collections.unmodifiableList(scriptCallStack);
+    }
+    
+    public boolean hasScriptCallStack() {
+        return !scriptCallStack.isEmpty();
+    }
+    
+    public String formatScriptCallStack() {
+        if (scriptCallStack.isEmpty()) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append("脚本调用栈:\n");
+        for (int i = scriptCallStack.size() - 1; i >= 0; i--) {
+            sb.append("  at ").append(scriptCallStack.get(i)).append("\n");
+        }
+        return sb.toString();
     }
     
     @Override

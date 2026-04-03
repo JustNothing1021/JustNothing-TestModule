@@ -1,0 +1,355 @@
+// 地牢探险 - Roguelike游戏
+// 随机生成地牢，探索战斗，收集宝藏！
+
+auto random = Random.new();
+
+auto player = HashMap.new();
+player.put("hp", 100);
+player.put("maxHp", 100);
+player.put("attack", 15);
+player.put("defense", 5);
+player.put("gold", 0);
+player.put("level", 1);
+player.put("exp", 0);
+player.put("potions", 3);
+player.put("keys", 0);
+player.put("floor", 1);
+player.put("kills", 0);
+
+auto enemies = [
+    ["史莱姆", 20, 8, 2, 10, 15],
+    ["哥布林", 35, 12, 5, 20, 25],
+    ["骷髅兵", 45, 15, 8, 30, 35],
+    ["蝙蝠群", 30, 18, 3, 25, 30],
+    ["蜘蛛", 40, 14, 6, 28, 32],
+    ["兽人", 60, 20, 12, 45, 50],
+    ["幽灵", 50, 25, 5, 40, 45],
+    ["石像鬼", 70, 22, 15, 55, 60],
+    ["暗影刺客", 55, 30, 8, 50, 55],
+    ["火焰元素", 80, 28, 10, 70, 75]
+];
+
+auto bosses = [
+    ["地牢守护者", 150, 35, 20, 100, 150],
+    ["骷髅王", 200, 40, 25, 150, 200],
+    ["暗黑龙", 300, 50, 30, 250, 300]
+];
+
+auto items = [
+    ["治疗药水", "potion", 40],
+    ["大治疗药水", "potion", 80],
+    ["力量卷轴", "buff_atk", 5],
+    ["防御卷轴", "buff_def", 3],
+    ["钥匙", "key", 1],
+    ["金币袋", "gold", 50]
+];
+
+auto weapons = [
+    ["生锈的剑", 5],
+    ["铁剑", 10],
+    ["钢剑", 15],
+    ["精钢剑", 20],
+    ["符文剑", 30]
+];
+
+auto armors = [
+    ["布甲", 3],
+    ["皮甲", 6],
+    ["锁子甲", 10],
+    ["板甲", 15],
+    ["龙鳞甲", 25]
+];
+
+auto currentWeapon = 0;
+auto currentArmor = 0;
+auto roomsExplored = 0;
+auto roomsPerFloor = 10;
+auto gameRunning = true;
+
+println("╔══════════════════════════════════╗");
+println("║        地牢探险 Roguelike        ║");
+println("╚══════════════════════════════════╝");
+println("");
+println("你站在古老地牢的入口...");
+println("传说深处有无数宝藏，也有可怕的怪物。");
+println("你能深入到第几层？");
+println("");
+Thread.sleep(1000);
+
+auto showStatus = () -> {
+    println("");
+    println("┌─────────────────────────────────┐");
+    println("│ 第" + player.get("floor") + "层  房间:" + roomsExplored + "/" + roomsPerFloor);
+    println("│ HP: " + player.get("hp") + "/" + player.get("maxHp") + "  药水:" + player.get("potions"));
+    println("│ 攻击:" + player.get("attack") + "  防御:" + player.get("defense"));
+    println("│ 金币:" + player.get("gold") + "  钥匙:" + player.get("keys"));
+    println("│ 等级:" + player.get("level") + "  击杀:" + player.get("kills"));
+    println("└─────────────────────────────────┘");
+};
+
+auto levelUp = () -> {
+    auto level = player.get("level");
+    player.put("level", level + 1);
+    player.put("maxHp", player.get("maxHp") + 20);
+    player.put("hp", player.get("maxHp"));
+    player.put("attack", player.get("attack") + 3);
+    player.put("defense", player.get("defense") + 2);
+    println("");
+    println("★ ☆ ★ 升级！现在是 " + player.get("level") + " 级！ ★ ☆ ★");
+    println("最大HP+20, 攻击+3, 防御+2");
+};
+
+auto addExp = (amount) -> {
+    player.put("exp", player.get("exp") + amount);
+    auto need = player.get("level") * 50;
+    while (player.get("exp") >= need) {
+        player.put("exp", player.get("exp") - need);
+        levelUp();
+        need = player.get("level") * 50;
+    }
+};
+
+auto battle = (enemyData) -> {
+    auto name = enemyData[0];
+    auto eHp = enemyData[1];
+    auto eAtk = enemyData[2];
+    auto eDef = enemyData[3];
+    auto eGold = enemyData[4];
+    auto eExp = enemyData[5];
+    
+    println("");
+    println("╔══════════════════════════════╗");
+    println("║        遭遇 " + name + "！");
+    println("║        HP: " + eHp + "  ATK:" + eAtk + "  DEF:" + eDef);
+    println("╚══════════════════════════════╝");
+    
+    while (eHp > 0 && player.get("hp") > 0) {
+        println("");
+        println("你的HP: " + player.get("hp") + "/" + player.get("maxHp"));
+        println("敌人HP: " + eHp);
+        println("1.攻击 2.药水 3.逃跑");
+        print("> ");
+        auto choice = Integer.parseInt(readLine());
+        
+        if (choice == 1) {
+            auto dmg = player.get("attack") - eDef / 2;
+            if (dmg < 1) dmg = 1;
+            dmg = dmg + random.nextInt(5);
+            eHp = eHp - dmg;
+            println("你造成 " + dmg + " 点伤害！");
+            
+            if (eHp > 0) {
+                auto eDmg = eAtk - player.get("defense") / 2;
+                if (eDmg < 1) eDmg = 1;
+                eDmg = eDmg + random.nextInt(3);
+                player.put("hp", player.get("hp") - eDmg);
+                println(name + "反击造成 " + eDmg + " 点伤害！");
+            }
+        } else if (choice == 2) {
+            if (player.get("potions") > 0) {
+                player.put("potions", player.get("potions") - 1);
+                auto heal = 50;
+                auto newHp = player.get("hp") + heal;
+                if (newHp > player.get("maxHp")) newHp = player.get("maxHp");
+                player.put("hp", newHp);
+                println("恢复 " + heal + " HP！");
+            } else {
+                println("没有药水了！");
+            }
+            auto eDmg = eAtk - player.get("defense") / 2;
+            if (eDmg < 1) eDmg = 1;
+            player.put("hp", player.get("hp") - eDmg);
+            println(name + "攻击造成 " + eDmg + " 点伤害！");
+        } else if (choice == 3) {
+            if (random.nextInt(100) < 40) {
+                println("成功逃跑！");
+                return false;
+            } else {
+                println("逃跑失败！");
+                auto eDmg = eAtk - player.get("defense") / 2;
+                if (eDmg < 1) eDmg = 1;
+                player.put("hp", player.get("hp") - eDmg);
+                println(name + "攻击造成 " + eDmg + " 点伤害！");
+            }
+        }
+    }
+    
+    if (player.get("hp") <= 0) {
+        return true;
+    }
+    
+    println("");
+    println("★ 胜利！★");
+    println("获得 " + eGold + " 金币, " + eExp + " 经验");
+    player.put("gold", player.get("gold") + eGold);
+    addExp(eExp);
+    player.put("kills", player.get("kills") + 1);
+    return true;
+};
+
+auto exploreRoom = () -> {
+    roomsExplored = roomsExplored + 1;
+    println("");
+    println("═════════════════════════════════");
+    println("探索第 " + roomsExplored + " 个房间...");
+    println("═════════════════════════════════");
+    Thread.sleep(500);
+    
+    auto roll = random.nextInt(100);
+    
+    if (roll < 40) {
+        auto floor = player.get("floor");
+        auto maxIdx = Math.min(floor * 2, size(enemies)) - 1;
+        auto idx = random.nextInt(maxIdx + 1);
+        battle(enemies[idx]);
+    } else if (roll < 55) {
+        auto itemIdx = random.nextInt(size(items));
+        auto item = items[itemIdx];
+        println("");
+        println("发现宝箱！里面有: " + item[0]);
+        
+        if (item[1].equals("potion")) {
+            player.put("potions", player.get("potions") + 1);
+            println("获得药水！");
+        } else if (item[1].equals("buff_atk")) {
+            player.put("attack", player.get("attack") + item[2]);
+            println("攻击力 +" + item[2] + "！");
+        } else if (item[1].equals("buff_def")) {
+            player.put("defense", player.get("defense") + item[2]);
+            println("防御力 +" + item[2] + "！");
+        } else if (item[1].equals("key")) {
+            player.put("keys", player.get("keys") + 1);
+            println("获得钥匙！");
+        } else if (item[1].equals("gold")) {
+            player.put("gold", player.get("gold") + item[2]);
+            println("获得 " + item[2] + " 金币！");
+        }
+    } else if (roll < 65) {
+        println("");
+        println("发现一个上锁的宝箱！");
+        if (player.get("keys") > 0) {
+            player.put("keys", player.get("keys") - 1);
+            auto gold = random.nextInt(50) + 30 + player.get("floor") * 20;
+            player.put("gold", player.get("gold") + gold);
+            println("使用钥匙打开，获得 " + gold + " 金币！");
+            
+            if (random.nextInt(100) < 30) {
+                auto wIdx = Math.min(player.get("floor") / 2, size(weapons) - 1);
+                if (wIdx > currentWeapon) {
+                    currentWeapon = wIdx;
+                    player.put("attack", player.get("attack") + weapons[wIdx][1]);
+                    println("发现武器: " + weapons[wIdx][0] + "！攻击 +" + weapons[wIdx][1]);
+                }
+            }
+        } else {
+            println("没有钥匙，无法打开...");
+        }
+    } else if (roll < 75) {
+        println("");
+        println("发现一个祭坛...");
+        if (random.nextInt(100) < 50) {
+            auto heal = player.get("maxHp") / 2;
+            player.put("hp", Math.min(player.get("hp") + heal, player.get("maxHp")));
+            println("祭坛发出光芒，恢复 " + heal + " HP！");
+        } else {
+            player.put("attack", player.get("attack") + 2);
+            println("祭坛赐予力量，攻击 +2！");
+        }
+    } else if (roll < 85) {
+        println("");
+        println("这个房间空无一物...");
+        if (random.nextInt(100) < 20) {
+            auto gold = random.nextInt(20) + 10;
+            player.put("gold", player.get("gold") + gold);
+            println("但在角落发现了 " + gold + " 金币！");
+        }
+    } else {
+        println("");
+        println("发现一个商人！");
+        println("1.买药水(30金) 2.买钥匙(50金) 3.离开");
+        print("> ");
+        auto buy = Integer.parseInt(readLine());
+        
+        if (buy == 1 && player.get("gold") >= 30) {
+            player.put("gold", player.get("gold") - 30);
+            player.put("potions", player.get("potions") + 1);
+            println("购买成功！");
+        } else if (buy == 2 && player.get("gold") >= 50) {
+            player.put("gold", player.get("gold") - 50);
+            player.put("keys", player.get("keys") + 1);
+            println("购买成功！");
+        } else {
+            println("交易取消。");
+        }
+    }
+};
+
+auto bossFight = () -> {
+    println("");
+    println("╔══════════════════════════════════╗");
+    println("║        BOSS 房间！！！           ║");
+    println("╚══════════════════════════════════╝");
+    Thread.sleep(1000);
+    
+    auto bossIdx = Math.min(player.get("floor") - 1, size(bosses) - 1);
+    battle(bosses[bossIdx]);
+};
+
+while (gameRunning && player.get("hp") > 0) {
+    showStatus();
+    println("");
+    println("行动: 1.探索 2.休息 3.状态 0.退出");
+    print("> ");
+    auto action = Integer.parseInt(readLine());
+    
+    if (action == 1) {
+        if (roomsExplored >= roomsPerFloor) {
+            bossFight();
+            if (player.get("hp") > 0) {
+                println("");
+                println("★ 恭喜通关第 " + player.get("floor") + " 层！★");
+                player.put("floor", player.get("floor") + 1);
+                roomsExplored = 0;
+                
+                auto bonus = player.get("floor") * 50;
+                player.put("gold", player.get("gold") + bonus);
+                println("获得 " + bonus + " 金币奖励！");
+                
+                println("");
+                println("是否继续深入？");
+                println("1.继续 2.带着战利品离开");
+                print("> ");
+                if (Integer.parseInt(readLine()) == 2) {
+                    gameRunning = false;
+                }
+            }
+        } else {
+            exploreRoom();
+        }
+    } else if (action == 2) {
+        if (player.get("potions") > 0) {
+            player.put("potions", player.get("potions") - 1);
+            auto heal = 50;
+            auto newHp = player.get("hp") + heal;
+            if (newHp > player.get("maxHp")) newHp = player.get("maxHp");
+            player.put("hp", newHp);
+            println("使用药水恢复 " + heal + " HP");
+        } else {
+            println("没有药水了！");
+        }
+    } else if (action == 3) {
+        showStatus();
+    } else if (action == 0) {
+        gameRunning = false;
+    }
+}
+
+println("");
+println("╔══════════════════════════════════╗");
+println("║           游戏结束               ║");
+println("╠══════════════════════════════════╣");
+println("║ 到达层数: " + player.get("floor"));
+println("║ 击杀数: " + player.get("kills"));
+println("║ 获得金币: " + player.get("gold"));
+println("║ 最终等级: " + player.get("level"));
+println("╚══════════════════════════════════╝");

@@ -11,6 +11,26 @@ import java.util.Map;
 
 public class ExecutionContext {
     
+    public static class CallFrame {
+        public final String functionName;
+        public final int line;
+        public final int column;
+        
+        public CallFrame(String functionName, int line, int column) {
+            this.functionName = functionName;
+            this.line = line;
+            this.column = column;
+        }
+        
+        @Override
+        public String toString() {
+            if (line > 0) {
+                return functionName + " (Line " + line + ")";
+            }
+            return functionName;
+        }
+    }
+    
     public static class Variable {
         public Object value;
         public Class<?> type;
@@ -33,6 +53,7 @@ public class ExecutionContext {
     private final Builtins builtins;
     private int loopDepth;
     private static final int MAX_LOOP_DEPTH = 1000;
+    private final List<CallFrame> callStack;
     
     private IOutputHandler outputBuffer;
     private IOutputHandler warnMsgBuffer;
@@ -49,6 +70,7 @@ public class ExecutionContext {
         this.customClasses = new HashMap<>();
         this.builtins = new Builtins();
         this.loopDepth = 0;
+        this.callStack = new ArrayList<>();
         this.outputBuffer = new SystemOutputCollector(System.out, System.in);
         this.warnMsgBuffer = new SystemOutputCollector(System.err, System.in);
         this.builtins.setOutputHandler(outputBuffer);
@@ -64,6 +86,7 @@ public class ExecutionContext {
         this.customClasses = new HashMap<>();
         this.builtins = new Builtins();
         this.loopDepth = 0;
+        this.callStack = new ArrayList<>();
         this.outputBuffer = outputHandler != null ? outputHandler : new SystemOutputCollector(System.out, System.in);
         this.warnMsgBuffer = errorHandler != null ? errorHandler : new SystemOutputCollector(System.err, System.in);
         this.builtins.setOutputHandler(outputBuffer);
@@ -79,6 +102,7 @@ public class ExecutionContext {
         this.customClasses = new HashMap<>();
         this.builtins = new Builtins();
         this.loopDepth = 0;
+        this.callStack = new ArrayList<>();
         this.outputBuffer = new SystemOutputCollector(System.out, System.in);
         this.warnMsgBuffer = new SystemOutputCollector(System.err, System.in);
         this.builtins.setOutputHandler(outputBuffer);
@@ -96,6 +120,7 @@ public class ExecutionContext {
         this.customClasses = new HashMap<>(parent.customClasses);
         this.builtins = parent.builtins;
         this.loopDepth = parent.loopDepth;
+        this.callStack = parent.callStack;
         this.outputBuffer = parent.outputBuffer;
         this.warnMsgBuffer = parent.warnMsgBuffer;
     }
@@ -305,5 +330,40 @@ public class ExecutionContext {
     
     public void exitScope() {
         scopeManager.exitScope();
+    }
+    
+    public void pushCallFrame(String functionName, int line, int column) {
+        callStack.add(new CallFrame(functionName, line, column));
+    }
+    
+    public void popCallFrame() {
+        if (!callStack.isEmpty()) {
+            callStack.remove(callStack.size() - 1);
+        }
+    }
+    
+    public List<CallFrame> getCallStack() {
+        return Collections.unmodifiableList(callStack);
+    }
+    
+    public List<String> getCallStackStrings() {
+        List<String> result = new ArrayList<>();
+        for (CallFrame frame : callStack) {
+            result.add(frame.toString());
+        }
+        return result;
+    }
+    
+    public String formatCallStack() {
+        if (callStack.isEmpty()) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append("脚本调用栈:\n");
+        for (int i = callStack.size() - 1; i >= 0; i--) {
+            CallFrame frame = callStack.get(i);
+            sb.append("  at ").append(frame.toString()).append("\n");
+        }
+        return sb.toString();
     }
 }

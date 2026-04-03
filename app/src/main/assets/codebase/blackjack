@@ -1,0 +1,28 @@
+// 21点 - 简化版
+// 尽量接近21点但不超过
+
+auto random = Random.new();
+
+println("=== 21点 ===");
+
+auto total = 0;
+while (true) {
+    auto card = random.nextInt(10) + 1;
+    total = total + card;
+    println("抽到: " + card + "  总计: " + total);
+    
+    if (total > 21) {
+        println("爆了！你输了！");
+        break;
+    }
+    if (total == 21) {
+        println("21点！完美！");
+        break;
+    }
+    
+    print("继续抽？(1=是 0=停) ");
+    if (Integer.parseInt(readLine()) == 0) {
+        println("最终得分: " + total);
+        break;
+    }
+}

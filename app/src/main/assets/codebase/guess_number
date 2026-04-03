@@ -1,0 +1,23 @@
+// 猜数字游戏 - 超轻量版
+// 系统随机生成1-100的数字，你来猜！
+
+auto target = Random.new().nextInt(100) + 1;
+auto attempts = 0;
+
+println("=== 猜数字 ===");
+println("我想了一个1-100的数字，猜猜看！");
+
+while (true) {
+    attempts = attempts + 1;
+    print("你的猜测: ");
+    auto guess = Integer.parseInt(readLine());
+    
+    if (guess == target) {
+        println("恭喜！你用" + attempts + "次猜对了！");
+        break;
+    } else if (guess < target) {
+        println("太小了！");
+    } else {
+        println("太大了！");
+    }
+}

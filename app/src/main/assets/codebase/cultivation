@@ -1,0 +1,861 @@
+// 修仙传说 - 大型文字RPG
+// 修炼、战斗、探索、炼丹、渡劫，成就仙途！
+
+auto random = Random.new();
+
+auto player = HashMap.new();
+player.put("realm", "凡人");
+player.put("realmLevel", 0);
+player.put("hp", 100);
+player.put("maxHp", 100);
+player.put("mp", 50);
+player.put("maxMp", 50);
+player.put("attack", 10);
+player.put("defense", 5);
+player.put("spirit", 10);
+player.put("spiritDefense", 5);
+player.put("exp", 0);
+player.put("expToNext", 100);
+player.put("gold", 50);
+player.put("spiritStones", 10);
+player.put("age", 16);
+player.put("lifespan", 80);
+player.put("cultivation", 0);
+player.put("cultivationToNext", 1000);
+player.put("pills", HashMap.new());
+player.put("techniques", ArrayList.new());
+player.put("artifacts", ArrayList.new());
+player.put("materials", HashMap.new());
+player.put("kills", 0);
+player.put("questsCompleted", 0);
+player.put("dungeonLevel", 1);
+
+auto realms = ["凡人", "练气", "筑基", "金丹", "元婴", "化神", "炼虚", "合体", "大乘", "渡劫", "仙人"];
+auto realmBonus = [0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89];
+
+auto techniques = [
+    ["基础吐纳术", "练气", 100, 10, "增加修炼速度10%"],
+    ["五行基础", "练气", 200, 15, "增加五行法术威力15%"],
+    ["剑气诀", "筑基", 500, 20, "剑类攻击+20%"],
+    ["金刚不坏", "筑基", 600, 25, "防御+25%"],
+    ["九转玄功", "金丹", 1500, 40, "全属性+40%"],
+    ["太上忘情", "元婴", 3000, 50, "精神攻击+50%"],
+    ["混沌真经", "化神", 6000, 70, "全属性+70%"],
+    ["天道法则", "大乘", 15000, 100, "全属性+100%"]
+];
+
+auto pills = [
+    ["回气丹", 50, "恢复50点灵力", "mp"],
+    ["疗伤丹", 80, "恢复80点生命", "hp"],
+    ["筑基丹", 0, "增加500修炼点", "cultivation"],
+    ["金丹", 0, "增加2000修炼点", "cultivation"],
+    ["元婴丹", 0, "增加8000修炼点", "cultivation"],
+    ["洗髓丹", 0, "永久增加5点攻击和防御", "permanent"],
+    ["延寿丹", 0, "增加10年寿命", "lifespan"]
+];
+
+auto enemies = [
+    ["野狼", 30, 8, 3, 0, 15, 5, "野兽"],
+    ["山贼", 50, 12, 6, 0, 30, 10, "人类"],
+    ["妖狐", 40, 15, 4, 20, 40, 15, "妖兽"],
+    ["僵尸", 60, 10, 10, 0, 35, 12, "亡灵"],
+    ["石魔", 80, 8, 15, 0, 50, 8, "元素"],
+    ["剑修", 70, 25, 8, 10, 60, 20, "修士"],
+    ["血魔", 100, 20, 12, 15, 80, 25, "魔修"],
+    ["蛟龙", 150, 30, 20, 25, 120, 40, "妖兽"],
+    ["鬼将", 120, 35, 15, 30, 100, 35, "鬼修"],
+    ["天魔", 200, 40, 25, 40, 180, 60, "魔族"]
+];
+
+auto bosses = [
+    ["千年妖王", 300, 50, 30, 40, 500, 100, "妖王"],
+    ["魔道宗主", 400, 60, 35, 50, 700, 150, "魔修"],
+    ["上古凶兽", 500, 70, 40, 60, 900, 200, "凶兽"],
+    ["天劫化身", 600, 80, 45, 70, 1200, 300, "天道"],
+    ["魔神残魂", 800, 100, 60, 80, 1500, 500, "魔神"]
+];
+
+auto materials = [
+    ["灵草", "炼丹材料", 10],
+    ["妖丹", "炼器材料", 30],
+    ["玄铁", "炼器材料", 50],
+    ["天材地宝", "炼丹材料", 100],
+    ["龙骨", "炼器材料", 200],
+    ["凤羽", "炼器材料", 300],
+    ["仙石", "通用材料", 500]
+];
+
+auto artifacts = [
+    ["铁剑", "武器", 5, 0, 0],
+    ["精钢剑", "武器", 10, 0, 0],
+    ["灵剑", "武器", 20, 5, 0],
+    ["玄铁剑", "武器", 35, 10, 5],
+    ["金丹法宝", "法宝", 50, 15, 10],
+    ["元婴法宝", "法宝", 80, 25, 20],
+    ["化神法宝", "法宝", 120, 40, 35],
+    ["仙器碎片", "仙器", 200, 60, 50]
+];
+
+auto locations = [
+    ["青云山", "入门修炼圣地，灵气稀薄"],
+    ["幽冥谷", "阴气聚集，鬼物横行"],
+    ["万兽林", "妖兽聚集，危机四伏"],
+    ["剑冢", "上古剑修埋骨之地"],
+    ["魔域", "魔修聚集，凶险异常"],
+    ["龙脉", "龙气汇聚，机缘与危险并存"],
+    ["仙府遗迹", "上古仙人洞府，宝物众多"],
+    ["天劫之地", "渡劫圣地，九死一生"]
+];
+
+auto currentLocation = 0;
+auto gameRunning = true;
+auto day = 1;
+auto eventCooldown = 0;
+
+println("╔════════════════════════════════════════╗");
+println("║            修 仙 传 说                  ║");
+println("║      Path to Immortality               ║");
+println("╚════════════════════════════════════════╝");
+println("");
+println("你出生在一个小村庄，自幼向往仙道...");
+println("十六岁那年，你决定踏上修仙之路。");
+println("前方是漫长的仙途，还是无尽的轮回？");
+println("");
+Thread.sleep(1500);
+
+auto showStatus = () -> {
+    println("");
+    println("┌─────────────────────────────────────┐");
+    println("│ 【" + player.get("realm") + "】 第" + player.get("realmLevel") + "层");
+    println("│ 年龄:" + player.get("age") + "岁  寿命:" + player.get("lifespan") + "年");
+    println("│ HP:" + player.get("hp") + "/" + player.get("maxHp") + "  MP:" + player.get("mp") + "/" + player.get("maxMp"));
+    println("│ 攻击:" + player.get("attack") + "  防御:" + player.get("defense"));
+    println("│ 神识:" + player.get("spirit") + "  神防:" + player.get("spiritDefense"));
+    println("│ 修为:" + player.get("cultivation") + "/" + player.get("cultivationToNext"));
+    println("│ 灵石:" + player.get("spiritStones") + "  金币:" + player.get("gold"));
+    println("│ 当前位置:" + locations[currentLocation][0]);
+    println("└─────────────────────────────────────┘");
+};
+
+auto showInventory = () -> {
+    println("");
+    println("═══ 背包 ═══");
+    
+    auto pillMap = player.get("pills");
+    println("【丹药】");
+    auto hasPills = false;
+    auto i = 0;
+    while (i < size(pills)) {
+        auto pill = pills[i];
+        auto count = pillMap.get(pill[0]);
+        if (count != null && count > 0) {
+            println("  " + pill[0] + " x" + count + " - " + pill[2]);
+            hasPills = true;
+        }
+        i = i + 1;
+    }
+    if (!hasPills) println("  (无)");
+    
+    auto techList = player.get("techniques");
+    println("【功法】(" + size(techList) + "本)");
+    auto j = 0;
+    while (j < size(techList)) {
+        println("  " + techList.get(j));
+        j = j + 1;
+    }
+    
+    auto artList = player.get("artifacts");
+    println("【法宝】(" + size(artList) + "件)");
+    auto k = 0;
+    while (k < size(artList)) {
+        auto art = artList.get(k);
+        println("  " + art[0] + " [" + art[1] + "]");
+        k = k + 1;
+    }
+    
+    auto matMap = player.get("materials");
+    println("【材料】");
+    auto hasMats = false;
+    auto m = 0;
+    while (m < size(materials)) {
+        auto mat = materials[m];
+        auto count = matMap.get(mat[0]);
+        if (count != null && count > 0) {
+            println("  " + mat[0] + " x" + count);
+            hasMats = true;
+        }
+        m = m + 1;
+    }
+    if (!hasMats) println("  (无)");
+};
+
+auto gainExp = (amount) -> {
+    auto exp = player.get("exp") + amount;
+    player.put("exp", exp);
+    
+    while (player.get("exp") >= player.get("expToNext")) {
+        player.put("exp", player.get("exp") - player.get("expToNext"));
+        player.put("expToNext", Math.round(player.get("expToNext") * 1.5));
+        player.put("attack", player.get("attack") + 2);
+        player.put("defense", player.get("defense") + 1);
+        player.put("maxHp", player.get("maxHp") + 10);
+        player.put("hp", player.get("maxHp"));
+        player.put("maxMp", player.get("maxMp") + 5);
+        player.put("mp", player.get("maxMp"));
+        player.put("realmLevel", player.get("realmLevel") + 1);
+        println("");
+        println("★ 境界提升！现在是【" + player.get("realm") + "】第" + player.get("realmLevel") + "层！");
+    }
+};
+
+auto gainCultivation = (amount) -> {
+    auto cult = player.get("cultivation") + amount;
+    player.put("cultivation", cult);
+    
+    while (player.get("cultivation") >= player.get("cultivationToNext")) {
+        auto realmIdx = 0;
+        auto r = 0;
+        while (r < size(realms)) {
+            if (realms[r].equals(player.get("realm"))) {
+                realmIdx = r;
+                break;
+            }
+            r = r + 1;
+        }
+        
+        if (realmIdx >= size(realms) - 1) {
+            println("");
+            println("╔════════════════════════════════════════╗");
+            println("║          ★★★ 恭喜飞升！★★★            ║");
+            println("║        你已成就仙人果位！              ║");
+            println("╚════════════════════════════════════════╝");
+            gameRunning = false;
+            return;
+        }
+        
+        player.put("cultivation", player.get("cultivation") - player.get("cultivationToNext"));
+        player.put("cultivationToNext", Math.round(player.get("cultivationToNext") * 2));
+        
+        auto newRealm = realms[realmIdx + 1];
+        auto bonus = realmBonus[realmIdx + 1];
+        
+        player.put("realm", newRealm);
+        player.put("attack", player.get("attack") + bonus * 5);
+        player.put("defense", player.get("defense") + bonus * 3);
+        player.put("spirit", player.get("spirit") + bonus * 4);
+        player.put("spiritDefense", player.get("spiritDefense") + bonus * 2);
+        player.put("maxHp", player.get("maxHp") + bonus * 20);
+        player.put("maxMp", player.get("maxMp") + bonus * 15);
+        player.put("hp", player.get("maxHp"));
+        player.put("mp", player.get("maxMp"));
+        player.put("lifespan", player.get("lifespan") + 100);
+        
+        println("");
+        println("╔════════════════════════════════════════╗");
+        println("║          ★★★ 突破成功！★★★            ║");
+        println("║      恭喜晋升【" + newRealm + "】境界！          ║");
+        println("╚════════════════════════════════════════╝");
+    }
+};
+
+auto battle = (enemy) -> {
+    auto name = enemy[0];
+    auto eHp = enemy[1];
+    auto eAtk = enemy[2];
+    auto eDef = enemy[3];
+    auto eSpiritAtk = enemy[4];
+    auto eExp = enemy[5];
+    auto eStones = enemy[6];
+    auto eType = enemy[7];
+    
+    println("");
+    println("═══════════════════════════════════════");
+    println("遭遇 " + name + "！");
+    println("═══════════════════════════════════════");
+    
+    while (eHp > 0 && player.get("hp") > 0) {
+        println("");
+        println("【" + name + "】HP:" + eHp);
+        println("【你】HP:" + player.get("hp") + "/" + player.get("maxHp") + " MP:" + player.get("mp") + "/" + player.get("maxMp"));
+        println("1.攻击 2.法术 3.丹药 4.逃跑");
+        print("> ");
+        auto choice = Integer.parseInt(readLine());
+        
+        if (choice == 1) {
+            auto dmg = player.get("attack") - eDef / 2;
+            if (dmg < 1) dmg = 1;
+            dmg = dmg + random.nextInt(5);
+            eHp = eHp - dmg;
+            println("你造成 " + dmg + " 点伤害！");
+            
+            if (eHp <= 0) break;
+            
+            auto eDmg = eAtk - player.get("defense") / 2;
+            if (eDmg < 1) eDmg = 1;
+            eDmg = eDmg + random.nextInt(3);
+            player.put("hp", player.get("hp") - eDmg);
+            println(name + "反击造成 " + eDmg + " 点伤害！");
+            
+        } else if (choice == 2) {
+            if (player.get("mp") < 10) {
+                println("灵力不足！");
+                continue;
+            }
+            player.put("mp", player.get("mp") - 10);
+            auto dmg = player.get("spirit") * 2 - eDef;
+            if (dmg < 5) dmg = 5;
+            dmg = dmg + random.nextInt(10);
+            eHp = eHp - dmg;
+            println("你施展法术造成 " + dmg + " 点伤害！");
+            
+            if (eHp <= 0) break;
+            
+            if (eSpiritAtk > 0) {
+                auto eSpDmg = eSpiritAtk - player.get("spiritDefense");
+                if (eSpDmg < 1) eSpDmg = 1;
+                player.put("hp", player.get("hp") - eSpDmg);
+                println(name + "施展法术造成 " + eSpDmg + " 点伤害！");
+            }
+            
+        } else if (choice == 3) {
+            auto pillMap = player.get("pills");
+            println("可用丹药:");
+            auto hasPill = false;
+            auto idx = 1;
+            auto pIdx = 0;
+            while (pIdx < size(pills)) {
+                auto pill = pills[pIdx];
+                if (pill[3].equals("hp") || pill[3].equals("mp")) {
+                    auto count = pillMap.get(pill[0]);
+                    if (count != null && count > 0) {
+                        println(idx + "." + pill[0] + " x" + count);
+                        hasPill = true;
+                        idx = idx + 1;
+                    }
+                }
+                pIdx = pIdx + 1;
+            }
+            println("0.取消");
+            if (!hasPill) {
+                println("没有可用丹药！");
+                continue;
+            }
+            print("> ");
+            auto usePill = Integer.parseInt(readLine());
+            if (usePill < 1) continue;
+            
+            auto used = 0;
+            auto pIdx2 = 0;
+            while (pIdx2 < size(pills) && used < usePill) {
+                auto pill = pills[pIdx2];
+                if (pill[3].equals("hp") || pill[3].equals("mp")) {
+                    auto count = pillMap.get(pill[0]);
+                    if (count != null && count > 0) {
+                        used = used + 1;
+                        if (used == usePill) {
+                            pillMap.put(pill[0], count - 1);
+                            if (pill[3].equals("hp")) {
+                                player.put("hp", Math.min(player.get("hp") + pill[1], player.get("maxHp")));
+                                println("恢复" + pill[1] + "点生命！");
+                            } else {
+                                player.put("mp", Math.min(player.get("mp") + pill[1], player.get("maxMp")));
+                                println("恢复" + pill[1] + "点灵力！");
+                            }
+                        }
+                    }
+                }
+                pIdx2 = pIdx2 + 1;
+            }
+            
+        } else if (choice == 4) {
+            if (random.nextInt(100) < 30) {
+                println("逃跑失败！");
+                auto eDmg = eAtk;
+                player.put("hp", player.get("hp") - eDmg);
+                println("被追击造成 " + eDmg + " 点伤害！");
+            } else {
+                println("成功逃跑！");
+                return;
+            }
+        }
+    }
+    
+    if (player.get("hp") <= 0) {
+        println("");
+        println("═══════════════════════════════════════");
+        println("你被击败了...");
+        println("═══════════════════════════════════════");
+        player.put("hp", 1);
+        player.put("gold", Math.max(0, player.get("gold") - 20));
+        player.put("spiritStones", Math.max(0, player.get("spiritStones") - 5));
+        return;
+    }
+    
+    println("");
+    println("═══════════════════════════════════════");
+    println("击败 " + name + "！");
+    println("获得 " + eExp + " 经验，" + eStones + " 灵石");
+    println("═══════════════════════════════════════");
+    
+    gainExp(eExp);
+    player.put("spiritStones", player.get("spiritStones") + eStones);
+    player.put("kills", player.get("kills") + 1);
+    
+    if (random.nextInt(100) < 40) {
+        auto matIdx = random.nextInt(size(materials));
+        auto mat = materials[matIdx];
+        auto matMap = player.get("materials");
+        auto count = matMap.get(mat[0]);
+        if (count == null) count = 0;
+        matMap.put(mat[0], count + 1);
+        println("获得材料: " + mat[0]);
+    }
+    
+    if (random.nextInt(100) < 15) {
+        auto pillIdx = random.nextInt(4);
+        auto pill = pills[pillIdx];
+        auto pillMap = player.get("pills");
+        auto count = pillMap.get(pill[0]);
+        if (count == null) count = 0;
+        pillMap.put(pill[0], count + 1);
+        println("获得丹药: " + pill[0]);
+    }
+};
+
+auto cultivate = () -> {
+    println("");
+    println("═══ 修炼 ═══");
+    println("1.吐纳 2.冥想 3.闭关 0.返回");
+    print("> ");
+    auto choice = Integer.parseInt(readLine());
+    
+    if (choice == 1) {
+        auto gain = 10 + random.nextInt(20);
+        gainCultivation(gain);
+        player.put("mp", Math.min(player.get("mp") + 10, player.get("maxMp")));
+        println("吐纳灵气，获得" + gain + "修为");
+        
+    } else if (choice == 2) {
+        if (player.get("mp") < 20) {
+            println("灵力不足！");
+            return;
+        }
+        player.put("mp", player.get("mp") - 20);
+        auto gain = 30 + random.nextInt(30);
+        gainCultivation(gain);
+        println("冥想悟道，获得" + gain + "修为");
+        
+    } else if (choice == 3) {
+        if (player.get("mp") < 50) {
+            println("灵力不足！");
+            return;
+        }
+        player.put("mp", player.get("mp") - 50);
+        auto gain = 100 + random.nextInt(100);
+        gainCultivation(gain);
+        player.put("age", player.get("age") + 1);
+        println("闭关一年，获得" + gain + "修为");
+        println("你现在是" + player.get("age") + "岁");
+        
+        if (player.get("age") >= player.get("lifespan")) {
+            println("");
+            println("═══════════════════════════════════════");
+            println("寿元耗尽，你已陨落...");
+            println("═══════════════════════════════════════");
+            gameRunning = false;
+        }
+    }
+};
+
+auto explore = () -> {
+    println("");
+    println("═══ 探索 " + locations[currentLocation][0] + " ═══");
+    println(locations[currentLocation][1]);
+    
+    auto roll = random.nextInt(100);
+    
+    if (roll < 35) {
+        auto dangerLevel = currentLocation + 1;
+        auto maxEnemyIdx = Math.min(dangerLevel * 2, size(enemies)) - 1;
+        auto enemyIdx = random.nextInt(maxEnemyIdx + 1);
+        battle(enemies[enemyIdx]);
+        
+    } else if (roll < 55) {
+        auto stones = (currentLocation + 1) * 5 + random.nextInt(20);
+        player.put("spiritStones", player.get("spiritStones") + stones);
+        println("发现灵石矿脉！获得" + stones + "灵石");
+        
+    } else if (roll < 70) {
+        auto matIdx = random.nextInt(size(materials));
+        auto mat = materials[matIdx];
+        auto matMap = player.get("materials");
+        auto count = matMap.get(mat[0]);
+        if (count == null) count = 0;
+        matMap.put(mat[0], count + 1);
+        println("采集到: " + mat[0]);
+        
+    } else if (roll < 85) {
+        auto cultGain = (currentLocation + 1) * 5 + random.nextInt(20);
+        gainCultivation(cultGain);
+        println("感悟天地，获得" + cultGain + "修为");
+        
+    } else if (roll < 95) {
+        auto goldFind = (currentLocation + 1) * 10 + random.nextInt(50);
+        player.put("gold", player.get("gold") + goldFind);
+        println("发现宝藏！获得" + goldFind + "金币");
+        
+    } else {
+        println("什么也没发现...");
+    }
+    
+    day = day + 1;
+    if (day % 30 == 0) {
+        player.put("age", player.get("age") + 1);
+        println("");
+        println("又过了一年，你现在是" + player.get("age") + "岁");
+        
+        if (player.get("age") >= player.get("lifespan")) {
+            println("");
+            println("═══════════════════════════════════════");
+            println("寿元耗尽，你已陨落...");
+            println("═══════════════════════════════════════");
+            gameRunning = false;
+        }
+    }
+};
+
+auto travel = () -> {
+    println("");
+    println("═══ 移动 ═══");
+    auto i = 0;
+    while (i < size(locations)) {
+        if (i != currentLocation) {
+            println((i + 1) + "." + locations[i][0]);
+        }
+        i = i + 1;
+    }
+    println("0.取消");
+    print("> ");
+    auto dest = Integer.parseInt(readLine()) - 1;
+    
+    if (dest >= 0 && dest < size(locations) && dest != currentLocation) {
+        currentLocation = dest;
+        println("前往" + locations[currentLocation][0]);
+        day = day + 1;
+    }
+};
+
+auto shop = () -> {
+    println("");
+    println("═══ 仙坊 ═══");
+    println("灵石:" + player.get("spiritStones") + " 金币:" + player.get("gold"));
+    println("1.购买丹药 2.购买功法 3.购买法宝 4.出售材料 0.返回");
+    print("> ");
+    auto choice = Integer.parseInt(readLine());
+    
+    if (choice == 1) {
+        println("【丹药】");
+        auto i = 0;
+        while (i < size(pills)) {
+            auto pill = pills[i];
+            auto price = (i + 1) * 20;
+            println((i + 1) + "." + pill[0] + " - " + price + "灵石 (" + pill[2] + ")");
+            i = i + 1;
+        }
+        println("0.返回");
+        print("> ");
+        auto buy = Integer.parseInt(readLine());
+        if (buy > 0 && buy <= size(pills)) {
+            auto pill = pills[buy - 1];
+            auto price = buy * 20;
+            if (player.get("spiritStones") >= price) {
+                player.put("spiritStones", player.get("spiritStones") - price);
+                auto pillMap = player.get("pills");
+                auto count = pillMap.get(pill[0]);
+                if (count == null) count = 0;
+                pillMap.put(pill[0], count + 1);
+                println("购买成功！");
+            } else {
+                println("灵石不足！");
+            }
+        }
+        
+    } else if (choice == 2) {
+        println("【功法】");
+        auto techList = player.get("techniques");
+        auto i = 0;
+        while (i < size(techniques)) {
+            auto tech = techniques[i];
+            auto owned = false;
+            auto j = 0;
+            while (j < size(techList)) {
+                if (techList.get(j).equals(tech[0])) {
+                    owned = true;
+                    break;
+                }
+                j = j + 1;
+            }
+            if (!owned) {
+                println((i + 1) + "." + tech[0] + " [" + tech[1] + "] - " + tech[2] + "灵石");
+            }
+            i = i + 1;
+        }
+        println("0.返回");
+        print("> ");
+        auto buy = Integer.parseInt(readLine());
+        if (buy > 0 && buy <= size(techniques)) {
+            auto tech = techniques[buy - 1];
+            if (player.get("spiritStones") >= tech[2]) {
+                player.put("spiritStones", player.get("spiritStones") - tech[2]);
+                techList.add(tech[0]);
+                println("习得功法: " + tech[0]);
+                println("效果: " + tech[4]);
+            } else {
+                println("灵石不足！");
+            }
+        }
+        
+    } else if (choice == 3) {
+        println("【法宝】");
+        auto i = 0;
+        while (i < size(artifacts)) {
+            auto art = artifacts[i];
+            auto price = (i + 1) * 100;
+            println((i + 1) + "." + art[0] + " [" + art[1] + "] 攻+" + art[2] + " 防+" + art[3] + " - " + price + "灵石");
+            i = i + 1;
+        }
+        println("0.返回");
+        print("> ");
+        auto buy = Integer.parseInt(readLine());
+        if (buy > 0 && buy <= size(artifacts)) {
+            auto art = artifacts[buy - 1];
+            auto price = buy * 100;
+            if (player.get("spiritStones") >= price) {
+                player.put("spiritStones", player.get("spiritStones") - price);
+                auto artList = player.get("artifacts");
+                artList.add(art);
+                player.put("attack", player.get("attack") + art[2]);
+                player.put("defense", player.get("defense") + art[3]);
+                player.put("spiritDefense", player.get("spiritDefense") + art[4]);
+                println("获得法宝: " + art[0]);
+            } else {
+                println("灵石不足！");
+            }
+        }
+        
+    } else if (choice == 4) {
+        auto matMap = player.get("materials");
+        println("【出售材料】");
+        auto i = 0;
+        while (i < size(materials)) {
+            auto mat = materials[i];
+            auto count = matMap.get(mat[0]);
+            if (count != null && count > 0) {
+                println((i + 1) + "." + mat[0] + " x" + count + " - " + mat[2] + "灵石/个");
+            }
+            i = i + 1;
+        }
+        println("0.返回");
+        print("> ");
+        auto sell = Integer.parseInt(readLine());
+        if (sell > 0 && sell <= size(materials)) {
+            auto mat = materials[sell - 1];
+            auto count = matMap.get(mat[0]);
+            if (count != null && count > 0) {
+                matMap.put(mat[0], count - 1);
+                player.put("spiritStones", player.get("spiritStones") + mat[2]);
+                println("出售成功！获得" + mat[2] + "灵石");
+            }
+        }
+    }
+};
+
+auto alchemy = () -> {
+    println("");
+    println("═══ 炼丹 ═══");
+    println("需要: 灵草x2 + 天材地宝x1");
+    auto matMap = player.get("materials");
+    auto lingcao = matMap.get("灵草");
+    auto tiancai = matMap.get("天材地宝");
+    
+    if (lingcao == null) lingcao = 0;
+    if (tiancai == null) tiancai = 0;
+    
+    println("灵草:" + lingcao + " 天材地宝:" + tiancai);
+    
+    if (lingcao >= 2 && tiancai >= 1) {
+        println("1.炼制筑基丹");
+        if (player.get("realm").equals("筑基") || player.get("realm").equals("金丹") || 
+            player.get("realm").equals("元婴") || player.get("realm").equals("化神") ||
+            player.get("realm").equals("炼虚") || player.get("realm").equals("合体") ||
+            player.get("realm").equals("大乘") || player.get("realm").equals("渡劫") ||
+            player.get("realm").equals("仙人")) {
+            println("2.炼制金丹");
+        }
+        println("0.返回");
+        print("> ");
+        auto choice = Integer.parseInt(readLine());
+        
+        if (choice == 1) {
+            matMap.put("灵草", lingcao - 2);
+            matMap.put("天材地宝", tiancai - 1);
+            auto pillMap = player.get("pills");
+            auto count = pillMap.get("筑基丹");
+            if (count == null) count = 0;
+            pillMap.put("筑基丹", count + 1);
+            println("炼制成功！获得筑基丹");
+        } else if (choice == 2) {
+            matMap.put("灵草", lingcao - 2);
+            matMap.put("天材地宝", tiancai - 1);
+            auto pillMap = player.get("pills");
+            auto count = pillMap.get("金丹");
+            if (count == null) count = 0;
+            pillMap.put("金丹", count + 1);
+            println("炼制成功！获得金丹");
+        }
+    } else {
+        println("材料不足！");
+    }
+};
+
+auto usePill = () -> {
+    println("");
+    println("═══ 使用丹药 ═══");
+    auto pillMap = player.get("pills");
+    auto hasPill = false;
+    auto i = 0;
+    while (i < size(pills)) {
+        auto pill = pills[i];
+        auto count = pillMap.get(pill[0]);
+        if (count != null && count > 0) {
+            println((i + 1) + "." + pill[0] + " x" + count + " - " + pill[2]);
+            hasPill = true;
+        }
+        i = i + 1;
+    }
+    println("0.返回");
+    if (!hasPill) {
+        println("没有丹药！");
+        return;
+    }
+    print("> ");
+    auto use = Integer.parseInt(readLine());
+    if (use > 0 && use <= size(pills)) {
+        auto pill = pills[use - 1];
+        auto count = pillMap.get(pill[0]);
+        if (count != null && count > 0) {
+            pillMap.put(pill[0], count - 1);
+            
+            if (pill[3].equals("hp")) {
+                player.put("hp", Math.min(player.get("hp") + pill[1], player.get("maxHp")));
+                println("恢复" + pill[1] + "点生命！");
+            } else if (pill[3].equals("mp")) {
+                player.put("mp", Math.min(player.get("mp") + pill[1], player.get("maxMp")));
+                println("恢复" + pill[1] + "点灵力！");
+            } else if (pill[3].equals("cultivation")) {
+                auto gain = 0;
+                if (pill[0].equals("筑基丹")) gain = 500;
+                else if (pill[0].equals("金丹")) gain = 2000;
+                else if (pill[0].equals("元婴丹")) gain = 8000;
+                gainCultivation(gain);
+                println("获得" + gain + "修为！");
+            } else if (pill[3].equals("permanent")) {
+                player.put("attack", player.get("attack") + 5);
+                player.put("defense", player.get("defense") + 5);
+                println("永久增加5点攻击和防御！");
+            } else if (pill[3].equals("lifespan")) {
+                player.put("lifespan", player.get("lifespan") + 10);
+                println("寿命增加10年！");
+            }
+        }
+    }
+};
+
+auto tribulation = () -> {
+    auto realmIdx = 0;
+    auto r = 0;
+    while (r < size(realms)) {
+        if (realms[r].equals(player.get("realm"))) {
+            realmIdx = r;
+            break;
+        }
+        r = r + 1;
+    }
+    
+    if (realmIdx < size(realms) - 2) {
+        println("你的境界还不够，无法渡劫！");
+        return;
+    }
+    
+    if (!player.get("realm").equals("渡劫")) {
+        println("你需要先达到渡劫期才能渡劫！");
+        return;
+    }
+    
+    println("");
+    println("╔════════════════════════════════════════╗");
+    println("║              天 劫 降 临               ║");
+    println("╚════════════════════════════════════════╝");
+    println("");
+    println("九天之上，雷云密布...");
+    Thread.sleep(1000);
+    
+    auto successChance = 30 + player.get("realmLevel") * 5;
+    auto techList = player.get("techniques");
+    auto t = 0;
+    while (t < size(techList)) {
+        if (techList.get(t).equals("天道法则")) {
+            successChance = successChance + 20;
+        }
+        t = t + 1;
+    }
+    
+    auto roll = random.nextInt(100);
+    println("渡劫成功率: " + successChance + "%");
+    Thread.sleep(500);
+    println("天雷轰下！！！");
+    Thread.sleep(500);
+    
+    if (roll < successChance) {
+        println("");
+        println("╔════════════════════════════════════════╗");
+        println("║          ★★★ 渡劫成功！★★★            ║");
+        println("║        你已飞升成仙！                  ║");
+        println("╚════════════════════════════════════════╝");
+        gameRunning = false;
+    } else {
+        println("");
+        println("渡劫失败！身受重伤！");
+        player.put("hp", 1);
+        player.put("cultivation", player.get("cultivation") / 2);
+        player.put("lifespan", player.get("lifespan") - 50);
+        println("修为减半，寿命减少50年！");
+    }
+};
+
+while (gameRunning && player.get("hp") > 0) {
+    showStatus();
+    println("");
+    println("第" + day + "天");
+    println("1.修炼 2.探索 3.移动 4.仙坊 5.炼丹 6.丹药 7.背包 8.渡劫 0.退出");
+    print("> ");
+    auto action = Integer.parseInt(readLine());
+    
+    if (action == 1) cultivate();
+    else if (action == 2) explore();
+    else if (action == 3) travel();
+    else if (action == 4) shop();
+    else if (action == 5) alchemy();
+    else if (action == 6) usePill();
+    else if (action == 7) showInventory();
+    else if (action == 8) tribulation();
+    else if (action == 0) gameRunning = false;
+}
+
+println("");
+println("═══════════════════════════════════════");
+println("游戏结束！");
+println("最终境界: " + player.get("realm"));
+println("击杀数: " + player.get("kills"));
+println("存活年龄: " + player.get("age") + "岁");
+println("═══════════════════════════════════════");

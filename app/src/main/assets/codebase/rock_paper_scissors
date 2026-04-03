@@ -1,0 +1,38 @@
+// 石头剪刀布 - 经典游戏
+
+auto random = Random.new();
+auto choices = ["石头", "剪刀", "布"];
+auto wins = 0;
+auto losses = 0;
+
+println("=== 石头剪刀布 ===");
+println("1=石头 2=剪刀 3=布  0=退出");
+
+while (true) {
+    print("出拳: ");
+    auto player = Integer.parseInt(readLine());
+    
+    if (player == 0) {
+        println("战绩: 胜" + wins + " 负" + losses);
+        break;
+    }
+    if (player < 1 || player > 3) {
+        println("输入1-3！");
+        continue;
+    }
+    
+    auto computer = random.nextInt(3) + 1;
+    println("电脑: " + choices[computer-1]);
+    
+    if (player == computer) {
+        println("平局！");
+    } else if ((player == 1 && computer == 2) || 
+               (player == 2 && computer == 3) || 
+               (player == 3 && computer == 1)) {
+        println("你赢了！");
+        wins = wins + 1;
+    } else {
+        println("你输了！");
+        losses = losses + 1;
+    }
+}

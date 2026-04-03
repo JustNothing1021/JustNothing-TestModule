@@ -1,0 +1,34 @@
+// 心理测试 - 简单问答游戏
+
+auto score = 0;
+
+println("=== 心理测试 ===");
+println("回答问题，看看你的性格！");
+
+print("1. 周末你更想: 1=宅家 2=出门 ");
+if (Integer.parseInt(readLine()) == 1) score = score + 1;
+
+print("2. 聚会时你是: 1=安静角落 2=人群中心 ");
+if (Integer.parseInt(readLine()) == 1) score = score + 1;
+
+print("3. 遇到问题先: 1=自己想 2=问别人 ");
+if (Integer.parseInt(readLine()) == 1) score = score + 1;
+
+print("4. 更喜欢: 1=看书 2=运动 ");
+if (Integer.parseInt(readLine()) == 1) score = score + 1;
+
+print("5. 做决定时: 1=深思熟虑 2=凭直觉 ");
+if (Integer.parseInt(readLine()) == 1) score = score + 1;
+
+println("");
+println("=== 结果 ===");
+if (score >= 4) {
+    println("你是内向型人格！");
+    println("喜欢独处，思考深入，内心丰富。");
+} else if (score >= 2) {
+    println("你是中间型人格！");
+    println("能静能动，适应力强。");
+} else {
+    println("你是外向型人格！");
+    println("热情开朗，善于社交。");
+}

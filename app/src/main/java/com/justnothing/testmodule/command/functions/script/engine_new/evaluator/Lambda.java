@@ -84,6 +84,11 @@ public class Lambda implements Function<Object[], Object> {
         
         callContext.getScopeManager().enterScope();
         
+        String funcName = "<lambda(" + parameterNames.toString() + ")>";
+        callContext.pushCallFrame(funcName, 
+            lambdaNode.getLocation() != null ? lambdaNode.getLocation().getLine() : -1,
+            lambdaNode.getLocation() != null ? lambdaNode.getLocation().getColumn() : -1);
+        
         try {
             for (Map.Entry<String, ScopeManager.Variable> entry : capturedVariables.entrySet()) {
                 String varName = entry.getKey();
@@ -108,7 +113,20 @@ public class Lambda implements Function<Object[], Object> {
             return ASTEvaluator.evaluate(lambdaNode.getBody(), callContext);
         } catch (ReturnException e) {
             return e.getValue();
+        } catch (EvaluationException e) {
+            e.setScriptCallStack(callContext.getCallStackStrings());
+            throw e;
+        } catch (RuntimeException e) {
+            EvaluationException wrapped = new EvaluationException(
+                e.getMessage(), 
+                lambdaNode.getLocation(), 
+                ErrorCode.EVAL_METHOD_INVOCATION_FAILED, 
+                e
+            );
+            wrapped.setScriptCallStack(callContext.getCallStackStrings());
+            throw wrapped;
         } finally {
+            callContext.popCallFrame();
             callContext.getScopeManager().exitScope();
         }
     }
