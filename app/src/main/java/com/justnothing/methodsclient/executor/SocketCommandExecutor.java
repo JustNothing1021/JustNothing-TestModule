@@ -14,6 +14,9 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -59,6 +62,7 @@ public class SocketCommandExecutor {
             Callable<Boolean> readTask = () -> SocketStreamReader.readInteractiveSocketStream(input, output, reading, bytesRead, finalSocket);
 
             Future<Boolean> future = ThreadPoolManager.submitSocketCallable(readTask);
+            Objects.requireNonNull(future);
 
             try {
                 Boolean success = future.get(EXEC_TIMEOUT, TimeUnit.MILLISECONDS);
@@ -149,7 +153,8 @@ public class SocketCommandExecutor {
             logger.debug("命令长度: " + command.length() + " 字符");
 
             AtomicBoolean reading = new AtomicBoolean(true);
-            var future = ThreadPoolManager.submitSocketCallable(() -> SocketStreamReader.readTextProtocolSocketStream(input, reading, bytesRead, charsRead));
+            Future<Boolean> future = ThreadPoolManager.submitSocketCallable(() -> SocketStreamReader.readTextProtocolSocketStream(input, reading, bytesRead, charsRead));
+            Objects.requireNonNull(future);
 
             try {
                 boolean serverClosedConnection = future.get(EXEC_TIMEOUT, TimeUnit.MILLISECONDS);
@@ -222,9 +227,6 @@ public class SocketCommandExecutor {
         }
     }
 
-    public void shutdown() {
-    }
-
     public static class ExecutionResult {
         public boolean success;
         public String output;
@@ -234,6 +236,122 @@ public class SocketCommandExecutor {
             this.success = success;
             this.output = output;
             this.error = error;
+        }
+    }
+
+    public static class ColoredExecutionResult {
+        public boolean success;
+        public List<ColoredSegment> segments;
+        public String error;
+
+        public ColoredExecutionResult(boolean success, List<ColoredSegment> segments, String error) {
+            this.success = success;
+            this.segments = segments;
+            this.error = error;
+        }
+
+        @SuppressWarnings("unused")
+        public String getPlainText() {
+            StringBuilder sb = new StringBuilder();
+            for (ColoredSegment segment : segments) {
+                sb.append(segment.text());
+            }
+            return sb.toString();
+        }
+    }
+
+    @SuppressWarnings("unused")
+    public ColoredExecutionResult executeInteractiveWithColoredOutput(String command) {
+        return executeInteractiveWithColoredOutput(command, true);
+    }
+
+    public ColoredExecutionResult executeInteractiveWithColoredOutput(String command, boolean supportsInput) {
+        long startTime = System.currentTimeMillis();
+        int port = ClientPortManager.getSocketPort();
+        AtomicLong bytesRead = new AtomicLong(0);
+
+        Socket socket = null;
+
+        try {
+            socket = new Socket();
+            socket.setTcpNoDelay(true);
+            socket.setKeepAlive(true);
+            socket.setSoTimeout(SOCKET_READ_TIMEOUT);
+            socket.connect(new InetSocketAddress("localhost", port), CONNECT_TIMEOUT);
+            logger.info("创建交互式Socket连接（带颜色输出），端口: " + port);
+
+            final InputStream input = socket.getInputStream();
+            final OutputStream output = socket.getOutputStream();
+
+            InteractiveProtocol.writeMessage(output, InteractiveProtocol.TYPE_CLIENT_CAPABILITY,
+                    InteractiveProtocol.encodeCapability(supportsInput));
+            logger.info("已发送客户端能力: supportsInput=" + supportsInput);
+
+            InteractiveProtocol.writeMessage(output, InteractiveProtocol.TYPE_CLIENT_COMMAND,
+                    command.getBytes(StandardCharsets.UTF_8));
+
+            logger.info("命令已发送，开始读取响应...");
+
+            AtomicBoolean reading = new AtomicBoolean(true);
+            List<ColoredSegment> segments = new ArrayList<>();
+
+            Socket finalSocket = socket;
+            Callable<Boolean> readTask = () -> SocketStreamReader.readInteractiveWithColoredOutput(
+                    input, output, reading, bytesRead, finalSocket, segments);
+
+            Future<Boolean> future = ThreadPoolManager.submitSocketCallable(readTask);
+            Objects.requireNonNull(future);
+            try {
+                Boolean success = future.get(EXEC_TIMEOUT, TimeUnit.MILLISECONDS);
+                long duration = System.currentTimeMillis() - startTime;
+
+                if (success != null && success) {
+                    PerformanceMonitor.recordSocketCommand(duration, bytesRead.get(),
+                            bytesRead.get(), true);
+                    logger.info("命令执行成功，耗时: " + duration + "ms, 读取字节: " + bytesRead.get());
+                    return new ColoredExecutionResult(true, segments, "");
+                } else {
+                    PerformanceMonitor.recordSocketCommand(duration, bytesRead.get(),
+                            bytesRead.get(), false);
+                    logger.error("命令执行失败，耗时: " + duration + "ms");
+                    return new ColoredExecutionResult(false, segments, "命令执行失败");
+                }
+
+            } catch (TimeoutException e) {
+                logger.error("命令执行超时（" + EXEC_TIMEOUT + "ms）");
+                reading.set(false);
+                future.cancel(true);
+                PerformanceMonitor.recordSocketCommand(
+                        System.currentTimeMillis() - startTime, 0, 0, false);
+                return new ColoredExecutionResult(false, segments, "命令执行超时");
+            } catch (Exception e) {
+                logger.error("命令执行出错", e);
+                reading.set(false);
+                PerformanceMonitor.recordSocketCommand(
+                        System.currentTimeMillis() - startTime, 0, 0, false);
+                return new ColoredExecutionResult(false, segments, "执行异常: " + e.getMessage());
+            }
+
+        } catch (SocketTimeoutException e) {
+            logger.error("连接超时");
+            closeQuietly(socket);
+            PerformanceMonitor.recordSocketCommand(
+                    System.currentTimeMillis() - startTime, 0, 0, false);
+            return new ColoredExecutionResult(false, new ArrayList<>(), "连接超时");
+        } catch (IOException e) {
+            logger.error("Socket连接失败: ", e);
+            closeQuietly(socket);
+            PerformanceMonitor.recordSocketCommand(
+                    System.currentTimeMillis() - startTime, 0, 0, false);
+            return new ColoredExecutionResult(false, new ArrayList<>(), "Socket连接失败: " + e.getMessage());
+        } catch (Exception e) {
+            logger.error("未知错误", e);
+            closeQuietly(socket);
+            PerformanceMonitor.recordSocketCommand(
+                    System.currentTimeMillis() - startTime, 0, 0, false);
+            return new ColoredExecutionResult(false, new ArrayList<>(), "未知错误: " + e.getMessage());
+        } finally {
+            closeQuietly(socket);
         }
     }
 
@@ -266,7 +384,8 @@ public class SocketCommandExecutor {
             logger.debug("命令长度: " + command.length() + " 字符");
 
             AtomicBoolean reading = new AtomicBoolean(true);
-            var future = ThreadPoolManager.submitSocketCallable(() -> SocketStreamReader.readSocketStreamToString(input, reading, bytesRead, charsRead, outputBuilder));
+            Future<Boolean> future = ThreadPoolManager.submitSocketCallable(() -> SocketStreamReader.readSocketStreamToString(input, reading, bytesRead, charsRead, outputBuilder));
+            Objects.requireNonNull(future);
 
             try {
                 boolean serverClosedConnection = future.get(EXEC_TIMEOUT, TimeUnit.MILLISECONDS);

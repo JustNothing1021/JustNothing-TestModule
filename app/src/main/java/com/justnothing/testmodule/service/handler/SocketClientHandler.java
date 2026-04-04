@@ -3,7 +3,7 @@ package com.justnothing.testmodule.service.handler;
 import android.util.Log;
 
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.output.IOutputHandler;
+import com.justnothing.testmodule.command.output.ICommandOutputHandler;
 import com.justnothing.testmodule.command.output.InteractiveOutputHandler;
 import com.justnothing.testmodule.command.output.InteractiveProtocol;
 import com.justnothing.testmodule.utils.functions.Logger;
@@ -205,7 +205,20 @@ public class SocketClientHandler {
     private void handleInteractiveProtocolClient(Socket clientSocket, InputStream input, OutputStream output) {
         try (clientSocket) {
             try {
-                Object[] commandPacket = InteractiveProtocol.readMessage(input);
+                Object[] capabilityPacket = InteractiveProtocol.readMessage(input);
+                boolean supportsInput = true;
+                
+                if (capabilityPacket != null && (byte) capabilityPacket[0] == InteractiveProtocol.TYPE_CLIENT_CAPABILITY) {
+                    supportsInput = InteractiveProtocol.decodeCapability((byte[]) capabilityPacket[1]);
+                    logger.info("客户端能力: supportsInput=" + supportsInput);
+                } else if (capabilityPacket != null) {
+                    logger.warn("第一个包不是CAPABILITY，使用默认能力");
+                }
+
+                Object[] commandPacket = capabilityPacket != null && (byte) capabilityPacket[0] != InteractiveProtocol.TYPE_CLIENT_CAPABILITY 
+                    ? capabilityPacket 
+                    : InteractiveProtocol.readMessage(input);
+                    
                 if (commandPacket == null) {
                     logger.warn("客户端连接已关闭或无效, 没有收到需要执行的命令");
                     return;
@@ -223,6 +236,7 @@ public class SocketClientHandler {
                 logger.debug("接收到的客户端命令: " + command);
 
                 InteractiveOutputHandler outputHandler = new InteractiveOutputHandler(output);
+                outputHandler.setSupportsInput(supportsInput);
 
                 final AtomicBoolean readerRunning = new AtomicBoolean(true);
                 final InteractiveOutputHandler finalOutputHandler = outputHandler;
@@ -268,7 +282,7 @@ public class SocketClientHandler {
     }
 
     private void executeCommandForTextProtocolSocket(String command, final PrintWriter writer) {
-        IOutputHandler socketOutput = new IOutputHandler() {
+        ICommandOutputHandler socketOutput = new ICommandOutputHandler() {
             private volatile boolean closed = false;
             final StringBuilder sb = new StringBuilder();
 

@@ -3,10 +3,11 @@ package com.justnothing.testmodule.command.functions.hook;
 
 
 import com.justnothing.testmodule.command.CommandExecutor;
+import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.javainterpreter.ScriptRunner;
 import com.justnothing.javainterpreter.evaluator.ExecutionContext;
-import com.justnothing.testmodule.command.output.IOutputHandler;
+import com.justnothing.testmodule.command.output.ICommandOutputHandler;
 import com.justnothing.testmodule.command.output.OutputHandler;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
 import com.justnothing.testmodule.utils.data.DataBridge;
@@ -137,19 +138,20 @@ public class HookManager {
         
         try {
             logger.info("验证Hook代码: " + hookInfo.getId());
-            context.output().println("[INFO]  验证Hook代码...");
+            context.print("验证Hook代码...", Colors.CYAN);
+            context.println(" ✓", Colors.LIGHT_GREEN);
             validateHookCode(hookInfo, classLoader);
             logger.info("Hook 代码验证成功: " + hookInfo.getId());
         } catch (Exception e) {
-            String errorMsg = CommandExceptionHandler.handleException(
+            context.print("Hook代码验证失败: ", Colors.RED);
+            context.println(e.getMessage(), Colors.YELLOW);
+            return CommandExceptionHandler.handleException(
                 "hook add", 
                 e, 
                 logger, 
                 context.output(), 
                 "Hook代码验证失败"
             );
-            context.output().println("[ERROR] Hook代码验证失败... 信息: " + e + "\n\n");
-            return errorMsg;
         }
         
         hooks.put(hookInfo.getId(), hookInfo);
@@ -159,28 +161,40 @@ public class HookManager {
                       " 类名: " + className + 
                       " 方法名: " + methodName + 
                       " 签名: " + (signature != null ? signature : "默认"));
-            context.output().println("[INFO]  开始应用Hook: " + className + "." + methodName
-                                        + ", signature = " + signature);
+            context.print("开始应用Hook: ", Colors.CYAN);
+            context.print(className, Colors.GREEN);
+            context.print(".", Colors.WHITE);
+            context.print(methodName, Colors.YELLOW);
+            if (signature != null && !signature.isEmpty()) {
+                context.print(", signature = ", Colors.GRAY);
+                context.print(signature, Colors.LIGHT_GREEN);
+            }
+            context.println("", Colors.DEFAULT);
+            
             applyHook(hookInfo);
             logger.info("Hook添加成功: " + hookInfo.getId());
-            context.output().println("[INFO]  Hook添加成功!\n\n");
-            return "Hook添加成功\nID: " + hookInfo.getId() + "\n" + hookInfo.getDisplayInfo();
+            context.print("Hook添加成功!", Colors.LIGHT_GREEN);
+            context.print(" ID: ", Colors.CYAN);
+            context.println(hookInfo.getId(), Colors.YELLOW);
+            context.println("");
+            hookInfo.printDisplayInfo(context);
+            return null;
         } catch (Exception e) {
             hooks.remove(hookInfo.getId());
+            context.print("Hook添加失败: ", Colors.RED);
+            context.println(e.getMessage(), Colors.YELLOW);
             Map<String, Object> errContext = new java.util.HashMap<>();
             errContext.put("类名", className);
             errContext.put("方法名", methodName);
             errContext.put("签名", signature != null ? signature : "默认");
             errContext.put("Hook ID", hookInfo.getId());
-            String errorMsg = CommandExceptionHandler.handleException(
+            return CommandExceptionHandler.handleException(
                 "hook add", 
                 e, 
                 logger, 
                 errContext,
                 "Hook添加失败"
             );
-            context.output().println("[ERROR] Hook添加失败... 信息: " + e + "\n\n");
-            return errorMsg;
         }
     }
 
@@ -445,8 +459,8 @@ public class HookManager {
                 });
             logger.debug("运行代码, hook id = " + hookInfo.getId() + "\n" + code);
             String prefix = "[" + hookInfo.getId() + "][" + phase + "] ";
-            IOutputHandler outputHandler = new OutputHandler(logger, prefix);
-            IOutputHandler errorHandler = new OutputHandler(logger, prefix);
+            ICommandOutputHandler outputHandler = new OutputHandler(logger, prefix);
+            ICommandOutputHandler errorHandler = new OutputHandler(logger, prefix);
             ExecutionContext context = new ExecutionContext(cl, outputHandler, errorHandler);
             addHookBuiltIn(context, param, getLoadPackageParam(), hookInfo, phase, returnValueSet);
             runner.setContext(context);
@@ -578,6 +592,32 @@ public class HookManager {
         return "Hook移除成功: " + hookId;
     }
 
+    public static void removeHook(String hookId, CommandExecutor.CmdExecContext ctx) {
+        HookInfo hookInfo = hooks.get(hookId);
+        if (hookInfo == null) {
+            ctx.print("Hook不存在: ", Colors.RED);
+            ctx.println(hookId, Colors.YELLOW);
+            return;
+        }
+        
+        XC_MethodHook.Unhook unhook = activeHooks.remove(hookId);
+        if (unhook != null) {
+            unhook.unhook();
+        }
+        
+        hookInfo.setActive(false);
+        hooks.remove(hookId);
+        
+        ScriptRunner runner = scriptRunners.remove(hookId);
+        if (runner != null) {
+            runner.clearVariables();
+        }
+        
+        logger.info("Hook移除成功: " + hookId);
+        ctx.print("Hook移除成功: ", Colors.LIGHT_GREEN);
+        ctx.println(hookId, Colors.YELLOW);
+    }
+
     public static String listHooks() {
         if (hooks.isEmpty()) {
             return "没有活动的Hook";
@@ -595,6 +635,26 @@ public class HookManager {
         return sb.toString();
     }
 
+    public static void listHooks(CommandExecutor.CmdExecContext ctx) {
+        if (hooks.isEmpty()) {
+            ctx.println("没有活动的Hook", Colors.GRAY);
+            return;
+        }
+        
+        ctx.println("===== Hook列表 =====", Colors.CYAN);
+        ctx.println("");
+        
+        for (HookInfo hookInfo : hooks.values()) {
+            hookInfo.printDisplayInfo(ctx);
+            ctx.println("------------------------", Colors.GRAY);
+            ctx.println("");
+        }
+        
+        ctx.print("总计: ", Colors.CYAN);
+        ctx.print(String.valueOf(hooks.size()), Colors.YELLOW);
+        ctx.println(" 个Hook", Colors.CYAN);
+    }
+
     public static String getHookInfo(String hookId) {
         HookInfo hookInfo = hooks.get(hookId);
         if (hookInfo == null) {
@@ -602,6 +662,17 @@ public class HookManager {
         }
         
         return hookInfo.getDisplayInfo();
+    }
+
+    public static void getHookInfo(String hookId, CommandExecutor.CmdExecContext ctx) {
+        HookInfo hookInfo = hooks.get(hookId);
+        if (hookInfo == null) {
+            ctx.print("Hook不存在: ", Colors.RED);
+            ctx.println(hookId, Colors.YELLOW);
+            return;
+        }
+        
+        hookInfo.printDisplayInfo(ctx);
     }
 
     public static String enableHook(String hookId) {
@@ -615,6 +686,20 @@ public class HookManager {
         return "Hook已启用: " + hookId;
     }
 
+    public static void enableHook(String hookId, CommandExecutor.CmdExecContext ctx) {
+        HookInfo hookInfo = hooks.get(hookId);
+        if (hookInfo == null) {
+            ctx.print("Hook不存在: ", Colors.RED);
+            ctx.println(hookId, Colors.YELLOW);
+            return;
+        }
+        
+        hookInfo.setEnabled(true);
+        logger.info("启用Hook: " + hookId);
+        ctx.print("Hook已启用: ", Colors.LIGHT_GREEN);
+        ctx.println(hookId, Colors.YELLOW);
+    }
+
     public static String disableHook(String hookId) {
         HookInfo hookInfo = hooks.get(hookId);
         if (hookInfo == null) {
@@ -626,10 +711,39 @@ public class HookManager {
         return "Hook已禁用: " + hookId;
     }
 
+    public static void disableHook(String hookId, CommandExecutor.CmdExecContext ctx) {
+        HookInfo hookInfo = hooks.get(hookId);
+        if (hookInfo == null) {
+            ctx.print("Hook不存在: ", Colors.RED);
+            ctx.println(hookId, Colors.YELLOW);
+            return;
+        }
+        
+        hookInfo.setEnabled(false);
+        logger.info("禁用Hook: " + hookId);
+        ctx.print("Hook已禁用: ", Colors.GRAY);
+        ctx.println(hookId, Colors.YELLOW);
+    }
+
     public static String getHookOutput(String hookId, int count) {
         return "Hook 输出功能待实现\n" +
                "HookID: " + hookId + "\n" +
                "调用次数: " + (hooks.get(hookId) != null ? Objects.requireNonNull(hooks.get(hookId)).getCallCount() : "N/A");
+    }
+
+    public static void getHookOutput(String hookId, int count, CommandExecutor.CmdExecContext ctx) {
+        HookInfo hookInfo = hooks.get(hookId);
+        if (hookInfo == null) {
+            ctx.print("Hook不存在: ", Colors.RED);
+            ctx.println(hookId, Colors.YELLOW);
+            return;
+        }
+        
+        ctx.println("Hook 输出功能待实现", Colors.GRAY);
+        ctx.print("HookID: ", Colors.CYAN);
+        ctx.println(hookId, Colors.YELLOW);
+        ctx.print("调用次数: ", Colors.CYAN);
+        ctx.println(String.valueOf(hookInfo.getCallCount()), Colors.LIGHT_GREEN);
     }
 
     public static int getHookCount() {

@@ -5,6 +5,7 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_THREADS_VER
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandArgumentParser;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 
@@ -79,17 +80,21 @@ public class ThreadsMain extends CommandBase {
 
         try {
             return switch (subCommand) {
-                case "list" -> handleList(args);
-                case "deadlock" -> handleDeadlock();
-                case "profile" -> handleProfile(args);
-                default -> "未知子命令: " + subCommand + "\n" + getHelpText();
+                case "list" -> handleList(args, context);
+                case "deadlock" -> handleDeadlock(context);
+                case "profile" -> handleProfile(args, context);
+                default -> {
+                    context.print("未知子命令: ", Colors.RED);
+                    context.println(subCommand, Colors.YELLOW);
+                    yield null;
+                }
             };
         } catch (Exception e) {
             return CommandExceptionHandler.handleException("threads", e, logger, "执行threads命令失败");
         }
     }
 
-    private String handleList(String[] args) {
+    private String handleList(String[] args, CommandExecutor.CmdExecContext ctx) {
         Long filterId = null;
         String filterName = null;
         Thread.State filterState = null;
@@ -100,7 +105,9 @@ public class ThreadsMain extends CommandBase {
                 try {
                     filterId = Long.parseLong(args[++i]);
                 } catch (NumberFormatException e) {
-                    return "错误: 线程ID必须是数字";
+                    ctx.print("错误: ", Colors.RED);
+                    ctx.println("线程ID必须是数字", Colors.YELLOW);
+                    return null;
                 }
             } else if (arg.equals("--name") && i + 1 < args.length) {
                 filterName = args[++i];
@@ -108,18 +115,22 @@ public class ThreadsMain extends CommandBase {
                 try {
                     filterState = Thread.State.valueOf(args[++i]);
                 } catch (IllegalArgumentException e) {
-                    return "错误: 无效的线程状态, 有效值: " + Arrays.toString(Thread.State.values());
+                    ctx.print("错误: ", Colors.RED);
+                    ctx.print("无效的线程状态, 有效值: ", Colors.GRAY);
+                    ctx.println(Arrays.toString(Thread.State.values()), Colors.YELLOW);
+                    return null;
                 }
             }
         }
         
-        StringBuilder result = new StringBuilder();
-        
         try {
             Map<Thread, StackTraceElement[]> allStackTraces = Thread.getAllStackTraces();
             
-            result.append("=== 线程信息 ===\n\n");
-            result.append("线程总数: ").append(allStackTraces.size()).append("\n\n");
+            ctx.println("=== 线程信息 ===", Colors.CYAN);
+            ctx.println("");
+            ctx.print("线程总数: ", Colors.GRAY);
+            ctx.println(String.valueOf(allStackTraces.size()), Colors.YELLOW);
+            ctx.println("");
             
             int blockedCount = 0;
             int waitingCount = 0;
@@ -131,36 +142,27 @@ public class ThreadsMain extends CommandBase {
             for (Thread thread : allStackTraces.keySet()) {
                 Thread.State state = thread.getState();
                 switch (state) {
-                    case BLOCKED:
-                        blockedCount++;
-                        break;
-                    case WAITING:
-                        waitingCount++;
-                        break;
-                    case TIMED_WAITING:
-                        timedWaitingCount++;
-                        break;
-                    case RUNNABLE:
-                        runnableCount++;
-                        break;
-                    case TERMINATED:
-                        terminatedCount++;
-                        break;
-                    case NEW:
-                        newStateCount++;
-                        break;
+                    case BLOCKED -> blockedCount++;
+                    case WAITING -> waitingCount++;
+                    case TIMED_WAITING -> timedWaitingCount++;
+                    case RUNNABLE -> runnableCount++;
+                    case TERMINATED -> terminatedCount++;
+                    case NEW -> newStateCount++;
                 }
             }
             
-            result.append("=== 线程状态统计 ===\n\n");
-            result.append("BLOCKED: ").append(blockedCount).append("\n");
-            result.append("WAITING: ").append(waitingCount).append("\n");
-            result.append("TIMED_WAITING: ").append(timedWaitingCount).append("\n");
-            result.append("RUNNABLE: ").append(runnableCount).append("\n");
-            result.append("TERMINATED: ").append(terminatedCount).append("\n");
-            result.append("NEW: ").append(newStateCount).append("\n\n");
+            ctx.println("=== 线程状态统计 ===", Colors.CYAN);
+            ctx.println("");
+            printStateCount(ctx, "BLOCKED", blockedCount, Colors.RED);
+            printStateCount(ctx, "WAITING", waitingCount, Colors.YELLOW);
+            printStateCount(ctx, "TIMED_WAITING", timedWaitingCount, Colors.PURPLE);
+            printStateCount(ctx, "RUNNABLE", runnableCount, Colors.LIGHT_GREEN);
+            printStateCount(ctx, "TERMINATED", terminatedCount, Colors.GRAY);
+            printStateCount(ctx, "NEW", newStateCount, Colors.CYAN);
+            ctx.println("");
             
-            result.append("=== 线程详情 ===\n\n");
+            ctx.println("=== 线程详情 ===", Colors.CYAN);
+            ctx.println("");
             
             boolean found = false;
             for (Map.Entry<Thread, StackTraceElement[]> entry : allStackTraces.entrySet()) {
@@ -178,25 +180,11 @@ public class ThreadsMain extends CommandBase {
                 }
                 
                 found = true;
-                result.append("线程: ").append(thread.getName()).append("\n");
-                result.append("  ID: ").append(thread.getId()).append("\n");
-                result.append("  状态: ").append(thread.getState()).append("\n");
-                result.append("  优先级: ").append(thread.getPriority()).append("\n");
-                result.append("  守护: ").append(thread.isDaemon() ? "是" : "否").append("\n");
-                result.append("  中断: ").append(thread.isInterrupted() ? "是" : "否").append("\n");
-                result.append("  是否存活: ").append(thread.isAlive() ? "是" : "否").append("\n");
-                
-                if (stackTrace != null && stackTrace.length > 0) {
-                    result.append("  堆栈:\n");
-                    for (StackTraceElement element : stackTrace) {
-                        result.append("    ").append(element.toString()).append("\n");
-                    }
-                }
-                result.append("\n");
+                printThreadInfo(ctx, thread, stackTrace);
             }
             
             if (!found && (filterId != null || filterName != null || filterState != null)) {
-                result.append("未找到匹配的线程\n");
+                ctx.println("未找到匹配的线程", Colors.GRAY);
             }
             
             logger.info("线程信息查询完成");
@@ -205,15 +193,95 @@ public class ThreadsMain extends CommandBase {
             return CommandExceptionHandler.handleException("threads list", e, logger, "获取线程信息失败");
         }
         
-        return result.toString();
+        return null;
     }
 
-    private String handleDeadlock() {
-        StringBuilder result = new StringBuilder();
+    private byte getStateColor(Thread.State state) {
+        return switch (state) {
+            case RUNNABLE -> Colors.LIGHT_GREEN;
+            case BLOCKED -> Colors.RED;
+            case WAITING -> Colors.YELLOW;
+            case TIMED_WAITING -> Colors.PURPLE;
+            case TERMINATED -> Colors.GRAY;
+            case NEW -> Colors.CYAN;
+        };
+    }
+
+    private void printStateCount(CommandExecutor.CmdExecContext ctx, String stateName, int count, byte color) {
+        ctx.print(stateName + ": ", Colors.GRAY);
+        ctx.println(String.valueOf(count), color);
+    }
+
+    private void printThreadInfo(CommandExecutor.CmdExecContext ctx, Thread thread, StackTraceElement[] stackTrace) {
+        ctx.print("线程: ", Colors.CYAN);
+        ctx.println(thread.getName(), Colors.LIGHT_GREEN);
         
+        ctx.print("  ID: ", Colors.GRAY);
+        ctx.println(String.valueOf(thread.getId()), Colors.YELLOW);
+        
+        byte stateColor = getStateColor(thread.getState());
+        ctx.print("  状态: ", Colors.GRAY);
+        ctx.println(thread.getState().toString(), stateColor);
+        
+        ctx.print("  优先级: ", Colors.GRAY);
+        ctx.println(String.valueOf(thread.getPriority()), Colors.LIGHT_GREEN);
+        
+        ctx.print("  守护: ", Colors.GRAY);
+        ctx.println(thread.isDaemon() ? "是" : "否", thread.isDaemon() ? Colors.PURPLE : Colors.LIGHT_GREEN);
+        
+        ctx.print("  中断: ", Colors.GRAY);
+        ctx.println(thread.isInterrupted() ? "是" : "否", thread.isInterrupted() ? Colors.RED : Colors.LIGHT_GREEN);
+        
+        ctx.print("  是否存活: ", Colors.GRAY);
+        ctx.println(thread.isAlive() ? "是" : "否", thread.isAlive() ? Colors.LIGHT_GREEN : Colors.GRAY);
+        
+        if (stackTrace != null && stackTrace.length > 0) {
+            ctx.print("  堆栈:", Colors.GRAY);
+            ctx.println("");
+            for (StackTraceElement element : stackTrace) {
+                ctx.print("    ", Colors.DEFAULT);
+                printStackTraceElement(ctx, element);
+            }
+        }
+        ctx.println("");
+    }
+
+    private void printStackTraceElement(CommandExecutor.CmdExecContext ctx, StackTraceElement element) {
+        String className = element.getClassName();
+        String methodName = element.getMethodName();
+        String fileName = element.getFileName();
+        int lineNumber = element.getLineNumber();
+        
+        int lastDot = className.lastIndexOf('.');
+        String packageName = lastDot > 0 ? className.substring(0, lastDot) : "";
+        String simpleClassName = lastDot > 0 ? className.substring(lastDot + 1) : className;
+        
+        if (!packageName.isEmpty()) {
+            ctx.print(packageName + ".", Colors.GRAY);
+        }
+        ctx.print(simpleClassName, Colors.GREEN);
+        ctx.print(".", Colors.GRAY);
+        ctx.print(methodName, Colors.LIGHT_BLUE);
+        ctx.print("(", Colors.PURPLE);
+        
+        if (fileName != null) {
+            ctx.print(fileName, Colors.CYAN);
+            if (lineNumber >= 0) {
+                ctx.print(":", Colors.GRAY);
+                ctx.print(String.valueOf(lineNumber), Colors.YELLOW);
+            }
+        } else {
+            ctx.print("Unknown Source", Colors.GRAY);
+        }
+        ctx.println(")", Colors.PURPLE);
+    }
+
+    private String handleDeadlock(CommandExecutor.CmdExecContext ctx) {
         try {
-            result.append("===== 线程状态分析 =====\n");
-            result.append("时间: ").append(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())).append("\n\n");
+            ctx.println("===== 线程状态分析 =====", Colors.CYAN);
+            ctx.print("时间: ", Colors.GRAY);
+            ctx.println(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()), Colors.YELLOW);
+            ctx.println("");
             
             Map<Thread, StackTraceElement[]> allStackTraces = Thread.getAllStackTraces();
             
@@ -227,78 +295,85 @@ public class ThreadsMain extends CommandBase {
             for (Thread thread : allStackTraces.keySet()) {
                 Thread.State state = thread.getState();
                 switch (state) {
-                    case BLOCKED:
-                        blockedCount++;
-                        break;
-                    case WAITING:
-                        waitingCount++;
-                        break;
-                    case TIMED_WAITING:
-                        timedWaitingCount++;
-                        break;
-                    case RUNNABLE:
-                        runnableCount++;
-                        break;
-                    case TERMINATED:
-                        terminatedCount++;
-                        break;
-                    case NEW:
-                        newStateCount++;
-                        break;
+                    case BLOCKED -> blockedCount++;
+                    case WAITING -> waitingCount++;
+                    case TIMED_WAITING -> timedWaitingCount++;
+                    case RUNNABLE -> runnableCount++;
+                    case TERMINATED -> terminatedCount++;
+                    case NEW -> newStateCount++;
                 }
             }
             
-            result.append("===== 线程状态统计 =====\n\n");
-            result.append("线程总数: ").append(allStackTraces.size()).append("\n");
-            result.append(" BLOCKED: ").append(blockedCount).append("\n");
-            result.append(" WAITING: ").append(waitingCount).append("\n");
-            result.append(" TIMED_WAITING: ").append(timedWaitingCount).append("\n");
-            result.append(" RUNNABLE: ").append(runnableCount).append("\n");
-            result.append(" TERMINATED: ").append(terminatedCount).append("\n");
-            result.append(" NEW: ").append(newStateCount).append("\n\n");
+            ctx.println("===== 线程状态统计 =====", Colors.CYAN);
+            ctx.println("");
+            ctx.print("线程总数: ", Colors.GRAY);
+            ctx.println(String.valueOf(allStackTraces.size()), Colors.YELLOW);
+            printStateCount(ctx, " BLOCKED", blockedCount, Colors.RED);
+            printStateCount(ctx, " WAITING", waitingCount, Colors.YELLOW);
+            printStateCount(ctx, " TIMED_WAITING", timedWaitingCount, Colors.PURPLE);
+            printStateCount(ctx, " RUNNABLE", runnableCount, Colors.LIGHT_GREEN);
+            printStateCount(ctx, " TERMINATED", terminatedCount, Colors.GRAY);
+            printStateCount(ctx, " NEW", newStateCount, Colors.CYAN);
+            ctx.println("");
             
             if (blockedCount > 0) {
-                result.append("===== 可能的死锁线程 =====\n\n");
-                result.append("Tip: Android不提供完整的死锁检测API, 此命令只基于基本的线程状态分析\n");
-                result.append("以下BLOCKED状态的线程可能存在死锁:\n\n");
+                ctx.println("===== 可能的死锁线程 =====", Colors.CYAN);
+                ctx.println("");
+                ctx.println("Tip: Android不提供完整的死锁检测API, 此命令只基于基本的线程状态分析", Colors.GRAY);
+                ctx.println("以下BLOCKED状态的线程可能存在死锁:", Colors.GRAY);
+                ctx.println("");
                 
                 for (Map.Entry<Thread, StackTraceElement[]> entry : allStackTraces.entrySet()) {
                     Thread thread = entry.getKey();
                     if (thread.getState() == Thread.State.BLOCKED) {
                         StackTraceElement[] stackTrace = entry.getValue();
                         
-                        result.append("线程: ").append(thread.getName()).append("\n");
-                        result.append("  ID: ").append(thread.getId()).append("\n");
-                        result.append("  状态: ").append(thread.getState()).append("\n");
-                        result.append("  优先级: ").append(thread.getPriority()).append("\n");
-                        result.append("  守护: ").append(thread.isDaemon()).append("\n");
-                        result.append("  中断: ").append(thread.isInterrupted()).append("\n\n");
+                        ctx.print("线程: ", Colors.CYAN);
+                        ctx.println(thread.getName(), Colors.LIGHT_GREEN);
+                        ctx.print("  ID: ", Colors.GRAY);
+                        ctx.println(String.valueOf(thread.getId()), Colors.YELLOW);
+                        ctx.print("  状态: ", Colors.GRAY);
+                        ctx.println(thread.getState().toString(), Colors.RED);
+                        ctx.print("  优先级: ", Colors.GRAY);
+                        ctx.println(String.valueOf(thread.getPriority()), Colors.LIGHT_GREEN);
+                        ctx.print("  守护: ", Colors.GRAY);
+                        ctx.println(String.valueOf(thread.isDaemon()), thread.isDaemon() ? Colors.PURPLE : Colors.LIGHT_GREEN);
+                        ctx.print("  中断: ", Colors.GRAY);
+                        ctx.println(String.valueOf(thread.isInterrupted()), thread.isInterrupted() ? Colors.RED : Colors.LIGHT_GREEN);
+                        ctx.println("");
                         
                         if (stackTrace != null && stackTrace.length > 0) {
-                            result.append("  堆栈跟踪:\n");
+                            ctx.print("  堆栈跟踪:", Colors.GRAY);
+                            ctx.println("");
                             for (StackTraceElement element : stackTrace) {
-                                result.append("    ").append(element.toString()).append("\n");
+                                ctx.print("    ", Colors.DEFAULT);
+                                printStackTraceElement(ctx, element);
                             }
                         }
-                        result.append("\n");
+                        ctx.println("");
                     }
                 }
             } else {
-                result.append("未检测到BLOCKED状态的线程, 应该是没有死锁的\n\n");
+                ctx.println("未检测到BLOCKED状态的线程, 应该是没有死锁的", Colors.LIGHT_GREEN);
+                ctx.println("");
             }
             
-            result.append("===== 检测结果 =====\n\n");
-            result.append("检测到 ").append(blockedCount).append(" 个BLOCKED状态的线程\n");
+            ctx.println("===== 检测结果 =====", Colors.CYAN);
+            ctx.println("");
+            ctx.print("检测到 ", Colors.GRAY);
+            ctx.print(String.valueOf(blockedCount), blockedCount > 0 ? Colors.RED : Colors.LIGHT_GREEN);
+            ctx.println(" 个BLOCKED状态的线程", Colors.GRAY);
+            
             if (blockedCount > 0) {
-                result.append("建议采取以下措施 (来自GLM 4.7 AI Assistant的忠告):\n");
-                result.append("  1. 检查BLOCKED线程的堆栈跟踪, 找出阻塞发生的位置\n");
-                result.append("  2. 检查锁的获取顺序, 确保所有线程以相同的顺序获取锁\n");
-                result.append("  3. 使用 tryLock() 替代 lock(), 避免无限等待\n");
-                result.append("  4. 考虑使用超时机制, 避免线程永久阻塞\n");
-                result.append("  5. 如果可能, 重构代码以减少锁的使用\n");
-                result.append("  6. 使用android.os.Looper和Handler进行线程间通信\n");
+                ctx.println("建议采取以下措施 (来自GLM 4.7 AI Assistant的忠告):", Colors.YELLOW);
+                ctx.println("  1. 检查BLOCKED线程的堆栈跟踪, 找出阻塞发生的位置", Colors.GRAY);
+                ctx.println("  2. 检查锁的获取顺序, 确保所有线程以相同的顺序获取锁", Colors.GRAY);
+                ctx.println("  3. 使用 tryLock() 替代 lock(), 避免无限等待", Colors.GRAY);
+                ctx.println("  4. 考虑使用超时机制, 避免线程永久阻塞", Colors.GRAY);
+                ctx.println("  5. 如果可能, 重构代码以减少锁的使用", Colors.GRAY);
+                ctx.println("  6. 使用android.os.Looper和Handler进行线程间通信", Colors.GRAY);
             } else {
-                result.append("当前没有检测到明显的死锁迹象\n");
+                ctx.println("当前没有检测到明显的死锁迹象", Colors.LIGHT_GREEN);
             }
             
             logger.info("线程状态分析完成, 发现 " + blockedCount + " 个BLOCKED线程");
@@ -307,12 +382,15 @@ public class ThreadsMain extends CommandBase {
             return CommandExceptionHandler.handleException("threads deadlock", e, logger, "线程状态分析失败");
         }
         
-        return result.toString();
+        return null;
     }
 
-    private String handleProfile(String[] args) {
+    private String handleProfile(String[] args, CommandExecutor.CmdExecContext ctx) {
         if (args.length < 2) {
-            return "错误: 参数不足\n用法: threads profile <subcmd> [args...]\n" + getHelpText();
+            ctx.print("错误: ", Colors.RED);
+            ctx.println("参数不足", Colors.YELLOW);
+            ctx.println("用法: threads profile <subcmd> [args...]", Colors.GRAY);
+            return null;
         }
 
         String profileSubCommand = args[1];
@@ -320,18 +398,22 @@ public class ThreadsMain extends CommandBase {
 
         try {
             return switch (profileSubCommand) {
-                case "start" -> handleProfileStart(args, manager);
-                case "stop" -> handleProfileStop(manager);
-                case "show" -> handleProfileShow(manager);
-                case "export" -> handleProfileExport(args, manager);
-                default -> "未知子命令: " + profileSubCommand + "\n" + getHelpText();
+                case "start" -> handleProfileStart(args, manager, ctx);
+                case "stop" -> handleProfileStop(manager, ctx);
+                case "show" -> handleProfileShow(manager, ctx);
+                case "export" -> handleProfileExport(args, manager, ctx);
+                default -> {
+                    ctx.print("未知子命令: ", Colors.RED);
+                    ctx.println(profileSubCommand, Colors.YELLOW);
+                    yield null;
+                }
             };
         } catch (Exception e) {
             return CommandExceptionHandler.handleException("threads profile", e, logger, "执行profile命令失败");
         }
     }
 
-    private String handleProfileStart(String[] args, ProfileManager manager) {
+    private String handleProfileStart(String[] args, ProfileManager manager, CommandExecutor.CmdExecContext ctx) {
         int duration = 60;
         
         if (args.length > 2) {
@@ -339,48 +421,60 @@ public class ThreadsMain extends CommandBase {
                 duration = CommandArgumentParser.parseInt(args, 2, "持续时间");
                 CommandArgumentParser.requireMin(duration, 1, "持续时间");
             } catch (IllegalArgumentException e) {
-                return "错误: " + e.getMessage();
+                ctx.print("错误: ", Colors.RED);
+                ctx.println(e.getMessage(), Colors.YELLOW);
+                return null;
             }
         }
 
         try {
             manager.startProfiling(duration);
-            return "开始性能分析, 持续时间: " + duration + "秒";
+            ctx.print("开始性能分析, 持续时间: ", Colors.LIGHT_GREEN);
+            ctx.print(String.valueOf(duration), Colors.YELLOW);
+            ctx.println("秒", Colors.GRAY);
+            return null;
         } catch (Exception e) {
             return CommandExceptionHandler.handleException("threads profile start", e, logger, "开始性能分析失败");
         }
     }
 
-    private String handleProfileStop(ProfileManager manager) {
+    private String handleProfileStop(ProfileManager manager, CommandExecutor.CmdExecContext ctx) {
         try {
             manager.stopProfiling();
-            return "停止性能分析成功";
+            ctx.println("停止性能分析成功", Colors.LIGHT_GREEN);
+            return null;
         } catch (Exception e) {
             return CommandExceptionHandler.handleException("threads profile stop", e, logger, "停止性能分析失败");
         }
     }
 
-    private String handleProfileShow(ProfileManager manager) {
+    private String handleProfileShow(ProfileManager manager, CommandExecutor.CmdExecContext ctx) {
         try {
-            return manager.getProfileReport();
+            ctx.println(manager.getProfileReport(), Colors.DEFAULT);
+            return null;
         } catch (Exception e) {
             return CommandExceptionHandler.handleException("threads profile show", e, logger, "获取分析结果失败");
         }
     }
 
-    private String handleProfileExport(String[] args, ProfileManager manager) {
+    private String handleProfileExport(String[] args, ProfileManager manager, CommandExecutor.CmdExecContext ctx) {
         if (args.length < 3) {
-            return "错误: 参数不足\n用法: threads profile export <file>";
+            ctx.print("错误: ", Colors.RED);
+            ctx.println("参数不足", Colors.YELLOW);
+            ctx.println("用法: threads profile export <file>", Colors.GRAY);
+            return null;
         }
 
         try {
             String filePath = args[2];
             boolean success = manager.exportToFile(filePath);
             if (success) {
-                return "导出分析结果成功: " + filePath;
+                ctx.print("导出分析结果成功: ", Colors.LIGHT_GREEN);
+                ctx.println(filePath, Colors.CYAN);
             } else {
-                return "导出分析结果失败";
+                ctx.println("导出分析结果失败", Colors.RED);
             }
+            return null;
         } catch (Exception e) {
             return CommandExceptionHandler.handleException("threads profile export", e, logger, "导出分析结果失败");
         }

@@ -2,7 +2,7 @@ package com.justnothing.testmodule.command.output;
 
 import com.justnothing.testmodule.utils.functions.Logger;
 
-public class OutputHandler implements IOutputHandler {
+public class OutputHandler implements ICommandOutputHandler {
     private final Logger logger;
     private final String prefix;
     private boolean closed = false;

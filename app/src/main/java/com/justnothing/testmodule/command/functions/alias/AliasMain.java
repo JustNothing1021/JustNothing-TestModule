@@ -47,7 +47,7 @@ public class AliasMain extends CommandBase {
                     list                 - 列出所有别名
                     clear                - 清除所有自定义别名
                     show <名称>          - 显示别名对应的命令
-                    
+                
                 示例:
                     alias add pm performance       - 添加别名: pm -> performance
                     alias add hi "help interactive" - 添加带参数的别名
@@ -56,12 +56,12 @@ public class AliasMain extends CommandBase {
                     alias list                     - 列出所有别名
                     alias show pm                  - 显示 pm 对应的命令
                     alias clear                    - 清除所有自定义别名
-                    
+                
                 使用别名:
                     pm sample start        - 等同于 performance sample start
                     sc run myscript        - 等同于 script run myscript
                     hi                     - 等同于 help interactive
-                    
+                
                 默认别名:
                     h, ?  -> help
                     pm    -> performance
@@ -70,7 +70,7 @@ public class AliasMain extends CommandBase {
                     wt    -> watch
                     bp    -> breakpoint
                     cls   -> clear
-                    
+                
                 注意:
                     - 别名名称不能包含空格
                     - 别名会自动保存，重启后保留

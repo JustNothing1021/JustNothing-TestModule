@@ -169,4 +169,5 @@
     <string name="performance_hook_call_cnt">Called times: %d</string>
     <string name="performance_hook_total_time">Total time cost: %dms</string>
     <string name="performance_hook_avg_time">Average time cost: %dms</string>
+    <string name="script_execute_finished">Script execution finished!</string>
 </resources>

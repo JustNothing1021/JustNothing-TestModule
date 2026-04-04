@@ -1,10 +1,16 @@
 package com.justnothing.testmodule.command.functions.classcmd;
 
 
+import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
+import com.justnothing.testmodule.utils.reflect.DescriptorColorizer;
+import com.justnothing.testmodule.utils.reflect.ReflectionUtils;
+
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+
 
 public class InfoCommand extends AbstractClassCommand {
 
@@ -17,7 +23,12 @@ public class InfoCommand extends AbstractClassCommand {
         String[] args = context.getArgs();
         
         if (args.length < 1) {
-            return "参数不足, 需要至少1个参数: class info <class_name>\n" + getHelpText();
+            return CommandExceptionHandler.handleException(
+                "class info", 
+                new IllegalArgumentException("参数不足, 需要至少1个参数: class info <class_name>"),
+                context.getExecContext(),
+                "参数错误"
+            );
         }
 
 
@@ -26,10 +37,12 @@ public class InfoCommand extends AbstractClassCommand {
         boolean showSuper = false;
         boolean showModifiers = false;
         boolean showAll = true;
+        boolean verbose = false;
 
         for (int i = 0; i < args.length - 1; i++) {
             String arg = args[i];
             switch (arg) {
+                case "-v", "--verbose" -> verbose = true;
                 case "-i", "--interfaces" -> {
                     showInterfaces = true;
                     showAll = false;
@@ -55,76 +68,98 @@ public class InfoCommand extends AbstractClassCommand {
         
         Class<?> targetClass = context.loadClass(className);
         if (targetClass == null) {
-            context.getLogger().error("找不到类: " + className);
-            return "找不到类: " + className;
+            return CommandExceptionHandler.handleException(
+                "class info",
+                new ClassNotFoundException("找不到类: " + className),
+                context.getExecContext(),
+                "类加载失败"
+            );
         }
 
-        StringBuilder result = new StringBuilder();
-        
         if (showAll || showModifiers) {
-            result.append("类名: ").append(targetClass.getName()).append("\n");
-            result.append("修饰符: ").append(Modifier.toString(targetClass.getModifiers())).append("\n");
-            if (targetClass.isInterface()) result.append("接口类 ");
-            if (targetClass.isArray()) result.append("数组 ");
-            if (targetClass.isPrimitive()) result.append("原始类型 ");
-            if (targetClass.isAnnotation()) result.append("注解 ");
-            if (targetClass.isEnum()) result.append("枚举 ");
-            if (targetClass.isAnonymousClass()) result.append("匿名类 ");
-            if (targetClass.isMemberClass()) result.append("成员类 ");
-            if (targetClass.isLocalClass()) result.append("本地类 ");
-            if (targetClass.isSynthetic()) result.append("合成类 ");
-            result.append("\n");
+            context.getExecContext().print("类名: ", Colors.CYAN);
+            context.getExecContext().println(targetClass.getName(), Colors.WHITE);
+            context.getExecContext().print("修饰符: ", Colors.CYAN);
+            context.getExecContext().println(Modifier.toString(targetClass.getModifiers()), Colors.YELLOW);
+            
+            StringBuilder flags = new StringBuilder();
+            if (targetClass.isInterface()) flags.append("接口类 ");
+            if (targetClass.isArray()) flags.append("数组 ");
+            if (targetClass.isPrimitive()) flags.append("原始类型 ");
+            if (targetClass.isAnnotation()) flags.append("注解 ");
+            if (targetClass.isEnum()) flags.append("枚举 ");
+            if (targetClass.isAnonymousClass()) flags.append("匿名类 ");
+            if (targetClass.isMemberClass()) flags.append("成员类 ");
+            if (targetClass.isLocalClass()) flags.append("本地类 ");
+            if (targetClass.isSynthetic()) flags.append("合成类 ");
+            if (flags.length() > 0) {
+                context.getExecContext().print("特性: ", Colors.CYAN);
+                context.getExecContext().println(flags.toString().trim(), Colors.BLUE);
+            }
+            context.getExecContext().println("");
         }
         
         if (showAll || showSuper) {
             Class<?> superClass = targetClass.getSuperclass();
+            context.getExecContext().print("父类: ", Colors.CYAN);
             if (superClass != null) {
-                result.append("父类: ").append(superClass.getName()).append("\n");
+                context.getExecContext().println(superClass.getName(), Colors.GREEN);
             } else {
-                result.append("父类: 无\n");
+                context.getExecContext().println("无", Colors.GRAY);
             }
-            result.append("\n");
+            context.getExecContext().println("");
         }
         
         if (showAll || showInterfaces) {
             Class<?>[] interfaces = targetClass.getInterfaces();
+            context.getExecContext().print("实现的接口", Colors.CYAN);
+            context.getExecContext().println(" (" + interfaces.length + "个):", Colors.CYAN);
             if (interfaces.length > 0) {
-                result.append("实现的接口:\n");
                 for (Class<?> _interface : interfaces) {
-                    result.append("  - ").append(_interface.getName()).append("\n");
+                    context.getExecContext().print("  - ", Colors.GRAY);
+                    context.getExecContext().println(_interface.getName(), Colors.GREEN);
                 }
             } else {
-                result.append("实现的接口: 无\n");
+                context.getExecContext().println("  无", Colors.GRAY);
             }
-            result.append("\n");
+            context.getExecContext().println("");
         }
         
         if (showAll || showConstructors) {
             Constructor<?>[] constructors = targetClass.getDeclaredConstructors();
-            result.append("构造函数 (").append(constructors.length).append("个):\n");
+            context.getExecContext().print("构造函数", Colors.CYAN);
+            context.getExecContext().println(" (" + constructors.length + "个):", Colors.CYAN);
             for (Constructor<?> constructor : constructors) {
-                result.append("  ").append(constructor.toString()).append("\n");
+                context.getExecContext().print("  ", Colors.GRAY);
+                DescriptorColorizer.printColoredDescriptor(context.getExecContext(), constructor, !verbose);
+                context.getExecContext().println("");
             }
-            result.append("\n");
+            context.getExecContext().println("");
         }
         
         if (showAll) {
             Field[] fields = targetClass.getDeclaredFields();
-            result.append("字段 (").append(fields.length).append("个):\n");
+            context.getExecContext().print("字段", Colors.CYAN);
+            context.getExecContext().println(" (" + fields.length + "个):", Colors.CYAN);
             for (Field field : fields) {
-                result.append("  ").append(field.toString()).append("\n");
+                context.getExecContext().print("  ", Colors.GRAY);
+                DescriptorColorizer.printColoredDescriptor(context.getExecContext(), field, !verbose);
+                context.getExecContext().println("");
             }
-            result.append("\n");
+            context.getExecContext().println("");
             
             Method[] methods = targetClass.getDeclaredMethods();
-            result.append("方法 (").append(methods.length).append("个):\n");
+            context.getExecContext().print("方法", Colors.CYAN);
+            context.getExecContext().println(" (" + methods.length + "个):", Colors.CYAN);
             for (Method method : methods) {
-                result.append("  ").append(method.toString()).append("\n");
+                context.getExecContext().print("  ", Colors.GRAY);
+                DescriptorColorizer.printColoredDescriptor(context.getExecContext(), method, !verbose);
+                context.getExecContext().println("");
             }
         }
         
         context.getLogger().info("查看类信息: " + className);
-        return result.toString();
+        return "";
     }
 
     @Override
@@ -134,12 +169,12 @@ public class InfoCommand extends AbstractClassCommand {
             
             查看类的详细信息.
             
-            选项:
-                -i, --interfaces    显示实现的接口
-                -c, --constructors  显示构造函数
-                -s, --super         显示父类信息
-                -m, --modifiers     显示修饰符信息
-                -a, --all           显示所有信息 (默认)
+                -v, --verbose        显示详细信息
+                -i, --interfaces     显示实现的接口
+                -c, --constructors   显示构造函数
+                -s, --super          显示父类信息
+                -m, --modifiers      显示修饰符信息
+                -a, --all            显示所有信息 (默认)
             
             示例:
                 class info java.lang.String

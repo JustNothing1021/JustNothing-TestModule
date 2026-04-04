@@ -1,5 +1,8 @@
 package com.justnothing.testmodule.command.functions.hook;
 
+import com.justnothing.testmodule.command.CommandExecutor;
+import com.justnothing.testmodule.command.output.Colors;
+
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -166,6 +169,59 @@ public class HookInfo {
         }
         
         return sb.toString();
+    }
+
+    public void printDisplayInfo(CommandExecutor.CmdExecContext ctx) {
+        ctx.print("ID: ", Colors.CYAN);
+        ctx.println(id, Colors.YELLOW);
+        
+        ctx.print("类名: ", Colors.CYAN);
+        ctx.println(className, Colors.GREEN);
+        
+        ctx.print("方法名: ", Colors.CYAN);
+        ctx.println(methodName, Colors.YELLOW);
+        
+        if (signature != null && !signature.isEmpty()) {
+            ctx.print("签名: ", Colors.CYAN);
+            ctx.println(signature, Colors.LIGHT_GREEN);
+        }
+        
+        ctx.print("创建时间: ", Colors.CYAN);
+        ctx.println(formatTime(createTime), Colors.GRAY);
+        
+        ctx.print("调用次数: ", Colors.CYAN);
+        ctx.println(String.valueOf(callCount.get()), Colors.LIGHT_GREEN);
+        
+        ctx.print("状态: ", Colors.CYAN);
+        ctx.println(active ? "活跃" : "非活跃", active ? Colors.LIGHT_GREEN : Colors.GRAY);
+        
+        ctx.print("启用: ", Colors.CYAN);
+        ctx.println(enabled ? "是" : "否", enabled ? Colors.LIGHT_GREEN : Colors.RED);
+        
+        if (beforeCode != null && !beforeCode.isEmpty()) {
+            ctx.print("before阶段代码: ", Colors.CYAN);
+            ctx.println(truncateCode(beforeCode), Colors.PURPLE);
+        }
+        if (beforeCodebase != null && !beforeCodebase.isEmpty()) {
+            ctx.print("before阶段代码文件: ", Colors.CYAN);
+            ctx.println(beforeCodebase, Colors.PURPLE);
+        }
+        if (afterCode != null && !afterCode.isEmpty()) {
+            ctx.print("after阶段代码: ", Colors.CYAN);
+            ctx.println(truncateCode(afterCode), Colors.PURPLE);
+        }
+        if (afterCodebase != null && !afterCodebase.isEmpty()) {
+            ctx.print("after阶段代码文件: ", Colors.CYAN);
+            ctx.println(afterCodebase, Colors.PURPLE);
+        }
+        if (replaceCode != null && !replaceCode.isEmpty()) {
+            ctx.print("replace代码: ", Colors.CYAN);
+            ctx.println(truncateCode(replaceCode), Colors.PURPLE);
+        }
+        if (replaceCodebase != null && !replaceCodebase.isEmpty()) {
+            ctx.print("replace代码文件: ", Colors.CYAN);
+            ctx.println(replaceCodebase, Colors.PURPLE);
+        }
     }
 
     private String formatTime(long timestamp) {

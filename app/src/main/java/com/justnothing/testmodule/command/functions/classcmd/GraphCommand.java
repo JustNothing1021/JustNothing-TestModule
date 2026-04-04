@@ -1,5 +1,8 @@
 package com.justnothing.testmodule.command.functions.classcmd;
 
+import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
+import com.justnothing.testmodule.command.output.Colors;
+
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,7 +25,8 @@ public class GraphCommand extends AbstractClassCommand {
         String className = args[0];
         Class<?> clazz = context.loadClass(className);
         
-        return generateClassInheritanceGraph(clazz, context);
+        generateClassInheritanceGraph(clazz, context);
+        return null;
     }
 
     @Override
@@ -37,49 +41,52 @@ public class GraphCommand extends AbstractClassCommand {
             """;
     }
 
-    private String generateClassInheritanceGraph(Class<?> clazz, ClassCommandContext context) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("===== 类继承图 =====\n");
-        sb.append("类名: ").append(clazz.getName()).append("\n\n");
+    private void generateClassInheritanceGraph(Class<?> clazz, ClassCommandContext context) {
+        context.getExecContext().println("===== 类继承图 =====", Colors.CYAN);
+        context.getExecContext().print("类名: ", Colors.CYAN);
+        context.getExecContext().println(clazz.getName(), Colors.GREEN);
+        context.getExecContext().println("");
         
         List<Class<?>> hierarchy = getClassHierarchy(clazz);
         
-        sb.append("继承层次（从顶层父类到当前类）:\n");
+        context.getExecContext().println("继承层次（从顶层父类到当前类）:", Colors.CYAN);
         for (int i = 0; i < hierarchy.size(); i++) {
             Class<?> currentClass = hierarchy.get(i);
             
             for (int j = 0; j < i; j++) {
-                sb.append("  ");
+                context.getExecContext().print("  ", Colors.GRAY);
             }
-            sb.append("└─> ").append(currentClass.getSimpleName()).append("\n");
+            context.getExecContext().print("└─> ", Colors.GRAY);
+            context.getExecContext().println(currentClass.getSimpleName(), Colors.GREEN);
             
             Class<?>[] interfaces = currentClass.getInterfaces();
             if (interfaces.length > 0) {
                 for (int j = 0; j < i + 1; j++) {
-                    sb.append("  ");
+                    context.getExecContext().print("  ", Colors.GRAY);
                 }
-                sb.append(i != hierarchy.size() - 1 ? "├─" : "└").append("实现接口: ");
+                context.getExecContext().print(i != hierarchy.size() - 1 ? "├─" : "└", Colors.GRAY);
+                context.getExecContext().print("实现接口: ", Colors.CYAN);
                 for (int k = 0; k < interfaces.length; k++) {
                     if (k > 0) {
-                        sb.append(", ");
+                        context.getExecContext().print(", ", Colors.WHITE);
                     }
-                    sb.append(interfaces[k].getSimpleName());
+                    context.getExecContext().print(interfaces[k].getSimpleName(), Colors.GREEN);
                 }
-                sb.append("\n");
+                context.getExecContext().println("");
             }
         }
         
-        sb.append("\n子类:\n");
+        context.getExecContext().println("");
+        context.getExecContext().println("子类:", Colors.CYAN);
         List<Class<?>> subclasses = findSubclasses(clazz, context);
         if (subclasses.isEmpty()) {
-            sb.append("  (无)\n");
+            context.getExecContext().println("  (无)", Colors.GRAY);
         } else {
             for (Class<?> subclass : subclasses) {
-                sb.append("  ").append(subclass.getName()).append("\n");
+                context.getExecContext().print("  ", Colors.GRAY);
+                context.getExecContext().println(subclass.getName(), Colors.GREEN);
             }
         }
-        
-        return sb.toString();
     }
 
     private List<Class<?>> getClassHierarchy(Class<?> clazz) {
@@ -111,7 +118,7 @@ public class GraphCommand extends AbstractClassCommand {
                 }
             }
         } catch (Exception e) {
-            context.getLogger().warn("查找子类失败", e);
+            CommandExceptionHandler.handleException("class graph", e, context.getExecContext(), "查找子类失败");
         }
         
         return subclasses;

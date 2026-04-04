@@ -6,13 +6,13 @@ import java.io.PrintStream;
 
 
 public class SystemOutputRedirector {
-    private final IOutputHandler output;
+    private final ICommandOutputHandler output;
     private PrintStream originalOut;
     private PrintStream originalErr;
     private PrintStream redirectedOut;
     private PrintStream redirectedErr;
 
-    public SystemOutputRedirector(IOutputHandler output) {
+    public SystemOutputRedirector(ICommandOutputHandler output) {
         this.output = output;
     }
 

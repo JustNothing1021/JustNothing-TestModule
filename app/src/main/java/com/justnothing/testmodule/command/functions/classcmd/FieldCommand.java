@@ -1,11 +1,15 @@
 package com.justnothing.testmodule.command.functions.classcmd;
 
 
+import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
+import com.justnothing.testmodule.utils.reflect.DescriptorColorizer;
 import com.justnothing.testmodule.utils.reflect.ReflectionUtils;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.util.Map;
 
 public class FieldCommand extends AbstractClassCommand {
 
@@ -18,8 +22,12 @@ public class FieldCommand extends AbstractClassCommand {
         String[] args = context.getArgs();
         
         if (args.length < 1) {
-            context.getLogger().warn("参数不足, 需要至少1个参数");
-            return getHelpText();
+            return CommandExceptionHandler.handleException(
+                "class field",
+                new IllegalArgumentException("参数不足, 需要至少1个参数: class field <class_name> [field_name]"),
+                context.getExecContext(),
+                "参数错误"
+            );
         }
 
         boolean getValue = false;
@@ -48,10 +56,14 @@ public class FieldCommand extends AbstractClassCommand {
                     if (i + 3 < args.length - 1) {
                         className = args[i + 1];
                         fieldName = args[i + 2];
-                        valueToSet = args[i + 3];   // TODO: 解析类型
+                        valueToSet = args[i + 3];
                     } else {
-                        context.getLogger().warn("提供给-s的参数不足, 需要至少3个");
-                        return "提供给-s的参数不足, 需要至少3个\n" + getHelpText();
+                        return CommandExceptionHandler.handleException(
+                            "class field",
+                            new IllegalArgumentException("提供给-s的参数不足, 需要至少3个: class field -s <class> <field> <value>"),
+                            context.getExecContext(),
+                            "参数错误"
+                        );
                     }
                 }
                 case "-v", "--value" -> {
@@ -73,7 +85,12 @@ public class FieldCommand extends AbstractClassCommand {
         }
         
         if ((getValue || setValue || showValue) && args.length < 2) {
-            return "错误: 获取/设置字段值需要指定字段名\n" + getHelpText();
+            return CommandExceptionHandler.handleException(
+                "class field",
+                new IllegalArgumentException("获取/设置字段值需要指定字段名: class field -g <class> <field>"),
+                context.getExecContext(),
+                "参数错误"
+            );
         }
         
         if (args.length >= 2) {
@@ -92,7 +109,13 @@ public class FieldCommand extends AbstractClassCommand {
             Field field = ClassResolver.findStaticField(targetClass, fieldName, accessSuper, accessInterfaces);
 
             if (field == null) {
-                return "找不到字段: " + fieldName + "\n" + getHelpText();
+                return CommandExceptionHandler.handleException(
+                    "class field",
+                    new NoSuchFieldException("找不到字段: " + fieldName),
+                    context.getExecContext(),
+                    Map.of("类名", className, "字段名", fieldName),
+                    "字段查找失败"
+                );
             }
 
             field.setAccessible(true);
@@ -101,66 +124,95 @@ public class FieldCommand extends AbstractClassCommand {
                 if (Modifier.isStatic(field.getModifiers())) {
                     if (getValue) {
                         Object value = field.get(null);
-                        return "字段值: " + (value != null ? value.toString() : "null");
+                        context.getExecContext().print("字段值: ", Colors.CYAN);
+                        if (value != null) {
+                            context.getExecContext().println(value.toString(), Colors.LIGHT_GREEN);
+                        } else {
+                            context.getExecContext().println("null", Colors.LIGHT_BLUE);
+                        }
+                        return null;
                     } else {
                         Object value = context.parseValue(valueToSet, field.getType());
                         field.set(null, value);
-                        return "成功设置字段值: " + valueToSet;
+                        context.getExecContext().print("成功设置字段值: ", Colors.CYAN);
+                        context.getExecContext().println(valueToSet, Colors.LIGHT_GREEN);
+                        return null;
                     }
                 } else {
-                    return "错误: 无法获取/设置非静态字段，需要提供实例对象";
+                    return CommandExceptionHandler.handleException(
+                        "class field",
+                        new IllegalStateException("无法获取/设置非静态字段，需要提供实例对象"),
+                        context.getExecContext(),
+                        Map.of("类名", className, "字段名", fieldName),
+                        "非静态字段访问失败"
+                    );
                 }
             }
 
-            StringBuilder sb = new StringBuilder();
-            sb.append("=== 字段信息 ===\n");
-            sb.append("字段名: ").append(field.getName()).append("\n");
-            sb.append("类型: ").append(field.getType().getName()).append("\n");
+            context.getExecContext().println("=== 字段信息 ===", Colors.CYAN);
+            context.getExecContext().print("字段名: ", Colors.CYAN);
+            context.getExecContext().println(field.getName(), Colors.CYAN);
+            context.getExecContext().print("类型: ", Colors.CYAN);
+            context.getExecContext().println(field.getType().getName(), Colors.GREEN);
 
             if (showAll || showType) {
-                sb.append("类型: ").append(field.getType().getName()).append("\n");
+                context.getExecContext().print("类型: ", Colors.CYAN);
+                context.getExecContext().println(field.getType().getName(), Colors.GREEN);
             }
 
             if (showAll || showModifiers) {
-                sb.append("修饰符: ").append(ReflectionUtils.getModifiersString(field.getModifiers())).append("\n");
+                context.getExecContext().print("修饰符: ", Colors.CYAN);
+                context.getExecContext().println(ReflectionUtils.getModifiersString(field.getModifiers()), Colors.DARK_BLUE);
             }
 
             if (showAll || showValue) {
                 if (Modifier.isStatic(field.getModifiers())) {
                     try {
                         Object value = field.get(null);
-                        sb.append("值: ").append(value != null ? value.toString() : "null").append("\n");
+                        context.getExecContext().print("值: ", Colors.CYAN);
+                        if (value != null) {
+                            context.getExecContext().println(value.toString(), Colors.LIGHT_GREEN);
+                        } else {
+                            context.getExecContext().println("null", Colors.LIGHT_BLUE);
+                        }
                     } catch (Exception e) {
-                        sb.append("值: 无法获取 (").append(e.getMessage()).append(")\n");
+                        context.getExecContext().print("值: 无法获取 (", Colors.CYAN);
+                        context.getExecContext().print(e.getMessage(), Colors.RED);
+                        context.getExecContext().println(")", Colors.CYAN);
                     }
                 } else {
-                    sb.append("值: 非静态字段，需要实例对象\n");
+                    context.getExecContext().println("值: 非静态字段，需要实例对象", Colors.GRAY);
                 }
             }
 
             if (showAll) {
-                sb.append("声明类: ").append(field.getDeclaringClass().getName()).append("\n");
+                context.getExecContext().print("声明类: ", Colors.CYAN);
+                context.getExecContext().println(field.getDeclaringClass().getName(), Colors.GREEN);
             }
 
-            return sb.toString();
+            return null;
 
         } else {
             Field[] fields = targetClass.getDeclaredFields();
-            StringBuilder sb = new StringBuilder();
             
-            sb.append("=== 字段列表 ===\n");
-            sb.append("类: ").append(targetClass.getName()).append("\n");
-            sb.append("字段总数: ").append(fields.length).append("\n\n");
+            context.getExecContext().println("=== 字段列表 ===", Colors.CYAN);
+            context.getExecContext().print("类: ", Colors.CYAN);
+            context.getExecContext().println(targetClass.getName(), Colors.GREEN);
+            context.getExecContext().print("字段总数: ", Colors.CYAN);
+            context.getExecContext().println(String.valueOf(fields.length), Colors.YELLOW);
+            context.getExecContext().println("");
             
             if (fields.length == 0) {
-                sb.append("无字段\n");
+                context.getExecContext().println("无字段", Colors.GRAY);
             } else {
                 for (Field field : fields) {
-                    sb.append("  ").append(ReflectionUtils.getDescriptor(field)).append("\n");
+                    context.getExecContext().print("  ", Colors.GRAY);
+                    DescriptorColorizer.printColoredDescriptor(context.getExecContext(), field, true);
+                    context.getExecContext().println("");
                 }
             }
             
-            return sb.toString();
+            return null;
         }
     }
 

@@ -26,6 +26,10 @@ public class InteractiveProtocol {
     public static final byte TYPE_INPUT_PING = 0x10;
     public static final byte TYPE_INPUT_PONG = 0x11;
     public static final byte TYPE_COMMAND_END = 0x12;
+    public static final byte TYPE_CLIENT_CAPABILITY = 0x13;
+    public static final byte TYPE_COLORED_OUTPUT = 0x14;
+
+
 
     public static String getMessageTypeName(byte type) {
         return switch (type) {
@@ -41,7 +45,54 @@ public class InteractiveProtocol {
             case TYPE_INPUT_PING -> "INPUT_PING";
             case TYPE_INPUT_PONG -> "INPUT_PONG";
             case TYPE_COMMAND_END -> "COMMAND_END";
+            case TYPE_CLIENT_CAPABILITY -> "CLIENT_CAPABILITY";
+            case TYPE_COLORED_OUTPUT -> "COLORED_OUTPUT";
             default -> "UNKNOWN(" + type + ")";
+        };
+    }
+
+    public static String getColorName(byte color) {
+        return switch (color) {
+            case Colors.DEFAULT -> "DEFAULT";
+            case Colors.BLACK -> "BLACK";
+            case Colors.RED -> "RED";
+            case Colors.GREEN -> "GREEN";
+            case Colors.YELLOW -> "YELLOW";
+            case Colors.BLUE -> "BLUE";
+            case Colors.CYAN -> "CYAN";
+            case Colors.MAGENTA -> "MAGENTA";
+            case Colors.WHITE -> "WHITE";
+            case Colors.GRAY -> "GRAY";
+            case Colors.LIGHT_GRAY -> "LIGHT_GRAY";
+            case Colors.LIGHT_RED -> "LIGHT_RED";
+            case Colors.LIGHT_GREEN -> "LIGHT_GREEN";
+            case Colors.LIGHT_YELLOW -> "LIGHT_YELLOW";
+            case Colors.LIGHT_BLUE -> "LIGHT_BLUE";
+            case Colors.LIGHT_CYAN -> "LIGHT_CYAN";
+            case Colors.LIGHT_MAGENTA -> "LIGHT_MAGENTA";
+            case Colors.DARK_GRAY -> "DARK_GRAY";
+            case Colors.DARK_RED -> "DARK_RED";
+            case Colors.DARK_GREEN -> "DARK_GREEN";
+            case Colors.DARK_YELLOW -> "DARK_YELLOW";
+            case Colors.DARK_BLUE -> "DARK_BLUE";
+            case Colors.DARK_CYAN -> "DARK_CYAN";
+            case Colors.PURPLE -> "PURPLE";
+            case Colors.ORANGE -> "ORANGE";
+            case Colors.PINK -> "PINK";
+            case Colors.BROWN -> "BROWN";
+            case Colors.GOLD -> "GOLD";
+            case Colors.SILVER -> "SILVER";
+            case Colors.LIME -> "LIME";
+            case Colors.TEAL -> "TEAL";
+            case Colors.NAVY -> "NAVY";
+            case Colors.MAROON -> "MAROON";
+            case Colors.OLIVE -> "OLIVE";
+            case Colors.AQUA -> "AQUA";
+            case Colors.CORAL -> "CORAL";
+            case Colors.SALMON -> "SALMON";
+            case Colors.INDIGO -> "INDIGO";
+            case Colors.VIOLET -> "VIOLET";
+            default -> "UNKNOWN(" + color + ")";
         };
     }
 
@@ -225,5 +276,60 @@ public class InteractiveProtocol {
             logger.error("写入消息失败: 类型=" + getMessageTypeName(type), e);
             throw e;
         }
+    }
+
+    /**
+     * 编码颜色输出
+     * @param color 颜色常量
+     * @param text 文本内容
+     * @return 编码后的字节数组 [COLOR_BYTE][TEXT_BYTES]
+     */
+    public static byte[] encodeColoredOutput(byte color, String text) {
+        if (text == null) {
+            text = "";
+        }
+        byte[] textBytes = text.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        byte[] data = new byte[1 + textBytes.length];
+        data[0] = color;
+        System.arraycopy(textBytes, 0, data, 1, textBytes.length);
+        return data;
+    }
+
+    /**
+     * 解码颜色输出
+     * @param data 原始数据 [BYTE][TEXT_BYTES]
+     * @return Object[]{color, text}
+     */
+    public static Object[] decodeColoredOutput(byte[] data) {
+        if (data == null || data.length == 0) {
+            return new Object[]{Colors.DEFAULT, ""};
+        }
+        byte color = data[0];
+        String text = "";
+        if (data.length > 1) {
+            text = new String(data, 1, data.length - 1, java.nio.charset.StandardCharsets.UTF_8);
+        }
+        return new Object[]{color, text};
+    }
+
+    /**
+     * 编码客户端能力
+     * @param supportsInput 是否支持交互输入
+     * @return 编码后的字节数组
+     */
+    public static byte[] encodeCapability(boolean supportsInput) {
+        return new byte[]{(byte) (supportsInput ? 1 : 0)};
+    }
+
+    /**
+     * 解码客户端能力
+     * @param data 原始数据
+     * @return 是否支持交互输入
+     */
+    public static boolean decodeCapability(byte[] data) {
+        if (data == null || data.length == 0) {
+            return false;
+        }
+        return data[0] == 1;
     }
 }

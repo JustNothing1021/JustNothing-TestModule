@@ -1,6 +1,8 @@
 package com.justnothing.testmodule.command.functions.classcmd;
 
+import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
+import com.justnothing.testmodule.utils.reflect.DescriptorColorizer;
 import com.justnothing.testmodule.utils.reflect.ReflectionUtils;
 
 import java.lang.reflect.Constructor;
@@ -20,8 +22,12 @@ public class ConstructorCommand extends AbstractClassCommand {
         String[] args = context.getArgs();
         
         if (args.length < 1) {
-            context.getLogger().warn("参数不足, 需要至少1个参数");
-            return getHelpText();
+            return CommandExceptionHandler.handleException(
+                "class constructor",
+                new IllegalArgumentException("参数不足, 需要至少1个参数: class constructor <class_name> [params...]"),
+                context.getExecContext(),
+                "参数错误"
+            );
         }
 
         String className = args[0];
@@ -45,39 +51,74 @@ public class ConstructorCommand extends AbstractClassCommand {
                 Map<String, Object> errContext = new HashMap<>();
                 errContext.put("参数索引", i - 1);
                 errContext.put("参数表达式", paramStr);
-                return CommandExceptionHandler.handleException("class constructor", e, context.getLogger(), errContext, "解析参数失败");
+                return CommandExceptionHandler.handleException("class constructor", e, context.getExecContext(), errContext, "解析参数失败");
             }
         }
 
         Class<?> targetClass = context.loadClass(className);
 
+        if (!params.isEmpty()) {
+            context.getExecContext().println("调用参数：", Colors.CYAN);
+            for (int i = 0; i < params.size(); i++) {
+                context.getExecContext().print("参数", Colors.YELLOW);
+                context.getExecContext().print("[", Colors.WHITE);
+                context.getExecContext().print(String.valueOf(i), Colors.LIGHT_GREEN);
+                context.getExecContext().print("]", Colors.WHITE);
+                context.getExecContext().print(" = ", Colors.WHITE);
+                Object value = params.get(i);
+                if (value == null) {
+                    context.getExecContext().print("null", Colors.LIGHT_BLUE);
+                } else {
+                    context.getExecContext().print(String.valueOf(value), Colors.LIGHT_BLUE);
+                }
+                context.getExecContext().print(" (", Colors.WHITE);
+                context.getExecContext().print(paramTypes.get(i).getName(), Colors.GREEN);
+                context.getExecContext().println(")", Colors.WHITE);
+            }
+            context.getExecContext().println("");
+        }
+
         Constructor<?> constructor = ReflectionUtils.findConstructor(targetClass, paramTypes.toArray(new Class<?>[0]));
 
         if (constructor == null) {
             context.getLogger().warn("没有找到类" + className + "的匹配构造函数");
-            StringBuilder sb = new StringBuilder();
-            sb.append("没有找到匹配的构造函数\n");
-            sb.append("参数类型: ");
+            context.getExecContext().println("没有找到匹配的构造函数", Colors.RED);
+            context.getExecContext().print("参数类型: ", Colors.CYAN);
             for (int i = 0; i < paramTypes.size(); i++) {
-                sb.append(paramTypes.get(i).getSimpleName());
-                if (i < paramTypes.size() - 1) sb.append(", ");
+                context.getExecContext().print(paramTypes.get(i).getName(), Colors.GREEN);
+                if (i < paramTypes.size() - 1) {
+                    context.getExecContext().print(", ", Colors.WHITE);
+                }
             }
-            sb.append("\n\n");
-            sb.append("可用的构造函数:\n");
+            context.getExecContext().println("");
+            context.getExecContext().println("");
+            context.getExecContext().println("可用的构造函数:", Colors.CYAN);
             for (Constructor<?> c : targetClass.getDeclaredConstructors()) {
-                sb.append("  ").append(ReflectionUtils.getDescriptor(c)).append("\n");
+                context.getExecContext().print("  ", Colors.GRAY);
+                DescriptorColorizer.printColoredDescriptor(context.getExecContext(), c, true);
+                context.getExecContext().println("");
             }
-            return sb.toString();
+            return "";
         }
+
+        context.getExecContext().print("找到构造函数: ", Colors.CYAN);
+        DescriptorColorizer.printColoredDescriptor(context.getExecContext(), constructor, true);
+        context.getExecContext().println("");
+        context.getExecContext().println("");
 
         constructor.setAccessible(true);
         Object instance = constructor.newInstance(params.toArray());
 
         context.getLogger().info("创建实例成功: " + instance);
-        return "创建实例成功\n============================\n" + instance +
-                "\n============================" +
-                "\n类型: " + instance.getClass().getName() +
-                "\nHash: " + System.identityHashCode(instance);
+        context.getExecContext().println("创建实例成功", Colors.GREEN);
+        context.getExecContext().println("============================", Colors.CYAN);
+        context.getExecContext().println(String.valueOf(instance), Colors.WHITE);
+        context.getExecContext().println("============================", Colors.CYAN);
+        context.getExecContext().print("类型: ", Colors.CYAN);
+        context.getExecContext().println(instance.getClass().getName(), Colors.YELLOW);
+        context.getExecContext().print("Hash: ", Colors.CYAN);
+        context.getExecContext().println(String.valueOf(System.identityHashCode(instance)), Colors.LIGHT_GREEN);
+        return "";
     }
 
     @Override

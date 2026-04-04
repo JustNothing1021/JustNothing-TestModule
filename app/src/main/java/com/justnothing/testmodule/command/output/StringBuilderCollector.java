@@ -4,7 +4,7 @@ package com.justnothing.testmodule.command.output;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
-public class StringBuilderCollector implements IOutputHandler {
+public class StringBuilderCollector implements ICommandOutputHandler {
     private final StringBuilder sb = new StringBuilder();
     private boolean closed = false;
 

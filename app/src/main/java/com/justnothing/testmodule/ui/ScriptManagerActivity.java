@@ -4,8 +4,13 @@ import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.graphics.Color;
 import android.os.Bundle;
+import android.text.SpannableString;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
 import android.text.TextUtils;
+import android.text.style.ForegroundColorSpan;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -19,9 +24,11 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.justnothing.methodsclient.StreamClient;
+import com.justnothing.methodsclient.executor.ColoredSegment;
 import com.justnothing.methodsclient.executor.SocketCommandExecutor;
 import com.justnothing.testmodule.R;
+import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.output.InteractiveProtocol;
 import com.justnothing.testmodule.constants.FileDirectory;
 import com.justnothing.testmodule.utils.functions.Logger;
 import com.justnothing.testmodule.utils.io.IOManager;
@@ -211,6 +218,7 @@ public class ScriptManagerActivity extends AppCompatActivity {
         return IOManager.readFile(file.getAbsolutePath());
     }
 
+
     private void writeFile(File file, String content) throws IOException {
         File parentDir = file.getParentFile();
         if (parentDir != null && !parentDir.exists()) {
@@ -308,29 +316,35 @@ public class ScriptManagerActivity extends AppCompatActivity {
         logger.info("执行脚本: " + script.name);
 
         ThreadPoolManager.submitFastRunnable(() -> {
-            StringBuilder allOutput = new StringBuilder();
-            StringBuilder allErrors = new StringBuilder();
             String cmd = script.command;
             boolean succeed = false;
+            SpannableStringBuilder coloredOutput = new SpannableStringBuilder();
+            
             try {
                 if (!TextUtils.isEmpty(cmd.trim())) {
                     String trimmedCmd = cmd.trim();
                     logger.info("执行命令: " + trimmedCmd);
 
-                    SocketCommandExecutor.ExecutionResult result =
-                        StreamClient.executeTextSocketWithOutput(trimmedCmd);
+                    coloredOutput.append(getString(R.string.script_result_info_command, trimmedCmd)).append("\n");
 
-                    allOutput.append(getString(R.string.script_result_info_command, trimmedCmd)).append("\n");
+                    SocketCommandExecutor socketExecutor = new SocketCommandExecutor();
+                    SocketCommandExecutor.ColoredExecutionResult result =
+                        socketExecutor.executeInteractiveWithColoredOutput(trimmedCmd, false);
+
+                    runOnUiThread(() -> Toast.makeText(this, getString(R.string.script_execute_finished), Toast.LENGTH_SHORT).show());
+
                     if (result.success) {
-                        allOutput.append(result.output).append("\n");
+                        SpannableString resultSpan = buildColoredSpan(result.segments);
+                        coloredOutput.append(resultSpan);
+                        coloredOutput.append("\n");
                         succeed = true;
                     } else {
-                        allOutput.append(getString(R.string.script_result_info_error, result.error)).append("\n");
-                        allErrors.append(getString(R.string.script_result_info_execution_failed)).append("\n");
+                        coloredOutput.append(getString(R.string.script_result_info_error, result.error)).append("\n");
                     }
-                    allOutput.append("\n");
+                    coloredOutput.append("\n");
                 }
-                String finalOutput = allOutput.toString();
+                
+                SpannableStringBuilder finalOutput = coloredOutput;
                 boolean finalSucceed = succeed;
                 runOnUiThread(() -> {
                     if (finalSucceed) {
@@ -364,6 +378,72 @@ public class ScriptManagerActivity extends AppCompatActivity {
                 });
             }
         });
+    }
+
+    private SpannableString buildColoredSpan(java.util.List<ColoredSegment> segments) {
+        SpannableStringBuilder builder = new SpannableStringBuilder();
+        
+        for (ColoredSegment segment : segments) {
+            int start = builder.length();
+            builder.append(segment.text());
+            int end = builder.length();
+            
+            int color = getColorFromCode(segment.color());
+            if (color != 0) {
+                builder.setSpan(
+                    new ForegroundColorSpan(color),
+                    start,
+                    end,
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                );
+            }
+        }
+        
+        return new SpannableString(builder);
+    }
+
+    private int getColorFromCode(byte colorCode) {
+        return switch (colorCode) {
+            case Colors.BLACK -> Color.parseColor("#000000");
+            case Colors.RED -> Color.parseColor("#F44336");
+            case Colors.GREEN -> Color.parseColor("#4CAF50");
+            case Colors.YELLOW -> Color.parseColor("#FFEB3B");
+            case Colors.BLUE -> Color.parseColor("#2196F3");
+            case Colors.CYAN -> Color.parseColor("#00BCD4");
+            case Colors.MAGENTA -> Color.parseColor("#E91E63");
+            case Colors.WHITE -> Color.parseColor("#FFFFFF");
+            case Colors.GRAY -> Color.parseColor("#9E9E9E");
+            case Colors.LIGHT_GRAY -> Color.parseColor("#BDBDBD");
+            case Colors.LIGHT_RED -> Color.parseColor("#FFCDD2");
+            case Colors.LIGHT_GREEN -> Color.parseColor("#C8E6C9");
+            case Colors.LIGHT_YELLOW -> Color.parseColor("#FFF9C4");
+            case Colors.LIGHT_BLUE -> Color.parseColor("#BBDEFB");
+            case Colors.LIGHT_CYAN -> Color.parseColor("#B2EBF2");
+            case Colors.LIGHT_MAGENTA -> Color.parseColor("#F8BBD9");
+            case Colors.DARK_GRAY -> Color.parseColor("#616161");
+            case Colors.DARK_RED -> Color.parseColor("#C62828");
+            case Colors.DARK_GREEN -> Color.parseColor("#2E7D32");
+            case Colors.DARK_YELLOW -> Color.parseColor("#F9A825");
+            case Colors.DARK_BLUE -> Color.parseColor("#1565C0");
+            case Colors.DARK_CYAN -> Color.parseColor("#00838F");
+            case Colors.PURPLE -> Color.parseColor("#7B1FA2");
+            case Colors.ORANGE -> Color.parseColor("#FF9800");
+            case Colors.PINK -> Color.parseColor("#E91E63");
+            case Colors.BROWN -> Color.parseColor("#795548");
+            case Colors.GOLD -> Color.parseColor("#FFD700");
+            case Colors.SILVER -> Color.parseColor("#C0C0C0");
+            case Colors.LIME -> Color.parseColor("#CDDC39");
+            case Colors.TEAL -> Color.parseColor("#009688");
+            case Colors.NAVY -> Color.parseColor("#0D47A1");
+            case Colors.MAROON -> Color.parseColor("#800000");
+            case Colors.OLIVE -> Color.parseColor("#808000");
+            case Colors.AQUA -> Color.parseColor("#00FFFF");
+            case Colors.CORAL -> Color.parseColor("#FF7F50");
+            case Colors.SALMON -> Color.parseColor("#FA8072");
+            case Colors.INDIGO -> Color.parseColor("#3F51B5");
+            case Colors.VIOLET -> Color.parseColor("#9C27B0");
+            default -> 0;
+        };
     }
 
     private void editScript(Script script) {

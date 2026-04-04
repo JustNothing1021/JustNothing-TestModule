@@ -1,6 +1,10 @@
 package com.justnothing.testmodule.command.functions.classcmd;
 
 
+import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
+import com.justnothing.testmodule.utils.reflect.DescriptorColorizer;
+
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -17,20 +21,33 @@ public class SearchCommand extends AbstractClassCommand {
         String[] args = context.getArgs();
         
         if (args.length < 2) {
-            context.getLogger().warn("参数不足, 需要至少2个参数");
-            return getHelpText();
+            return CommandExceptionHandler.handleException(
+                "class search",
+                new IllegalArgumentException("参数不足, 需要至少2个参数: class search <subcmd> <pattern>"),
+                context.getExecContext(),
+                "参数错误"
+            );
         }
 
         String subCommand = args[0];
         String pattern = args[1];
 
-        return switch (subCommand) {
+        switch (subCommand) {
             case "class" -> searchClasses(pattern, context);
             case "method" -> searchMethods(pattern, context);
             case "field" -> searchFields(pattern, context);
             case "annotation" -> searchAnnotations(pattern, context);
-            default -> "未知子命令: " + subCommand + "\n" + getHelpText();
-        };
+            default -> {
+                return CommandExceptionHandler.handleException(
+                    "class search",
+                    new IllegalArgumentException("未知子命令: " + subCommand),
+                    context.getExecContext(),
+                    "参数错误"
+                );
+            }
+        }
+        
+        return null;
     }
 
     @Override
@@ -62,10 +79,11 @@ public class SearchCommand extends AbstractClassCommand {
             """;
     }
 
-    private String searchClasses(String pattern, ClassCommandContext context) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("===== 搜索类名 =====\n");
-        sb.append("模式: ").append(pattern).append("\n\n");
+    private void searchClasses(String pattern, ClassCommandContext context) {
+        context.getExecContext().println("===== 搜索类名 =====", Colors.CYAN);
+        context.getExecContext().print("模式: ", Colors.CYAN);
+        context.getExecContext().println(pattern, Colors.YELLOW);
+        context.getExecContext().println("");
         
         List<Class<?>> matchedClasses = new ArrayList<>();
         
@@ -89,23 +107,26 @@ public class SearchCommand extends AbstractClassCommand {
         }
         
         if (matchedClasses.isEmpty()) {
-            sb.append("未找到匹配的类\n");
+            context.getExecContext().println("未找到匹配的类", Colors.GRAY);
         } else {
-            sb.append("找到 ").append(matchedClasses.size()).append(" 个匹配的类:\n\n");
+            context.getExecContext().print("找到 ", Colors.CYAN);
+            context.getExecContext().print(String.valueOf(matchedClasses.size()), Colors.YELLOW);
+            context.getExecContext().println(" 个匹配的类:", Colors.CYAN);
+            context.getExecContext().println("");
             for (Class<?> clazz : matchedClasses) {
-                sb.append("  ").append(clazz.getName()).append("\n");
+                context.getExecContext().print("  ", Colors.GRAY);
+                context.getExecContext().println(clazz.getName(), Colors.GREEN);
             }
         }
-        
-        return sb.toString();
     }
 
-    private String searchMethods(String pattern, ClassCommandContext context) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("===== 搜索方法名 =====\n");
-        sb.append("模式: ").append(pattern).append("\n\n");
+    private void searchMethods(String pattern, ClassCommandContext context) {
+        context.getExecContext().println("===== 搜索方法名 =====", Colors.CYAN);
+        context.getExecContext().print("模式: ", Colors.CYAN);
+        context.getExecContext().println(pattern, Colors.YELLOW);
+        context.getExecContext().println("");
         
-        Map<String, List<String>> matchedMethods = new LinkedHashMap<>();
+        Map<String, List<Method>> matchedMethods = new LinkedHashMap<>();
         
         try {
             Field classesField = ClassLoader.class.getDeclaredField("classes");
@@ -120,7 +141,7 @@ public class SearchCommand extends AbstractClassCommand {
                     if (matchesPattern(method.getName(), pattern)) {
                         String className = clazz.getName();
                         matchedMethods.computeIfAbsent(className, k -> new ArrayList<>())
-                                        .add(method.toString());
+                                        .add(method);
                     }
                 }
             }
@@ -130,28 +151,33 @@ public class SearchCommand extends AbstractClassCommand {
         }
         
         if (matchedMethods.isEmpty()) {
-            sb.append("未找到匹配的方法\n");
+            context.getExecContext().println("未找到匹配的方法", Colors.GRAY);
         } else {
             int totalCount = matchedMethods.values().stream().mapToInt(List::size).sum();
-            sb.append("找到 ").append(totalCount).append(" 个匹配的方法:\n\n");
+            context.getExecContext().print("找到 ", Colors.CYAN);
+            context.getExecContext().print(String.valueOf(totalCount), Colors.YELLOW);
+            context.getExecContext().println(" 个匹配的方法:", Colors.CYAN);
+            context.getExecContext().println("");
             
-            for (Map.Entry<String, List<String>> entry : matchedMethods.entrySet()) {
-                sb.append("  ").append(entry.getKey()).append(":\n");
-                for (String method : entry.getValue()) {
-                    sb.append("    ").append(method).append("\n");
+            for (Map.Entry<String, List<Method>> entry : matchedMethods.entrySet()) {
+                context.getExecContext().print("  ", Colors.GRAY);
+                context.getExecContext().println(entry.getKey() + ":", Colors.GREEN);
+                for (Method method : entry.getValue()) {
+                    context.getExecContext().print("    ", Colors.GRAY);
+                    DescriptorColorizer.printColoredDescriptor(context.getExecContext(), method, true);
+                    context.getExecContext().println("");
                 }
             }
         }
-        
-        return sb.toString();
     }
 
-    private String searchFields(String pattern, ClassCommandContext context) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("===== 搜索字段名 =====\n");
-        sb.append("模式: ").append(pattern).append("\n\n");
+    private void searchFields(String pattern, ClassCommandContext context) {
+        context.getExecContext().println("===== 搜索字段名 =====", Colors.CYAN);
+        context.getExecContext().print("模式: ", Colors.CYAN);
+        context.getExecContext().println(pattern, Colors.YELLOW);
+        context.getExecContext().println("");
         
-        Map<String, List<String>> matchedFields = new LinkedHashMap<>();
+        Map<String, List<Field>> matchedFields = new LinkedHashMap<>();
         
         try {
             Field classesField = ClassLoader.class.getDeclaredField("classes");
@@ -166,7 +192,7 @@ public class SearchCommand extends AbstractClassCommand {
                     if (matchesPattern(field.getName(), pattern)) {
                         String className = clazz.getName();
                         matchedFields.computeIfAbsent(className, k -> new ArrayList<>())
-                                      .add(field.getType().getName() + " " + field.getName());
+                                      .add(field);
                     }
                 }
             }
@@ -176,26 +202,31 @@ public class SearchCommand extends AbstractClassCommand {
         }
         
         if (matchedFields.isEmpty()) {
-            sb.append("未找到匹配的字段\n");
+            context.getExecContext().println("未找到匹配的字段", Colors.GRAY);
         } else {
             int totalCount = matchedFields.values().stream().mapToInt(List::size).sum();
-            sb.append("找到 ").append(totalCount).append(" 个匹配的字段:\n\n");
+            context.getExecContext().print("找到 ", Colors.CYAN);
+            context.getExecContext().print(String.valueOf(totalCount), Colors.YELLOW);
+            context.getExecContext().println(" 个匹配的字段:", Colors.CYAN);
+            context.getExecContext().println("");
             
-            for (Map.Entry<String, List<String>> entry : matchedFields.entrySet()) {
-                sb.append("  ").append(entry.getKey()).append(":\n");
-                for (String field : entry.getValue()) {
-                    sb.append("    ").append(field).append("\n");
+            for (Map.Entry<String, List<Field>> entry : matchedFields.entrySet()) {
+                context.getExecContext().print("  ", Colors.GRAY);
+                context.getExecContext().println(entry.getKey() + ":", Colors.GREEN);
+                for (Field field : entry.getValue()) {
+                    context.getExecContext().print("    ", Colors.GRAY);
+                    DescriptorColorizer.printColoredDescriptor(context.getExecContext(), field, true);
+                    context.getExecContext().println("");
                 }
             }
         }
-        
-        return sb.toString();
     }
 
-    private String searchAnnotations(String pattern, ClassCommandContext context) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("===== 搜索注解 =====\n");
-        sb.append("模式: ").append(pattern).append("\n\n");
+    private void searchAnnotations(String pattern, ClassCommandContext context) {
+        context.getExecContext().println("===== 搜索注解 =====", Colors.CYAN);
+        context.getExecContext().print("模式: ", Colors.CYAN);
+        context.getExecContext().println(pattern, Colors.YELLOW);
+        context.getExecContext().println("");
         
         Map<String, List<String>> matchedAnnotations = new LinkedHashMap<>();
         
@@ -234,20 +265,32 @@ public class SearchCommand extends AbstractClassCommand {
         }
         
         if (matchedAnnotations.isEmpty()) {
-            sb.append("未找到匹配的注解\n");
+            context.getExecContext().println("未找到匹配的注解", Colors.GRAY);
         } else {
             int totalCount = matchedAnnotations.values().stream().mapToInt(List::size).sum();
-            sb.append("找到 ").append(totalCount).append(" 个匹配的注解:\n\n");
+            context.getExecContext().print("找到 ", Colors.CYAN);
+            context.getExecContext().print(String.valueOf(totalCount), Colors.YELLOW);
+            context.getExecContext().println(" 个匹配的注解:", Colors.CYAN);
+            context.getExecContext().println("");
             
             for (Map.Entry<String, List<String>> entry : matchedAnnotations.entrySet()) {
-                sb.append("  ").append(entry.getKey()).append(":\n");
+                context.getExecContext().print("  ", Colors.GRAY);
+                context.getExecContext().println(entry.getKey() + ":", Colors.GREEN);
                 for (String annotation : entry.getValue()) {
-                    sb.append("    @").append(annotation).append("\n");
+                    context.getExecContext().print("    ", Colors.GRAY);
+                    if (annotation.contains(" -> ")) {
+                        String[] parts = annotation.split(" -> ");
+                        context.getExecContext().print(parts[0], Colors.YELLOW);
+                        context.getExecContext().print(" -> ", Colors.WHITE);
+                        context.getExecContext().print("@", Colors.PURPLE);
+                        context.getExecContext().println(parts[1], Colors.GREEN);
+                    } else {
+                        context.getExecContext().print("@", Colors.PURPLE);
+                        context.getExecContext().println(annotation, Colors.GREEN);
+                    }
                 }
             }
         }
-        
-        return sb.toString();
     }
 
     private boolean matchesPattern(String text, String pattern) {

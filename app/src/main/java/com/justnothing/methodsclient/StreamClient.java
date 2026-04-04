@@ -49,10 +49,10 @@ public class StreamClient {
         return ClientPortManager.checkSocketServer();
     }
 
+    @SuppressWarnings("unused")
     public static int getSocketPort() {
         return ClientPortManager.getSocketPort();
     }
-
 
 
     public boolean executeInteractiveSocketCommand(String command) {
@@ -183,9 +183,7 @@ public class StreamClient {
                 """, CLIENT_VER);
     }
 
-    public static void onExit() {
 
-    }
 
     static {
         origOut = System.out;

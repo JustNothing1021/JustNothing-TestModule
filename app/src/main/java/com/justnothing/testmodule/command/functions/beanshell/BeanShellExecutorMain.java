@@ -11,8 +11,12 @@ import com.justnothing.testmodule.utils.io.IOManager;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class BeanShellExecutorMain extends CommandBase {
@@ -37,8 +41,8 @@ public class BeanShellExecutorMain extends CommandBase {
 
     @Override
     public String getHelpText() {
-        if (commandName.equals("bvars")) {
-            return String.format("""
+        return switch (commandName) {
+            case "bvars" -> String.format("""
                     语法: bvars
                     
                     显示BeanShell执行器的变量列表.
@@ -48,8 +52,7 @@ public class BeanShellExecutorMain extends CommandBase {
                     
                     (Submodule bsh %s)
                     """, CMD_BEAN_SHELL_VER);
-        } else if (commandName.equals("bclear")) {
-            return String.format("""
+            case "bclear" -> String.format("""
                     语法: bclear
                     
                     清空BeanShell执行器的所有变量.
@@ -59,8 +62,7 @@ public class BeanShellExecutorMain extends CommandBase {
                     
                     (Submodule bsh %s)
                     """, CMD_BEAN_SHELL_VER);
-        } else if (commandName.equals("bscript")) {
-            return String.format("""
+            case "bscript" -> String.format("""
                     语法: bscript <subcmd> [args...]
                     
                     BeanShell脚本管理系统.
@@ -87,8 +89,7 @@ public class BeanShellExecutorMain extends CommandBase {
                     
                     (Submodule bsh %s)
                     """, CMD_BEAN_SHELL_VER);
-        } else {
-            return String.format("""
+            default -> String.format("""
                     语法: bsh <beanShell code>
                     
                     用BeanShell解释器执行代码.
@@ -105,45 +106,50 @@ public class BeanShellExecutorMain extends CommandBase {
                     
                     (Submodule bsh %s)
                     """, CMD_BEAN_SHELL_VER);
-        }
+        };
     }
     @Override
     public String runMain(CommandExecutor.CmdExecContext context) {
         String cmdName = context.cmdName();
         String[] args = context.args();
         ClassLoader classLoader = context.classLoader();
-        
-        if (cmdName.equals("bvars")) {
-            return listVariables(context);
-        } else if (cmdName.equals("bclear")) {
-            return clearVariables(context);
-        } else if (cmdName.equals("bscript")) {
-            try {
-                return handleScriptCommand(args, context);
-            } catch (IOException e) {
-                context.output().println("执行脚本时发生错误");
-                context.output().printStackTrace(e);
-                return "";
-            }
-        } else {
-            if (args.length < 1) {
-                return getHelpText();
-            }
 
-            try {
-                StringBuilder code = new StringBuilder();
-                for (int i = 0; i < args.length; i++) {
-                    code.append(args[i]);
-                    if (i < args.length - 1) {
-                        code.append(" ");
-                    }
+        switch (cmdName) {
+            case "bvars" -> {
+                return listVariables(context);
+            }
+            case "bclear" -> {
+                return clearVariables(context);
+            }
+            case "bscript" -> {
+                try {
+                    return handleScriptCommand(args, context);
+                } catch (IOException e) {
+                    context.output().println("执行脚本时发生错误");
+                    context.output().printStackTrace(e);
+                    return "";
                 }
-                logger.info("执行BeanShell代码: " + code);
-                String result = getBeanShellExecutor(classLoader).execute(code.toString(), beanShellExecutionContext);
-                return "BeanShell执行器结果:\n\n" + result;
+            }
+            default -> {
+                if (args.length < 1) {
+                    return getHelpText();
+                }
 
-            } catch (Exception e) {
-                return CommandExceptionHandler.handleException(cmdName, e, logger, "BeanShell执行出错");
+                try {
+                    StringBuilder code = new StringBuilder();
+                    for (int i = 0; i < args.length; i++) {
+                        code.append(args[i]);
+                        if (i < args.length - 1) {
+                            code.append(" ");
+                        }
+                    }
+                    logger.info("执行BeanShell代码: " + code);
+                    String result = getBeanShellExecutor(classLoader).execute(code.toString(), beanShellExecutionContext);
+                    return "BeanShell执行器结果:\n\n" + result;
+
+                } catch (Exception e) {
+                    return CommandExceptionHandler.handleException(cmdName, e, logger, "BeanShell执行出错");
+                }
             }
         }
     }
@@ -191,26 +197,17 @@ public class BeanShellExecutorMain extends CommandBase {
 
         String subCommand = args[0];
 
-        switch (subCommand) {
-            case "create":
-                return handleScriptCreate(args);
-            case "edit":
-                return handleScriptEdit(args);
-            case "list":
-                return handleScriptList();
-            case "show":
-                return handleScriptShow(args);
-            case "delete":
-                return handleScriptDelete(args);
-            case "run":
-                return handleScriptRun(args, context);
-            case "import":
-                return handleScriptImport(args);
-            case "export":
-                return handleScriptExport(args);
-            default:
-                return "未知子命令: " + subCommand + "\n" + getHelpText();
-        }
+        return switch (subCommand) {
+            case "create" -> handleScriptCreate(args);
+            case "edit" -> handleScriptEdit(args);
+            case "list" -> handleScriptList();
+            case "show" -> handleScriptShow(args);
+            case "delete" -> handleScriptDelete(args);
+            case "run" -> handleScriptRun(args, context);
+            case "import" -> handleScriptImport(args);
+            case "export" -> handleScriptExport(args);
+            default -> "未知子命令: " + subCommand + "\n" + getHelpText();
+        };
     }
 
     private File getBeanShellScriptFile(String scriptName) {
@@ -233,22 +230,21 @@ public class BeanShellExecutorMain extends CommandBase {
             return "错误: 脚本 '" + scriptName + "' 已存在";
         }
 
-        IOManager.createDirectory(scriptFile.getParentFile().getAbsolutePath());
+        IOManager.createDirectory(Objects.requireNonNull(scriptFile.getParentFile()).getAbsolutePath());
+
+        String content = "# BeanShell Script: " + scriptName + "\n" +
+                "# Created by: " + System.currentTimeMillis() + "\n" +
+                "\n" +
+                "# 在这里编写你的BeanShell脚本代码...\n";
         
-        StringBuilder content = new StringBuilder();
-        content.append("# BeanShell Script: ").append(scriptName).append("\n");
-        content.append("# Created by: ").append(System.currentTimeMillis()).append("\n");
-        content.append("\n");
-        content.append("# 在这里编写你的BeanShell脚本代码...\n");
-        
-        IOManager.writeFile(scriptFile.getAbsolutePath(), content.toString());
+        IOManager.writeFile(scriptFile.getAbsolutePath(), content);
 
         return "BeanShell脚本 '" + scriptName + "' 创建成功\n" +
                "路径: " + scriptFile.getAbsolutePath() + "\n" +
                "提示: 使用 'bscript edit " + scriptName + "' 编辑脚本";
     }
 
-    private String handleScriptEdit(String[] args) throws IOException {
+    private String handleScriptEdit(String[] args) {
         if (args.length < 2) {
             return "错误: 需要指定脚本名称\n用法: bscript edit <name>";
         }
@@ -311,7 +307,7 @@ public class BeanShellExecutorMain extends CommandBase {
         return "===== BeanShell脚本内容: " + scriptName + " =====\n\n" + content;
     }
 
-    private String handleScriptDelete(String[] args) throws IOException {
+    private String handleScriptDelete(String[] args) {
         if (args.length < 2) {
             return "错误: 需要指定脚本名称\n用法: bscript delete <name>";
         }
@@ -380,7 +376,7 @@ public class BeanShellExecutorMain extends CommandBase {
                    "提示: 使用 'bscript delete " + scriptName + "' 删除旧脚本";
         }
 
-        IOManager.createDirectory(destFile.getParentFile().getAbsolutePath());
+        IOManager.createDirectory(Objects.requireNonNull(destFile.getParentFile()).getAbsolutePath());
         IOManager.writeFile(destFile.getAbsolutePath(), content);
 
         return "BeanShell脚本导入成功\n" +
@@ -428,17 +424,17 @@ public class BeanShellExecutorMain extends CommandBase {
         if (bytes < 1024) {
             return bytes + " B";
         } else if (bytes < 1024 * 1024) {
-            return String.format("%.2f KB", bytes / 1024.0);
+            return String.format(Locale.getDefault(), "%.2f KB", bytes / 1024.0);
         } else if (bytes < 1024 * 1024 * 1024) {
-            return String.format("%.2f MB", bytes / (1024.0 * 1024));
+            return String.format(Locale.getDefault(), "%.2f MB", bytes / (1024.0 * 1024));
         } else {
-            return String.format("%.2f GB", bytes / (1024.0 * 1024 * 1024));
+            return String.format(Locale.getDefault(), "%.2f GB", bytes / (1024.0 * 1024 * 1024));
         }
     }
 
     private String formatTime(long timestamp) {
-        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        return sdf.format(new java.util.Date(timestamp));
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        return sdf.format(new Date(timestamp));
     }
 
 }

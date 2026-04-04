@@ -2,8 +2,12 @@ package com.justnothing.javainterpreter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 import java.lang.reflect.Array;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.Path;
 
 import com.justnothing.javainterpreter.ast.nodes.BlockNode;
 import com.justnothing.javainterpreter.evaluator.ASTEvaluator;
@@ -13,10 +17,23 @@ import com.justnothing.javainterpreter.exception.EvaluationException;
 import com.justnothing.javainterpreter.lexer.Lexer;
 import com.justnothing.javainterpreter.parser.ParseContext;
 import com.justnothing.javainterpreter.parser.Parser;
+import com.justnothing.javainterpreter.preprocessor.Preprocessor;
 
 public class REPL {
     
     public static void main(String[] args) {
+        ExecutionContext context = new ExecutionContext(REPL.class.getClassLoader());
+        ParseContext parseContext = new ParseContext();
+        parseContext.setClassLoader(REPL.class.getClassLoader());
+        Preprocessor preprocessor = new Preprocessor();
+        
+        if (args.length > 0) {
+            for (String fileName : args) {
+                runFile(fileName, context, parseContext, preprocessor);
+            }
+            return;
+        }
+        
         System.out.println("=== Script Parser REPL ===");
         System.out.println("输入代码查看AST，输入 'exit' 或 'quit' 退出");
         System.out.println("支持的功能:");
@@ -25,17 +42,17 @@ public class REPL {
         System.out.println("  - Lambda表达式: x -> x + 1;");
         System.out.println("  - 控制流: if, for, while");
         System.out.println("  - 方法调用: System.out.println(1);");
+        System.out.println("  - 预处理器: #define, #ifdef, #ifndef, #else, #endif");
         System.out.println("  - :multi 进入多行输入模式");
+        System.out.println("  - :run <file> 运行脚本文件");
+        System.out.println("  - :macros 显示已定义的宏");
         System.out.println();
         
         Scanner scanner = new Scanner(System.in);
-        ExecutionContext context = new ExecutionContext(REPL.class.getClassLoader());
-        ParseContext parseContext = new ParseContext();
-        parseContext.setClassLoader(REPL.class.getClassLoader());
         List<String> pendingLines = new ArrayList<>();
         
         while (true) {
-            String prompt = pendingLines.isEmpty() ? "> " : "... ";
+            String prompt = pendingLines.isEmpty() ? "> " : "| ";
             System.out.print(prompt);
             String input;
             try {
@@ -62,6 +79,28 @@ public class REPL {
                 System.out.println("  :eval  - 执行多行输入的代码");
                 System.out.println("  :clear - 清空多行输入缓冲区");
                 System.out.println("  :show  - 显示当前多行输入缓冲区内容");
+                System.out.println("  :run <file> - 运行脚本文件");
+                System.out.println("  :macros - 显示已定义的宏");
+                System.out.println();
+                continue;
+            }
+            
+            if (input.startsWith(":run ")) {
+                String fileName = input.substring(5).trim();
+                runFile(fileName, context, parseContext, preprocessor);
+                continue;
+            }
+            
+            if (input.equalsIgnoreCase(":macros")) {
+                System.out.println("已定义的宏:");
+                for (Map.Entry<String, String> entry : preprocessor.getMacros().entrySet()) {
+                    String value = entry.getValue();
+                    if (value.isEmpty()) {
+                        System.out.println("  " + entry.getKey() + " (标记宏)");
+                    } else {
+                        System.out.println("  " + entry.getKey() + " = " + value);
+                    }
+                }
                 System.out.println();
                 continue;
             }
@@ -91,7 +130,7 @@ public class REPL {
                         }
                         
                         String code = String.join("\n", lines);
-                        executeCode(code, context, parseContext);
+                        executeCode(code, context, parseContext, preprocessor);
                         lines.clear();
                         continue;
                     }
@@ -125,7 +164,7 @@ public class REPL {
                 continue;
             }
             
-            executeCode(code, context, parseContext);
+            executeCode(code, context, parseContext, preprocessor);
             pendingLines.clear();
         }
         
@@ -136,10 +175,21 @@ public class REPL {
         int braceCount = 0;
         int parenCount = 0;
         int bracketCount = 0;
+        int preprocessorConditionCount = 0;
         boolean inString = false;
         boolean inChar = false;
         boolean inFString = false;
         boolean escape = false;
+        
+        String[] lines = code.split("\n");
+        for (String line : lines) {
+            String trimmed = line.trim();
+            if (trimmed.startsWith("#ifdef") || trimmed.startsWith("#ifndef") || trimmed.startsWith("#if ")) {
+                preprocessorConditionCount++;
+            } else if (trimmed.equals("#endif")) {
+                preprocessorConditionCount--;
+            }
+        }
         
         for (int i = 0; i < code.length(); i++) {
             char c = code.charAt(i);
@@ -184,12 +234,13 @@ public class REPL {
             }
         }
         
-        return braceCount <= 0 && parenCount <= 0 && bracketCount <= 0;
+        return braceCount <= 0 && parenCount <= 0 && bracketCount <= 0 && preprocessorConditionCount <= 0;
     }
     
-    private static void executeCode(String input, ExecutionContext context, ParseContext parseContext) {
+    private static void executeCode(String input, ExecutionContext context, ParseContext parseContext, Preprocessor preprocessor) {
         try {
-            Lexer lexer = new Lexer(input);
+            String processedCode = preprocessor.process(input);
+            Lexer lexer = new Lexer(processedCode);
             Parser parser = new Parser(lexer.tokenize(), parseContext);
             BlockNode ast = parser.parse();
             
@@ -224,5 +275,37 @@ public class REPL {
             return sb.toString();
         }
         return String.valueOf(value);
+    }
+    
+    private static void runFile(String fileName, ExecutionContext context, ParseContext parseContext, Preprocessor preprocessor) {
+        try {
+            Path filePath = Paths.get(fileName);
+            if (!Files.exists(filePath)) {
+                System.out.println("错误: 文件不存在: " + fileName);
+                return;
+            }
+            
+            String code = Files.readString(filePath);
+            System.out.println("===== 运行文件: " + fileName + " =====");
+            
+            String processedCode = preprocessor.process(code, fileName);
+            Lexer lexer = new Lexer(processedCode);
+            Parser parser = new Parser(lexer.tokenize(), parseContext);
+            BlockNode ast = parser.parse();
+            
+            Object result = ASTEvaluator.evaluate(ast, context);
+            
+            System.out.println("===== 执行完成 =====");
+            if (result != null) {
+                System.out.println("返回值: " + formatValue(result));
+            }
+        } catch (ParseException e) {
+            System.out.println("解析错误: " + e.getMessage());
+        } catch (EvaluationException e) {
+            System.out.println("执行错误: " + e.getMessage());
+        } catch (Exception e) {
+            System.out.println("错误: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 }

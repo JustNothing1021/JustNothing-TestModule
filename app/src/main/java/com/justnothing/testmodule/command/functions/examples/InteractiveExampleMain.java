@@ -2,7 +2,7 @@ package com.justnothing.testmodule.command.functions.examples;
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
-import com.justnothing.testmodule.command.output.IOutputHandler;
+import com.justnothing.testmodule.command.output.ICommandOutputHandler;
 
 public class InteractiveExampleMain extends CommandBase {
 
@@ -26,7 +26,7 @@ public class InteractiveExampleMain extends CommandBase {
 
     @Override
     public String runMain(CommandExecutor.CmdExecContext context) {
-        IOutputHandler output = context.output();
+        ICommandOutputHandler output = context.output();
         output.println("=== 交互式示例 ===");
         String name = context.readLine("请输入你的名字: ");
         output.println("你好, " + name + "!");

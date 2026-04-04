@@ -1,6 +1,8 @@
 package com.justnothing.testmodule.command.functions.classcmd;
 
-import com.justnothing.testmodule.utils.reflect.ReflectionUtils;
+import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
+import com.justnothing.testmodule.utils.reflect.DescriptorColorizer;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -19,8 +21,12 @@ public class ListCommand extends AbstractClassCommand {
         
         boolean verbose = args.length > 0 && (args[0].equals("-v") || args[0].equals("--verbose"));
         if (verbose && args.length < 2) {
-            context.getLogger().warn("详细模式需要指定类名");
-            return getHelpText();
+            return CommandExceptionHandler.handleException(
+                "class list",
+                new IllegalArgumentException("详细模式需要指定类名: class list -v <class>"),
+                context.getExecContext(),
+                "参数错误"
+            );
         }
         
         String className = args[args.length - 1];
@@ -30,11 +36,14 @@ public class ListCommand extends AbstractClassCommand {
         Class<?> targetClass = context.loadClass(className);
         context.getLogger().info("成功加载类: " + targetClass.getName());
 
-        StringBuilder sb = new StringBuilder();
-        sb.append("类名: ").append(className).append("\n");
-        sb.append("使用的包: ").append(context.getTargetPackage() != null ? context.getTargetPackage() : "default").append("\n");
-        sb.append("类加载器: ").append(context.getClassLoader() != null ? context.getClassLoader() : "无").append("\n");
-        sb.append("\n方法列表:\n");
+        context.getExecContext().print("类名: ", Colors.CYAN);
+        context.getExecContext().println(className, Colors.GREEN);
+        context.getExecContext().print("使用的包: ", Colors.CYAN);
+        context.getExecContext().println(context.getTargetPackage() != null ? context.getTargetPackage() : "default", Colors.YELLOW);
+        context.getExecContext().print("类加载器: ", Colors.CYAN);
+        context.getExecContext().println(context.getClassLoader() != null ? context.getClassLoader().toString() : "无", Colors.GRAY);
+        context.getExecContext().println("");
+        context.getExecContext().println("方法列表:", Colors.CYAN);
 
         context.getLogger().debug("开始获取类方法");
         Method[] methods = targetClass.getDeclaredMethods();
@@ -53,17 +62,22 @@ public class ListCommand extends AbstractClassCommand {
             } else {
                 instanceCount++;
             }
-            sb.append("  ").append(ReflectionUtils.getDescriptor(method, !verbose)).append("\n");
+            context.getExecContext().print("  ", Colors.GRAY);
+            DescriptorColorizer.printColoredDescriptor(context.getExecContext(), method, !verbose);
+            context.getExecContext().println("");
         }
 
-        sb.append("\n结果:\n");
-        sb.append("  静态方法: ").append(staticCount).append("\n");
-        sb.append("  实例方法: ").append(instanceCount).append("\n");
-        sb.append("  总计: ").append(methods.length).append("\n");
+        context.getExecContext().println("");
+        context.getExecContext().println("结果:", Colors.CYAN);
+        context.getExecContext().print("  静态方法: ", Colors.CYAN);
+        context.getExecContext().println(String.valueOf(staticCount), Colors.YELLOW);
+        context.getExecContext().print("  实例方法: ", Colors.CYAN);
+        context.getExecContext().println(String.valueOf(instanceCount), Colors.YELLOW);
+        context.getExecContext().print("  总计: ", Colors.CYAN);
+        context.getExecContext().println(String.valueOf(methods.length), Colors.YELLOW);
         
         context.getLogger().info("执行成功，找到 " + methods.length + " 个方法 (静态: " + staticCount + ", 实例: " + instanceCount + ")");
-        context.getLogger().debug("执行结果:\n" + sb);
-        return sb.toString();
+        return null;
     }
 
     @Override

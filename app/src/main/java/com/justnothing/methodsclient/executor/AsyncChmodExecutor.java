@@ -8,6 +8,7 @@ import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
+import java.lang.reflect.Method;
 
 // AI写的，用于异步执行chmod操作
 // 其实感觉有点拆东墙补西墙。。。
@@ -66,7 +67,7 @@ public class AsyncChmodExecutor extends Logger {
         inProgress.set(true);
         try {
             Class<?> systemPropertiesClass = Class.forName("android.os.SystemProperties");
-            java.lang.reflect.Method getMethod = systemPropertiesClass.getMethod("get", String.class);
+            Method getMethod = systemPropertiesClass.getMethod("get", String.class);
             
             String bootCompleted = (String) getMethod.invoke(null, "sys.boot_completed");
             boolean isCompleted = "1".equals(bootCompleted);

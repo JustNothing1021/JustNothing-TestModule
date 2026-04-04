@@ -30,6 +30,7 @@ public class ClassMain extends CommandBase {
                     查看类的详细信息.
                     
                     选项:
+                        -v, --verbose     显示详细信息
                         -i, --interfaces  显示实现的接口
                         -c, --constructors 显示构造函数
                         -s, --super       显示父类信息
@@ -181,6 +182,7 @@ public class ClassMain extends CommandBase {
                         reflect <class> <type> <name> [options]       - 使用反射访问和操作类的私有成员
                     
                     info 选项:
+                        -v, --verbose       显示详细信息
                         -i, --interfaces    显示实现的接口
                         -c, --constructors  显示构造函数
                         -s, --super         显示父类信息
@@ -188,6 +190,7 @@ public class ClassMain extends CommandBase {
                         -a, --all           显示所有信息 (默认)
                     
                     analyze 选项:
+                        -v, --verbose     显示详细信息
                         -f, --fields      只显示字段
                         -m, --methods     只显示方法
                         -a, --all         显示所有信息 (默认)

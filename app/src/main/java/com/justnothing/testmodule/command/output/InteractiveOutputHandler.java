@@ -2,7 +2,6 @@ package com.justnothing.testmodule.command.output;
 
 import androidx.annotation.NonNull;
 
-import com.justnothing.testmodule.command.output.IOutputHandler;
 import com.justnothing.testmodule.utils.functions.Logger;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
@@ -19,7 +18,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 
-public class InteractiveOutputHandler implements IOutputHandler {
+public class InteractiveOutputHandler implements ICommandOutputHandler {
 
     public static final int PING_PONG_TIMEOUT = 30000;
     public static final int INPUT_PING_PONG_INTERVAL = 5000;
@@ -35,9 +34,18 @@ public class InteractiveOutputHandler implements IOutputHandler {
     private final AtomicBoolean closed = new AtomicBoolean(false);
     private final AtomicReference<ScheduledFuture<?>> pingFutureRef = new AtomicReference<>();
     private final Object writeLock = new Object();
+    private volatile boolean supportsInput = true;
 
     public InteractiveOutputHandler(OutputStream outputStream) {
         this.outputStream = outputStream;
+    }
+
+    public void setSupportsInput(boolean supportsInput) {
+        this.supportsInput = supportsInput;
+    }
+
+    public boolean isSupportsInput() {
+        return supportsInput;
     }
 
     @Override
@@ -54,6 +62,21 @@ public class InteractiveOutputHandler implements IOutputHandler {
     public void printf(String format, Object... args) {
         sendOutput(String.format(format, args));
     }
+    
+    @Override
+    public void print(String text, byte color) {
+        sendColoredOutput(color, text);
+    }
+    
+    @Override
+    public void println(String text, byte color) {
+        sendColoredOutput(color, text + "\n");
+    }
+    
+    @Override
+    public void printf(byte color, String format, Object... args) {
+        sendColoredOutput(color, String.format(format, args));
+    }
 
     @Override
     public void printStackTrace(Throwable t) {
@@ -66,18 +89,71 @@ public class InteractiveOutputHandler implements IOutputHandler {
     }
 
     @Override
+    public void printStackTrace(Throwable t, byte color) {
+        if (!closed.get() && t != null) {
+            StringWriter sw = new StringWriter();
+            PrintWriter pw = new PrintWriter(sw);
+            t.printStackTrace(pw);
+            sendColoredOutput(color, sw.toString());
+        }
+    }
+
+    @Override
     public void printError(String text) {
-        sendOutput("[ERROR] " + text);
+        sendColoredOutput(Colors.RED, text);
     }
 
     @Override
     public void printlnError(String text) {
-        sendOutput("[ERROR] " + text + "\n");
+        sendColoredOutput(Colors.RED, text + "\n");
+    }
+    
+    @Override
+    public void printSuccess(String text) {
+        sendColoredOutput(Colors.GREEN, text);
+    }
+    
+    @Override
+    public void printlnSuccess(String text) {
+        sendColoredOutput(Colors.GREEN, text + "\n");
+    }
+    
+    @Override
+    public void printWarning(String text) {
+        sendColoredOutput(Colors.YELLOW, text);
+    }
+    
+    @Override
+    public void printlnWarning(String text) {
+        sendColoredOutput(Colors.YELLOW, text + "\n");
+    }
+    
+    @Override
+    public void printInfo(String text) {
+        sendColoredOutput(Colors.BLUE, text);
+    }
+    
+    @Override
+    public void printlnInfo(String text) {
+        sendColoredOutput(Colors.BLUE, text + "\n");
+    }
+    
+    @Override
+    public void printDebug(String text) {
+        sendColoredOutput(Colors.CYAN, text);
+    }
+    
+    @Override
+    public void printlnDebug(String text) {
+        sendColoredOutput(Colors.CYAN, text + "\n");
     }
 
 
     @Override
     public String readLineFromClient(String prompt) {
+        if (!supportsInput) {
+            throw new RuntimeException(getClass().getName() + " 并不支持readLineFromClient...");
+        }
         if (closed.get()) {
             return null;
         }
@@ -153,6 +229,9 @@ public class InteractiveOutputHandler implements IOutputHandler {
 
     @Override
     public String readPasswordFromClient(String prompt) {
+        if (!supportsInput) {
+            throw new RuntimeException(getClass().getName() + " 并不支持readPasswordFromClient...");
+        }
         if (closed.get()) {
             return null;
         }
@@ -169,7 +248,7 @@ public class InteractiveOutputHandler implements IOutputHandler {
             }
 
             long startTime = System.currentTimeMillis();
-            ScheduledFuture<?> pingFuture = getPingFuture(startTime);
+            ScheduledFuture<?> pingFuture = getPingFuture();
             pingFutureRef.set(pingFuture);
 
             while (!closed.get() && (System.currentTimeMillis() - startTime) < 60000) {
@@ -195,7 +274,7 @@ public class InteractiveOutputHandler implements IOutputHandler {
     }
 
     @NonNull
-    private ScheduledFuture<?> getPingFuture(long startTime) {
+    private ScheduledFuture<?> getPingFuture() {
         return Objects.requireNonNull(ThreadPoolManager.scheduleAtFixedRate(
                 this::runServerPing,
                 PASSWORD_PING_INTERVAL, PASSWORD_PING_INTERVAL, TimeUnit.MILLISECONDS));
@@ -259,6 +338,23 @@ public class InteractiveOutputHandler implements IOutputHandler {
                 buffer.append(text);
             } catch (IOException e) {
                 logger.error("发送错误输出失败", e);
+                close();
+            }
+        }
+    }
+    
+    private void sendColoredOutput(byte color, String text) {
+        if (!closed.get() && text != null && !text.isEmpty()) {
+            try {
+                synchronized (writeLock) {
+                    byte[] data = InteractiveProtocol.encodeColoredOutput(color, text);
+                    InteractiveProtocol.writeMessage(outputStream,
+                            InteractiveProtocol.TYPE_COLORED_OUTPUT,
+                            data);
+                }
+                buffer.append(text);
+            } catch (IOException e) {
+                logger.error("发送颜色输出失败", e);
                 close();
             }
         }

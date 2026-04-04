@@ -25,13 +25,6 @@ public abstract class AbstractCommand implements Command {
 
     protected abstract String executeInternal(CommandContext context) throws Exception;
 
-    protected String requireArgs(CommandContext context, int minArgs) {
-        if (context.getArgs().length < minArgs) {
-            context.getLogger().warn("参数不足，需要至少" + minArgs + "个参数");
-            return getHelpText();
-        }
-        return null;
-    }
 
     @Override
     public String getHelpText() {

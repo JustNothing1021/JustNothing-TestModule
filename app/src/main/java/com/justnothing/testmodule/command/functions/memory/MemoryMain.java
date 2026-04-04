@@ -9,6 +9,7 @@ import android.os.Debug;
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.io.IOManager;
 
@@ -166,17 +167,21 @@ public class MemoryMain extends CommandBase {
 
         try {
             return switch (subCommand) {
-                case "info" -> handleInfo(subArgs);
-                case "gc" -> handleGc(subArgs);
-                case "dump" -> handleDump(subArgs);
-                default -> "未知子命令: " + subCommand + "\n" + getHelpText();
+                case "info" -> handleInfo(subArgs, context);
+                case "gc" -> handleGc(subArgs, context);
+                case "dump" -> handleDump(subArgs, context);
+                default -> {
+                    context.print("未知子命令: ", Colors.RED);
+                    context.println(subCommand, Colors.YELLOW);
+                    yield null;
+                }
             };
         } catch (Exception e) {
             return CommandExceptionHandler.handleException("memory", e, logger, "执行memory命令失败");
         }
     }
 
-    private String handleInfo(String[] args) {
+    private String handleInfo(String[] args, CommandExecutor.CmdExecContext ctx) {
         boolean showHeapOnly = false;
 
         for (String arg : args) {
@@ -187,8 +192,6 @@ public class MemoryMain extends CommandBase {
             }
         }
         
-        StringBuilder result = new StringBuilder();
-        
         try {
             Context appContext = getApplicationContext();
             if (appContext == null) {
@@ -196,68 +199,87 @@ public class MemoryMain extends CommandBase {
             }
             
             if (showHeapOnly) {
-                result.append("===== 堆内存信息 =====\n\n");
-                result.append("===== 原生堆内存 =====\n\n");
-                result.append("已分配: ").append(formatBytes(Debug.getNativeHeapAllocatedSize())).append("\n");
-                result.append("已用: ").append(formatBytes(Debug.getNativeHeapSize())).append("\n");
-                result.append("空闲: ").append(formatBytes(Debug.getNativeHeapFreeSize())).append("\n\n");
+                ctx.println("===== 堆内存信息 =====", Colors.CYAN);
+                ctx.println("");
                 
-                result.append("===== Java运行时内存 =====\n\n");
+                ctx.println("===== 原生堆内存 =====", Colors.CYAN);
+                ctx.println("");
+                printMemoryValue(ctx, "已分配: ", Debug.getNativeHeapAllocatedSize());
+                printMemoryValue(ctx, "已用: ", Debug.getNativeHeapSize());
+                printMemoryValue(ctx, "空闲: ", Debug.getNativeHeapFreeSize());
+                ctx.println("");
+                
+                ctx.println("===== Java运行时内存 =====", Colors.CYAN);
+                ctx.println("");
                 Runtime runtime = Runtime.getRuntime();
-                result.append("最大内存: ").append(formatBytes(runtime.maxMemory())).append("\n");
-                result.append("已分配内存: ").append(formatBytes(runtime.totalMemory())).append("\n");
-                result.append("空闲内存: ").append(formatBytes(runtime.freeMemory())).append("\n");
-                result.append("已用内存: ").append(formatBytes(runtime.totalMemory() - runtime.freeMemory())).append("\n");
+                printMemoryValue(ctx, "最大内存: ", runtime.maxMemory());
+                printMemoryValue(ctx, "已分配内存: ", runtime.totalMemory());
+                printMemoryValue(ctx, "空闲内存: ", runtime.freeMemory());
+                printMemoryValue(ctx, "已用内存: ", runtime.totalMemory() - runtime.freeMemory());
             } else {
-                result.append("===== 详细内存信息 =====\n\n");
+                ctx.println("===== 详细内存信息 =====", Colors.CYAN);
+                ctx.println("");
                 
-                result.append("===== Java运行时内存 =====\n\n");
+                ctx.println("===== Java运行时内存 =====", Colors.CYAN);
+                ctx.println("");
                 Runtime runtime = Runtime.getRuntime();
-                result.append("最大内存: ").append(formatBytes(runtime.maxMemory())).append("\n");
-                result.append("已分配内存: ").append(formatBytes(runtime.totalMemory())).append("\n");
-                result.append("空闲内存: ").append(formatBytes(runtime.freeMemory())).append("\n");
+                printMemoryValue(ctx, "最大内存: ", runtime.maxMemory());
+                printMemoryValue(ctx, "已分配内存: ", runtime.totalMemory());
+                printMemoryValue(ctx, "空闲内存: ", runtime.freeMemory());
+                
                 long usedMemory = runtime.totalMemory() - runtime.freeMemory();
-                result.append("已用内存: ").append(formatBytes(usedMemory)).append("\n");
+                printMemoryValue(ctx, "已用内存: ", usedMemory);
+                
                 if (runtime.maxMemory() > 0) {
                     double percent = (double) usedMemory / runtime.maxMemory() * 100;
-                    result.append("使用率: ").append(new DecimalFormat("#,##0.00").format(percent)).append("%\n");
+                    ctx.print("使用率: ", Colors.GRAY);
+                    ctx.print(String.format(Locale.US, "%.2f", percent), getPercentColor(percent));
+                    ctx.println("%", Colors.GRAY);
                 }
-                result.append("\n");
+                ctx.println("");
                 
-                result.append("===== 原生堆内存 =====\n\n");
-                result.append("已分配: ").append(formatBytes(Debug.getNativeHeapAllocatedSize())).append("\n");
-                result.append("已用: ").append(formatBytes(Debug.getNativeHeapSize())).append("\n");
-                result.append("空闲: ").append(formatBytes(Debug.getNativeHeapFreeSize())).append("\n\n");
+                ctx.println("===== 原生堆内存 =====", Colors.CYAN);
+                ctx.println("");
+                printMemoryValue(ctx, "已分配: ", Debug.getNativeHeapAllocatedSize());
+                printMemoryValue(ctx, "已用: ", Debug.getNativeHeapSize());
+                printMemoryValue(ctx, "空闲: ", Debug.getNativeHeapFreeSize());
+                ctx.println("");
                 
                 if (appContext != null) {
-                    result.append("===== 进程内存 =====\n\n");
+                    ctx.println("===== 进程内存 =====", Colors.CYAN);
+                    ctx.println("");
                     ActivityManager activityManager = (ActivityManager) appContext.getSystemService(Context.ACTIVITY_SERVICE);
                     if (activityManager != null) {
                         ActivityManager.MemoryInfo memoryInfo = new ActivityManager.MemoryInfo();
                         activityManager.getMemoryInfo(memoryInfo);
                         
-                        result.append("可用内存: ").append(formatBytes(memoryInfo.availMem)).append("\n");
-                        result.append("总内存: ").append(formatBytes(memoryInfo.totalMem)).append("\n");
-                        result.append("内存阈值: ").append(formatBytes(memoryInfo.threshold)).append("\n");
-                        result.append("低内存状态: ").append(memoryInfo.lowMemory ? "是" : "否").append("\n\n");
+                        printMemoryValue(ctx, "可用内存: ", memoryInfo.availMem);
+                        printMemoryValue(ctx, "总内存: ", memoryInfo.totalMem);
+                        printMemoryValue(ctx, "内存阈值: ", memoryInfo.threshold);
+                        ctx.print("低内存状态: ", Colors.GRAY);
+                        ctx.println(memoryInfo.lowMemory ? "是" : "否", memoryInfo.lowMemory ? Colors.RED : Colors.LIGHT_GREEN);
+                        ctx.println("");
                         
                         int pid = android.os.Process.myPid();
                         Debug.MemoryInfo[] memoryInfos = activityManager.getProcessMemoryInfo(new int[]{pid});
                         if (memoryInfos.length > 0) {
                             Debug.MemoryInfo processMemory = memoryInfos[0];
-                            result.append("当前进程内存:\n");
-                            result.append("  PSS: ").append(formatBytes(processMemory.getTotalPss() * 1024L)).append("\n");
-                            result.append("  USS: ").append(formatBytes(processMemory.getTotalPrivateDirty() * 1024L)).append("\n");
-                            result.append("  RSS: ").append(formatBytes(processMemory.getTotalSharedDirty() * 1024L)).append("\n\n");
+                            ctx.println("当前进程内存:", Colors.CYAN);
+                            printMemoryValue(ctx, "  PSS: ", processMemory.getTotalPss() * 1024L);
+                            printMemoryValue(ctx, "  USS: ", processMemory.getTotalPrivateDirty() * 1024L);
+                            printMemoryValue(ctx, "  RSS: ", processMemory.getTotalSharedDirty() * 1024L);
+                            ctx.println("");
                         }
                     }
                 }
                 
-                result.append("===== 系统内存 =====\n\n");
-                result.append(readMeminfo());
+                ctx.println("===== 系统内存 =====", Colors.CYAN);
+                ctx.println("");
+                printMeminfoColored(ctx);
                 
-                result.append("===== 进程内存统计 =====\n\n");
-                result.append(readProcessMemoryStats());
+                ctx.println("===== 进程内存统计 =====", Colors.CYAN);
+                ctx.println("");
+                printProcessMemoryStatsColored(ctx);
             }
             
             logger.info("内存信息查询完成");
@@ -266,10 +288,62 @@ public class MemoryMain extends CommandBase {
             return CommandExceptionHandler.handleException("memory info", e, logger, "获取内存信息失败");
         }
         
-        return result.toString();
+        return null;
     }
 
-    private String handleGc(String[] args) {
+    private byte getPercentColor(double percent) {
+        if (percent < 50) {
+            return Colors.LIGHT_GREEN;
+        } else if (percent < 80) {
+            return Colors.YELLOW;
+        } else {
+            return Colors.RED;
+        }
+    }
+
+    private void printMemoryValue(CommandExecutor.CmdExecContext ctx, String label, long bytes) {
+        ctx.print(label, Colors.GRAY);
+        printBytes(ctx, bytes);
+        ctx.println("", Colors.DEFAULT);
+    }
+
+    private void printBytes(CommandExecutor.CmdExecContext ctx, long bytes) {
+        String[] units = {"B", "KB", "MB", "GB", "TB"};
+        int unitIndex = 0;
+        double size = bytes;
+        
+        while (size >= 1024 && unitIndex < units.length - 1) {
+            size /= 1024;
+            unitIndex++;
+        }
+        
+        String formatted;
+        if (unitIndex == 0) {
+            formatted = String.valueOf((long) size);
+        } else {
+            formatted = String.format(Locale.US, "%.2f", size);
+        }
+        
+        ctx.print(formatted, Colors.YELLOW);
+        ctx.print(" " + units[unitIndex], Colors.CYAN);
+    }
+
+    private void printMemoryWithPercent(CommandExecutor.CmdExecContext ctx, String label, long used, long total) {
+        ctx.print(label, Colors.GRAY);
+        printBytes(ctx, used);
+        ctx.print(" / ", Colors.GRAY);
+        printBytes(ctx, total);
+        
+        if (total > 0) {
+            double percent = (double) used / total * 100;
+            ctx.print(" (", Colors.GRAY);
+            ctx.print(String.format(Locale.US, "%.1f", percent), getPercentColor(percent));
+            ctx.print("%)", Colors.GRAY);
+        }
+        ctx.println("", Colors.DEFAULT);
+    }
+
+    private String handleGc(String[] args, CommandExecutor.CmdExecContext ctx) {
         boolean fullGc = false;
         boolean showStats = false;
         
@@ -281,23 +355,28 @@ public class MemoryMain extends CommandBase {
             }
         }
         
-        StringBuilder result = new StringBuilder();
-        
         try {
             Runtime runtime = Runtime.getRuntime();
             
-            result.append("===== 垃圾回收 =====\n\n");
+            ctx.println("===== 垃圾回收 =====", Colors.CYAN);
+            ctx.println("");
             
             long beforeUsed = runtime.totalMemory() - runtime.freeMemory();
             long beforeTotal = runtime.totalMemory();
             long beforeMax = runtime.maxMemory();
             
-            result.append("GC前堆内存: ").append(formatBytes(beforeUsed));
-            result.append(" / ").append(formatBytes(beforeTotal));
+            ctx.print("GC前堆内存: ", Colors.GRAY);
+            printBytes(ctx, beforeUsed);
+            ctx.print(" / ", Colors.GRAY);
+            printBytes(ctx, beforeTotal);
             if (beforeMax > 0) {
-                result.append(" (").append(formatPercent(beforeUsed, beforeMax)).append(")");
+                double percent = (double) beforeUsed / beforeMax * 100;
+                ctx.print(" (", Colors.GRAY);
+                ctx.print(String.format(Locale.US, "%.1f", percent), getPercentColor(percent));
+                ctx.print("%)", Colors.GRAY);
             }
-            result.append("\n\n");
+            ctx.println("", Colors.DEFAULT);
+            ctx.println("");
             
             if (fullGc) {
                 logger.info("执行完整GC");
@@ -324,32 +403,47 @@ public class MemoryMain extends CommandBase {
             long afterTotal = runtime.totalMemory();
             long afterMax = runtime.maxMemory();
             
-            result.append("GC后堆内存: ").append(formatBytes(afterUsed));
-            result.append(" / ").append(formatBytes(afterTotal));
+            ctx.print("GC后堆内存: ", Colors.GRAY);
+            printBytes(ctx, afterUsed);
+            ctx.print(" / ", Colors.GRAY);
+            printBytes(ctx, afterTotal);
             if (afterMax > 0) {
-                result.append(" (").append(formatPercent(afterUsed, afterMax)).append(")");
+                double percent = (double) afterUsed / afterMax * 100;
+                ctx.print(" (", Colors.GRAY);
+                ctx.print(String.format(Locale.US, "%.1f", percent), getPercentColor(percent));
+                ctx.print("%)", Colors.GRAY);
             }
-            result.append("\n\n");
+            ctx.println("", Colors.DEFAULT);
+            ctx.println("");
             
             long freed = beforeUsed - afterUsed;
             if (freed > 0) {
-                result.append("释放内存: ").append(formatBytes(freed)).append("\n");
+                ctx.print("释放内存: ", Colors.LIGHT_GREEN);
+                printBytes(ctx, freed);
+                ctx.println("", Colors.DEFAULT);
             } else if (freed < 0) {
-                result.append("内存增加: ").append(formatBytes(-freed)).append(" (?)\n").append("可以试试memory gc --full\n");
+                ctx.print("内存增加: ", Colors.RED);
+                printBytes(ctx, -freed);
+                ctx.println(" (?)", Colors.GRAY);
+                ctx.println("可以试试 memory gc --full", Colors.YELLOW);
             } else {
-                result.append("内存未变化\n");
+                ctx.println("内存未变化", Colors.GRAY);
             }
             
             if (showStats) {
-                result.append("\n===== GC统计信息 =====\n\n");
-                result.append("Tip: Android不提供详细的GC统计信息\n");
-                result.append("以下是内存使用统计:\n\n");
+                ctx.println("");
+                ctx.println("===== GC统计信息 =====", Colors.CYAN);
+                ctx.println("");
+                ctx.println("Tip: Android不提供详细的GC统计信息", Colors.GRAY);
+                ctx.println("以下是内存使用统计:", Colors.GRAY);
+                ctx.println("");
                 
-                result.append("Java堆内存:\n");
-                result.append("  最大: ").append(formatBytes(afterMax)).append("\n");
-                result.append("  已分配: ").append(formatBytes(afterTotal)).append("\n");
-                result.append("  已用: ").append(formatBytes(afterUsed)).append("\n");
-                result.append("  空闲: ").append(formatBytes(runtime.freeMemory())).append("\n\n");
+                ctx.println("Java堆内存:", Colors.CYAN);
+                printMemoryValue(ctx, "  最大: ", afterMax);
+                printMemoryValue(ctx, "  已分配: ", afterTotal);
+                printMemoryValue(ctx, "  已用: ", afterUsed);
+                printMemoryValue(ctx, "  空闲: ", runtime.freeMemory());
+                ctx.println("");
                 
                 Context appContext = getApplicationContext();
                 if (appContext != null) {
@@ -360,15 +454,17 @@ public class MemoryMain extends CommandBase {
                             new ActivityManager.MemoryInfo();
                         activityManager.getMemoryInfo(memoryInfo);
                         
-                        result.append("系统内存:\n");
-                        result.append("  可用: ").append(formatBytes(memoryInfo.availMem)).append("\n");
-                        result.append("  总计: ").append(formatBytes(memoryInfo.totalMem)).append("\n");
-                        result.append("  低内存: ").append(memoryInfo.lowMemory ? "是" : "否").append("\n\n");
+                        ctx.println("系统内存:", Colors.CYAN);
+                        printMemoryValue(ctx, "  可用: ", memoryInfo.availMem);
+                        printMemoryValue(ctx, "  总计: ", memoryInfo.totalMem);
+                        ctx.print("  低内存: ", Colors.GRAY);
+                        ctx.println(memoryInfo.lowMemory ? "是" : "否", memoryInfo.lowMemory ? Colors.RED : Colors.LIGHT_GREEN);
+                        ctx.println("");
                     }
                 }
                 
-                result.append("进程内存统计:\n");
-                result.append(readProcessMemoryStats());
+                ctx.println("进程内存统计:", Colors.CYAN);
+                printProcessMemoryStatsColored(ctx);
             }
             
             logger.info("垃圾回收完成");
@@ -377,10 +473,10 @@ public class MemoryMain extends CommandBase {
             return CommandExceptionHandler.handleException("memory gc", e, logger, "垃圾回收失败");
         }
         
-        return result.toString();
+        return null;
     }
 
-    private String handleDump(String[] args) {
+    private String handleDump(String[] args, CommandExecutor.CmdExecContext ctx) {
         boolean dumpHeap = false;
         boolean dumpThreads = false;
         boolean dumpFull = true;
@@ -400,29 +496,25 @@ public class MemoryMain extends CommandBase {
             }
         }
         
-        StringBuilder output = new StringBuilder();
-        
-        output.append("=== 系统堆转储 ===\n");
-        output.append("时间: ").append(new Date()).append("\n");
-        
         if (filePath != null) {
-            output.append("文件: ").append(filePath).append("\n");
-        }
-        output.append("\n");
-        
-        if (dumpHeap || dumpFull) {
-            dumpHeapInfo(output);
-        }
-        
-        if (dumpThreads || dumpFull) {
-            dumpThreadInfo(output);
-        }
-        
-        if (dumpFull) {
-            dumpSystemInfo(output);
-        }
-        
-        if (filePath != null) {
+            StringBuilder output = new StringBuilder();
+            
+            output.append("=== 系统堆转储 ===\n");
+            output.append("时间: ").append(new Date()).append("\n");
+            output.append("文件: ").append(filePath).append("\n\n");
+            
+            if (dumpHeap || dumpFull) {
+                dumpHeapInfo(output);
+            }
+            
+            if (dumpThreads || dumpFull) {
+                dumpThreadInfo(output);
+            }
+            
+            if (dumpFull) {
+                dumpSystemInfo(output);
+            }
+            
             File outputFile = new File(filePath);
             File parentDir = outputFile.getParentFile();
             if (parentDir != null && !parentDir.exists()) {
@@ -433,14 +525,138 @@ public class MemoryMain extends CommandBase {
                 logger.info("开始导出堆信息到: " + filePath);
                 IOManager.writeFile(outputFile.getAbsolutePath(), output.toString());
                 logger.info("堆信息导出完成");
-                return "堆信息已导出到: " + filePath;
+                ctx.print("堆信息已导出到: ", Colors.LIGHT_GREEN);
+                ctx.println(filePath, Colors.CYAN);
+                return null;
             } catch (IOException e) {
                 logger.error("导出堆信息失败", e);
-                return "错误: " + e.getMessage();
+                ctx.print("错误: ", Colors.RED);
+                ctx.println(e.getMessage(), Colors.YELLOW);
+                return null;
             }
         } else {
-            return output.toString();
+            ctx.println("=== 系统堆转储 ===", Colors.CYAN);
+            ctx.print("时间: ", Colors.GRAY);
+            ctx.println(new Date().toString(), Colors.YELLOW);
+            ctx.println("");
+            
+            if (dumpHeap || dumpFull) {
+                dumpHeapInfoColored(ctx);
+            }
+            
+            if (dumpThreads || dumpFull) {
+                dumpThreadInfoColored(ctx);
+            }
+            
+            if (dumpFull) {
+                dumpSystemInfoColored(ctx);
+            }
+            
+            return null;
         }
+    }
+
+    private void dumpHeapInfoColored(CommandExecutor.CmdExecContext ctx) {
+        ctx.println("=== 堆内存信息 ===", Colors.CYAN);
+        ctx.println("");
+        
+        Runtime runtime = Runtime.getRuntime();
+        ctx.println("Java运行时内存:", Colors.CYAN);
+        printMemoryValue(ctx, "  最大: ", runtime.maxMemory());
+        printMemoryValue(ctx, "  已分配: ", runtime.totalMemory());
+        printMemoryValue(ctx, "  空闲: ", runtime.freeMemory());
+        printMemoryValue(ctx, "  已用: ", runtime.totalMemory() - runtime.freeMemory());
+        ctx.println("");
+        
+        ctx.println("原生堆内存:", Colors.CYAN);
+        printMemoryValue(ctx, "  已分配: ", Debug.getNativeHeapAllocatedSize());
+        printMemoryValue(ctx, "  已用: ", Debug.getNativeHeapSize());
+        printMemoryValue(ctx, "  空闲: ", Debug.getNativeHeapFreeSize());
+        ctx.println("");
+        
+        Context appContext = getApplicationContext();
+        if (appContext != null) {
+            ActivityManager activityManager = (ActivityManager) appContext.getSystemService(Context.ACTIVITY_SERVICE);
+            if (activityManager != null) {
+                ActivityManager.MemoryInfo memoryInfo = new ActivityManager.MemoryInfo();
+                activityManager.getMemoryInfo(memoryInfo);
+                
+                ctx.println("系统内存:", Colors.CYAN);
+                printMemoryValue(ctx, "  可用: ", memoryInfo.availMem);
+                printMemoryValue(ctx, "  总计: ", memoryInfo.totalMem);
+                printMemoryValue(ctx, "  阈值: ", memoryInfo.threshold);
+                ctx.print("  低内存: ", Colors.GRAY);
+                ctx.println(memoryInfo.lowMemory ? "是" : "否", memoryInfo.lowMemory ? Colors.RED : Colors.LIGHT_GREEN);
+                ctx.println("");
+            }
+        }
+        
+        ctx.println("=== 内存详细信息 ===", Colors.CYAN);
+        ctx.println("");
+        printMeminfoColored(ctx);
+    }
+    
+    private void dumpThreadInfoColored(CommandExecutor.CmdExecContext ctx) {
+        ctx.println("=== 线程信息 ===", Colors.CYAN);
+        ctx.println("");
+        
+        Map<Thread, StackTraceElement[]> allStackTraces = Thread.getAllStackTraces();
+        ctx.print("线程总数: ", Colors.GRAY);
+        ctx.println(String.valueOf(allStackTraces.size()), Colors.YELLOW);
+        ctx.println("");
+        
+        ctx.println("=== 线程详情 ===", Colors.CYAN);
+        ctx.println("");
+        for (Map.Entry<Thread, StackTraceElement[]> entry : allStackTraces.entrySet()) {
+            Thread thread = entry.getKey();
+            StackTraceElement[] stackTrace = entry.getValue();
+            
+            ctx.print("线程: ", Colors.CYAN);
+            ctx.println(thread.getName(), Colors.LIGHT_GREEN);
+            ctx.print("  ID: ", Colors.GRAY);
+            ctx.println(String.valueOf(thread.getId()), Colors.YELLOW);
+            ctx.print("  状态: ", Colors.GRAY);
+            ctx.println(thread.getState().toString(), Colors.LIGHT_GREEN);
+            ctx.print("  优先级: ", Colors.GRAY);
+            ctx.println(String.valueOf(thread.getPriority()), Colors.YELLOW);
+            ctx.print("  守护: ", Colors.GRAY);
+            ctx.println(thread.isDaemon() ? "是" : "否", thread.isDaemon() ? Colors.PURPLE : Colors.LIGHT_GREEN);
+            ctx.print("  中断: ", Colors.GRAY);
+            ctx.println(thread.isInterrupted() ? "是" : "否", thread.isInterrupted() ? Colors.RED : Colors.LIGHT_GREEN);
+            
+            if (stackTrace != null && stackTrace.length > 0) {
+                ctx.print("  堆栈:", Colors.GRAY);
+                ctx.println("");
+                for (StackTraceElement element : stackTrace) {
+                    ctx.print("    ", Colors.DEFAULT);
+                    ctx.println(element.toString(), Colors.GRAY);
+                }
+            }
+            ctx.println("");
+        }
+    }
+    
+    private void dumpSystemInfoColored(CommandExecutor.CmdExecContext ctx) {
+        ctx.println("=== 系统信息 ===", Colors.CYAN);
+        ctx.println("");
+        
+        ctx.print("操作系统: ", Colors.GRAY);
+        ctx.println(System.getProperty("os.name"), Colors.YELLOW);
+        ctx.print("系统版本: ", Colors.GRAY);
+        ctx.println(System.getProperty("os.version"), Colors.YELLOW);
+        ctx.print("架构: ", Colors.GRAY);
+        ctx.println(System.getProperty("os.arch"), Colors.YELLOW);
+        ctx.print("处理器数: ", Colors.GRAY);
+        ctx.println(String.valueOf(Runtime.getRuntime().availableProcessors()), Colors.YELLOW);
+        ctx.print("Java版本: ", Colors.GRAY);
+        ctx.println(System.getProperty("java.version"), Colors.YELLOW);
+        ctx.print("Java供应商: ", Colors.GRAY);
+        ctx.println(System.getProperty("java.vendor"), Colors.YELLOW);
+        ctx.print("Java虚拟机: ", Colors.GRAY);
+        ctx.println(System.getProperty("java.vm.name"), Colors.YELLOW);
+        ctx.print("Java虚拟机版本: ", Colors.GRAY);
+        ctx.println(System.getProperty("java.vm.version"), Colors.YELLOW);
+        ctx.println("");
     }
 
     private static void dumpHeapInfo(StringBuilder output) {
@@ -606,6 +822,71 @@ public class MemoryMain extends CommandBase {
             return df.format(percent) + "%";
         }
         return "N/A";
+    }
+
+    private void printMeminfoColored(CommandExecutor.CmdExecContext ctx) {
+        try (BufferedReader reader = new BufferedReader(new FileReader("/proc/meminfo"))) {
+            String line;
+            int count = 0;
+            while ((line = reader.readLine()) != null && count < 20) {
+                String[] parts = line.split(":");
+                if (parts.length >= 2) {
+                    String key = parts[0].trim();
+                    String value = parts[1].trim();
+                    
+                    ctx.print(key, Colors.CYAN);
+                    ctx.print(": ", Colors.GRAY);
+                    
+                    if (value.contains("kB")) {
+                        String numStr = value.replace("kB", "").trim();
+                        try {
+                            long kb = Long.parseLong(numStr);
+                            printBytes(ctx, kb * 1024);
+                        } catch (NumberFormatException e) {
+                            ctx.print(value, Colors.YELLOW);
+                        }
+                    } else {
+                        ctx.print(value, Colors.YELLOW);
+                    }
+                    ctx.println("", Colors.DEFAULT);
+                } else {
+                    ctx.println(line, Colors.GRAY);
+                }
+                count++;
+            }
+        } catch (IOException e) {
+            ctx.print("无法读取 /proc/meminfo: ", Colors.RED);
+            ctx.println(e.getMessage(), Colors.YELLOW);
+        }
+    }
+    
+    private void printProcessMemoryStatsColored(CommandExecutor.CmdExecContext ctx) {
+        try {
+            int pid = android.os.Process.myPid();
+            try (BufferedReader reader = new BufferedReader(new FileReader("/proc/" + pid + "/statm"))) {
+                String line = reader.readLine();
+                if (line != null) {
+                    String[] parts = line.split("\\s+");
+                    if (parts.length >= 7) {
+                        long pageSize = 4096;
+                        long size = Long.parseLong(parts[0]) * pageSize;
+                        long resident = Long.parseLong(parts[1]) * pageSize;
+                        long shared = Long.parseLong(parts[2]) * pageSize;
+                        long text = Long.parseLong(parts[3]) * pageSize;
+                        long data = Long.parseLong(parts[5]) * pageSize;
+                        
+                        printMemoryValue(ctx, "总大小: ", size);
+                        printMemoryValue(ctx, "驻留内存: ", resident);
+                        printMemoryValue(ctx, "共享内存: ", shared);
+                        printMemoryValue(ctx, "代码段: ", text);
+                        printMemoryValue(ctx, "数据段: ", data);
+                    }
+                }
+            }
+        } catch (IOException e) {
+            ctx.print("无法读取进程内存统计: ", Colors.RED);
+            ctx.println(e.getMessage(), Colors.YELLOW);
+        }
     }
     
     private static Context getApplicationContext() {

@@ -131,8 +131,8 @@
     <string name="script_example_script_3_desc">执行一段简单的Java代码。</string>
     <string name="script_example_script_category">测试类</string>
     <string name="script_example_script_command" translatable="false">help</string>
-    <string name="script_example_script_2_command" translatable="false">-cl android clist com.android.server.am.ActivityManagerService</string>
-    <string name="script_example_script_3_command" translatable="false"><![CDATA[srun for (int i = 0; i < 114; i++) println(i); ]]></string>
+    <string name="script_example_script_2_command" translatable="false">class analyze com.android.server.am.ActivityManagerService</string>
+    <string name="script_example_script_3_command" translatable="false"><![CDATA[script run_code for (int i = 0; i < 114; i++) println(i); ]]></string>
     <string name="status_hook_count" formatted="false">可用hook总数: %d (Zygote hook: %d, 应用hook: %d)</string>
     <string name="status_module_status_tip">模块状态: %s</string>
     <string name="status_module_status_activated">已激活</string>
@@ -172,4 +172,5 @@
     <string name="performance_hook_call_cnt">调用次数: %d</string>
     <string name="performance_hook_total_time">总耗时: %dms</string>
     <string name="performance_hook_avg_time">平均耗时: %dms</string>
+    <string name="script_execute_finished">脚本执行完成!</string>
 </resources>

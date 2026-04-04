@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 
-public class StreamOutputWriter implements IOutputHandler {
+public class StreamOutputWriter implements ICommandOutputHandler {
     private final OutputStream outputStream;
     private final PrintWriter printWriter;
     private final AtomicBoolean closed = new AtomicBoolean(false);

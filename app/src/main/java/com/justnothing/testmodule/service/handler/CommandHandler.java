@@ -5,7 +5,7 @@ import android.os.ParcelFileDescriptor;
 import android.util.Log;
 
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.output.IOutputHandler;
+import com.justnothing.testmodule.command.output.ICommandOutputHandler;
 import com.justnothing.testmodule.command.output.StreamOutputWriter;
 import com.justnothing.testmodule.utils.data.DataDirectoryManager;
 import com.justnothing.testmodule.utils.functions.Logger;
@@ -76,7 +76,7 @@ public class CommandHandler {
             ParcelFileDescriptor writeFd = pipe[1];
 
             OutputStream outputStream = new ParcelFileDescriptor.AutoCloseOutputStream(writeFd);
-            IOutputHandler outputWriter = new StreamOutputWriter(outputStream);
+            ICommandOutputHandler outputWriter = new StreamOutputWriter(outputStream);
 
             ThreadPoolManager.submitFastRunnable(() -> {
                 try {

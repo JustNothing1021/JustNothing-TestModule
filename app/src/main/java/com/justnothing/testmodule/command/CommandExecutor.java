@@ -22,8 +22,9 @@ import com.justnothing.testmodule.command.functions.threads.ThreadsMain;
 import com.justnothing.testmodule.command.functions.trace.TraceMain;
 import com.justnothing.testmodule.command.functions.watch.WatchMain;
 import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.output.StringBuilderCollector;
-import com.justnothing.testmodule.command.output.IOutputHandler;
+import com.justnothing.testmodule.command.output.ICommandOutputHandler;
 import com.justnothing.testmodule.command.output.SystemOutputRedirector;
 import com.justnothing.testmodule.command.utils.ArgumentGroup;
 import com.justnothing.testmodule.command.utils.CommandArgumentParser;
@@ -181,10 +182,10 @@ public class CommandExecutor {
     }
 
 
-    public void execute(String fullCommand, IOutputHandler output) {
+    public void execute(String fullCommand, ICommandOutputHandler output) {
         if (fullCommand == null || fullCommand.trim().isEmpty()) {
             logger.warn("命令为空");
-            output.println("命令不能为空");
+            output.println("命令不能为空", Colors.RED);
             return;
         }
         if (output == null) {
@@ -208,11 +209,12 @@ public class CommandExecutor {
             }
         } catch (Exception e) {
             logger.error("执行命令异常", e);
-            output.println("\n===============================================");
-            output.println("执行命令出现严重错误...");
-            output.println("错误信息:");
-            output.printStackTrace(e);
-            output.println("===============================================");
+            output.println("\n===============================================", Colors.RED);
+            output.println("执行命令出现严重错误...", Colors.RED);
+            output.printf("错误信息: [%s] %s", e.getClass().getSimpleName(), e.getMessage());
+            output.println("堆栈追踪:", Colors.GRAY);
+            output.printStackTrace(e, Colors.GRAY);
+            output.println("===============================================", Colors.RED);
             output.close();
         } finally {
             cleanup();
@@ -221,10 +223,10 @@ public class CommandExecutor {
     }
 
 
-    private void executeCommandInternal(String fullCommand, IOutputHandler output) {
+    private void executeCommandInternal(String fullCommand, ICommandOutputHandler output) {
         fullCommand = fullCommand.trim();
         if (fullCommand.isEmpty()) {
-            output.println("没有指定命令 (可以用help来获取帮助)");
+            output.println("没有指定命令 (可以用help来获取帮助)", Colors.RED);
             return;
         }
         
@@ -238,7 +240,7 @@ public class CommandExecutor {
         
         String[] commandParams = CommandArgumentParser.splitArguments(parseResult.commandLine());
         if (commandParams.length == 0) {
-            output.println("没有指定命令 (可以用help来获取帮助)");
+            output.println("没有指定命令 (可以用help来获取帮助)", Colors.ORANGE);
             return;
         }
         
@@ -264,20 +266,13 @@ public class CommandExecutor {
             argGroup
         );
 
-        try {
-            // 使用命令注册表分发命令
-            CommandBase commandObj = getCommand(command);
-            if (commandObj != null) {
-                context.output().println(commandObj.runMain(context));
-            } else {
-                output.println("未知的命令: " + command + ", 输入help获取帮助");
-            }
-        } catch (Exception e) {
-            output.println("\n===============================================");
-            output.println("执行命令时出现错误!");
-            output.println("错误信息:");
-            output.printStackTrace(e);
-            output.println("===============================================");
+        // 使用命令注册表分发命令
+        CommandBase commandObj = getCommand(command);
+        if (commandObj != null) {
+            String result = commandObj.runMain(context);
+            context.output().println(result != null ? result : "");
+        } else {
+            output.println("未知的命令: " + command + ", 输入help获取帮助", Colors.ORANGE);
         }
 
     }
@@ -295,18 +290,27 @@ public class CommandExecutor {
             String origCommand, // 除去命令名外完整的请求命令行
             String targetPackage, // 请求的目标包名
             ClassLoader classLoader, // 指定的类加载器
-            IOutputHandler output, // 输出流
+            ICommandOutputHandler output, // 输出流
             ArgumentGroup argGroup // 多格式参数组
     ) {
 
         public void print(Object obj) {
             output.print(obj.toString());
         }
+        public void print(Object obj, byte color) {
+            output.print(obj.toString(), color);
+        }
         public void println(Object obj) {
             output.println(obj.toString());
         }
+        public void println(Object obj, byte color) {
+            output.println(obj.toString(), color);
+        }
         public void printf(String fmt, Object... args) {
             output.printf(fmt, args);
+        }
+        public void printf(byte color, String fmt, Object... args) {
+            output.printf(color, fmt, args);
         }
         public String readLine(String prompt) {
             return output.readLineFromClient(prompt);

@@ -11,6 +11,7 @@ import com.justnothing.javainterpreter.exception.ParseException;
 import com.justnothing.javainterpreter.lexer.Lexer;
 import com.justnothing.javainterpreter.parser.ParseContext;
 import com.justnothing.javainterpreter.parser.Parser;
+import com.justnothing.javainterpreter.preprocessor.Preprocessor;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -21,7 +22,9 @@ public class ScriptRunner {
     
     private ExecutionContext context;
     private ParseContext parseContext;
+    private Preprocessor preprocessor;
     private final ClassLoader classLoader;
+    private boolean enablePreprocessor = true;
 
     public ScriptRunner() {
         this(Thread.currentThread().getContextClassLoader());
@@ -30,6 +33,7 @@ public class ScriptRunner {
     public ScriptRunner(ClassLoader classLoader) {
         this.context = new ExecutionContext(classLoader);
         this.parseContext = new ParseContext(classLoader);
+        this.preprocessor = new Preprocessor();
         this.classLoader = classLoader;
         this.context.getBuiltins().setContextClassLoader(classLoader);
     }
@@ -37,6 +41,7 @@ public class ScriptRunner {
     public ScriptRunner(ClassLoader classLoader, IOutputHandler outputHandler, IOutputHandler errorHandler) {
         this.context = new ExecutionContext(classLoader, outputHandler, errorHandler);
         this.parseContext = new ParseContext(classLoader);
+        this.preprocessor = new Preprocessor();
         this.classLoader = classLoader;
         this.context.getBuiltins().setContextClassLoader(classLoader);
     }
@@ -64,7 +69,8 @@ public class ScriptRunner {
         context.clearWarnMessages();
         
         try {
-            Lexer lexer = new Lexer(code);
+            String processedCode = preprocess(code);
+            Lexer lexer = new Lexer(processedCode);
             Parser parser = new Parser(lexer.tokenize(), parseContext, classLoader);
             BlockNode ast = parser.parse();
             if (context.isPrintAST()) {
@@ -92,7 +98,8 @@ public class ScriptRunner {
         context.clearWarnMessages();
         
         try {
-            Lexer lexer = new Lexer(code);
+            String processedCode = preprocess(code);
+            Lexer lexer = new Lexer(processedCode);
             Parser parser = new Parser(lexer.tokenize(), parseContext, classLoader);
             BlockNode ast = parser.parse();
             ASTEvaluator.evaluate(ast, context);
@@ -211,5 +218,52 @@ public class ScriptRunner {
             cause = cause.getCause();
         }
         return cause;
+    }
+    
+    private String preprocess(String code) {
+        if (!enablePreprocessor || preprocessor == null) {
+            return code;
+        }
+        return preprocessor.process(code);
+    }
+    
+    public Preprocessor getPreprocessor() {
+        return preprocessor;
+    }
+    
+    public void setPreprocessor(Preprocessor preprocessor) {
+        this.preprocessor = preprocessor;
+    }
+    
+    public boolean isPreprocessorEnabled() {
+        return enablePreprocessor;
+    }
+    
+    public void setEnablePreprocessor(boolean enable) {
+        this.enablePreprocessor = enable;
+    }
+    
+    public void defineMacro(String name, String value) {
+        if (preprocessor == null) {
+            preprocessor = new Preprocessor();
+        }
+        preprocessor.define(name, value);
+    }
+    
+    public void defineMacro(String name) {
+        if (preprocessor == null) {
+            preprocessor = new Preprocessor();
+        }
+        preprocessor.define(name);
+    }
+    
+    public void undefineMacro(String name) {
+        if (preprocessor != null) {
+            preprocessor.undefine(name);
+        }
+    }
+    
+    public boolean isMacroDefined(String name) {
+        return preprocessor != null && preprocessor.isDefined(name);
     }
 }

@@ -1,5 +1,7 @@
 package com.justnothing.testmodule.command.functions.alias;
 
+import androidx.annotation.NonNull;
+
 import com.justnothing.testmodule.utils.functions.Logger;
 
 import java.io.BufferedReader;
@@ -102,7 +104,8 @@ public class AliasManager {
     public String getAlias(String name) {
         return aliases.get(name);
     }
-    
+
+    @SuppressWarnings("unused")
     public boolean hasAlias(String name) {
         return aliases.containsKey(name);
     }
@@ -132,11 +135,13 @@ public class AliasManager {
         
         return input;
     }
-    
+
+    @SuppressWarnings("unused")
     public Map<String, String> getAllAliases() {
         return Collections.unmodifiableMap(new LinkedHashMap<>(aliases));
     }
-    
+
+    @SuppressWarnings("unused")
     public List<AliasEntry> getAliasList() {
         List<AliasEntry> list = new ArrayList<>();
         for (Map.Entry<String, String> entry : aliases.entrySet()) {
@@ -235,19 +240,13 @@ public class AliasManager {
         
         return sb.toString();
     }
-    
-    public static class AliasEntry {
-        public final String name;
-        public final String command;
-        
-        public AliasEntry(String name, String command) {
-            this.name = name;
-            this.command = command;
+
+    public record AliasEntry(String name, String command) {
+
+        @NonNull
+            @Override
+            public String toString() {
+                return name + " -> " + command;
+            }
         }
-        
-        @Override
-        public String toString() {
-            return name + " -> " + command;
-        }
-    }
 }

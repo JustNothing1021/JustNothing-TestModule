@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.classcmd;
 
 import com.justnothing.testmodule.command.base.AbstractCommand;
 import com.justnothing.testmodule.command.base.CommandContext;
+import com.justnothing.testmodule.command.output.Colors;
 
 public abstract class AbstractClassCommand extends AbstractCommand implements ClassCommand {
 

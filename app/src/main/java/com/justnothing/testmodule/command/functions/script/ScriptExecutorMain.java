@@ -1060,10 +1060,21 @@ public class ScriptExecutorMain extends CommandBase {
         int braceCount = 0;
         int parenCount = 0;
         int bracketCount = 0;
+        int preprocessorConditionCount = 0;
         boolean inString = false;
         boolean inChar = false;
         boolean inFString = false;
         boolean escape = false;
+        
+        String[] lines = code.split("\n");
+        for (String line : lines) {
+            String trimmed = line.trim();
+            if (trimmed.startsWith("#ifdef") || trimmed.startsWith("#ifndef") || trimmed.startsWith("#if ")) {
+                preprocessorConditionCount++;
+            } else if (trimmed.equals("#endif")) {
+                preprocessorConditionCount--;
+            }
+        }
         
         for (int i = 0; i < code.length(); i++) {
             char c = code.charAt(i);
@@ -1108,7 +1119,7 @@ public class ScriptExecutorMain extends CommandBase {
             }
         }
         
-        return braceCount <= 0 && parenCount <= 0 && bracketCount <= 0;
+        return braceCount <= 0 && parenCount <= 0 && bracketCount <= 0 && preprocessorConditionCount <= 0;
     }
 
 }

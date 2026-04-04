@@ -12,6 +12,7 @@ import com.justnothing.testmodule.constants.FileDirectory;
 import com.justnothing.testmodule.hooks.HookEntry;
 import com.justnothing.testmodule.utils.io.IOManager;
 import com.justnothing.testmodule.utils.io.RootProcessPool;
+
 import java.io.File;
 import java.util.Objects;
 
@@ -24,6 +25,7 @@ public class FileCommandExecutor {
     public record ExecutionResult(boolean success, String output, String error) {
     }
 
+    @SuppressWarnings("unused")
     public static ExecutionResult executeFileWithOutput(String command) {
         long startTime = System.currentTimeMillis();
         boolean success = false;

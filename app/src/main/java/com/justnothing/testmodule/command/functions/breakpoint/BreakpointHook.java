@@ -61,7 +61,7 @@ public class BreakpointHook {
             Method method = targetClass.getDeclaredMethod(info.methodName, paramTypes);
             return XposedBridge.hookMethod(method, new XC_MethodHook() {
                 @Override
-                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                protected void beforeHookedMethod(MethodHookParam param) {
                     if (!info.enabled) {
                         return;
                     }
@@ -103,7 +103,7 @@ public class BreakpointHook {
         Method[] methods = targetClass.getDeclaredMethods();
         int hookedCount = 0;
         XC_MethodHook.Unhook lastUnhook = null;
-        
+
         for (Method method : methods) {
             if (method.getName().equals(info.methodName)) {
                 XC_MethodHook.Unhook unhook = XposedBridge.hookMethod(method, new XC_MethodHook() {
@@ -141,7 +141,7 @@ public class BreakpointHook {
                         logger.info("================");
                     }
                 });
-                
+
                 hookedCount++;
                 lastUnhook = unhook;
             }

@@ -2,6 +2,7 @@ package com.justnothing.methodsclient.executor;
 
 
 import com.justnothing.methodsclient.StreamClient;
+import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.output.InteractiveProtocol;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
@@ -13,6 +14,7 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -215,6 +217,10 @@ public class SocketStreamReader {
                 handleServerError(data, bytesRead);
                 return null;
 
+            case InteractiveProtocol.TYPE_COLORED_OUTPUT:
+                handleColoredOutput(data, bytesRead);
+                return null;
+
             case InteractiveProtocol.TYPE_SERVER_INPUT_REQUEST:
                 handleInputRequest(data, output, inputQueue, reading);
                 return null;
@@ -258,6 +264,71 @@ public class SocketStreamReader {
             System.err.flush();
             bytesRead.addAndGet(data.length);
         }
+    }
+
+    private static void handleColoredOutput(byte[] data, AtomicLong bytesRead) {
+        if (data == null || data.length == 0) {
+            return;
+        }
+        
+        Object[] decoded = InteractiveProtocol.decodeColoredOutput(data);
+        byte color = (byte) decoded[0];
+        String text = (String) decoded[1];
+        
+        printAsANSI(color, text);
+        bytesRead.addAndGet(data.length);
+    }
+
+    private static void printAsANSI(byte color, String text) {
+        String ansiCode = getANSICode(color);
+        String resetCode = "\u001B[0m";
+        
+        System.out.print(ansiCode + text + resetCode);
+        System.out.flush();
+    }
+
+    private static String getANSICode(byte color) {
+        return switch (color) {
+            case Colors.BLACK -> "\u001B[30m";
+            case Colors.RED -> "\u001B[31m";
+            case Colors.GREEN -> "\u001B[32m";
+            case Colors.YELLOW -> "\u001B[33m";
+            case Colors.BLUE -> "\u001B[34m";
+            case Colors.MAGENTA -> "\u001B[35m";
+            case Colors.CYAN -> "\u001B[36m";
+            case Colors.WHITE -> "\u001B[37m";
+            case Colors.GRAY -> "\u001B[38;5;245m";
+            case Colors.LIGHT_GRAY -> "\u001B[90m";
+            case Colors.LIGHT_RED -> "\u001B[91m";
+            case Colors.LIGHT_GREEN -> "\u001B[92m";
+            case Colors.LIGHT_YELLOW -> "\u001B[93m";
+            case Colors.LIGHT_BLUE -> "\u001B[94m";
+            case Colors.LIGHT_MAGENTA -> "\u001B[95m";
+            case Colors.LIGHT_CYAN -> "\u001B[96m";
+            case Colors.DARK_GRAY -> "\u001B[90m";
+            case Colors.DARK_RED -> "\u001B[31m";
+            case Colors.DARK_GREEN -> "\u001B[32m";
+            case Colors.DARK_YELLOW -> "\u001B[33m";
+            case Colors.DARK_BLUE -> "\u001B[34m";
+            case Colors.DARK_CYAN -> "\u001B[36m";
+            case Colors.PURPLE -> "\u001B[35m";
+            case Colors.ORANGE -> "\u001B[38;5;208m";
+            case Colors.PINK -> "\u001B[38;5;218m";
+            case Colors.BROWN -> "\u001B[38;5;130m";
+            case Colors.GOLD -> "\u001B[38;5;220m";
+            case Colors.SILVER -> "\u001B[38;5;250m";
+            case Colors.LIME -> "\u001B[38;5;154m";
+            case Colors.TEAL -> "\u001B[38;5;37m";
+            case Colors.NAVY -> "\u001B[38;5;17m";
+            case Colors.MAROON -> "\u001B[38;5;124m";
+            case Colors.OLIVE -> "\u001B[38;5;142m";
+            case Colors.AQUA -> "\u001B[38;5;87m";
+            case Colors.CORAL -> "\u001B[38;5;209m";
+            case Colors.SALMON -> "\u001B[38;5;210m";
+            case Colors.INDIGO -> "\u001B[38;5;93m";
+            case Colors.VIOLET -> "\u001B[38;5;177m";
+            default -> "";
+        };
     }
 
     private static void handleInputRequest(byte[] data, OutputStream output,
@@ -383,5 +454,116 @@ public class SocketStreamReader {
         } finally {
             reading.set(false);
         }
+    }
+
+    public static boolean readInteractiveWithColoredOutput(InputStream input, OutputStream output,
+                                                            AtomicBoolean reading, AtomicLong bytesRead,
+                                                            Socket socket, List<ColoredSegment> segments) {
+        try {
+            AtomicLong lastResponseTime = new AtomicLong(System.currentTimeMillis());
+            BlockingQueue<String> inputQueue = new LinkedBlockingQueue<>();
+            Object writeLock = new Object();
+
+            startPingThread(reading, output, lastResponseTime, writeLock);
+
+            while (reading.get() && !Thread.currentThread().isInterrupted()) {
+                try {
+                    socket.setSoTimeout(1000);
+                    Object[] packet = InteractiveProtocol.readMessage(input);
+
+                    if (packet == null) {
+                        logger.info("服务器已关闭连接");
+                        return true;
+                    }
+
+                    if (isServerTimeout(lastResponseTime)) {
+                        return false;
+                    }
+
+                    byte type = (byte) packet[0];
+                    byte[] data = (byte[]) packet[1];
+                    lastResponseTime.set(System.currentTimeMillis());
+
+                    Boolean result = handlePacketForColoredOutput(type, data, output, bytesRead, inputQueue, reading, writeLock, segments);
+                    if (result != null) {
+                        return result;
+                    }
+
+                } catch (SocketTimeoutException e) {
+                    if (isServerTimeout(lastResponseTime)) {
+                        return false;
+                    }
+                } catch (IOException e) {
+                    if (e.getMessage() != null && e.getMessage().contains("Connection reset")) {
+                        logger.info("连接被重置");
+                        return true;
+                    }
+                    throw e;
+                }
+            }
+            return true;
+        } catch (IOException e) {
+            logger.error("读取流失败", e);
+            return false;
+        } finally {
+            reading.set(false);
+        }
+    }
+
+    private static Boolean handlePacketForColoredOutput(byte type, byte[] data, OutputStream output,
+                                                         AtomicLong bytesRead, BlockingQueue<String> inputQueue,
+                                                         AtomicBoolean reading, Object writeLock,
+                                                         java.util.List<ColoredSegment> segments) {
+        return switch (type) {
+            case InteractiveProtocol.TYPE_SERVER_OUTPUT -> {
+                if (data != null) {
+                    String text = new String(data, StandardCharsets.UTF_8);
+                    segments.add(new ColoredSegment(Colors.DEFAULT, text));
+                    bytesRead.addAndGet(data.length);
+                }
+                yield null;
+            }
+            case InteractiveProtocol.TYPE_SERVER_ERROR -> {
+                if (data != null) {
+                    String text = new String(data, StandardCharsets.UTF_8);
+                    segments.add(new ColoredSegment(Colors.RED, text));
+                    bytesRead.addAndGet(data.length);
+                }
+                yield null;
+            }
+            case InteractiveProtocol.TYPE_COLORED_OUTPUT -> {
+                if (data != null && data.length > 0) {
+                    Object[] decoded = InteractiveProtocol.decodeColoredOutput(data);
+                    byte color = (byte) decoded[0];
+                    String text = (String) decoded[1];
+                    segments.add(new ColoredSegment(color, text));
+                    bytesRead.addAndGet(data.length);
+                }
+                yield null;
+            }
+            case InteractiveProtocol.TYPE_SERVER_PING -> {
+                try {
+                    synchronized (writeLock) {
+                        InteractiveProtocol.writeMessage(output, InteractiveProtocol.TYPE_CLIENT_PONG, null);
+                    }
+                    logger.debug("接收到了服务端的PING，发送PONG响应");
+                } catch (IOException e) {
+                    logger.error("发送CLIENT_PONG响应失败", e);
+                }
+                yield null;
+            }
+            case InteractiveProtocol.TYPE_SERVER_PONG -> {
+                logger.debug("收到了服务端的PONG");
+                yield null;
+            }
+            case InteractiveProtocol.TYPE_COMMAND_END -> {
+                logger.info("收到COMMAND_END标记，退出程序");
+                yield true;
+            }
+            default -> {
+                logger.warn("未知的消息类型: " + type);
+                yield null;
+            }
+        };
     }
 }
