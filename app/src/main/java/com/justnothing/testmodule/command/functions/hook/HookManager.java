@@ -4,8 +4,8 @@ package com.justnothing.testmodule.command.functions.hook;
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
-import com.justnothing.testmodule.command.functions.script.engine_new.ScriptRunner;
-import com.justnothing.testmodule.command.functions.script.engine_new.evaluator.ExecutionContext;
+import com.justnothing.javainterpreter.ScriptRunner;
+import com.justnothing.javainterpreter.evaluator.ExecutionContext;
 import com.justnothing.testmodule.command.output.IOutputHandler;
 import com.justnothing.testmodule.command.output.OutputHandler;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
@@ -13,6 +13,7 @@ import com.justnothing.testmodule.utils.data.DataBridge;
 import com.justnothing.testmodule.utils.io.IOManager;
 import com.justnothing.testmodule.utils.functions.Logger;
 import com.justnothing.testmodule.utils.reflect.SignatureUtils;
+import com.justnothing.testmodule.utils.script.AppClassFinder;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -185,6 +186,7 @@ public class HookManager {
 
     private static void validateHookCode(HookInfo hookInfo, ClassLoader classLoader) throws Exception {
         ScriptRunner runner = new ScriptRunner(classLoader);
+        runner.setClassFinder(new AppClassFinder());
         if (hookInfo.getBeforeCode() != null && !hookInfo.getBeforeCode().isEmpty()) {
             logger.info("验证before代码");
             validateCode(runner, hookInfo.getBeforeCode(), "before");
@@ -436,7 +438,11 @@ public class HookManager {
         try {
             ClassLoader cl = hookInfo.getClassLoader();
             ScriptRunner runner = scriptRunners.computeIfAbsent(
-                hookInfo.getId(), k -> new ScriptRunner(cl));
+                hookInfo.getId(), k -> {
+                    ScriptRunner r = new ScriptRunner(cl);
+                    r.setClassFinder(new AppClassFinder());
+                    return r;
+                });
             logger.debug("运行代码, hook id = " + hookInfo.getId() + "\n" + code);
             String prefix = "[" + hookInfo.getId() + "][" + phase + "] ";
             IOutputHandler outputHandler = new OutputHandler(logger, prefix);

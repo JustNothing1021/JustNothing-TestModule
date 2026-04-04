@@ -39,6 +39,16 @@ public class OutputHandler implements IOutputHandler {
     }
 
     @Override
+    public void printError(String text) {
+        logger.error(prefix + text);
+    }
+
+    @Override
+    public void printlnError(String text) {
+        logger.error(prefix + text);
+    }
+
+    @Override
     public void flush() {
     }
 

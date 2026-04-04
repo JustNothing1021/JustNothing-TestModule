@@ -54,6 +54,18 @@ public class SystemOutputCollector implements IOutputHandler {
     }
 
     @Override
+    public void printError(String text) {
+        stream.print("[ERROR] " + text);
+        sb.append("[ERROR] ").append(text);
+    }
+
+    @Override
+    public void printlnError(String text) {
+        stream.println("[ERROR] " + text);
+        sb.append("[ERROR] ").append(text).append("\n");
+    }
+
+    @Override
     public void flush() {
         stream.flush();
     }

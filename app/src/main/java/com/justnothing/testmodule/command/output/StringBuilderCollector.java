@@ -34,6 +34,16 @@ public class StringBuilderCollector implements IOutputHandler {
     }
 
     @Override
+    public void printError(String text) {
+        sb.append("[ERROR] ").append(text);
+    }
+
+    @Override
+    public void printlnError(String text) {
+        sb.append("[ERROR] ").append(text).append("\n");
+    }
+
+    @Override
     public void flush() {}
 
     @Override

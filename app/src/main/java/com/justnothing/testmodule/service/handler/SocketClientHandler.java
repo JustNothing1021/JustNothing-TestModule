@@ -4,8 +4,8 @@ import android.util.Log;
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.output.IOutputHandler;
-import com.justnothing.testmodule.service.protocol.InteractiveOutputHandler;
-import com.justnothing.testmodule.service.protocol.InteractiveProtocol;
+import com.justnothing.testmodule.command.output.InteractiveOutputHandler;
+import com.justnothing.testmodule.command.output.InteractiveProtocol;
 import com.justnothing.testmodule.utils.functions.Logger;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
@@ -300,6 +300,16 @@ public class SocketClientHandler {
             @Override
             public void printf(String format, Object... args) {
                 print(String.format(format, args));
+            }
+
+            @Override
+            public void printError(String text) {
+                print("[ERROR] " + text);
+            }
+
+            @Override
+            public void printlnError(String text) {
+                println("[ERROR] " + text);
             }
 
             @Override

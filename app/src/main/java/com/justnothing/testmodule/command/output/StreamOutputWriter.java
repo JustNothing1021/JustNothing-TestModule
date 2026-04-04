@@ -126,6 +126,16 @@ public class StreamOutputWriter implements IOutputHandler {
     }
 
     @Override
+    public void printError(String text) {
+        print("[ERROR] " + text);
+    }
+
+    @Override
+    public void printlnError(String text) {
+        println("[ERROR] " + text);
+    }
+
+    @Override
     public void flush() {
         synchronized (printWriter) {
             printWriter.flush();

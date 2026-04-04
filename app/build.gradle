@@ -74,6 +74,7 @@ dependencies {
     implementation files("libs/NCW-Logger-1.0.3-hotfix3.jar")
 
     compileOnly libs.xposed.api
+    implementation project(':engine')
 
     testImplementation libs.junit
     androidTestImplementation libs.androidx.junit.v130

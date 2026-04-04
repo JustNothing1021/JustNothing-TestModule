@@ -5,12 +5,13 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_SCRIPT_VER;
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
-import com.justnothing.testmodule.command.functions.script.engine_new.ScriptRunner;
+import com.justnothing.javainterpreter.ScriptRunner;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.data.DataBridge;
 import com.justnothing.testmodule.utils.io.IOManager;
-import com.justnothing.testmodule.command.functions.script.engine_new.exception.EvaluationException;
-import com.justnothing.testmodule.command.functions.script.engine_new.exception.ParseException;
+import com.justnothing.javainterpreter.exception.EvaluationException;
+import com.justnothing.javainterpreter.exception.ParseException;
+import com.justnothing.testmodule.utils.script.AppClassFinder;
 
 import java.io.File;
 import java.io.IOException;
@@ -21,7 +22,12 @@ public class ScriptExecutorMain extends CommandBase {
 
     private static final ConcurrentHashMap<ClassLoader, ScriptRunner>
             scriptRunners = new ConcurrentHashMap<>();
-    private static final ScriptRunner systemScriptRunner = new ScriptRunner(null);
+    private static final ScriptRunner systemScriptRunner;
+    
+    static {
+        systemScriptRunner = new ScriptRunner(null);
+        systemScriptRunner.setClassFinder(new AppClassFinder());
+    }
 
     private final String commandName;
 
@@ -580,6 +586,7 @@ public class ScriptExecutorMain extends CommandBase {
         
         try {
             ScriptRunner runner = new ScriptRunner(context.classLoader());
+            runner.setClassFinder(new AppClassFinder());
             runner.execute(content, context.output(), context.output());
             result.append("脚本执行成功");
         } catch (Exception e) {
@@ -607,6 +614,7 @@ public class ScriptExecutorMain extends CommandBase {
         
         try {
             ScriptRunner runner = new ScriptRunner(context.classLoader());
+            runner.setClassFinder(new AppClassFinder());
             runner.execute(code, context.output(), context.output());
             result.append("代码执行成功");
         } catch (Exception e) {

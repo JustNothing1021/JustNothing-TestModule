@@ -2,7 +2,7 @@ package com.justnothing.methodsclient.executor;
 
 
 import com.justnothing.methodsclient.StreamClient;
-import com.justnothing.testmodule.service.protocol.InteractiveProtocol;
+import com.justnothing.testmodule.command.output.InteractiveProtocol;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
 import java.io.BufferedReader;

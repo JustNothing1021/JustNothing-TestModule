@@ -1,8 +1,9 @@
 package com.justnothing.testmodule.command.functions.classcmd;
 
-import com.justnothing.testmodule.command.functions.script.engine_new.ScriptRunner;
-import com.justnothing.testmodule.command.functions.script.engine_new.evaluator.ExecutionContext;
+import com.justnothing.javainterpreter.ScriptRunner;
+import com.justnothing.javainterpreter.evaluator.ExecutionContext;
 import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.script.AppClassFinder;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -150,6 +151,7 @@ public class ExpressionParser {
         ScriptRunner runner = map.get(classLoader);
         if (runner == null) {
             runner = new ScriptRunner(classLoader);
+            runner.setClassFinder(new AppClassFinder());
             map.put(classLoader, runner);
         }
         
