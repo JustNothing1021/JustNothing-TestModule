@@ -336,6 +336,7 @@ cd JustNothing-TestModule
  - [Magisk](https://github.com/topjohnwu/Magisk)
  - [DeepSeek](https://www.deepseek.com)
  - [GLM-4.7](https://www.zhipuai.cn)
+ - [GLM-5](https://www.zhipuai.cn)
  - [NoneColdWind](https://github.com/NoneColdWind)
 
 ## 联系方式
@@ -346,9 +347,16 @@ cd JustNothing-TestModule
 
 ## 更新日志
 
-### v0.4.6的TODO
- - 给脚本执行器单开一个项目
- - 重构一下这个项目
+### v0.4.7的TODO
+ - 重构所有模块的命令行子命令，都添上颜色
+ - 再使用能工智人给所有代码lint一遍
+ - 把一堆Thread.sleep换成异步
+
+### v0.4.6
+ - 让AI用解释器的语言写了简单的文本程序，可以用script run玩玩
+ - 给交互式协议添加了颜色的显示
+ - 给脚本执行器单开了一个项目
+ - 稍稍改进了一些代码的风格
 
 ### v0.4.5
  - 给脚本执行器翻新了
