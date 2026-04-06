@@ -34,19 +34,19 @@ public class DescriptorColorizer {
         
         TypeVariable<?>[] typeParms = method.getTypeParameters();
         if (typeParms.length > 0) {
-            printTypeParameters(ctx, typeParms);
+            printTypeParameters(ctx, typeParms, simple);
             ctx.print(" ", Colors.DEFAULT);
         }
         
         if (simple) {
-            printClassType(ctx, method.getReturnType(), Colors.DARK_GREEN);
+            printClassType(ctx, method.getReturnType(), Colors.DARK_GREEN, true);
         } else {
             printType(ctx, method.getGenericReturnType());
         }
         ctx.print(" ", Colors.DEFAULT);
         
         if (!simple) {
-            printType(ctx, method.getDeclaringClass(), Colors.GRAY);
+            printType(ctx, method.getDeclaringClass(), Colors.GRAY, false);
             ctx.print(".", Colors.GRAY);
         }
         ctx.print(method.getName(), Colors.YELLOW);
@@ -63,7 +63,7 @@ public class DescriptorColorizer {
                     if (i > 0) {
                         ctx.print(", ", Colors.WHITE);
                     }
-                    printClassType(ctx, exceptionTypes[i], Colors.GREEN);
+                    printClassType(ctx, exceptionTypes[i], Colors.GREEN, true);
                 }
             }
         } else {
@@ -74,7 +74,7 @@ public class DescriptorColorizer {
                     if (i > 0) {
                         ctx.print(", ", Colors.WHITE);
                     }
-                    printType(ctx, exceptionTypes[i], Colors.GREEN);
+                    printType(ctx, exceptionTypes[i], Colors.GREEN, false);
                 }
             }
         }
@@ -86,7 +86,7 @@ public class DescriptorColorizer {
         printModifiers(ctx, modifiers);
         
         if (simple) {
-            printClassType(ctx, field.getType(), Colors.DARK_GREEN);
+            printClassType(ctx, field.getType(), Colors.DARK_GREEN, true);
         } else {
             printType(ctx, field.getGenericType());
         }
@@ -95,7 +95,7 @@ public class DescriptorColorizer {
         if (simple) {
             ctx.print(field.getName(), Colors.CYAN);
         } else {
-            printType(ctx, field.getDeclaringClass(), Colors.GRAY);
+            printType(ctx, field.getDeclaringClass(), Colors.GRAY, false);
             ctx.print(".", Colors.GRAY);
             ctx.print(field.getName(), Colors.CYAN);
         }
@@ -107,9 +107,9 @@ public class DescriptorColorizer {
         printModifiers(ctx, modifiers);
         
         if (simple) {
-            printClassType(ctx, constructor.getDeclaringClass(), Colors.YELLOW);
+            printClassType(ctx, constructor.getDeclaringClass(), Colors.YELLOW, true);
         } else {
-            printType(ctx, constructor.getDeclaringClass(), Colors.YELLOW);
+            printType(ctx, constructor.getDeclaringClass(), Colors.YELLOW, false);
         }
         
         ctx.print("(", Colors.PURPLE);
@@ -119,7 +119,7 @@ public class DescriptorColorizer {
                 if (i > 0) {
                     ctx.print(", ", Colors.WHITE);
                 }
-                printClassType(ctx, params[i], Colors.GREEN);
+                printClassType(ctx, params[i], Colors.GREEN, true);
             }
         } else {
             Type[] params = constructor.getGenericParameterTypes();
@@ -127,7 +127,7 @@ public class DescriptorColorizer {
                 if (i > 0) {
                     ctx.print(", ", Colors.WHITE);
                 }
-                printType(ctx, params[i], Colors.GREEN);
+                printType(ctx, params[i], Colors.GREEN, false);
             }
         }
         ctx.print(")", Colors.PURPLE);
@@ -176,18 +176,18 @@ public class DescriptorColorizer {
     }
 
     private static void printType(CommandExecutor.CmdExecContext ctx, Type type) {
-        printType(ctx, type, Colors.GREEN);
+        printType(ctx, type, Colors.GREEN, false);
     }
 
-    private static void printType(CommandExecutor.CmdExecContext ctx, Type type, byte color) {
+    private static void printType(CommandExecutor.CmdExecContext ctx, Type type, byte color, boolean simple) {
         if (type instanceof Class<?> clazz) {
-            printClassType(ctx, clazz, color);
+            printClassType(ctx, clazz, color, simple);
         } else if (type instanceof GenericArrayType gat) {
-            printType(ctx, gat.getGenericComponentType(), color);
+            printType(ctx, gat.getGenericComponentType(), color, simple);
             ctx.print("[", Colors.CYAN);
             ctx.print("]", Colors.CYAN);
         } else if (type instanceof ParameterizedType pt) {
-            printType(ctx, pt.getRawType(), color);
+            printType(ctx, pt.getRawType(), color, simple);
             Type[] typeArgs = pt.getActualTypeArguments();
             if (typeArgs.length > 0) {
                 ctx.print("<", Colors.WHITE);
@@ -195,7 +195,7 @@ public class DescriptorColorizer {
                     if (i > 0) {
                         ctx.print(", ", Colors.WHITE);
                     }
-                    printType(ctx, typeArgs[i], color);
+                    printType(ctx, typeArgs[i], color, simple);
                 }
                 ctx.print(">", Colors.WHITE);
             }
@@ -203,15 +203,15 @@ public class DescriptorColorizer {
             Type[] upperBounds = wt.getUpperBounds();
             Type[] lowerBounds = wt.getLowerBounds();
             if (lowerBounds.length > 0) {
-                ctx.print("?", Colors.DARK_BLUE);
+                ctx.print("?", Colors.CYAN);
                 ctx.print(" super ", Colors.DARK_BLUE);
-                printType(ctx, lowerBounds[0], color);
+                printType(ctx, lowerBounds[0], color, simple);
             } else if (upperBounds.length > 0 && upperBounds[0] != Object.class) {
-                ctx.print("?", Colors.DARK_BLUE);
+                ctx.print("?", Colors.CYAN);
                 ctx.print(" extends ", Colors.DARK_BLUE);
-                printType(ctx, upperBounds[0], color);
+                printType(ctx, upperBounds[0], color, simple);
             } else {
-                ctx.print("?", Colors.DARK_BLUE);
+                ctx.print("?", Colors.CYAN);
             }
         } else if (type instanceof TypeVariable<?> tv) {
             ctx.print(tv.getName(), Colors.DARK_GREEN);
@@ -281,13 +281,13 @@ public class DescriptorColorizer {
     private static void printTypeArg(CommandExecutor.CmdExecContext ctx, String arg, byte color) {
         arg = arg.trim();
         if (arg.equals("?")) {
-            ctx.print("?", Colors.DARK_BLUE);
+            ctx.print("?", Colors.CYAN);
         } else if (arg.startsWith("? extends ")) {
-            ctx.print("?", Colors.DARK_BLUE);
+            ctx.print("?", Colors.CYAN);
             ctx.print(" extends ", Colors.DARK_BLUE);
             printTypeString(ctx, arg.substring(10), color);
         } else if (arg.startsWith("? super ")) {
-            ctx.print("?", Colors.DARK_BLUE);
+            ctx.print("?", Colors.CYAN);
             ctx.print(" super ", Colors.DARK_BLUE);
             printTypeString(ctx, arg.substring(8), color);
         } else {
@@ -295,12 +295,13 @@ public class DescriptorColorizer {
         }
     }
 
-    private static void printClassType(CommandExecutor.CmdExecContext ctx, Class<?> clazz, byte color) {
+    private static void printClassType(CommandExecutor.CmdExecContext ctx, Class<?> clazz, byte color, boolean simple) {
         if (clazz.isArray()) {
-            printClassType(ctx, Objects.requireNonNull(clazz.getComponentType()), color);
+            printClassType(ctx, Objects.requireNonNull(clazz.getComponentType()), color, simple);
             ctx.print("[]", Colors.CYAN);
         } else {
-            ctx.print(formatTypeName(clazz.getName()), color);
+            String name = simple ? clazz.getSimpleName() : clazz.getName();
+            ctx.print(formatTypeName(name), color);
         }
     }
 
@@ -327,18 +328,18 @@ public class DescriptorColorizer {
         }
     }
 
-    private static void printTypeParameters(CommandExecutor.CmdExecContext ctx, TypeVariable<?>[] typeParms) {
+    private static void printTypeParameters(CommandExecutor.CmdExecContext ctx, TypeVariable<?>[] typeParms, boolean simple) {
         ctx.print("<", Colors.WHITE);
         for (int i = 0; i < typeParms.length; i++) {
             if (i > 0) {
                 ctx.print(", ", Colors.WHITE);
             }
-            printTypeVariable(ctx, typeParms[i]);
+            printTypeVariable(ctx, typeParms[i], simple);
         }
         ctx.print(">", Colors.WHITE);
     }
 
-    private static void printTypeVariable(CommandExecutor.CmdExecContext ctx, TypeVariable<?> typeVar) {
+    private static void printTypeVariable(CommandExecutor.CmdExecContext ctx, TypeVariable<?> typeVar, boolean simple) {
         ctx.print(typeVar.getName(), Colors.DARK_GREEN);
         
         Type[] bounds = typeVar.getBounds();
@@ -348,7 +349,7 @@ public class DescriptorColorizer {
                 if (i > 0) {
                     ctx.print(" & ", Colors.WHITE);
                 }
-                printType(ctx, bounds[i], Colors.DARK_GREEN);
+                printType(ctx, bounds[i], Colors.DARK_GREEN, simple);
             }
         }
     }
@@ -361,10 +362,10 @@ public class DescriptorColorizer {
                     ctx.print(", ", Colors.WHITE);
                 }
                 if (method.isVarArgs() && (i == params.length - 1)) {
-                    printClassType(ctx, Objects.requireNonNull(params[i].getComponentType()), Colors.GREEN);
+                    printClassType(ctx, Objects.requireNonNull(params[i].getComponentType()), Colors.GREEN, true);
                     ctx.print("...", Colors.WHITE);
                 } else {
-                    printClassType(ctx, params[i], Colors.GREEN);
+                    printClassType(ctx, params[i], Colors.GREEN, true);
                 }
             }
         } else {
@@ -375,15 +376,15 @@ public class DescriptorColorizer {
                 }
                 if (method.isVarArgs() && (i == params.length - 1)) {
                     if (params[i] instanceof GenericArrayType gat) {
-                        printType(ctx, gat.getGenericComponentType(), Colors.GREEN);
+                        printType(ctx, gat.getGenericComponentType(), Colors.GREEN, false);
                     } else if (params[i] instanceof Class<?> clazz && clazz.isArray()) {
-                        printType(ctx, clazz.getComponentType(), Colors.GREEN);
+                        printType(ctx, clazz.getComponentType(), Colors.GREEN, false);
                     } else {
-                        printType(ctx, params[i], Colors.GREEN);
+                        printType(ctx, params[i], Colors.GREEN, false);
                     }
                     ctx.print("...", Colors.WHITE);
                 } else {
-                    printType(ctx, params[i], Colors.GREEN);
+                    printType(ctx, params[i], Colors.GREEN, false);
                 }
             }
         }

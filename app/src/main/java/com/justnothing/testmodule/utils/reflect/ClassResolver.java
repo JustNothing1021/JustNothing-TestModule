@@ -285,6 +285,11 @@ public class ClassResolver {
             }
         }
 
+        ClassLoader apkLoader = ClassLoaderManager.getApkClassLoader();
+        if (apkLoader != null && apkLoader != apkClassLoader) {
+            apkClassLoader = apkLoader;
+        }
+        
         if (apkClassLoader != null) {
             Class<?> clazz = findInLoader(className, apkClassLoader);
             if (clazz != null) {
@@ -293,8 +298,17 @@ public class ClassResolver {
             }
         }
 
+        ClassLoader moduleLoader = ClassResolver.class.getClassLoader();
+        if (moduleLoader != null && moduleLoader != preferredLoader && moduleLoader != apkClassLoader) {
+            Class<?> clazz = findInLoader(className, moduleLoader);
+            if (clazz != null) {
+                logger.debug("在模块ClassLoader中找到类: " + className);
+                return clazz;
+            }
+        }
+
         for (ClassLoader loader : registeredLoaders) {
-            if (loader == preferredLoader || loader == apkClassLoader) {
+            if (loader == preferredLoader || loader == apkClassLoader || loader == moduleLoader) {
                 continue;
             }
 
@@ -326,8 +340,8 @@ public class ClassResolver {
                     return Class.forName(className);
                 }
             }
-        } catch (Exception e) {
-            logger.debug("在ClassLoader中查找类失败: " + className + ", " + e.getMessage());
+        } catch (Throwable e) {
+            logger.debug("在ClassLoader中查找类失败: " + className + ", " + e.getClass().getSimpleName() + ": " + e.getMessage());
             return null;
         }
     }

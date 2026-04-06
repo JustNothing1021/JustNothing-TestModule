@@ -47,8 +47,8 @@ public class ClassLoaderManager {
 
             String modulePath = DataBridge.getModulePath();
             if (modulePath == null || modulePath.isEmpty()) {
-                logger.warn("模块路径未设置，无法创建APK ClassLoader");
-                return getDefaultClassLoaderStatic();
+                logger.debug("模块路径未设置，无法创建APK ClassLoader");
+                return null;
             }
 
             try {
@@ -64,22 +64,22 @@ public class ClassLoaderManager {
 
                 logger.info("成功创建APK ClassLoader: " + modulePath);
                 
-                ClassResolver.registerClassLoader(apkClassLoader);
+                ClassResolver.registerApkClassLoader(apkClassLoader);
                 
                 return apkClassLoader;
             } catch (Exception e) {
                 logger.error("创建APK ClassLoader失败: " + e.getMessage(), e);
-                return getDefaultClassLoaderStatic();
+                return null;
             }
         }
     }
 
     private static ClassLoader getDefaultClassLoaderStatic() {
-        ClassLoader cl = Thread.currentThread().getContextClassLoader();
+        ClassLoader cl = ClassLoaderManager.class.getClassLoader();
         if (cl != null) return cl;
-        cl = ClassLoader.getSystemClassLoader();
+        cl = Thread.currentThread().getContextClassLoader();
         if (cl != null) return cl;
-        return ClassLoaderManager.class.getClassLoader();
+        return ClassLoader.getSystemClassLoader();
     }
 
     public static Class<?> loadClassFromApk(String className) throws ClassNotFoundException {

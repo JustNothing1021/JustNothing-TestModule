@@ -2,7 +2,6 @@ package com.justnothing.testmodule.command.functions.classcmd;
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.base.CommandContext;
-import com.justnothing.testmodule.utils.reflect.ClassResolver;
 import com.justnothing.testmodule.utils.functions.Logger;
 import com.justnothing.testmodule.utils.reflect.ReflectionUtils;
 
@@ -18,15 +17,6 @@ public class ClassCommandContext extends CommandContext {
         super(args, classLoader, targetPackage, context, logger);
     }
 
-    public Class<?> loadClass(String className) throws Exception {
-        if (getClassLoader() == null) {
-            getLogger().debug("使用默认类加载器加载类: " + className);
-            return ClassResolver.findClassOrFail(className);
-        } else {
-            getLogger().debug("使用提供的类加载器加载类: " + className);
-            return ClassResolver.findClassOrFail(className, getClassLoader());
-        }
-    }
 
     public String formatValue(Object value, boolean rawOutput) {
         if (value == null) {

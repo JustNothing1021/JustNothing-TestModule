@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.classcmd;
 
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
+import com.justnothing.testmodule.utils.reflect.ClassResolver;
 import com.justnothing.testmodule.utils.reflect.DescriptorColorizer;
 
 import java.lang.reflect.Method;
@@ -33,7 +34,7 @@ public class ListCommand extends AbstractClassCommand {
         
         context.getLogger().debug("目标类名: " + className + ", 详细模式: " + verbose);
 
-        Class<?> targetClass = context.loadClass(className);
+        Class<?> targetClass = ClassResolver.findClassOrFail(className, context.getClassLoader());
         context.getLogger().info("成功加载类: " + targetClass.getName());
 
         context.getExecContext().print("类名: ", Colors.CYAN);

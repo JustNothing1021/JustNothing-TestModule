@@ -138,7 +138,7 @@ public class ExportContextMain extends CommandBase {
             
         } catch (Exception e) {
             logger.error("导出设备上下文信息失败", e);
-            return CommandExceptionHandler.handleException("export context", e, logger, "导出设备上下文信息失败");
+            return CommandExceptionHandler.handleException("export-context", e, context, "导出设备上下文信息失败");
         }
     }
 

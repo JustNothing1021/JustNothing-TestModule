@@ -15,91 +15,7 @@ public class CommandExceptionHandler {
     
     private static final String ERROR_SEPARATOR = "========================================";
     
-    public static String handleException(
-        String commandName, 
-        Throwable e, 
-        Logger logger
-    ) {
-        logger.error("执行" + commandName + "命令失败", e);
-        return formatError(commandName, e, null, null);
-    }
-    
-    public static String handleException(
-        String commandName, 
-        Throwable e, 
-        Logger logger,
-        ICommandOutputHandler output
-    ) {
-        logger.error("执行" + commandName + "命令失败", e);
-        String errorMsg = formatError(commandName, e, null, null);
-        if (output != null) {
-            output.println("[ERROR] " + errorMsg);
-        }
-        return errorMsg;
-    }
-    
-    public static String handleException(
-        String commandName, 
-        Throwable e, 
-        Logger logger,
-        String errorHint
-    ) {
-        logger.error("执行" + commandName + "命令失败", e);
-        return formatError(commandName, e, errorHint, null);
-    }
-    
-    public static String handleException(
-        String commandName, 
-        Throwable e, 
-        Logger logger,
-        Map<String, Object> context
-    ) {
-        logger.error("执行" + commandName + "命令失败", e);
-        return formatError(commandName, e, null, context);
-    }
-    
-    public static String handleException(
-        String commandName, 
-        Throwable e, 
-        Logger logger,
-        ICommandOutputHandler output,
-        String errorHint
-    ) {
-        logger.error("执行" + commandName + "命令失败", e);
-        String errorMsg = formatError(commandName, e, errorHint, null);
-        if (output != null) {
-            output.println("[ERROR] " + errorMsg);
-        }
-        return errorMsg;
-    }
-    
-    public static String handleException(
-        String commandName, 
-        Throwable e, 
-        Logger logger,
-        ICommandOutputHandler output,
-        String errorHint,
-        Map<String, Object> context
-    ) {
-        logger.error("执行" + commandName + "命令失败", e);
-        String errorMsg = formatError(commandName, e, errorHint, context);
-        if (output != null) {
-            output.println("[ERROR] " + errorMsg);
-        }
-        return errorMsg;
-    }
-    
-    public static String handleException(
-        String commandName, 
-        Throwable e, 
-        Logger logger,
-        Map<String, Object> context,
-        String errorHint
-    ) {
-        logger.error("执行" + commandName + "命令失败", e);
-        return formatError(commandName, e, errorHint, context);
-    }
-    
+
     public static String handleException(
         String commandName, 
         Throwable e, 
@@ -215,38 +131,7 @@ public class CommandExceptionHandler {
         }
         ctx.println(ERROR_SEPARATOR, Colors.RED);
     }
-    
-    public static String handleUserError(
-        String commandName, 
-        String message, 
-        Logger logger
-    ) {
-        logger.debug("用户输入错误: " + message);
-        return String.format(
-            Locale.getDefault(),
-            "错误: %s\n" +
-            "提示: 输入 '%s help' 查看帮助",
-            message,
-            commandName
-        );
-    }
-    
-    public static String handleUserError(
-        String commandName, 
-        String message, 
-        Logger logger,
-        String errorHint
-    ) {
-        logger.debug("用户输入错误: " + message);
-        StringBuilder sb = new StringBuilder();
-        sb.append(String.format(Locale.getDefault(), "错误: %s\n", message));
-        if (errorHint != null && !errorHint.isEmpty()) {
-            sb.append(String.format(Locale.getDefault(), "详情: %s\n", errorHint));
-        }
-        sb.append(String.format(Locale.getDefault(), "提示: 输入 '%s help' 查看帮助", commandName));
-        return sb.toString();
-    }
-    
+
     private static String formatError(String commandName, Throwable e, String errorHint, Map<String, Object> context) {
         StringBuilder sb = new StringBuilder();
         sb.append(ERROR_SEPARATOR).append("\n");

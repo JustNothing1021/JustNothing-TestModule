@@ -17,7 +17,7 @@ public abstract class AbstractCommand implements Command {
             return CommandExceptionHandler.handleException(
                 commandName, 
                 e, 
-                context.getLogger(), 
+                context.getExecContext(),
                 "执行" + commandName + "命令失败"
             );
         }

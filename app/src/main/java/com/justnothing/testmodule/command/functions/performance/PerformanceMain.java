@@ -149,7 +149,7 @@ public class PerformanceMain extends CommandBase {
                 default -> "未知子命令: " + subCommand + "\n" + getHelpText();
             };
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("performance", e, logger);
+            return CommandExceptionHandler.handleException("performance " + subCommand, e, context, "执行performance子命令时遇到错误");
         }
     }
 

@@ -3,6 +3,7 @@ package com.justnothing.testmodule.command.functions.classcmd;
 
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
+import com.justnothing.testmodule.utils.reflect.ClassResolver;
 import com.justnothing.testmodule.utils.reflect.DescriptorColorizer;
 import com.justnothing.testmodule.utils.reflect.ReflectionUtils;
 
@@ -66,15 +67,7 @@ public class InfoCommand extends AbstractClassCommand {
         String className = args[args.length - 1];
 
         
-        Class<?> targetClass = context.loadClass(className);
-        if (targetClass == null) {
-            return CommandExceptionHandler.handleException(
-                "class info",
-                new ClassNotFoundException("找不到类: " + className),
-                context.getExecContext(),
-                "类加载失败"
-            );
-        }
+        Class<?> targetClass = ClassResolver.findClassOrFail(className, context.getClassLoader());
 
         if (showAll || showModifiers) {
             context.getExecContext().print("类名: ", Colors.CYAN);

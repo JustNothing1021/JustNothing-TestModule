@@ -144,12 +144,11 @@ public class HookManager {
             logger.info("Hook 代码验证成功: " + hookInfo.getId());
         } catch (Exception e) {
             context.print("Hook代码验证失败: ", Colors.RED);
-            context.println(e.getMessage(), Colors.YELLOW);
+            context.println(Objects.requireNonNullElse(e.getMessage(), "没有详细信息"), Colors.YELLOW);
             return CommandExceptionHandler.handleException(
                 "hook add", 
                 e, 
-                logger, 
-                context.output(), 
+                context,
                 "Hook代码验证失败"
             );
         }
@@ -182,7 +181,7 @@ public class HookManager {
         } catch (Exception e) {
             hooks.remove(hookInfo.getId());
             context.print("Hook添加失败: ", Colors.RED);
-            context.println(e.getMessage(), Colors.YELLOW);
+            context.println(Objects.requireNonNullElse(e.getMessage(), "没有详细信息"), Colors.YELLOW);
             Map<String, Object> errContext = new java.util.HashMap<>();
             errContext.put("类名", className);
             errContext.put("方法名", methodName);
@@ -190,8 +189,8 @@ public class HookManager {
             errContext.put("Hook ID", hookInfo.getId());
             return CommandExceptionHandler.handleException(
                 "hook add", 
-                e, 
-                logger, 
+                e,
+                context,
                 errContext,
                 "Hook添加失败"
             );
@@ -327,12 +326,8 @@ public class HookManager {
                             executeHookCodeWithReturnFlag(hookInfo, code, param, "replace", returnValueSet);
                         }
                     }
-                    
-                    if (!returnValueSet.get() && !param.hasThrowable()) {
-                        logger.info("replace代码未调用setReturnValue()，原方法将继续执行");
-                        logger.info("提示: 调用 setReturnValue(value) 设置返回值并阻止原方法执行");
-                        logger.info("      对于void方法，调用 setReturnValue(null) 阻止原方法执行");
-                    }
+
+
                 }
                 
                 @Override
@@ -569,10 +564,10 @@ public class HookManager {
         }
     }
 
-    public static String removeHook(String hookId) {
+    public static void removeHook(String hookId) {
         HookInfo hookInfo = hooks.get(hookId);
         if (hookInfo == null) {
-            return "Hook不存在: " + hookId;
+            return;
         }
         
         XC_MethodHook.Unhook unhook = activeHooks.remove(hookId);
@@ -589,7 +584,6 @@ public class HookManager {
         }
         
         logger.info("Hook移除成功: " + hookId);
-        return "Hook移除成功: " + hookId;
     }
 
     public static void removeHook(String hookId, CommandExecutor.CmdExecContext ctx) {

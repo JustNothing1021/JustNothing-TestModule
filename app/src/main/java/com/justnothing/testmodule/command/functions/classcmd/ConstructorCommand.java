@@ -4,6 +4,7 @@ import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.reflect.DescriptorColorizer;
 import com.justnothing.testmodule.utils.reflect.ReflectionUtils;
+import com.justnothing.testmodule.utils.reflect.ClassResolver;
 
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
@@ -55,7 +56,7 @@ public class ConstructorCommand extends AbstractClassCommand {
             }
         }
 
-        Class<?> targetClass = context.loadClass(className);
+        Class<?> targetClass = ClassResolver.findClassOrFail(className, context.getClassLoader());
 
         if (!params.isEmpty()) {
             context.getExecContext().println("调用参数：", Colors.CYAN);

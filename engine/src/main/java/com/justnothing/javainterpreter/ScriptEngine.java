@@ -4,7 +4,6 @@ import com.justnothing.javainterpreter.api.DefaultOutputHandler;
 import com.justnothing.javainterpreter.api.IClassFinder;
 import com.justnothing.javainterpreter.api.IOutputHandler;
 
-import java.util.List;
 import java.util.Map;
 
 public class ScriptEngine {

@@ -1,7 +1,6 @@
 package com.justnothing.testmodule.command.functions.classcmd;
 
 import com.justnothing.javainterpreter.ScriptRunner;
-import com.justnothing.javainterpreter.evaluator.ExecutionContext;
 import com.justnothing.testmodule.utils.functions.Logger;
 import com.justnothing.testmodule.utils.script.AppClassFinder;
 
@@ -28,7 +27,7 @@ public class ExpressionParser {
     public static ParseResult parse(String expression, ClassLoader classLoader) {
         return parse(expression, classLoader, null);
     }
-    
+
     public static ParseResult parse(String expression, ClassLoader classLoader, Class<?> expectedType) {
         if (expression == null || expression.trim().isEmpty()) {
             return new ParseResult(null, Void.class, false);
@@ -114,7 +113,6 @@ public class ExpressionParser {
             case "short" -> actualType == Short.class || actualType == short.class;
             case "char", "character" -> actualType == Character.class || actualType == char.class;
             case "string" -> actualType == String.class;
-            case "null", "void" -> actualType == Void.class;
             default -> {
                 try {
                     Class<?> hintClass = Class.forName(typeHint, false, classLoader);

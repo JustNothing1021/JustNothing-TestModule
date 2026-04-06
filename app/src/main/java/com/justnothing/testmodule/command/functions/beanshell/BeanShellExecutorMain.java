@@ -148,7 +148,7 @@ public class BeanShellExecutorMain extends CommandBase {
                     return "BeanShell执行器结果:\n\n" + result;
 
                 } catch (Exception e) {
-                    return CommandExceptionHandler.handleException(cmdName, e, logger, "BeanShell执行出错");
+                    return CommandExceptionHandler.handleException(cmdName, e, context, "BeanShell执行出错");
                 }
             }
         }
@@ -349,7 +349,7 @@ public class BeanShellExecutorMain extends CommandBase {
             context.output().print("执行结果:\n");
             context.output().print(execResult);
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("bsh", e, logger, "BeanShell执行出错");
+            return CommandExceptionHandler.handleException("bsh", e, context, "BeanShell执行出错");
         }
         
         return "";

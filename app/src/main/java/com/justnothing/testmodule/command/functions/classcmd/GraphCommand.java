@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.classcmd;
 
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.utils.reflect.ClassResolver;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -23,7 +24,7 @@ public class GraphCommand extends AbstractClassCommand {
         }
 
         String className = args[0];
-        Class<?> clazz = context.loadClass(className);
+        Class<?> clazz = ClassResolver.findClassOrFail(className, context.getClassLoader());
         
         generateClassInheritanceGraph(clazz, context);
         return null;

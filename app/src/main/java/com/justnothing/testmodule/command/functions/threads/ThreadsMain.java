@@ -13,6 +13,7 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Map;
+import java.util.Objects;
 
 public class ThreadsMain extends CommandBase {
 
@@ -31,7 +32,7 @@ public class ThreadsMain extends CommandBase {
                     list [options]                                 - 列出所有线程及其状态
                     deadlock                                       - 检测Java应用程序中的死锁
                     profile <subcmd> [args...]                     - 性能分析
-                    
+                
                 profile 子命令:
                     start [duration: seconds]                      - 开始性能分析, 默认60秒
                     stop                                           - 停止当前分析
@@ -90,7 +91,7 @@ public class ThreadsMain extends CommandBase {
                 }
             };
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("threads", e, logger, "执行threads命令失败");
+            return CommandExceptionHandler.handleException("threads", e, context, "执行threads命令失败");
         }
     }
 
@@ -190,7 +191,7 @@ public class ThreadsMain extends CommandBase {
             logger.info("线程信息查询完成");
             
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("threads list", e, logger, "获取线程信息失败");
+            return CommandExceptionHandler.handleException("threads list", e, ctx, "获取线程信息失败");
         }
         
         return null;
@@ -379,7 +380,7 @@ public class ThreadsMain extends CommandBase {
             logger.info("线程状态分析完成, 发现 " + blockedCount + " 个BLOCKED线程");
             
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("threads deadlock", e, logger, "线程状态分析失败");
+            return CommandExceptionHandler.handleException("threads deadlock", e, ctx, "线程状态分析失败");
         }
         
         return null;
@@ -409,7 +410,7 @@ public class ThreadsMain extends CommandBase {
                 }
             };
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("threads profile", e, logger, "执行profile命令失败");
+            return CommandExceptionHandler.handleException("threads profile", e, ctx, "执行profile命令失败");
         }
     }
 
@@ -418,11 +419,11 @@ public class ThreadsMain extends CommandBase {
         
         if (args.length > 2) {
             try {
-                duration = CommandArgumentParser.parseInt(args, 2, "持续时间");
+                duration = Objects.requireNonNullElse(CommandArgumentParser.parseInt(args, 2, "持续时间"), 30);
                 CommandArgumentParser.requireMin(duration, 1, "持续时间");
             } catch (IllegalArgumentException e) {
                 ctx.print("错误: ", Colors.RED);
-                ctx.println(e.getMessage(), Colors.YELLOW);
+                ctx.println(Objects.requireNonNullElse(e.getMessage(), "暂无详细信息"), Colors.YELLOW);
                 return null;
             }
         }
@@ -434,7 +435,7 @@ public class ThreadsMain extends CommandBase {
             ctx.println("秒", Colors.GRAY);
             return null;
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("threads profile start", e, logger, "开始性能分析失败");
+            return CommandExceptionHandler.handleException("threads profile start", e, ctx, "开始性能分析失败");
         }
     }
 
@@ -444,7 +445,7 @@ public class ThreadsMain extends CommandBase {
             ctx.println("停止性能分析成功", Colors.LIGHT_GREEN);
             return null;
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("threads profile stop", e, logger, "停止性能分析失败");
+            return CommandExceptionHandler.handleException("threads profile stop", e, ctx, "停止性能分析失败");
         }
     }
 
@@ -453,7 +454,7 @@ public class ThreadsMain extends CommandBase {
             ctx.println(manager.getProfileReport(), Colors.DEFAULT);
             return null;
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("threads profile show", e, logger, "获取分析结果失败");
+            return CommandExceptionHandler.handleException("threads profile show", e, ctx, "获取分析结果失败");
         }
     }
 
@@ -476,7 +477,7 @@ public class ThreadsMain extends CommandBase {
             }
             return null;
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("threads profile export", e, logger, "导出分析结果失败");
+            return CommandExceptionHandler.handleException("threads profile export", e, ctx, "导出分析结果失败");
         }
     }
 }

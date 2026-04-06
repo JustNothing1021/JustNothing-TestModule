@@ -92,20 +92,20 @@ public class NativeMain extends CommandBase {
         }
         
         return switch (subcmd) {
-            case "list" -> handleList(args, verbose);
-            case "info" -> handleInfo(args, verbose);
-            case "functions" -> handleFunctions(args, verbose, context.classLoader());
-            case "symbols" -> handleSymbols(args);
-            case "memory" -> handleMemory();
-            case "heap" -> handleHeap(verbose);
-            case "stack" -> handleStack(threadId);
-            case "maps" -> handleMaps(verbose);
-            case "search" -> handleSearch(args);
+            case "list" -> handleList(args, verbose, context);
+            case "info" -> handleInfo(args, verbose, context);
+            case "functions" -> handleFunctions(args, verbose, context);
+            case "symbols" -> handleSymbols(args, context);
+            case "memory" -> handleMemory(context);
+            case "heap" -> handleHeap(verbose, context);
+            case "stack" -> handleStack(threadId, context);
+            case "maps" -> handleMaps(verbose, context);
+            case "search" -> handleSearch(args, context);
             default -> "未知子命令: " + subcmd + "\n" + getHelpText();
         };
     }
     
-    private String handleList(String[] args, boolean verbose) {
+    private String handleList(String[] args, boolean verbose, CommandExecutor.CmdExecContext context) {
         String pattern = args.length > 1 ? args[1] : null;
         
         try {
@@ -129,11 +129,11 @@ public class NativeMain extends CommandBase {
             return sb.toString();
             
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("native list", e, logger, "获取native库列表失败");
+            return CommandExceptionHandler.handleException("native list", e, context, "获取native库列表失败");
         }
     }
     
-    private String handleInfo(String[] args, boolean verbose) {
+    private String handleInfo(String[] args, boolean verbose, CommandExecutor.CmdExecContext context) {
         if (args.length < 2) {
             return "参数不足，需要指定库名";
         }
@@ -167,11 +167,11 @@ public class NativeMain extends CommandBase {
             return sb.toString();
             
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("native info", e, logger, "获取库信息失败");
+            return CommandExceptionHandler.handleException("native info", e, context, "获取库信息失败");
         }
     }
     
-    private String handleFunctions(String[] args, boolean verbose, ClassLoader classLoader) {
+    private String handleFunctions(String[] args, boolean verbose, CommandExecutor.CmdExecContext context) {
         if (args.length < 2) {
             return "参数不足，需要指定类名";
         }
@@ -179,7 +179,7 @@ public class NativeMain extends CommandBase {
         String className = args[1];
         
         try {
-            Class<?> targetClass = ClassResolver.findClassOrFail(className, classLoader);
+            Class<?> targetClass = ClassResolver.findClassOrFail(className, context.classLoader());
             
             Method[] methods = targetClass.getDeclaredMethods();
             List<Method> nativeMethods = new ArrayList<>();
@@ -209,11 +209,11 @@ public class NativeMain extends CommandBase {
             return sb.toString();
             
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("native functions", e, logger, "获取native方法失败");
+            return CommandExceptionHandler.handleException("native functions", e, context, "获取native方法失败");
         }
     }
 
-    private String handleSymbols(String[] args) {
+    private String handleSymbols(String[] args, CommandExecutor.CmdExecContext context) {
         if (args.length < 2) {
             return "参数不足，需要指定库名";
         }
@@ -234,11 +234,11 @@ public class NativeMain extends CommandBase {
             return sb.toString();
             
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("native symbols", e, logger, "获取符号表失败");
+            return CommandExceptionHandler.handleException("native symbols", e, context, "获取符号表失败");
         }
     }
     
-    private String handleMemory() {
+    private String handleMemory(CommandExecutor.CmdExecContext context) {
         try {
             Map<String, String> memoryInfo = getNativeMemoryInfo();
             
@@ -253,11 +253,11 @@ public class NativeMain extends CommandBase {
             return sb.toString();
             
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("native memory", e, logger, "获取native内存信息失败");
+            return CommandExceptionHandler.handleException("native memory", e, context, "获取native内存信息失败");
         }
     }
     
-    private String handleHeap(boolean verbose) {
+    private String handleHeap(boolean verbose, CommandExecutor.CmdExecContext context) {
         try {
             Map<String, String> heapInfo = getNativeHeapInfo();
             
@@ -279,11 +279,11 @@ public class NativeMain extends CommandBase {
             return sb.toString();
             
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("native heap", e, logger, "获取native堆信息失败");
+            return CommandExceptionHandler.handleException("native heap", e, context, "获取native堆信息失败");
         }
     }
     
-    private String handleStack(String threadId) {
+    private String handleStack(String threadId, CommandExecutor.CmdExecContext context) {
         try {
             String stackTrace = getNativeStackTrace(threadId);
             
@@ -298,11 +298,11 @@ public class NativeMain extends CommandBase {
             return sb.toString();
             
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("native stack", e, logger, "获取native栈失败");
+            return CommandExceptionHandler.handleException("native stack", e, context, "获取native栈失败");
         }
     }
     
-    private String handleMaps(boolean verbose) {
+    private String handleMaps(boolean verbose, CommandExecutor.CmdExecContext context) {
         try {
             List<String> maps = getMemoryMaps();
             
@@ -325,11 +325,11 @@ public class NativeMain extends CommandBase {
             return sb.toString();
             
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("native maps", e, logger, "获取内存映射失败");
+            return CommandExceptionHandler.handleException("native maps", e, context, "获取内存映射失败");
         }
     }
     
-    private String handleSearch(String[] args) {
+    private String handleSearch(String[] args, CommandExecutor.CmdExecContext context) {
         if (args.length < 2) {
             return "参数不足，需要指定搜索模式";
         }
@@ -364,7 +364,7 @@ public class NativeMain extends CommandBase {
             return sb.toString();
             
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("native search", e, logger, "搜索失败");
+            return CommandExceptionHandler.handleException("native search", e, context, "搜索失败");
         }
     }
     

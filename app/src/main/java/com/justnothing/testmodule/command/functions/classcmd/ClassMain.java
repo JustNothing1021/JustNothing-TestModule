@@ -326,7 +326,7 @@ public class ClassMain extends CommandBase {
             return CommandExceptionHandler.handleException(
                 "class " + subCommand, 
                 e, 
-                logger, 
+                context,
                 "执行class命令失败"
             );
         }

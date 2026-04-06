@@ -102,7 +102,7 @@ public class FieldCommand extends AbstractClassCommand {
         
         context.getLogger().debug("目标类: " + className + ", 字段名: " + fieldName + ", 显示全部: " + showAll);
 
-        Class<?> targetClass = context.loadClass(className);
+        Class<?> targetClass = ClassResolver.findClassOrFail(className, context.getClassLoader());
         context.getLogger().info("成功加载类: " + targetClass.getName());
 
         if (fieldName != null) {
@@ -122,22 +122,22 @@ public class FieldCommand extends AbstractClassCommand {
 
             if (getValue || setValue) {
                 if (Modifier.isStatic(field.getModifiers())) {
+                    Object value;
                     if (getValue) {
-                        Object value = field.get(null);
+                        value = field.get(null);
                         context.getExecContext().print("字段值: ", Colors.CYAN);
                         if (value != null) {
                             context.getExecContext().println(value.toString(), Colors.LIGHT_GREEN);
                         } else {
                             context.getExecContext().println("null", Colors.LIGHT_BLUE);
                         }
-                        return null;
                     } else {
-                        Object value = context.parseValue(valueToSet, field.getType());
+                        value = context.parseValue(valueToSet, field.getType());
                         field.set(null, value);
                         context.getExecContext().print("成功设置字段值: ", Colors.CYAN);
                         context.getExecContext().println(valueToSet, Colors.LIGHT_GREEN);
-                        return null;
                     }
+                    return null;
                 } else {
                     return CommandExceptionHandler.handleException(
                         "class field",
@@ -177,7 +177,8 @@ public class FieldCommand extends AbstractClassCommand {
                         }
                     } catch (Exception e) {
                         context.getExecContext().print("值: 无法获取 (", Colors.CYAN);
-                        context.getExecContext().print(e.getMessage(), Colors.RED);
+                        String msg = e.getMessage();
+                        context.getExecContext().print(msg == null ? "没有详细信息" : msg, Colors.RED);
                         context.getExecContext().println(")", Colors.CYAN);
                     }
                 } else {
@@ -189,8 +190,6 @@ public class FieldCommand extends AbstractClassCommand {
                 context.getExecContext().print("声明类: ", Colors.CYAN);
                 context.getExecContext().println(field.getDeclaringClass().getName(), Colors.GREEN);
             }
-
-            return null;
 
         } else {
             Field[] fields = targetClass.getDeclaredFields();
@@ -211,9 +210,9 @@ public class FieldCommand extends AbstractClassCommand {
                     context.getExecContext().println("");
                 }
             }
-            
-            return null;
+
         }
+        return null;
     }
 
     @Override

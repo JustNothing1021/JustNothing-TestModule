@@ -177,7 +177,7 @@ public class MemoryMain extends CommandBase {
                 }
             };
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("memory", e, logger, "执行memory命令失败");
+            return CommandExceptionHandler.handleException("memory", e, context, "执行memory命令失败");
         }
     }
 
@@ -285,7 +285,7 @@ public class MemoryMain extends CommandBase {
             logger.info("内存信息查询完成");
             
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("memory info", e, logger, "获取内存信息失败");
+            return CommandExceptionHandler.handleException("memory info", e, ctx, "获取内存信息失败");
         }
         
         return null;
@@ -470,7 +470,7 @@ public class MemoryMain extends CommandBase {
             logger.info("垃圾回收完成");
             
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("memory gc", e, logger, "垃圾回收失败");
+            return CommandExceptionHandler.handleException("memory gc", e, ctx, "垃圾回收失败");
         }
         
         return null;

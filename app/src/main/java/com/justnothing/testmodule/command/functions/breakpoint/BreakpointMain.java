@@ -114,7 +114,7 @@ public class BreakpointMain extends CommandBase {
                 default -> "未知子命令: " + subCommand + "\n" + getHelpText();
             };
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("breakpoint", e, logger);
+            return CommandExceptionHandler.handleException("breakpoint " + subCommand, e, context, "执行breakpoint的某个子命令时出错");
         }
     }
 

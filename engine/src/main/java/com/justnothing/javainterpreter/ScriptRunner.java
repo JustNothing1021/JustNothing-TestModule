@@ -207,7 +207,7 @@ public class ScriptRunner {
             message = message + "\n\n" + scriptCallStack;
         }
         
-        RuntimeException simplified = new RuntimeException(message);
+        RuntimeException simplified = new RuntimeException(message, rootCause != null ? rootCause : e);
         simplified.setStackTrace(rootCause != null ? rootCause.getStackTrace() : e.getStackTrace());
         return simplified;
     }

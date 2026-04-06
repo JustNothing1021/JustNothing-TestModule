@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.classcmd;
 
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
+import com.justnothing.testmodule.utils.reflect.ClassResolver;
 import com.justnothing.testmodule.utils.reflect.DescriptorColorizer;
 
 import org.jetbrains.annotations.NotNull;
@@ -60,17 +61,8 @@ public class ReflectCommand extends AbstractClassCommand {
                 case "-r", "--raw" -> rawOutput = true;
             }
         }
-        
-        Class<?> targetClass = context.loadClass(className);
-        if (targetClass == null) {
-            return CommandExceptionHandler.handleException(
-                "class reflect",
-                new ClassNotFoundException("找不到类: " + className),
-                context.getExecContext(),
-                Map.of("类名", className),
-                "类加载失败"
-            );
-        }
+
+        Class<?> targetClass = ClassResolver.findClassOrFail(className, context.getClassLoader());
 
         switch (type) {
             case "field" -> handleReflectField(targetClass, memberName, valueToSet, accessSuper, accessInterfaces, rawOutput, context);

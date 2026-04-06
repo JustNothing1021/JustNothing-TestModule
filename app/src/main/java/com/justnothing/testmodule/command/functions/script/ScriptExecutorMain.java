@@ -15,7 +15,10 @@ import com.justnothing.testmodule.utils.script.AppClassFinder;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Locale;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ScriptExecutorMain extends CommandBase {
@@ -31,10 +34,6 @@ public class ScriptExecutorMain extends CommandBase {
 
     private final String commandName;
 
-    public ScriptExecutorMain() {
-        this("script");
-    }
-
     public ScriptExecutorMain(String commandName) {
         super("ScriptExecutor");
         this.commandName = commandName;
@@ -42,8 +41,8 @@ public class ScriptExecutorMain extends CommandBase {
 
     @Override
     public String getHelpText() {
-        if (commandName.equals("sclear")) {
-            return String.format("""
+        return switch (commandName) {
+            case "sclear" -> String.format("""
                     语法: sclear
                     
                     清空脚本执行器的所有变量.
@@ -53,8 +52,7 @@ public class ScriptExecutorMain extends CommandBase {
                     
                     (Submodule script %s)
                     """, CMD_SCRIPT_VER);
-        } else if (commandName.equals("svars")) {
-            return String.format("""
+            case "svars" -> String.format("""
                     语法: svars
                     
                     显示脚本执行器的变量列表.
@@ -64,8 +62,7 @@ public class ScriptExecutorMain extends CommandBase {
                     
                     (Submodule script %s)
                     """, CMD_SCRIPT_VER);
-        } else if (commandName.equals("srun")) {
-            return String.format("""
+            case "srun" -> String.format("""
                     语法: srun <code>
                     
                     快捷执行脚本代码.
@@ -78,8 +75,7 @@ public class ScriptExecutorMain extends CommandBase {
                     
                     (Submodule script %s)
                     """, CMD_SCRIPT_VER);
-        } else if (commandName.equals("sinteractive")) {
-            return String.format("""
+            case "sinteractive" -> String.format("""
                     语法: sinteractive
                     
                     进入交互式脚本执行模式.
@@ -102,259 +98,258 @@ public class ScriptExecutorMain extends CommandBase {
                     
                     (Submodule script %s)
                     """, CMD_SCRIPT_VER);
-        } else {
-            return String.format("""
-                    语法: script <subcmd> [args...] | script <code>
-                    
-                    用JustNothing1021 (在GLM4.7和GLM5的帮助下) 写的解释器跑Java代码.
-                    就是目前还有一些语法不支持...习惯就好, 不会写AST(
-                    
-                    另外, 这玩意的性能很低, 不建议执行超过100次循环的代码
-                    (是这样的, 以后会试着优化, 以我的技术力现在能用就已经是个奇迹了)
-                    
-                    子命令:
-                        create <name>              - 创建新脚本
-                        edit <name>                - 编辑脚本
-                        list                       - 列出所有脚本
-                        show <name>                - 显示脚本内容
-                        delete <name>              - 删除脚本
-                        run <name>                 - 执行脚本
-                        run_code <code>            - 直接执行代码字符串（备用）
-                        import <file>              - 导入脚本文件
-                        export <name> <file>       - 导出脚本文件
-                        manage                     - 启动交互式脚本管理器
-                
-                    选项:
-                        name              - 脚本名称
-                        file              - 文件路径
-
-
-                    ═══════════════════════════════════════════════════════════════
-                                      语法糖说明 (不同于原版Java的新特性)
-                    ═══════════════════════════════════════════════════════════════
-
-                    [0] 某些神秘的运算符
-                        auto pow = 2 ** 3;                              // 8
-                        auto spaceship = 1 <=> 2;                       // 左大会返回-1, 右大会返回1, 相等返回0
-                        auto intersectionSet = {1, 2, 3} & {2, 3, 4};   // 交集, {2, 3}, 还有很多集合操作可以自己琢磨
-                        auto doAsync = () -> async someTask();          // 异步执行然后返回Future, 往下面看
-                        auto result = await doAsync();                  // 等待async任务完成, 并获取结果, 往下面看
-                        auto address = database?.user?.address;         // 可选链, 往下面看
-                    
-                    [1] Lambda表达式 (有独立类型也可以转FunctionalInterface)
-                        auto add = (x, y) -> x + y;
-                        add(1, 2);  // 3
-                        
-                        auto greet = (name) -> { println("Hello, " + name); };
-                        greet("World");
-                    
-                    [2] 方法引用 (可以直接调用, 转Lambda/FunctionalInterface)
-                        auto parseInt = Integer::parseInt;
-                        parseInt("123");  // 123
-                        
-                        auto strLen = "hello"::length;
-                        strLen();  // 5
-                    
-                    [3] Range范围操作符, 生成整数 (或者说字符) 序列
-                        for (i in 1..5) print(i);      // 12345
-                        for (c in 'a'..'e') print(c);  // abcde
-                        auto nums = 1..10;             // [1,2,3,4,5,6,7,8,9,10]
-                    
-                    [4] f-string字符串插值 (Python风格, 但是有点点区别)
-                        auto name = "Alice";
-                        auto age = 18;
-                        f"My name is ${name}, age ${age}";  // "My name is Alice, age 18"
-                        f"My name is $name";                // "My name is Alice"
-                        f"My name is $name, age $age";      //  boom, 因为找不到"name,"这个变量
-                    
-                    [5] Pipeline管道操作符
-                        auto result = "  hello  " 
-                            |> String::trim 
-                            |> String::toUpperCase;
-                        // "HELLO"
-                        
-                        [1, 2, 3, 4, 5] 
-                            |> filter((x) -> x > 2) 
-                            |> map((x) -> x * 2);  // [6, 8, 10]
-
-                        auto twice = x -> x * 2;
-                        auto addOne = x -> x + 1;
-                        auto square = x -> x ** 2;
-
-                        auto result = 3 |> twice |> addOne |> square;  // 49 (3 -> 6 -> 7 -> 49)
-                    
-                    [6] 安全调用操作符 (在非null的时候调用, 不然返回null)
-                        auto obj = null;
-                        obj?.method();                   // null (不报错)
-                        obj?.field;                      // null
-                        obj?.method()?.anotherMethod();  // 链式安全调用
-                    
-                    [7] Elvis操作符 (空值合并)
-                        auto value = null;
-                        auto result = value ?: "default";  // "default"
-                    
-                    [8] 非空断言
-                        auto value = null;
-                        !!value;  // 抛出 NullPointerException
-                    
-                    [9] 条件赋值操作符
-                        Integer a = null;
-                        a ?= 1; // a = a != null ? a : 1, a
-                        
-                    [10] 集合操作符
-                        auto a = [1, 2, 3];
-                        auto b = [3, 4, 5];
-                        a | b;  // 并集   [1, 2, 3, 4, 5]
-                        a - b;  // 差集   [1, 2]
-                        a & b;  // 交集   [3]
-                        a ^ b;  // 异或集 [1, 2, 4, 5]
-                    
-                    [11] Async/Await 异步支持
-                        auto future = async {
-                            Thread.sleep(1000);
-                            return "done";
-                        };
-                        auto result = await future;  // "done" (阻塞等待)
-                    
-                    [12] Switch 表达式
-                        auto result = switch (x) {
-                            case 1 -> "one";
-                            case 2 -> "two";
-                            default -> "other";
-                        };
-                    
-                    [13] Try-with-resources
-                        try (auto is = new FileInputStream("/path")) {
-                            // 自动关闭资源
-                        }
-                    
-                    [14] 类定义 (动态生成)
-                        class Point {
-                            int x, y;
-                            Point(int x, int y) { this.x = x; this.y = y; }
-                            int sum() { return x + y; }
-                        }
-                        auto p = new Point(1, 2);
-                        p.sum();  // 3
-                    
-                    [15] 短声明 (自动推导类型, 相当于auto, 会按最严格的类型推导)
-                        x := 10;           // int
-                        name := "hello";   // String
-                        arr := [1, 2, 3];  // Object[], 这个是例外
-                    
-                    ═══════════════════════════════════════════════════════════════
-                                              内置函数
-                    ═══════════════════════════════════════════════════════════════
-                    
-                    输出:
-                        print(s)                 - 输出到缓冲区
-                        println(s)               - 输出并换行
-                    
-                    输入:
-                        readLine(prompt?)        - 读取用户输入 (可选提示)
-                        readPassword(prompt?)    - 读取密码 (隐藏输入)
-                        setupInteractiveInput()  - 重定向System.in到交互输入
-                                                   (调用后Scanner等可正常使用)
-                    
-                    集合操作:
-                        map(collection, fn)      - 映射
-                        filter(collection, fn)   - 过滤
-                        reduce(collection, fn)   - 归约
-                        range(start, end)        - 生成范围
-                        keys(map)                - 获取Map的键
-                        values(map)              - 获取Map的值
-                        size(collection)         - 获取大小
-                        contains(coll, elem)     - 检查包含
-                    
-                    字符串:
-                        split(str, delim)        - 分割字符串
-                        join(coll, delim)        - 连接为字符串
-                    
-                    数学:
-                        random()                 - 随机数 [0.0, 1.0)
-                        randint(min, max)        - 随机整数
-                        abs(n), min(a,b), max(a,b), clamp(v,min,max)
-                    
-                    反射:
-                        getField(obj, name)                 - 获取字段
-                        setField(obj, name, val)            - 设置字段
-                        invokeMethod(obj, name, args...)    - 调用方法
-                    
-                    类型:
-                        typeOf(obj)              - 类型名称
-                        isInstanceOf(obj, cls)   - 类型检查
-                        cast(obj, className)     - 类型转换
-                    
-                    Android:
-                        getContext()             - 获取Context
-                        getPackageName()         - 获取包名
-                        getApplicationInfo()     - 获取应用信息
-                    
-                    调试:
-                        analyze(obj)             - 分析对象
-                        deepAnalyze(obj)         - 深度分析
-                        trace()                  - 打印调用栈
-                        setPrintAST(bool)        - 开关AST打印
-                    
-                    时间:
-                        currentTimeMillis()      - 毫秒时间戳
-                        nanoTime()               - 纳秒时间
-                        sleep(ms)                - 休眠
-                    
-                    线程:
-                        runLater(lambda)         - 新线程执行
-                        createSafeExecutor()     - 创建线程安全执行器
-                        asRunnable(lambda)       - Lambda转Runnable
-                        asFunction(lambda)       - Lambda转Function
-                    
-                    ═══════════════════════════════════════════════════════════════
-                                              注意事项
-                    ═══════════════════════════════════════════════════════════════
-                    
-                    (1) auto类型必须有初始值
-                        auto x = 10;     // ok
-                        auto y;          // boom
-                    
-                    (2) 泛型类型信息会被擦除
-                        List<Integer> list = new ArrayList();
-                        list.add("wtf"); // 能跑, 但不建议
-                    
-                    (3) 原始类型会自动装箱
-                        >>> (1).getClass();
-                        class java.lang.Integer
-                    
-                    (4) 自动导入的包:
-                        java.util.*
-                        java.lang.*
-                        java.lang.reflect.*
-                        android.util.*
-                        android.os.*
-                    
-                    (5) delete 可以删除变量
-                        delete x;    // 删除x
-                        delete *;    // 删除所有
-                    
-                    (6) 遇到报错不一定是你的问题, 可能是解析器不支持这个语法 (
-                    
-                    示例:
-                        script create my_hook
-                        script list
-                        script show my_hook
-                        script run my_hook
-                        script import /sdcard/script.java
-                        script export my_hook /sdcard/backup.java
-                        script delete my_hook
-                        script manage
-                        script 'String a = "114514"; println(a);'
-
-                    注:
-                        - 脚本保存在 %s 下
-                    
-                    (Submodule script %s)
-                    """,  
+            default -> String.format("""
+                            语法: script <subcmd> [args...] | script <code>
+                            
+                            用JustNothing1021 (在GLM4.7和GLM5的帮助下) 写的解释器跑Java代码.
+                            就是目前还有一些语法不支持...习惯就好, 不会写AST(
+                            
+                            另外, 这玩意的性能很低, 不建议执行超过100次循环的代码
+                            (是这样的, 以后会试着优化, 以我的技术力现在能用就已经是个奇迹了)
+                            
+                            子命令:
+                                create <name>              - 创建新脚本
+                                edit <name>                - 编辑脚本
+                                list                       - 列出所有脚本
+                                show <name>                - 显示脚本内容
+                                delete <name>              - 删除脚本
+                                run <name>                 - 执行脚本
+                                run_code <code>            - 直接执行代码字符串（备用）
+                                import <file>              - 导入脚本文件
+                                export <name> <file>       - 导出脚本文件
+                                manage                     - 启动交互式脚本管理器
+                            
+                            选项:
+                                name              - 脚本名称
+                                file              - 文件路径
+                            
+                            
+                            ═══════════════════════════════════════════════════════════════
+                                              语法糖说明 (不同于原版Java的新特性)
+                            ═══════════════════════════════════════════════════════════════
+                            
+                            [0] 某些神秘的运算符
+                                auto pow = 2 ** 3;                              // 8
+                                auto spaceship = 1 <=> 2;                       // 左大会返回-1, 右大会返回1, 相等返回0
+                                auto intersectionSet = {1, 2, 3} & {2, 3, 4};   // 交集, {2, 3}, 还有很多集合操作可以自己琢磨
+                                auto doAsync = () -> async someTask();          // 异步执行然后返回Future, 往下面看
+                                auto result = await doAsync();                  // 等待async任务完成, 并获取结果, 往下面看
+                                auto address = database?.user?.address;         // 可选链, 往下面看
+                            
+                            [1] Lambda表达式 (有独立类型也可以转FunctionalInterface)
+                                auto add = (x, y) -> x + y;
+                                add(1, 2);  // 3
+                            
+                                auto greet = (name) -> { println("Hello, " + name); };
+                                greet("World");
+                            
+                            [2] 方法引用 (可以直接调用, 转Lambda/FunctionalInterface)
+                                auto parseInt = Integer::parseInt;
+                                parseInt("123");  // 123
+                            
+                                auto strLen = "hello"::length;
+                                strLen();  // 5
+                            
+                            [3] Range范围操作符, 生成整数 (或者说字符) 序列
+                                for (i in 1..5) print(i);      // 12345
+                                for (c in 'a'..'e') print(c);  // abcde
+                                auto nums = 1..10;             // [1,2,3,4,5,6,7,8,9,10]
+                            
+                            [4] f-string字符串插值 (Python风格, 但是有点点区别)
+                                auto name = "Alice";
+                                auto age = 18;
+                                f"My name is ${name}, age ${age}";  // "My name is Alice, age 18"
+                                f"My name is $name";                // "My name is Alice"
+                                f"My name is $name, age $age";      //  boom, 因为找不到"name,"这个变量
+                            
+                            [5] Pipeline管道操作符
+                                auto result = "  hello  "
+                                    |> String::trim
+                                    |> String::toUpperCase;
+                                // "HELLO"
+                            
+                                [1, 2, 3, 4, 5]
+                                    |> filter((x) -> x > 2)
+                                    |> map((x) -> x * 2);  // [6, 8, 10]
+                            
+                                auto twice = x -> x * 2;
+                                auto addOne = x -> x + 1;
+                                auto square = x -> x ** 2;
+                            
+                                auto result = 3 |> twice |> addOne |> square;  // 49 (3 -> 6 -> 7 -> 49)
+                            
+                            [6] 安全调用操作符 (在非null的时候调用, 不然返回null)
+                                auto obj = null;
+                                obj?.method();                   // null (不报错)
+                                obj?.field;                      // null
+                                obj?.method()?.anotherMethod();  // 链式安全调用
+                            
+                            [7] Elvis操作符 (空值合并)
+                                auto value = null;
+                                auto result = value ?: "default";  // "default"
+                            
+                            [8] 非空断言
+                                auto value = null;
+                                !!value;  // 抛出 NullPointerException
+                            
+                            [9] 条件赋值操作符
+                                Integer a = null;
+                                a ?= 1; // a = a != null ? a : 1, a
+                            
+                            [10] 集合操作符
+                                auto a = [1, 2, 3];
+                                auto b = [3, 4, 5];
+                                a | b;  // 并集   [1, 2, 3, 4, 5]
+                                a - b;  // 差集   [1, 2]
+                                a & b;  // 交集   [3]
+                                a ^ b;  // 异或集 [1, 2, 4, 5]
+                            
+                            [11] Async/Await 异步支持
+                                auto future = async {
+                                    Thread.sleep(1000);
+                                    return "done";
+                                };
+                                auto result = await future;  // "done" (阻塞等待)
+                            
+                            [12] Switch 表达式
+                                auto result = switch (x) {
+                                    case 1 -> "one";
+                                    case 2 -> "two";
+                                    default -> "other";
+                                };
+                            
+                            [13] Try-with-resources
+                                try (auto is = new FileInputStream("/path")) {
+                                    // 自动关闭资源
+                                }
+                            
+                            [14] 类定义 (动态生成)
+                                class Point {
+                                    int x, y;
+                                    Point(int x, int y) { this.x = x; this.y = y; }
+                                    int sum() { return x + y; }
+                                }
+                                auto p = new Point(1, 2);
+                                p.sum();  // 3
+                            
+                            [15] 短声明 (自动推导类型, 相当于auto, 会按最严格的类型推导)
+                                x := 10;           // int
+                                name := "hello";   // String
+                                arr := [1, 2, 3];  // Object[], 这个是例外
+                            
+                            ═══════════════════════════════════════════════════════════════
+                                                      内置函数
+                            ═══════════════════════════════════════════════════════════════
+                            
+                            输出:
+                                print(s)                 - 输出到缓冲区
+                                println(s)               - 输出并换行
+                            
+                            输入:
+                                readLine(prompt?)        - 读取用户输入 (可选提示)
+                                readPassword(prompt?)    - 读取密码 (隐藏输入)
+                                setupInteractiveInput()  - 重定向System.in到交互输入
+                                                           (调用后Scanner等可正常使用)
+                            
+                            集合操作:
+                                map(collection, fn)      - 映射
+                                filter(collection, fn)   - 过滤
+                                reduce(collection, fn)   - 归约
+                                range(start, end)        - 生成范围
+                                keys(map)                - 获取Map的键
+                                values(map)              - 获取Map的值
+                                size(collection)         - 获取大小
+                                contains(coll, elem)     - 检查包含
+                            
+                            字符串:
+                                split(str, delim)        - 分割字符串
+                                join(coll, delim)        - 连接为字符串
+                            
+                            数学:
+                                random()                 - 随机数 [0.0, 1.0)
+                                randint(min, max)        - 随机整数
+                                abs(n), min(a,b), max(a,b), clamp(v,min,max)
+                            
+                            反射:
+                                getField(obj, name)                 - 获取字段
+                                setField(obj, name, val)            - 设置字段
+                                invokeMethod(obj, name, args...)    - 调用方法
+                            
+                            类型:
+                                typeOf(obj)              - 类型名称
+                                isInstanceOf(obj, cls)   - 类型检查
+                                cast(obj, className)     - 类型转换
+                            
+                            Android:
+                                getContext()             - 获取Context
+                                getPackageName()         - 获取包名
+                                getApplicationInfo()     - 获取应用信息
+                            
+                            调试:
+                                analyze(obj)             - 分析对象
+                                deepAnalyze(obj)         - 深度分析
+                                trace()                  - 打印调用栈
+                                setPrintAST(bool)        - 开关AST打印
+                            
+                            时间:
+                                currentTimeMillis()      - 毫秒时间戳
+                                nanoTime()               - 纳秒时间
+                                sleep(ms)                - 休眠
+                            
+                            线程:
+                                runLater(lambda)         - 新线程执行
+                                createSafeExecutor()     - 创建线程安全执行器
+                                asRunnable(lambda)       - Lambda转Runnable
+                                asFunction(lambda)       - Lambda转Function
+                            
+                            ═══════════════════════════════════════════════════════════════
+                                                      注意事项
+                            ═══════════════════════════════════════════════════════════════
+                            
+                            (1) auto类型必须有初始值
+                                auto x = 10;     // ok
+                                auto y;          // boom
+                            
+                            (2) 泛型类型信息会被擦除
+                                List<Integer> list = new ArrayList();
+                                list.add("wtf"); // 能跑, 但不建议
+                            
+                            (3) 原始类型会自动装箱
+                                >>> (1).getClass();
+                                class java.lang.Integer
+                            
+                            (4) 自动导入的包:
+                                java.util.*
+                                java.lang.*
+                                java.lang.reflect.*
+                                android.util.*
+                                android.os.*
+                            
+                            (5) delete 可以删除变量
+                                delete x;    // 删除x
+                                delete *;    // 删除所有
+                            
+                            (6) 遇到报错不一定是你的问题, 可能是解析器不支持这个语法 (
+                            
+                            示例:
+                                script create my_hook
+                                script list
+                                script show my_hook
+                                script run my_hook
+                                script import /sdcard/script.java
+                                script export my_hook /sdcard/backup.java
+                                script delete my_hook
+                                script manage
+                                script 'String a = "114514"; println(a);'
+                            
+                            注:
+                                - 脚本保存在 %s 下
+                            
+                            (Submodule script %s)
+                            """,
                     DataBridge.getScriptsDirectory().getAbsolutePath(),
                     CMD_SCRIPT_VER);
-        }
+        };
     }
 
     @Override
@@ -380,7 +375,7 @@ public class ScriptExecutorMain extends CommandBase {
                 try {
                     return handleScriptManagerCommand(context);
                 } catch (Exception e) {
-                    return CommandExceptionHandler.handleException("script script", e, logger, "执行script命令失败");
+                    return CommandExceptionHandler.handleException("script " + args[0], e, context, "执行script命令失败");
                 }
             }
         }
@@ -395,7 +390,7 @@ public class ScriptExecutorMain extends CommandBase {
             runner.execute(context.origCommand(), context.output(), context.output());
             return "";
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("script", e, logger, "脚本执行失败");
+            return CommandExceptionHandler.handleException("script", e, context, "脚本执行失败");
         }
     }
 
@@ -410,28 +405,18 @@ public class ScriptExecutorMain extends CommandBase {
 
         String subCommand = args[0];
 
-        switch (subCommand) {
-            case "create":
-                return handleCreate(args);
-            case "list":
-                return handleList();
-            case "show":
-                return handleShow(args);
-            case "delete":
-                return handleDelete(args);
-            case "run":
-                return handleRun(args, context);
-            case "run_code":
-                return handleRunCode(context);
-            case "import":
-                return handleImport(args);
-            case "export":
-                return handleExport(args);
-            case "manage":
-                return handleManage(context);
-            default:
-                return "未知子命令: " + subCommand + "\n" + getHelpText();
-        }
+        return switch (subCommand) {
+            case "create" -> handleCreate(args);
+            case "list" -> handleList();
+            case "show" -> handleShow(args);
+            case "delete" -> handleDelete(args);
+            case "run" -> handleRun(args, context);
+            case "run_code" -> handleRunCode(context);
+            case "import" -> handleImport(args);
+            case "export" -> handleExport(args);
+            case "manage" -> handleManage(context);
+            default -> "未知子命令: " + subCommand + "\n" + getHelpText();
+        };
     }
 
     private ScriptRunner getScriptExecutor(ClassLoader cl) {
@@ -484,21 +469,20 @@ public class ScriptExecutorMain extends CommandBase {
             return "错误: 脚本 '" + scriptName + "' 已存在";
         }
 
-        IOManager.createDirectory(scriptFile.getParentFile().getAbsolutePath());
+        IOManager.createDirectory(Objects.requireNonNull(scriptFile.getParentFile()).getAbsolutePath());
+
+        String content = "// Script: " + scriptName + "\n" +
+                         "// Created by: " + System.currentTimeMillis() + "\n" +
+                         "\n" +
+                         "// 在这里编写你的脚本代码...\n";
         
-        StringBuilder content = new StringBuilder();
-        content.append("// Script: ").append(scriptName).append("\n");
-        content.append("// Created by: ").append(System.currentTimeMillis()).append("\n");
-        content.append("\n");
-        content.append("// 在这里编写你的脚本代码...\n");
-        
-        IOManager.writeFile(scriptFile.getAbsolutePath(), content.toString());
+        IOManager.writeFile(scriptFile.getAbsolutePath(), content);
 
         return "脚本 '" + scriptName + "' 创建成功\n" +
                 "路径: " + scriptFile.getAbsolutePath();
     }
 
-    private String handleList() throws IOException {
+    private String handleList() {
         File scriptsDir = DataBridge.getScriptsDirectory();
         
         if (!scriptsDir.exists()) {
@@ -546,7 +530,7 @@ public class ScriptExecutorMain extends CommandBase {
         return "===== 文件内容: " + fileName + " =====\n\n" + content;
     }
 
-    private String handleDelete(String[] args) throws IOException {
+    private String handleDelete(String[] args) {
         if (args.length < 2) {
             return "错误: 需要指定文件名称\n用法: script delete <name>";
         }
@@ -590,7 +574,7 @@ public class ScriptExecutorMain extends CommandBase {
             runner.execute(content, context.output(), context.output());
             result.append("脚本执行成功");
         } catch (Exception e) {
-            result.append(CommandExceptionHandler.handleException("script run", e, logger, "脚本执行失败"));
+            result.append(CommandExceptionHandler.handleException("script run", e, context, "脚本执行失败"));
         }
         
         return result.toString();
@@ -618,7 +602,7 @@ public class ScriptExecutorMain extends CommandBase {
             runner.execute(code, context.output(), context.output());
             result.append("代码执行成功");
         } catch (Exception e) {
-            result.append(CommandExceptionHandler.handleException("script runcode", e, logger, "代码执行失败"));
+            result.append(CommandExceptionHandler.handleException("script run_code", e, context, "代码执行失败"));
         }
         
         return result.toString();
@@ -666,7 +650,7 @@ public class ScriptExecutorMain extends CommandBase {
                     "提示: 使用 'script delete " + fileName + "' 删除旧文件";
         }
 
-        IOManager.createDirectory(destFile.getParentFile().getAbsolutePath());
+        IOManager.createDirectory(Objects.requireNonNull(destFile.getParentFile()).getAbsolutePath());
         IOManager.writeFile(destFile.getAbsolutePath(), content);
 
         return "文件导入成功\n" +
@@ -715,7 +699,8 @@ public class ScriptExecutorMain extends CommandBase {
     private String handleManage(CommandExecutor.CmdExecContext context) {
         context.output().println("===== 交互式脚本管理器 =====");
         context.output().println("输入 'help' 查看可用命令, 'exit' 或 'quit' 退出\n");
-        
+
+        label:
         while (true) {
             String input = context.readLine("manage> ");
             
@@ -724,27 +709,27 @@ public class ScriptExecutorMain extends CommandBase {
             }
             
             input = input.trim();
-            
-            if (input.isEmpty()) {
-                continue;
+
+            switch (input) {
+                case "":
+                    continue;
+                case "exit":
+                case "quit":
+                case "0":
+                    context.output().println("退出脚本管理器");
+                    break label;
+                case "help":
+                case "?":
+                    showManageHelp(context);
+                    continue;
             }
-            
-            if (input.equals("exit") || input.equals("quit") || input.equals("0")) {
-                context.output().println("退出脚本管理器");
-                break;
-            }
-            
-            if (input.equals("help") || input.equals("?")) {
-                showManageHelp(context);
-                continue;
-            }
-            
+
             String result = handleManageCommand(input, context);
             if (result != null) {
                 context.output().println(result);
             }
         }
-        
+
         return "脚本管理器已退出";
     }
     
@@ -770,65 +755,53 @@ public class ScriptExecutorMain extends CommandBase {
         String cmd = parts[0].toLowerCase();
         
         try {
-            switch (cmd) {
-                case "1":
-                case "create": {
+            return switch (cmd) {
+                case "1", "create" -> {
                     if (parts.length < 2) {
-                        return "用法: create <name>";
+                        yield "用法: create <name>";
                     }
-                    return handleCreate(new String[]{"create", parts[1]});
+                    yield handleCreate(new String[]{"create", parts[1]});
                 }
-                case "2":
-                case "list": {
-                    return handleList();
-                }
-                case "3":
-                case "show": {
+                case "2", "list" -> handleList();
+                case "3", "show" -> {
                     if (parts.length < 2) {
-                        return "用法: show <name>";
+                        yield "用法: show <name>";
                     }
-                    return handleShow(new String[]{"show", parts[1]});
+                    yield handleShow(new String[]{"show", parts[1]});
                 }
-                case "edit": {
+                case "edit" -> {
                     if (parts.length < 2) {
-                        return "用法: edit <name>";
+                        yield "用法: edit <name>";
                     }
-                    return handleEdit(parts[1], context);
+                    yield handleEdit(parts[1], context);
                 }
-                case "4":
-                case "delete": {
+                case "4", "delete" -> {
                     if (parts.length < 2) {
-                        return "用法: delete <name>";
+                        yield "用法: delete <name>";
                     }
-                    return handleDelete(new String[]{"delete", parts[1]});
+                    yield handleDelete(new String[]{"delete", parts[1]});
                 }
-                case "5":
-                case "run": {
+                case "5", "run" -> {
                     if (parts.length < 2) {
-                        return "用法: run <name>";
+                        yield "用法: run <name>";
                     }
-                    return handleRun(new String[]{"run", parts[1]}, context);
+                    yield handleRun(new String[]{"run", parts[1]}, context);
                 }
-                case "6":
-                case "import": {
+                case "6", "import" -> {
                     if (parts.length < 2) {
-                        return "用法: import <path>";
+                        yield "用法: import <path>";
                     }
-                    return handleImport(new String[]{"import", parts[1]});
+                    yield handleImport(new String[]{"import", parts[1]});
                 }
-                case "7":
-                case "export": {
+                case "7", "export" -> {
                     if (parts.length < 3) {
-                        return "用法: export <name> <path>";
+                        yield "用法: export <name> <path>";
                     }
-                    return handleExport(new String[]{"export", parts[1], parts[2]});
+                    yield handleExport(new String[]{"export", parts[1], parts[2]});
                 }
-                case "codebase": {
-                    return handleCodebaseList();
-                }
-                default:
-                    return "未知命令: " + cmd + " (输入 'help' 查看帮助)";
-            }
+                case "codebase" -> handleCodebaseList();
+                default -> "未知命令: " + cmd + " (输入 'help' 查看帮助)";
+            };
         } catch (Exception e) {
             return "错误: " + e.getMessage();
         }
@@ -905,16 +878,16 @@ public class ScriptExecutorMain extends CommandBase {
         if (bytes < 1024) {
             return bytes + " B";
         } else if (bytes < 1024 * 1024) {
-            return String.format("%.2f KB", bytes / 1024.0);
+            return String.format(Locale.getDefault(), "%.2f KB", bytes / 1024.0);
         } else if (bytes < 1024 * 1024 * 1024) {
-            return String.format("%.2f MB", bytes / (1024.0 * 1024));
+            return String.format(Locale.getDefault(), "%.2f MB", bytes / (1024.0 * 1024));
         } else {
-            return String.format("%.2f GB", bytes / (1024.0 * 1024 * 1024));
+            return String.format(Locale.getDefault(), "%.2f GB", bytes / (1024.0 * 1024 * 1024));
         }
     }
 
     private String formatTime(long timestamp) {
-        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         return sdf.format(new java.util.Date(timestamp));
     }
 
@@ -938,6 +911,7 @@ public class ScriptExecutorMain extends CommandBase {
         boolean multiLineMode = false;
         boolean autoMultiLine = false;
 
+        label:
         while (true) {
             String prompt = (multiLineMode || autoMultiLine) ? "... " : ">>> ";
             String code = context.readLine(prompt);
@@ -948,26 +922,24 @@ public class ScriptExecutorMain extends CommandBase {
             }
             
             code = code.trim();
-            
-            if (code.equals("exit") || code.equals("quit")) {
-                context.output().println("Say goodbye~~~");
-                break;
-            }
-            
-            if (code.isEmpty()) {
-                if (autoMultiLine) {
+
+            switch (code) {
+                case "exit":
+                case "quit":
+                    context.output().println("Say goodbye~~~");
+                    break label;
+                case "":
+                    if (autoMultiLine) {
+                        continue;
+                    }
                     continue;
-                }
-                continue;
+                case ":multi":
+                    multiLineMode = true;
+                    autoMultiLine = false;
+                    context.output().println("进入多行模式, 输入 ':eval' 执行, ':clear' 清空, ':exit' 退出多行模式");
+                    continue;
             }
-            
-            if (code.equals(":multi")) {
-                multiLineMode = true;
-                autoMultiLine = false;
-                context.output().println("进入多行模式, 输入 ':eval' 执行, ':clear' 清空, ':exit' 退出多行模式");
-                continue;
-            }
-            
+
             if (code.equals(":exit") && (multiLineMode || autoMultiLine)) {
                 multiLineMode = false;
                 autoMultiLine = false;
@@ -1036,21 +1008,18 @@ public class ScriptExecutorMain extends CommandBase {
             
             if (cause instanceof EvaluationException evalEx) {
                 Throwable innerCause = evalEx.getCause();
+                context.output().println("错误: " + evalEx.getMessage());
                 if (innerCause != null) {
-                    context.output().println("错误: " + evalEx.getMessage());
                     context.output().printStackTrace(innerCause);
-                } else {
-                    context.output().println("错误: " + evalEx.getMessage());
                 }
             } else if (cause instanceof ParseException parseEx) {
                 context.output().println("语法错误: " + parseEx.getMessage());
             } else if (cause != null) {
                 context.output().println((isParseError ? "语法错误: " : "错误: ") + cause.getMessage());
-                if (!isParseError) {
-                    context.output().printStackTrace(cause);
-                }
+                context.output().printStackTrace(cause);
             } else {
                 context.output().println((isParseError ? "语法错误: " : "错误: ") + message);
+                context.output().printStackTrace(e);
             }
             context.output().print(ANSI_RESET);
         }
@@ -1091,7 +1060,7 @@ public class ScriptExecutorMain extends CommandBase {
             
             if (c == '"' && !inChar) {
                 if (i > 0 && code.charAt(i - 1) == 'f' && !inString && !inFString) {
-                    inFString = !inFString;
+                    inFString = true;
                 } else if (inFString) {
                     inFString = false;
                 } else {

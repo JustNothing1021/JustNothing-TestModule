@@ -123,7 +123,7 @@ public class HookMain extends CommandBase {
                 }
             };
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("hook", e, logger, "执行hook命令失败");
+            return CommandExceptionHandler.handleException("hook " + subCommand, e, context, "执行hook命令失败");
         }
     }
 
@@ -300,7 +300,7 @@ public class HookMain extends CommandBase {
         HookManager.clearAllHooks();
         context.print("已清除", Colors.LIGHT_GREEN);
         context.print(" " + count + " ", Colors.YELLOW);
-        context.println("个Hook", Colors.CYAN);
+        context.println("个Hook", Colors.LIGHT_GREEN);
         return null;
     }
 }

@@ -8,6 +8,7 @@ import com.justnothing.testmodule.command.functions.CommandBase;
 import com.justnothing.testmodule.command.utils.CommandArgumentParser;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -63,7 +64,7 @@ public class TraceMain extends CommandBase {
         String[] args = context.args();
         ClassLoader classLoader = context.classLoader();
         
-        logger.debug("执行trace命令，参数: " + java.util.Arrays.toString(args));
+        logger.debug("执行trace命令，参数: " + Arrays.toString(args));
         
         if (args.length < 1) {
             logger.warn("参数不足");
@@ -75,7 +76,7 @@ public class TraceMain extends CommandBase {
 
         try {
             return switch (subCommand) {
-                case "add" -> handleAdd(args, classLoader, manager);
+                case "add" -> handleAdd(args, classLoader, manager, context);
                 case "list" -> handleList(manager);
                 case "show" -> handleShow(args, manager);
                 case "export" -> handleExport(args, manager);
@@ -84,11 +85,11 @@ public class TraceMain extends CommandBase {
                 default -> "未知子命令: " + subCommand + "\n" + getHelpText();
             };
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("trace", e, logger, "执行trace命令失败");
+            return CommandExceptionHandler.handleException("trace", e, context, "执行trace命令失败");
         }
     }
 
-    private String handleAdd(String[] args, ClassLoader classLoader, TraceManager manager) {
+    private String handleAdd(String[] args, ClassLoader classLoader, TraceManager manager, CommandExecutor.CmdExecContext context) {
         try {
             CommandArgumentParser.requireArgsLength(args, 3, "trace add");
         } catch (IllegalArgumentException e) {
@@ -103,11 +104,11 @@ public class TraceMain extends CommandBase {
             int id = manager.addTraceTask(className, methodName, signature, classLoader);
             return "添加trace任务成功，ID: " + id;
         } catch (Exception e) {
-            Map<String, Object> context = new HashMap<>();
-            context.put("类名", className);
-            context.put("方法名", methodName);
-            context.put("签名", signature != null ? signature : "无");
-            return CommandExceptionHandler.handleException("trace add", e, logger, context, "添加trace任务失败");
+            Map<String, Object> errorContext = new HashMap<>();
+            errorContext.put("类名", className);
+            errorContext.put("方法名", methodName);
+            errorContext.put("签名", signature != null ? signature : "无");
+            return CommandExceptionHandler.handleException("trace add", e, context, errorContext, "添加trace任务失败");
         }
     }
 

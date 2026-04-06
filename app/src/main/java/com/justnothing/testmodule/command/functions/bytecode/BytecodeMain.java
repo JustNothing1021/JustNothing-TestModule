@@ -176,21 +176,21 @@ public class BytecodeMain extends CommandBase {
         ClassLoader classLoader = context.classLoader();
 
         return switch (subcmd) {
-            case "info" -> handleInfo(args, classLoader, targetPackage, verbose);
-            case "method" -> handleMethod(args, classLoader, targetPackage, hexFormat);
-            case "dump" -> handleDump(args, classLoader, targetPackage, outputPath);
-            case "analyze" -> handleAnalyze(args, classLoader, targetPackage, verbose);
-            case "disasm" -> handleDisasm(args, classLoader, targetPackage, hexFormat);
-            case "constants" -> handleConstants(args, classLoader, targetPackage);
-            case "verify" -> handleVerify(args, classLoader, targetPackage);
-            case "decompile" -> handleDecompile(args, classLoader, targetPackage, outputPath);
-            case "batch_export" -> handleBatchExport(args, classLoader, outputPath);
-            case "list_classes" -> handleListClasses(args, classLoader);
+            case "info" -> handleInfo(args, classLoader, targetPackage, verbose, context);
+            case "method" -> handleMethod(args, classLoader, targetPackage, hexFormat, context);
+            case "dump" -> handleDump(args, classLoader, targetPackage, outputPath, context);
+            case "analyze" -> handleAnalyze(args, classLoader, targetPackage, verbose, context);
+            case "disasm" -> handleDisasm(args, classLoader, targetPackage, hexFormat, context);
+            case "constants" -> handleConstants(args, classLoader, targetPackage, context);
+            case "verify" -> handleVerify(args, classLoader, context);
+            case "decompile" -> handleDecompile(args, classLoader, targetPackage, outputPath, context);
+            case "batch_export" -> handleBatchExport(classLoader, outputPath);
+            case "list_classes" -> handleListClasses(classLoader);
             default -> "未知子命令: " + subcmd + "\n" + getHelpText();
         };
     }
 
-    private String handleInfo(String[] args, ClassLoader classLoader, String targetPackage, boolean verbose) {
+    private String handleInfo(String[] args, ClassLoader classLoader, String targetPackage, boolean verbose, CommandExecutor.CmdExecContext context) {
         if (args.length < 2) {
             return "参数不足，需要指定类名";
         }
@@ -242,11 +242,11 @@ public class BytecodeMain extends CommandBase {
 
         } catch (Exception e) {
             logger.error("获取类信息失败", e);
-            return CommandExceptionHandler.handleException("bytecode", e, logger, "获取类信息失败");
+            return CommandExceptionHandler.handleException("bytecode", e, context, "获取类信息失败");
         }
     }
 
-    private String handleMethod(String[] args, ClassLoader classLoader, String targetPackage, boolean hexFormat) {
+    private String handleMethod(String[] args, ClassLoader classLoader, String targetPackage, boolean hexFormat, CommandExecutor.CmdExecContext context) {
         if (args.length < 3) {
             return "参数不足，需要指定类名和方法名";
         }
@@ -256,9 +256,6 @@ public class BytecodeMain extends CommandBase {
 
         try {
             Class<?> targetClass = loadClass(className, classLoader);
-            if (targetClass == null) {
-                return "找不到类: " + className;
-            }
 
             Method[] methods = targetClass.getDeclaredMethods();
             Method targetMethod = null;
@@ -306,11 +303,11 @@ public class BytecodeMain extends CommandBase {
             return sb.toString();
 
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("bytecode", e, logger, "获取方法信息失败");
+            return CommandExceptionHandler.handleException("bytecode", e, context, "获取方法信息失败");
         }
     }
 
-    private String handleDump(String[] args, ClassLoader classLoader, String targetPackage, String outputPath) {
+    private String handleDump(String[] args, ClassLoader classLoader, String targetPackage, String outputPath, CommandExecutor.CmdExecContext context) {
         if (args.length < 2) {
             return "参数不足，需要指定类名";
         }
@@ -339,11 +336,11 @@ public class BytecodeMain extends CommandBase {
             return "字节码已导出到: " + outputPath + "\n大小: " + bytecode.length + " 字节";
 
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("bytecode", e, logger, "导出字节码失败");
+            return CommandExceptionHandler.handleException("bytecode", e, context, "导出字节码失败");
         }
     }
 
-    private String handleAnalyze(String[] args, ClassLoader classLoader, String targetPackage, boolean verbose) {
+    private String handleAnalyze(String[] args, ClassLoader classLoader, String targetPackage, boolean verbose, CommandExecutor.CmdExecContext context) {
         if (args.length < 2) {
             return "参数不足，需要指定类名";
         }
@@ -414,11 +411,11 @@ public class BytecodeMain extends CommandBase {
             return sb.toString();
 
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("bytecode", e, logger, "分析字节码失败");
+            return CommandExceptionHandler.handleException("bytecode", e, context, "分析字节码失败");
         }
     }
 
-    private String handleDisasm(String[] args, ClassLoader classLoader, String targetPackage, boolean hexFormat) {
+    private String handleDisasm(String[] args, ClassLoader classLoader, String targetPackage, boolean hexFormat, CommandExecutor.CmdExecContext context) {
         if (args.length < 2) {
             return "参数不足，需要指定类名";
         }
@@ -469,11 +466,11 @@ public class BytecodeMain extends CommandBase {
             return sb.toString();
 
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("bytecode", e, logger, "反汇编失败");
+            return CommandExceptionHandler.handleException("bytecode", e, context, "反汇编失败");
         }
     }
 
-    private String handleConstants(String[] args, ClassLoader classLoader, String targetPackage) {
+    private String handleConstants(String[] args, ClassLoader classLoader, String targetPackage, CommandExecutor.CmdExecContext context) {
         if (args.length < 2) {
             return "参数不足，需要指定类名";
         }
@@ -482,11 +479,6 @@ public class BytecodeMain extends CommandBase {
 
         try {
             Class<?> targetClass = loadClass(className, classLoader);
-            if (targetClass == null) {
-                return "找不到类: " + className +
-                        "\n使用的包: " + (targetPackage != null ? targetPackage : "default") +
-                        "\n类加载器: " + (classLoader != null ? classLoader.getClass().getName() : "无");
-            }
 
             byte[] bytecode = getClassBytecode(targetClass);
 
@@ -535,11 +527,11 @@ public class BytecodeMain extends CommandBase {
             return sb.toString();
 
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("bytecode", e, logger, "获取常量池失败");
+            return CommandExceptionHandler.handleException("bytecode", e, context, "获取常量池失败");
         }
     }
 
-    private String handleVerify(String[] args, ClassLoader classLoader, String targetPackage) {
+    private String handleVerify(String[] args, ClassLoader classLoader, CommandExecutor.CmdExecContext context) {
         if (args.length < 2) {
             return "参数不足，需要指定类名";
         }
@@ -548,9 +540,6 @@ public class BytecodeMain extends CommandBase {
 
         try {
             Class<?> targetClass = loadClass(className, classLoader);
-            if (targetClass == null) {
-                return "找不到类: " + className;
-            }
 
             byte[] bytecode = getClassBytecode(targetClass);
 
@@ -600,11 +589,11 @@ public class BytecodeMain extends CommandBase {
             return sb.toString();
 
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("bytecode", e, logger, "验证字节码失败");
+            return CommandExceptionHandler.handleException("bytecode", e, context, "验证字节码失败");
         }
     }
 
-    private String handleDecompile(String[] args, ClassLoader classLoader, String targetPackage, String outputPath) {
+    private String handleDecompile(String[] args, ClassLoader classLoader, String targetPackage, String outputPath, CommandExecutor.CmdExecContext context) {
         if (args.length < 2) {
             return "参数不足，需要指定类名";
         }
@@ -647,11 +636,11 @@ public class BytecodeMain extends CommandBase {
             }
 
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("bytecode", e, logger, "反编译失败");
+            return CommandExceptionHandler.handleException("bytecode", e, context, "反编译失败");
         }
     }
 
-    private String handleBatchExport(String[] args, ClassLoader classLoader, String outputPath) {
+    private String handleBatchExport(ClassLoader classLoader, String outputPath) {
         if (outputPath == null) {
             outputPath = "/sdcard/class_dump_" + System.currentTimeMillis() + "/";
         }
@@ -665,7 +654,7 @@ public class BytecodeMain extends CommandBase {
         }
     }
 
-    private String handleListClasses(String[] args, ClassLoader classLoader) {
+    private String handleListClasses(ClassLoader classLoader) {
         try {
             Map<String, byte[]> classes = SystemBytecodeExtractor.getAllClassesBytecode(classLoader);
 

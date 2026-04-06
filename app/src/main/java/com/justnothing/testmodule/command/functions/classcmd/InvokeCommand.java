@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.classcmd;
 
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
+import com.justnothing.testmodule.utils.reflect.ClassResolver;
 import com.justnothing.testmodule.utils.reflect.DescriptorColorizer;
 import com.justnothing.testmodule.utils.reflect.ReflectionUtils;
 
@@ -65,7 +66,7 @@ public class InvokeCommand extends AbstractClassCommand {
         methodName = args[argIndex + 1];
         argIndex += 2;
 
-        Class<?> targetClass = context.loadClass(className);
+        Class<?> targetClass = ClassResolver.findClassOrFail(className, context.getClassLoader());
 
         List<Object> params = new ArrayList<>();
         List<Class<?>> paramTypes = new ArrayList<>();

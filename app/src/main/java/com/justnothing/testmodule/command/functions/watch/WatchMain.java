@@ -84,7 +84,7 @@ public class WatchMain extends CommandBase {
 
         try {
             return switch (subCommand) {
-                case "add" -> handleAdd(args, classLoader, manager);
+                case "add" -> handleAdd(args, classLoader, manager, context);
                 case "list" -> handleList(manager);
                 case "stop" -> handleStop(args, manager);
                 case "clear" -> handleClear(manager);
@@ -92,11 +92,11 @@ public class WatchMain extends CommandBase {
                 default -> "未知子命令: " + subCommand + "\n" + getHelpText();
             };
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("watch", e, logger, "执行watch命令失败");
+            return CommandExceptionHandler.handleException("watch", e, context, "执行watch命令失败");
         }
     }
 
-    private String handleAdd(String[] args, ClassLoader classLoader, WatchManager manager) {
+    private String handleAdd(String[] args, ClassLoader classLoader, WatchManager manager, CommandExecutor.CmdExecContext context) {
         try {
             CommandArgumentParser.requireArgsLength(args, 4, "watch add");
         } catch (IllegalArgumentException e) {
@@ -121,7 +121,7 @@ public class WatchMain extends CommandBase {
             try {
                 interval = Long.parseLong(intervalStr);
             } catch (NumberFormatException e) {
-                return CommandExceptionHandler.handleException("watch add", e, logger, "无效的interval参数");
+                return CommandExceptionHandler.handleException("watch add", e, context, "无效的interval参数");
             }
         }
 
@@ -154,13 +154,13 @@ public class WatchMain extends CommandBase {
                 return "未知类型: " + type + "，必须是 'field' 或 'method'";
             }
         } catch (Exception e) {
-            Map<String, Object> context = new HashMap<>();
-            context.put("类型", type);
-            context.put("类名", className);
-            context.put("成员名", memberName);
-            context.put("签名", signature != null ? signature : "无");
-            context.put("间隔", interval + "ms");
-            return CommandExceptionHandler.handleException("watch add", e, logger, context, "添加watch任务失败");
+            Map<String, Object> errorContext = new HashMap<>();
+            errorContext.put("类型", type);
+            errorContext.put("类名", className);
+            errorContext.put("成员名", memberName);
+            errorContext.put("签名", signature != null ? signature : "无");
+            errorContext.put("间隔", interval + "ms");
+            return CommandExceptionHandler.handleException("watch add", e, context, errorContext, "添加watch任务失败");
         }
     }
 

@@ -3,6 +3,7 @@ package com.justnothing.testmodule.command.functions.classcmd;
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
+import com.justnothing.testmodule.utils.reflect.ClassResolver;
 import com.justnothing.testmodule.utils.reflect.DescriptorColorizer;
 import com.justnothing.testmodule.utils.reflect.ReflectionUtils;
 
@@ -32,7 +33,7 @@ public class AnalyzeCommand extends AbstractClassCommand {
             return CommandExceptionHandler.handleException(
                 "class analyze",
                 new IllegalArgumentException("参数不足, 需要至少1个参数: class analyze <class_name>"),
-                context.getLogger(),
+                context.getExecContext(),
                 "参数错误"
             );
         }
@@ -67,7 +68,7 @@ public class AnalyzeCommand extends AbstractClassCommand {
 
         context.getLogger().debug("目标类: " + className + ", 显示字段: " + showFields + ", 显示方法: " + showMethods + ", 显示全部: " + showAll);
 
-        Class<?> targetClass = context.loadClass(className);
+        Class<?> targetClass = ClassResolver.findClassOrFail(className, context.getClassLoader());
         context.getLogger().info("成功加载类: " + targetClass.getName());
 
         if (showAll || showFields) {
@@ -96,7 +97,8 @@ public class AnalyzeCommand extends AbstractClassCommand {
                             }
                         } catch (IllegalAccessException | NullPointerException | IllegalArgumentException e) {
                             cmd.print(" [无法访问: ", Colors.RED);
-                            cmd.print(e.getMessage(), Colors.ORANGE);
+                            String msg = e.getMessage();
+                            cmd.print(msg != null ? msg : "暂无错误信息", Colors.ORANGE);
                             cmd.print("]", Colors.RED);
                         }
                     }
