@@ -26,11 +26,6 @@ public abstract class PackageHook extends XposedBasicHook<XC_LoadPackage.LoadPac
             super(className, methodName, signature, hook, shouldLoad);
         }
 
-        public PackageMethodHook(String className, String methodName,
-                                 Object[] signature, XC_MethodHook hook) {
-            super(className, methodName, signature, hook);
-        }
-
         @Override
         public Boolean loads(XC_LoadPackage.LoadPackageParam param) {
             try {
@@ -65,9 +60,6 @@ public abstract class PackageHook extends XposedBasicHook<XC_LoadPackage.LoadPac
                                 HookCondition<XC_LoadPackage.LoadPackageParam> shouldLoad) {
             super(className, fieldName, value, shouldLoad);
         }
-        public PackageFieldHook(String className, String fieldName, Object value) {
-            super(className, fieldName, value, null);
-        }
 
         @Override
         public Boolean loads(XC_LoadPackage.LoadPackageParam param) {
@@ -99,9 +91,6 @@ public abstract class PackageHook extends XposedBasicHook<XC_LoadPackage.LoadPac
         public PackageCallbackHook(HookCallback<XC_LoadPackage.LoadPackageParam> hookCallback,
                                    HookCondition<XC_LoadPackage.LoadPackageParam> shouldLoad) {
             super(hookCallback, shouldLoad);
-        }
-        public PackageCallbackHook(HookCallback<XC_LoadPackage.LoadPackageParam> hookCallback) {
-            super(hookCallback, null);
         }
 
         @Override

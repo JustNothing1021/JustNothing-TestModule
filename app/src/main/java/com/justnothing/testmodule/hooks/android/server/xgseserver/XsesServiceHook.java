@@ -44,7 +44,7 @@ public class XsesServiceHook extends PackageHook {
                 String.class,
                 new XC_MethodReplacement() {
                     @Override
-                    protected Object replaceHookedMethod(MethodHookParam methodHookParam) throws Throwable {
+                    protected Object replaceHookedMethod(MethodHookParam methodHookParam) {
                         String data = (String) methodHookParam.args[0];
                         if (data == null || data.trim().isEmpty()) {
                             warn("processServerPush接收到空数据");

@@ -12,6 +12,7 @@ import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
@@ -70,32 +71,32 @@ public class ThreadsMain extends CommandBase {
     }
 
     @Override
-    public String runMain(CommandExecutor.CmdExecContext context) {
+    public void runMain(CommandExecutor.CmdExecContext context) {
         String[] args = context.args();
         
         if (args.length < 1) {
-            return getHelpText();
+            context.println(getHelpText(), Colors.WHITE);
+            return;
         }
 
         String subCommand = args[0];
 
         try {
-            return switch (subCommand) {
+            switch (subCommand) {
                 case "list" -> handleList(args, context);
                 case "deadlock" -> handleDeadlock(context);
                 case "profile" -> handleProfile(args, context);
                 default -> {
                     context.print("未知子命令: ", Colors.RED);
                     context.println(subCommand, Colors.YELLOW);
-                    yield null;
                 }
             };
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("threads", e, context, "执行threads命令失败");
+            CommandExceptionHandler.handleException("threads", e, context, "执行threads命令失败");
         }
     }
 
-    private String handleList(String[] args, CommandExecutor.CmdExecContext ctx) {
+    private void handleList(String[] args, CommandExecutor.CmdExecContext ctx) {
         Long filterId = null;
         String filterName = null;
         Thread.State filterState = null;
@@ -108,7 +109,7 @@ public class ThreadsMain extends CommandBase {
                 } catch (NumberFormatException e) {
                     ctx.print("错误: ", Colors.RED);
                     ctx.println("线程ID必须是数字", Colors.YELLOW);
-                    return null;
+                    return;
                 }
             } else if (arg.equals("--name") && i + 1 < args.length) {
                 filterName = args[++i];
@@ -119,7 +120,7 @@ public class ThreadsMain extends CommandBase {
                     ctx.print("错误: ", Colors.RED);
                     ctx.print("无效的线程状态, 有效值: ", Colors.GRAY);
                     ctx.println(Arrays.toString(Thread.State.values()), Colors.YELLOW);
-                    return null;
+                    return;
                 }
             }
         }
@@ -156,7 +157,7 @@ public class ThreadsMain extends CommandBase {
             ctx.println("");
             printStateCount(ctx, "BLOCKED", blockedCount, Colors.RED);
             printStateCount(ctx, "WAITING", waitingCount, Colors.YELLOW);
-            printStateCount(ctx, "TIMED_WAITING", timedWaitingCount, Colors.PURPLE);
+            printStateCount(ctx, "TIMED_WAITING", timedWaitingCount, Colors.MAGENTA);
             printStateCount(ctx, "RUNNABLE", runnableCount, Colors.LIGHT_GREEN);
             printStateCount(ctx, "TERMINATED", terminatedCount, Colors.GRAY);
             printStateCount(ctx, "NEW", newStateCount, Colors.CYAN);
@@ -191,10 +192,8 @@ public class ThreadsMain extends CommandBase {
             logger.info("线程信息查询完成");
             
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("threads list", e, ctx, "获取线程信息失败");
+            CommandExceptionHandler.handleException("threads list", e, ctx, "获取线程信息失败");
         }
-        
-        return null;
     }
 
     private byte getStateColor(Thread.State state) {
@@ -202,7 +201,7 @@ public class ThreadsMain extends CommandBase {
             case RUNNABLE -> Colors.LIGHT_GREEN;
             case BLOCKED -> Colors.RED;
             case WAITING -> Colors.YELLOW;
-            case TIMED_WAITING -> Colors.PURPLE;
+            case TIMED_WAITING -> Colors.MAGENTA;
             case TERMINATED -> Colors.GRAY;
             case NEW -> Colors.CYAN;
         };
@@ -228,7 +227,7 @@ public class ThreadsMain extends CommandBase {
         ctx.println(String.valueOf(thread.getPriority()), Colors.LIGHT_GREEN);
         
         ctx.print("  守护: ", Colors.GRAY);
-        ctx.println(thread.isDaemon() ? "是" : "否", thread.isDaemon() ? Colors.PURPLE : Colors.LIGHT_GREEN);
+        ctx.println(thread.isDaemon() ? "是" : "否", thread.isDaemon() ? Colors.MAGENTA : Colors.LIGHT_GREEN);
         
         ctx.print("  中断: ", Colors.GRAY);
         ctx.println(thread.isInterrupted() ? "是" : "否", thread.isInterrupted() ? Colors.RED : Colors.LIGHT_GREEN);
@@ -263,7 +262,7 @@ public class ThreadsMain extends CommandBase {
         ctx.print(simpleClassName, Colors.GREEN);
         ctx.print(".", Colors.GRAY);
         ctx.print(methodName, Colors.LIGHT_BLUE);
-        ctx.print("(", Colors.PURPLE);
+        ctx.print("(", Colors.MAGENTA);
         
         if (fileName != null) {
             ctx.print(fileName, Colors.CYAN);
@@ -274,14 +273,14 @@ public class ThreadsMain extends CommandBase {
         } else {
             ctx.print("Unknown Source", Colors.GRAY);
         }
-        ctx.println(")", Colors.PURPLE);
+        ctx.println(")", Colors.MAGENTA);
     }
 
-    private String handleDeadlock(CommandExecutor.CmdExecContext ctx) {
+    private void handleDeadlock(CommandExecutor.CmdExecContext ctx) {
         try {
             ctx.println("===== 线程状态分析 =====", Colors.CYAN);
             ctx.print("时间: ", Colors.GRAY);
-            ctx.println(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()), Colors.YELLOW);
+            ctx.println(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date()), Colors.YELLOW);
             ctx.println("");
             
             Map<Thread, StackTraceElement[]> allStackTraces = Thread.getAllStackTraces();
@@ -311,7 +310,7 @@ public class ThreadsMain extends CommandBase {
             ctx.println(String.valueOf(allStackTraces.size()), Colors.YELLOW);
             printStateCount(ctx, " BLOCKED", blockedCount, Colors.RED);
             printStateCount(ctx, " WAITING", waitingCount, Colors.YELLOW);
-            printStateCount(ctx, " TIMED_WAITING", timedWaitingCount, Colors.PURPLE);
+            printStateCount(ctx, " TIMED_WAITING", timedWaitingCount, Colors.MAGENTA);
             printStateCount(ctx, " RUNNABLE", runnableCount, Colors.LIGHT_GREEN);
             printStateCount(ctx, " TERMINATED", terminatedCount, Colors.GRAY);
             printStateCount(ctx, " NEW", newStateCount, Colors.CYAN);
@@ -338,7 +337,7 @@ public class ThreadsMain extends CommandBase {
                         ctx.print("  优先级: ", Colors.GRAY);
                         ctx.println(String.valueOf(thread.getPriority()), Colors.LIGHT_GREEN);
                         ctx.print("  守护: ", Colors.GRAY);
-                        ctx.println(String.valueOf(thread.isDaemon()), thread.isDaemon() ? Colors.PURPLE : Colors.LIGHT_GREEN);
+                        ctx.println(String.valueOf(thread.isDaemon()), thread.isDaemon() ? Colors.MAGENTA : Colors.LIGHT_GREEN);
                         ctx.print("  中断: ", Colors.GRAY);
                         ctx.println(String.valueOf(thread.isInterrupted()), thread.isInterrupted() ? Colors.RED : Colors.LIGHT_GREEN);
                         ctx.println("");
@@ -380,25 +379,23 @@ public class ThreadsMain extends CommandBase {
             logger.info("线程状态分析完成, 发现 " + blockedCount + " 个BLOCKED线程");
             
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("threads deadlock", e, ctx, "线程状态分析失败");
+            CommandExceptionHandler.handleException("threads deadlock", e, ctx, "线程状态分析失败");
         }
-        
-        return null;
     }
 
-    private String handleProfile(String[] args, CommandExecutor.CmdExecContext ctx) {
+    private void handleProfile(String[] args, CommandExecutor.CmdExecContext ctx) {
         if (args.length < 2) {
             ctx.print("错误: ", Colors.RED);
             ctx.println("参数不足", Colors.YELLOW);
             ctx.println("用法: threads profile <subcmd> [args...]", Colors.GRAY);
-            return null;
+            return;
         }
 
         String profileSubCommand = args[1];
         ProfileManager manager = ProfileManager.getInstance();
 
         try {
-            return switch (profileSubCommand) {
+            switch (profileSubCommand) {
                 case "start" -> handleProfileStart(args, manager, ctx);
                 case "stop" -> handleProfileStop(manager, ctx);
                 case "show" -> handleProfileShow(manager, ctx);
@@ -406,15 +403,14 @@ public class ThreadsMain extends CommandBase {
                 default -> {
                     ctx.print("未知子命令: ", Colors.RED);
                     ctx.println(profileSubCommand, Colors.YELLOW);
-                    yield null;
                 }
             };
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("threads profile", e, ctx, "执行profile命令失败");
+            CommandExceptionHandler.handleException("threads profile", e, ctx, "执行profile命令失败");
         }
     }
 
-    private String handleProfileStart(String[] args, ProfileManager manager, CommandExecutor.CmdExecContext ctx) {
+    private void handleProfileStart(String[] args, ProfileManager manager, CommandExecutor.CmdExecContext ctx) {
         int duration = 60;
         
         if (args.length > 2) {
@@ -424,7 +420,7 @@ public class ThreadsMain extends CommandBase {
             } catch (IllegalArgumentException e) {
                 ctx.print("错误: ", Colors.RED);
                 ctx.println(Objects.requireNonNullElse(e.getMessage(), "暂无详细信息"), Colors.YELLOW);
-                return null;
+                return;
             }
         }
 
@@ -433,37 +429,34 @@ public class ThreadsMain extends CommandBase {
             ctx.print("开始性能分析, 持续时间: ", Colors.LIGHT_GREEN);
             ctx.print(String.valueOf(duration), Colors.YELLOW);
             ctx.println("秒", Colors.GRAY);
-            return null;
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("threads profile start", e, ctx, "开始性能分析失败");
+            CommandExceptionHandler.handleException("threads profile start", e, ctx, "开始性能分析失败");
         }
     }
 
-    private String handleProfileStop(ProfileManager manager, CommandExecutor.CmdExecContext ctx) {
+    private void handleProfileStop(ProfileManager manager, CommandExecutor.CmdExecContext ctx) {
         try {
             manager.stopProfiling();
             ctx.println("停止性能分析成功", Colors.LIGHT_GREEN);
-            return null;
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("threads profile stop", e, ctx, "停止性能分析失败");
+            CommandExceptionHandler.handleException("threads profile stop", e, ctx, "停止性能分析失败");
         }
     }
 
-    private String handleProfileShow(ProfileManager manager, CommandExecutor.CmdExecContext ctx) {
+    private void handleProfileShow(ProfileManager manager, CommandExecutor.CmdExecContext ctx) {
         try {
             ctx.println(manager.getProfileReport(), Colors.DEFAULT);
-            return null;
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("threads profile show", e, ctx, "获取分析结果失败");
+            CommandExceptionHandler.handleException("threads profile show", e, ctx, "获取分析结果失败");
         }
     }
 
-    private String handleProfileExport(String[] args, ProfileManager manager, CommandExecutor.CmdExecContext ctx) {
+    private void handleProfileExport(String[] args, ProfileManager manager, CommandExecutor.CmdExecContext ctx) {
         if (args.length < 3) {
             ctx.print("错误: ", Colors.RED);
             ctx.println("参数不足", Colors.YELLOW);
             ctx.println("用法: threads profile export <file>", Colors.GRAY);
-            return null;
+            return;
         }
 
         try {
@@ -475,9 +468,8 @@ public class ThreadsMain extends CommandBase {
             } else {
                 ctx.println("导出分析结果失败", Colors.RED);
             }
-            return null;
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("threads profile export", e, ctx, "导出分析结果失败");
+            CommandExceptionHandler.handleException("threads profile export", e, ctx, "导出分析结果失败");
         }
     }
 }

@@ -9,7 +9,6 @@ import com.justnothing.testmodule.utils.io.IOManager;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 
 public class ServerPortManager {
@@ -52,6 +51,7 @@ public class ServerPortManager {
         return true;
     }
 
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     public boolean isValidPort(int port) {
         return port >= 1024 && port <= 65535;
     }
@@ -91,7 +91,7 @@ public class ServerPortManager {
 
             File parentDir = portFile.getParentFile();
             if (parentDir != null && !parentDir.exists()) {
-                boolean mkdirSuccess = parentDir.mkdirs();
+                boolean mkdirSuccess = IOManager.createDirectory(parentDir);
                 if (!mkdirSuccess) {
                     logger.warn("无法创建端口文件目录: " + parentDir.getAbsolutePath());
                 }
@@ -203,30 +203,4 @@ public class ServerPortManager {
         }
     }
 
-    public static boolean isSocketServerRunning() {
-        try {
-            File portFile = new File(PORT_FILE);
-            if (!portFile.exists()) {
-                return false;
-            }
-
-            String portStr = IOManager.readFile(portFile.getAbsolutePath());
-
-            if (portStr == null) {
-                return false;
-            }
-
-            int port = Integer.parseInt(portStr.trim());
-
-            try (java.net.Socket socket = new java.net.Socket()) {
-                socket.connect(new InetSocketAddress("localhost", port), 1000);
-                return true;
-            } catch (Exception e) {
-                return false;
-            }
-
-        } catch (Exception e) {
-            return false;
-        }
-    }
 }

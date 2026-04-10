@@ -86,9 +86,9 @@ public class ModuleStatusActivity extends AppCompatActivity {
     private void refreshStatus() {
         ThreadPoolManager.submitFastRunnable(() -> {
             try {
-                StreamClient.writeHookData(false);
+                if (!StreamClient.writeHookData(false)) logger.warn("写入Hook数据失败, writeHookData returns false");
             } catch (Exception e) {
-                logger.error("写入Hook数据失败: " + e.getMessage());
+                logger.error("写入Hook数据出现错误: " + e.getMessage());
             }
 
             handler.post(() -> {

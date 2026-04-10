@@ -1,15 +1,22 @@
 package com.justnothing.testmodule.command.functions.performance.sampler;
 
-import java.util.Map;
+public interface SampleData {
 
-public record SampleData(int id, int sampleRate, long startTime, long stopTime, int totalSamples,
-                         Map<String, Integer> methodCounts) {
+    int id();
 
-    public long getDuration() {
-        return stopTime - startTime;
+    int sampleRate();
+
+    long startTime();
+
+    long stopTime();
+
+    int totalSamples();
+
+    default long getDuration() {
+        return stopTime() - startTime();
     }
 
-    public String getDurationString() {
+    default String getDurationString() {
         long duration = getDuration();
         if (duration < 1000) {
             return duration + " ms";

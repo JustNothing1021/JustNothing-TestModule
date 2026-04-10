@@ -171,7 +171,7 @@ public class InteractiveOutputHandler implements ICommandOutputHandler {
                         requestData.getBytes(StandardCharsets.UTF_8));
             }
 
-            ScheduledFuture<?> pingFuture = ThreadPoolManager.scheduleAtFixedRate(
+            ScheduledFuture<?> pingFuture = ThreadPoolManager.scheduleWithFixedDelay(
                     this::runInputPing,
                     INPUT_PING_PONG_INTERVAL, INPUT_PING_PONG_INTERVAL, TimeUnit.MILLISECONDS);
             pingFutureRef.set(pingFuture);
@@ -275,7 +275,7 @@ public class InteractiveOutputHandler implements ICommandOutputHandler {
 
     @NonNull
     private ScheduledFuture<?> getPingFuture() {
-        return Objects.requireNonNull(ThreadPoolManager.scheduleAtFixedRate(
+        return Objects.requireNonNull(ThreadPoolManager.scheduleWithFixedDelay(
                 this::runServerPing,
                 PASSWORD_PING_INTERVAL, PASSWORD_PING_INTERVAL, TimeUnit.MILLISECONDS));
     }

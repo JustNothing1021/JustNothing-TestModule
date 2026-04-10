@@ -3,17 +3,15 @@ package com.justnothing.testmodule.command.functions.alias;
 import androidx.annotation.NonNull;
 
 import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.io.IOManager;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -167,11 +165,14 @@ public class AliasManager {
             return;
         }
         
-        try (BufferedReader reader = new BufferedReader(new FileReader(aliasFile))) {
-            String line;
-            int count = 0;
+        try {
+            String content = IOManager.readFile(aliasFile.getAbsolutePath());
+            if (content == null || content.isEmpty()) {
+                return;
+            }
             
-            while ((line = reader.readLine()) != null) {
+            int count = 0;
+            for (String line : content.split("\n")) {
                 if (line.trim().isEmpty() || line.startsWith("#")) {
                     continue;
                 }
@@ -198,14 +199,17 @@ public class AliasManager {
     private void saveAliasesAsync() {
         new Thread(() -> {
             synchronized (aliases) {
-                try (BufferedWriter writer = new BufferedWriter(new FileWriter(aliasFile))) {
-                    writer.write("# Command Aliases\n");
-                    writer.write("# Format: name=command\n");
-                    writer.write("# Example: pm=performance\n\n");
+                try {
+                    StringBuilder sb = new StringBuilder();
+                    sb.append("# Command Aliases\n");
+                    sb.append("# Format: name=command\n");
+                    sb.append("# Example: pm=performance\n\n");
                     
                     for (Map.Entry<String, String> entry : aliases.entrySet()) {
-                        writer.write(entry.getKey() + "=" + entry.getValue() + "\n");
+                        sb.append(entry.getKey()).append("=").append(entry.getValue()).append("\n");
                     }
+                    
+                    IOManager.writeFile(aliasFile.getAbsolutePath(), sb.toString());
                 } catch (IOException e) {
                     logger.error("保存别名文件失败", e);
                 }
@@ -232,7 +236,7 @@ public class AliasManager {
         
         for (String name : names) {
             String command = aliases.get(name);
-            sb.append(String.format("  %-" + maxNameLen + "s  ->  %s\n", name, command));
+            sb.append(String.format(Locale.getDefault(), "  %-" + maxNameLen + "s  ->  %s\n", name, command));
         }
         
         sb.append("────────────────────────────────────────\n");

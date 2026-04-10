@@ -4,6 +4,7 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_ALIAS_VER;
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.utils.data.DataDirectoryManager;
 
 import java.io.File;
@@ -82,40 +83,49 @@ public class AliasMain extends CommandBase {
     }
     
     @Override
-    public String runMain(CommandExecutor.CmdExecContext context) {
+    public void runMain(CommandExecutor.CmdExecContext context) {
         String[] args = context.args();
         String[] strippedArgs = context.argGroup().getStrippedArgs();
         
         AliasManager manager = getAliasManager();
         if (manager == null) {
-            return "错误: 别名管理器未初始化";
+            context.println("错误: 别名管理器未初始化", Colors.RED);
+            return;
         }
         
         if (args.length == 0) {
-            return manager.formatAliasList();
+            String result = manager.formatAliasList();
+            context.println(result, Colors.WHITE);
+            return;
         }
         
         String subCommand = args[0];
         
-        return switch (subCommand) {
-            case "add" -> handleAdd(strippedArgs, manager);
-            case "remove", "rm", "delete", "del" -> handleRemove(args, manager);
-            case "list", "ls" -> manager.formatAliasList();
-            case "clear" -> handleClear(manager);
-            case "show", "get" -> handleShow(args, manager);
+        switch (subCommand) {
+            case "add" -> handleAdd(strippedArgs, manager, context);
+            case "remove", "rm", "delete", "del" -> handleRemove(args, manager, context);
+            case "list", "ls" -> {
+                String result = manager.formatAliasList();
+                context.println(result, Colors.WHITE);
+            }
+            case "clear" -> handleClear(manager, context);
+            case "show", "get" -> handleShow(args, manager, context);
             default -> {
                 if (args.length == 1) {
-                    yield handleShow(args, manager);
+                    handleShow(args, manager, context);
                 } else {
-                    yield "未知的子命令: " + subCommand + "\n使用 'alias' 查看帮助";
+                    context.println("未知的子命令: " + subCommand, Colors.RED);
+                    context.println("使用 'alias' 查看帮助", Colors.GRAY);
                 }
             }
-        };
+        }
     }
     
-    private String handleAdd(String[] args, AliasManager manager) {
+    private void handleAdd(String[] args, AliasManager manager, CommandExecutor.CmdExecContext context) {
         if (args.length < 3) {
-            return "用法: alias add <名称> <命令>\n示例: alias add pm performance";
+            context.println("用法: alias add <名称> <命令>", Colors.GRAY);
+            context.println("示例: alias add pm performance", Colors.GRAY);
+            return;
         }
         
         String name = args[1];
@@ -129,43 +139,54 @@ public class AliasMain extends CommandBase {
         String command = commandBuilder.toString();
         
         if (manager.addAlias(name, command)) {
-            return "已添加别名: " + name + " -> " + command;
+            context.println("已添加别名", Colors.GREEN);
+            context.print("名称: ", Colors.CYAN);
+            context.println(name, Colors.YELLOW);
+            context.print("命令: ", Colors.CYAN);
+            context.println(command, Colors.GREEN);
         } else {
-            return "添加别名失败: 名称或命令无效";
+            context.println("添加别名失败: 名称或命令无效", Colors.RED);
         }
     }
     
-    private String handleRemove(String[] args, AliasManager manager) {
+    private void handleRemove(String[] args, AliasManager manager, CommandExecutor.CmdExecContext context) {
         if (args.length < 2) {
-            return "用法: alias remove <名称>";
+            context.println("用法: alias remove <名称>", Colors.GRAY);
+            return;
         }
         
         String name = args[1];
         
         if (manager.removeAlias(name)) {
-            return "已删除别名: " + name;
+            context.println("已删除别名", Colors.GREEN);
+            context.print("名称: ", Colors.CYAN);
+            context.println(name, Colors.YELLOW);
         } else {
-            return "删除失败: 别名 '" + name + "' 不存在";
+            context.println("删除失败: 别名 '" + name + "' 不存在", Colors.RED);
         }
     }
     
-    private String handleClear(AliasManager manager) {
+    private void handleClear(AliasManager manager, CommandExecutor.CmdExecContext context) {
         manager.clearAliases();
-        return "已清除所有自定义别名（默认别名已恢复）";
+        context.println("已清除所有自定义别名（默认别名已恢复）", Colors.GREEN);
     }
     
-    private String handleShow(String[] args, AliasManager manager) {
+    private void handleShow(String[] args, AliasManager manager, CommandExecutor.CmdExecContext context) {
         if (args.length < 2) {
-            return manager.formatAliasList();
+            String result = manager.formatAliasList();
+            context.println(result, Colors.WHITE);
+            return;
         }
         
         String name = args[1];
         String command = manager.getAlias(name);
         
         if (command != null) {
-            return name + " -> " + command;
+            context.print(name, Colors.YELLOW);
+            context.print(" -> ", Colors.WHITE);
+            context.println(command, Colors.GREEN);
         } else {
-            return "别名 '" + name + "' 不存在";
+            context.println("别名 '" + name + "' 不存在", Colors.RED);
         }
     }
 }

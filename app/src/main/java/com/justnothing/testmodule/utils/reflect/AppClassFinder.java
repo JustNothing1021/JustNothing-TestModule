@@ -1,7 +1,6 @@
-package com.justnothing.testmodule.utils.script;
+package com.justnothing.testmodule.utils.reflect;
 
 import com.justnothing.javainterpreter.api.IClassFinder;
-import com.justnothing.testmodule.utils.reflect.ClassResolver;
 
 import java.util.List;
 

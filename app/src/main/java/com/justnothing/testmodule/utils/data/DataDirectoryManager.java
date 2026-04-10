@@ -33,9 +33,9 @@ public class DataDirectoryManager {
     public static void deleteFallbackRecordFile() {
         File fallbackRecordFile = new File(FileDirectory.TEMP_FALLBACK_RECORD_FILE_DIR);
         if (fallbackRecordFile.isFile()) {
-            if (!fallbackRecordFile.delete()) {
+            if (!IOManager.deleteFile(fallbackRecordFile.getAbsolutePath())) {
                 if (AsyncChmodExecutor.chmodFile(fallbackRecordFile.getPath(), "777", true)) {
-                    if (!fallbackRecordFile.delete()) {
+                    if (!IOManager.deleteFile(fallbackRecordFile.getAbsolutePath())) {
                         logger.warn("无法删除临时目录记录文件");
                     }
                 }
@@ -104,7 +104,7 @@ public class DataDirectoryManager {
             
             if (!parentDir.exists()) {
                 logger.info("文件目录不存在，尝试创建: " + parentDir.getAbsolutePath());
-                if (!parentDir.mkdirs()) {
+                if (!IOManager.createDirectory(parentDir)) {
                     logger.error("创建文件目录失败: " + parentDir.getAbsolutePath());
                     return false;
                 }

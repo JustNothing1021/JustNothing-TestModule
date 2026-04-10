@@ -1,5 +1,6 @@
 package com.justnothing.testmodule.command.functions.threads;
 
+import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 import com.justnothing.testmodule.utils.functions.Logger;
 
 import android.annotation.SuppressLint;
@@ -10,8 +11,11 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class ProfileTask implements Runnable {
 
@@ -36,31 +40,31 @@ public class ProfileTask implements Runnable {
         logger.info("Profile任务开始运行，持续时间: " + duration + "秒");
 
         try {
-            int sampleCount = 0;
+            AtomicInteger sampleCount = new AtomicInteger(0);
             long startTime = System.currentTimeMillis();
-            
-            while (running.get() && (System.currentTimeMillis() - startTime) < duration * 1000) {
-                try {
-                    ProfileManager.ProfileSample sample = collectSample();
-                    manager.addSample(sample);
-                    
-                    collectProcessStats();
-                    collectThreadStats();
-                    
-                    sampleCount++;
-                    logger.debug("采集样本 " + sampleCount + ": CPU=" + 
-                            String.format("%.2f%%", sample.cpuUsage * 100) + 
-                            ", 内存=" + formatBytes(sample.memoryUsage));
-                    
-                    Thread.sleep(sampleInterval);
-                } catch (InterruptedException e) {
-                    logger.info("Profile任务被中断");
-                    break;
-                } catch (Exception e) {
-                    logger.error("采集样本失败", e);
-                }
-            }
-            
+            ThreadPoolManager.scheduleWithFixedDelayUntil(
+                () -> {
+                    try {
+                        ProfileManager.ProfileSample sample = collectSample();
+                        manager.addSample(sample);
+
+                        collectProcessStats();
+                        collectThreadStats();
+                        sampleCount.getAndIncrement();
+                        logger.debug("采集样本 " + sampleCount.get() + ": CPU=" +
+                                String.format(Locale.getDefault(), "%.2f%%", sample.cpuUsage() * 100) +
+                                ", 内存=" + formatBytes(sample.memoryUsage()));
+
+                    } catch (Exception e) {
+                        logger.error("采集样本失败", e);
+                    }
+                },
+                0,
+                sampleInterval, TimeUnit.MILLISECONDS,
+                () -> !(running.get() && (System.currentTimeMillis() - startTime) < duration * 1000L)
+            );
+
+
             logger.info("Profile任务完成，共采集 " + sampleCount + " 个样本");
         } finally {
             running.set(false);
@@ -68,7 +72,7 @@ public class ProfileTask implements Runnable {
     }
 
     private ProfileManager.ProfileSample collectSample() {
-        String timestamp = new SimpleDateFormat("HH:mm:ss.SSS").format(new Date());
+        String timestamp = new SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault()).format(new Date());
         double cpuUsage = getCpuUsage();
         long memoryUsage = getMemoryUsage();
         int threadCount = getThreadCount();
@@ -226,11 +230,11 @@ public class ProfileTask implements Runnable {
         if (bytes < 1024) {
             return bytes + " B";
         } else if (bytes < 1024 * 1024) {
-            return String.format("%.2f KB", bytes / 1024.0);
+            return String.format(Locale.getDefault(), "%.2f KB", bytes / 1024.0);
         } else if (bytes < 1024 * 1024 * 1024) {
-            return String.format("%.2f MB", bytes / (1024.0 * 1024.0));
+            return String.format(Locale.getDefault(), "%.2f MB", bytes / (1024.0 * 1024.0));
         } else {
-            return String.format("%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0));
+            return String.format(Locale.getDefault(), "%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0));
         }
     }
 

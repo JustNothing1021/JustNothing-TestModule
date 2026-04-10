@@ -3,8 +3,6 @@ package com.justnothing.testmodule.utils.data;
 import com.justnothing.testmodule.constants.AppEnvironment;
 import com.justnothing.testmodule.utils.functions.Logger;
 
-import org.json.JSONObject;
-
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 

@@ -1,10 +1,10 @@
 package com.justnothing.xtchttplib;
 
+import com.justnothing.testmodule.utils.io.IOManager;
+
 import org.json.JSONObject;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 
-
+@SuppressWarnings("unused")
 public class ContextManager {
     private String grey; 
     private Integer ts;
@@ -126,7 +126,7 @@ public class ContextManager {
     
 
     public static ContextManager fromJsonFile(String filePath) throws Exception {
-        String jsonStr = new String(Files.readAllBytes(Paths.get(filePath)));
+        String jsonStr = IOManager.readFile(filePath);
         return fromJson(jsonStr);
     }
 

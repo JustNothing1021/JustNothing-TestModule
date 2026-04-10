@@ -88,14 +88,16 @@ public class ReflectionUtils {
         Method[] methods = clazz.getDeclaredMethods();
         List<Method> candidates = new ArrayList<>();
 
+        boolean matchAll = methodName == null || methodName.equals("*");
+        
         for (Method method : methods) {
-            if (method.getName().equals(methodName)) {
+            if (matchAll || method.getName().equals(methodName)) {
                 candidates.add(method);
                 logger.debug("找到候选方法: " + method + " (参数: " + Arrays.toString(method.getParameterTypes()) + ")");
             }
         }
 
-        if (candidates.isEmpty()) {
+        if (candidates.isEmpty() && !matchAll) {
             Class<?> superClass = clazz.getSuperclass();
             if (superClass != null) {
                 logger.debug("在父类 " + superClass.getName() + " 中继续查找");
@@ -116,7 +118,7 @@ public class ReflectionUtils {
             return candidates.toArray(new Method[0]);
         }
 
-        Class<?>[] expected = SignatureUtils.parseSignature(signature, classLoader);
+        Class<?>[] expected = SignatureUtils.parseParamList(signature, classLoader);
         for (Method method : candidates) {
             if (ClassResolver.isApplicableArgs(method.getParameterTypes(), expected, method.isVarArgs())) {
                 return new Method[] { method };
@@ -160,7 +162,7 @@ public class ReflectionUtils {
             return candidates.toArray(new Constructor<?>[0]);
         }
 
-        Class<?>[] expected = SignatureUtils.parseSignature(signature, classLoader);
+        Class<?>[] expected = SignatureUtils.parseParamList(signature, classLoader);
         for (Constructor<?> constructor : candidates) {
             if (ClassResolver.isApplicableArgs(constructor.getParameterTypes(), expected, constructor.isVarArgs())) {
                 return new Constructor<?>[] { constructor };
@@ -315,57 +317,62 @@ public class ReflectionUtils {
         if (Modifier.isStrict(modifiers)) sb.append("strictfp ");
         if (Modifier.isTransient(modifiers)) sb.append("transient ");
 
-        if (member instanceof Method method) {
+        switch (member) {
+            case Method method -> {
 
-            TypeVariable<?>[] typeparms = method.getTypeParameters();
-            if (typeparms.length > 0) {
-                sb.append(Arrays.stream(typeparms)
-                          .map(typeVar -> typeVarBounds(typeVar))
-                          .collect(Collectors.joining(",", "<", "> ")));
-            }
-
-            sb.append(simple ? method.getReturnType().getSimpleName() : method.getReturnType().getTypeName()).append(' ');
-            sb.append(simple ? method.getDeclaringClass().getSimpleName() : method.getDeclaringClass().getTypeName()).append('.');
-            sb.append(method.getName());
-
-
-            if (simple) {
-                Class<?>[] params = method.getParameterTypes();
-                sb.append(Arrays.stream(params)
-                      .map(Class::getSimpleName)
-                      .collect(Collectors.joining(", ", "(", ")")));
-
-            } else {
-                sb.append('(');
-                StringJoiner sj = new StringJoiner(", ");
-                Type[] params = method.getGenericParameterTypes();
-                for (int j = 0; j < params.length; j++) {
-                    String param = params[j].toString();
-                    if (method.isVarArgs() && (j == params.length - 1)) // replace T[] with T...
-                        param = param.replaceFirst("\\[]$", "...");
-                    sj.add(param);
+                TypeVariable<?>[] typeparms = method.getTypeParameters();
+                if (typeparms.length > 0) {
+                    sb.append(Arrays.stream(typeparms)
+                            .map(ReflectionUtils::typeVarBounds)
+                            .collect(Collectors.joining(",", "<", "> ")));
                 }
-                sb.append(sj);
-                sb.append(')');
-            }
 
-            Type[] exceptionTypes = method.getGenericExceptionTypes();
-            if (exceptionTypes.length > 0) {
-                sb.append(Arrays.stream(exceptionTypes)
-                          .map(Type::toString)
-                          .collect(Collectors.joining(", ", " throws ", "")));
+                sb.append(simple ? method.getReturnType().getSimpleName() : method.getReturnType().getTypeName()).append(' ');
+                sb.append(simple ? method.getDeclaringClass().getSimpleName() : method.getDeclaringClass().getTypeName()).append('.');
+                sb.append(method.getName());
+
+
+                if (simple) {
+                    Class<?>[] params = method.getParameterTypes();
+                    sb.append(Arrays.stream(params)
+                            .map(Class::getSimpleName)
+                            .collect(Collectors.joining(", ", "(", ")")));
+
+                } else {
+                    sb.append('(');
+                    StringJoiner sj = new StringJoiner(", ");
+                    Type[] params = method.getGenericParameterTypes();
+                    for (int j = 0; j < params.length; j++) {
+                        String param = params[j].toString();
+                        if (method.isVarArgs() && (j == params.length - 1)) // replace T[] with T...
+                            param = param.replaceFirst("\\[]$", "...");
+                        sj.add(param);
+                    }
+                    sb.append(sj);
+                    sb.append(')');
+                }
+
+                Type[] exceptionTypes = method.getGenericExceptionTypes();
+                if (exceptionTypes.length > 0) {
+                    sb.append(Arrays.stream(exceptionTypes)
+                            .map(Type::toString)
+                            .collect(Collectors.joining(", ", " throws ", "")));
+                }
             }
-        } else if (member instanceof Field field) {
-            sb.append(simple ? field.getType().getSimpleName() : field.getType().getName()).append(' ');
-            sb.append(simple ? field.getName() : member.getDeclaringClass().getName() + "." + field.getName())
-                    .append(" ");
-        } else if (member instanceof Constructor<?> constructor) {
-            sb.append(simple ? constructor.getDeclaringClass().getSimpleName() :
-                               constructor.getDeclaringClass().getName());
-            sb.append(Arrays.stream(constructor.getParameterTypes())
-                      .map(simple ? Class::getSimpleName : Class::getName)
-                      .collect(Collectors.joining(", ", "(", ")")));
-            
+            case Field field -> {
+                sb.append(simple ? field.getType().getSimpleName() : field.getType().getName()).append(' ');
+                sb.append(simple ? field.getName() : member.getDeclaringClass().getName() + "." + field.getName())
+                        .append(" ");
+            }
+            case Constructor<?> constructor -> {
+                sb.append(simple ? constructor.getDeclaringClass().getSimpleName() :
+                        constructor.getDeclaringClass().getName());
+                sb.append(Arrays.stream(constructor.getParameterTypes())
+                        .map(simple ? Class::getSimpleName : Class::getName)
+                        .collect(Collectors.joining(", ", "(", ")")));
+            }
+            default -> {
+            }
         }
 
         return sb.toString().stripTrailing();

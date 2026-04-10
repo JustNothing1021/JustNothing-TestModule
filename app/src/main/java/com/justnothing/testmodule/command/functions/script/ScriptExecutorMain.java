@@ -5,15 +5,19 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_SCRIPT_VER;
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.javainterpreter.ScriptRunner;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.data.DataBridge;
 import com.justnothing.testmodule.utils.io.IOManager;
 import com.justnothing.javainterpreter.exception.EvaluationException;
 import com.justnothing.javainterpreter.exception.ParseException;
-import com.justnothing.testmodule.utils.script.AppClassFinder;
+import com.justnothing.testmodule.utils.reflect.AppClassFinder;
+
 
 import java.io.File;
+import java.util.Map;
+import java.util.Date;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
@@ -353,70 +357,67 @@ public class ScriptExecutorMain extends CommandBase {
     }
 
     @Override
-    public String runMain(CommandExecutor.CmdExecContext context) {
+    public void runMain(CommandExecutor.CmdExecContext context) {
         String cmdName = context.cmdName();
 
         switch (cmdName) {
-            case "sclear" -> {
-                return clearExecutorVariables(context);
-            }
-            case "svars" -> {
-                return listExecutorVariables(context);
-            }
-            case "srun" -> {
-                return executeScriptCode(context);
-            }
-            case "sinteractive" -> {
-                return runInteractiveMode(context);
-            }
+            case "sclear" -> clearExecutorVariables(context);
+            case "svars" -> listExecutorVariables(context);
+            case "srun" -> executeScriptCode(context);
+            case "sinteractive" -> runInteractiveMode(context);
             case "script" -> {
                 String[] args = context.args();
-                if (args.length == 0) return getHelpText();
+                if (args.length == 0) {
+                    context.println(getHelpText(), Colors.WHITE);
+                    return;
+                }
                 try {
-                    return handleScriptManagerCommand(context);
+                    handleScriptManagerCommand(context);
                 } catch (Exception e) {
-                    return CommandExceptionHandler.handleException("script " + args[0], e, context, "执行script命令失败");
+                    CommandExceptionHandler.handleException("script " + args[0], e, context, "执行script命令失败");
                 }
             }
         }
-        
-        return getHelpText();
     }
 
-    private String executeScriptCode(CommandExecutor.CmdExecContext context) {
+    private void executeScriptCode(CommandExecutor.CmdExecContext context) {
         try {
             logger.info("执行脚本代码: " + context.origCommand());
             ScriptRunner runner = getScriptExecutor(context.classLoader());
             runner.execute(context.origCommand(), context.output(), context.output());
-            return "";
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("script", e, context, "脚本执行失败");
+            CommandExceptionHandler.handleException("script", e, context, "脚本执行失败");
         }
     }
 
-    private String handleScriptManagerCommand(CommandExecutor.CmdExecContext context) throws IOException {
+    private void handleScriptManagerCommand(CommandExecutor.CmdExecContext context) throws IOException {
         String[] args = context.args();
         
         logger.debug("执行script命令，参数: " + Arrays.toString(args));
         
         if (args.length < 1) {
-            return getHelpText();
+            getHelpText();
+            return;
         }
 
         String subCommand = args[0];
 
-        return switch (subCommand) {
-            case "create" -> handleCreate(args);
-            case "list" -> handleList();
-            case "show" -> handleShow(args);
-            case "delete" -> handleDelete(args);
+        switch (subCommand) {
+            case "create" -> handleCreate(args, context);
+            case "list" -> handleList(context);
+            case "show" -> handleShow(args, context);
+            case "delete" -> handleDelete(args, context);
             case "run" -> handleRun(args, context);
             case "run_code" -> handleRunCode(context);
-            case "import" -> handleImport(args);
-            case "export" -> handleExport(args);
+            case "import" -> handleImport(args, context);
+            case "export" -> handleExport(args, context);
             case "manage" -> handleManage(context);
-            default -> "未知子命令: " + subCommand + "\n" + getHelpText();
-        };
+            default -> {
+                context.print("未知子命令: ", Colors.RED);
+                context.println(subCommand, Colors.YELLOW);
+                getHelpText();
+            }
+        }
     }
 
     private ScriptRunner getScriptExecutor(ClassLoader cl) {
@@ -424,49 +425,57 @@ public class ScriptExecutorMain extends CommandBase {
         return scriptRunners.computeIfAbsent(cl, ScriptRunner::new);
     }
 
-    public String clearExecutorVariables(CommandExecutor.CmdExecContext context) {
+    public void clearExecutorVariables(CommandExecutor.CmdExecContext context) {
         getScriptExecutor(context.classLoader()).clearVariables();
-        return "已清空所有执行器的变量\n提示: 只清空了" +
-                (context.targetPackage() == null ? "默认" : context.targetPackage())
-                + "的ClassLoader的执行器的变量，其他ClassLoader的并没有被清空";
+        context.println("已清空所有执行器的变量", Colors.GREEN);
+        context.print("提示: ", Colors.CYAN);
+        context.print("只清空了", Colors.GRAY);
+        context.print((context.targetPackage() == null ? "默认" : context.targetPackage()), Colors.YELLOW);
+        context.println("的ClassLoader的执行器的变量，其他ClassLoader的并没有被清空", Colors.GRAY);
     }
 
-    public String listExecutorVariables(CommandExecutor.CmdExecContext context) {
+    public void listExecutorVariables(CommandExecutor.CmdExecContext context) {
         ClassLoader classLoader = context.classLoader();
         String targetPackage = context.targetPackage();
 
-        StringBuilder sb = new StringBuilder("(当前ClassLoader: " + (targetPackage == null ? "默认加载器" : targetPackage) + ")");
-
-        sb.append("\n\n脚本执行器的变量列表:\n");
-        java.util.Map<String, Object> scriptVars = getScriptExecutor(classLoader).getAllVariablesAsObject();
+        context.print("(当前ClassLoader: ", Colors.GRAY);
+        context.println((targetPackage == null ? "默认加载器" : targetPackage) + ")", Colors.YELLOW);
+        context.println("", Colors.WHITE);
+        context.println("脚本执行器的变量列表:", Colors.CYAN);
+        
+        Map<String, Object> scriptVars = getScriptExecutor(classLoader).getAllVariablesAsObject();
         if (scriptVars.isEmpty()) {
-            sb.append("  (空)\n");
+            context.println("  (空)", Colors.GRAY);
         } else {
-            for (java.util.Map.Entry<String, Object> entry : scriptVars.entrySet()) {
+            for (Map.Entry<String, Object> entry : scriptVars.entrySet()) {
                 Object value = entry.getValue();
-                sb.append("  ").append(entry.getKey())
-                        .append(" = ").append(value)
-                        .append(" (").append(value != null ? value.getClass().getSimpleName() : "null")
-                        .append(")\n");
+                context.print("  " + entry.getKey() + " = ", Colors.CYAN);
+                context.print(String.valueOf(value), Colors.GREEN);
+                context.println(" (" + (value != null ? value.getClass().getSimpleName() : "null") + ")", Colors.GRAY);
             }
         }
 
-        return sb.toString();
     }
 
-    private String handleCreate(String[] args) throws IOException {
+    private void handleCreate(String[] args, CommandExecutor.CmdExecContext context) throws IOException {
         if (args.length < 2) {
-            return "错误: 需要指定脚本名称\n用法: script create <name>";
+            context.println("错误: 需要指定脚本名称", Colors.RED);
+            context.println("用法: script create <name>", Colors.GRAY);
+            return;
         }
 
         String scriptName = args[1];
         if (!isValidScriptName(scriptName)) {
-            return "错误: 脚本名称只能包含字母、数字和下划线";
+            context.println("错误: 脚本名称只能包含字母、数字和下划线", Colors.RED);
+            return;
         }
 
         File scriptFile = getScriptFile(scriptName);
         if (scriptFile.exists()) {
-            return "错误: 脚本 '" + scriptName + "' 已存在";
+            context.print("错误: 脚本 '", Colors.RED);
+            context.print(scriptName, Colors.YELLOW);
+            context.println("' 已存在", Colors.RED);
+            return;
         }
 
         IOManager.createDirectory(Objects.requireNonNull(scriptFile.getParentFile()).getAbsolutePath());
@@ -478,44 +487,56 @@ public class ScriptExecutorMain extends CommandBase {
         
         IOManager.writeFile(scriptFile.getAbsolutePath(), content);
 
-        return "脚本 '" + scriptName + "' 创建成功\n" +
-                "路径: " + scriptFile.getAbsolutePath();
+        context.print("脚本 '", Colors.GREEN);
+        context.print(scriptName, Colors.YELLOW);
+        context.println("' 创建成功", Colors.GREEN);
+        context.print("路径: ", Colors.CYAN);
+        context.println(scriptFile.getAbsolutePath(), Colors.GREEN);
     }
 
-    private String handleList() {
+    private void handleList(CommandExecutor.CmdExecContext context) {
         File scriptsDir = DataBridge.getScriptsDirectory();
         
         if (!scriptsDir.exists()) {
-            scriptsDir.mkdirs();
+            IOManager.createDirectory(scriptsDir);
         }
 
         File[] scriptFiles = scriptsDir.listFiles();
 
         if (scriptFiles == null || scriptFiles.length == 0) {
-            return "没有找到脚本";
+            context.println("没有找到脚本", Colors.GRAY);
+            return;
         }
 
-        StringBuilder result = new StringBuilder();
-        result.append("===== 脚本列表 =====\n\n");
+        context.println("===== 脚本列表 =====", Colors.CYAN);
+        context.println("", Colors.WHITE);
 
         for (File scriptFile : scriptFiles) {
             String name = scriptFile.getName();
             long size = scriptFile.length();
             long lastModified = scriptFile.lastModified();
             
-            result.append("名称: ").append(name).append("\n");
-            result.append("  大小: ").append(formatSize(size)).append("\n");
-            result.append("  修改时间: ").append(formatTime(lastModified)).append("\n");
-            result.append("  路径: ").append(scriptFile.getAbsolutePath()).append("\n\n");
+            context.print("名称: ", Colors.CYAN);
+            context.println(name, Colors.YELLOW);
+            context.print("  大小: ", Colors.CYAN);
+            context.println(formatSize(size), Colors.GREEN);
+            context.print("  修改时间: ", Colors.CYAN);
+            context.println(formatTime(lastModified), Colors.GREEN);
+            context.print("  路径: ", Colors.CYAN);
+            context.println(scriptFile.getAbsolutePath(), Colors.GRAY);
+            context.println("", Colors.WHITE);
         }
 
-        result.append("总计: ").append(scriptFiles.length).append(" 个脚本");
-        return result.toString();
+        context.print("总计: ", Colors.CYAN);
+        context.print(String.valueOf(scriptFiles.length), Colors.YELLOW);
+        context.println(" 个脚本", Colors.CYAN);
     }
 
-    private String handleShow(String[] args) throws IOException {
+    private void handleShow(String[] args, CommandExecutor.CmdExecContext context) throws IOException {
         if (args.length < 2) {
-            return "错误: 需要指定文件名称\n用法: script show <name>";
+            context.println("错误: 需要指定文件名称", Colors.RED);
+            context.println("用法: script show <name>", Colors.GRAY);
+            return;
         }
 
         String fileName = args[1];
@@ -523,16 +544,25 @@ public class ScriptExecutorMain extends CommandBase {
         File targetFile = new File(scriptsDir, fileName);
 
         if (!targetFile.exists()) {
-            return "错误: 文件 '" + fileName + "' 不存在";
+            context.print("错误: 文件 '", Colors.RED);
+            context.print(fileName, Colors.YELLOW);
+            context.println("' 不存在", Colors.RED);
+            return;
         }
 
         String content = IOManager.readFile(targetFile.getAbsolutePath());
-        return "===== 文件内容: " + fileName + " =====\n\n" + content;
+        context.print("===== 文件内容: ", Colors.CYAN);
+        context.print(fileName, Colors.YELLOW);
+        context.println(" =====", Colors.CYAN);
+        context.println("", Colors.WHITE);
+        context.println(content, Colors.WHITE);
     }
 
-    private String handleDelete(String[] args) {
+    private void handleDelete(String[] args, CommandExecutor.CmdExecContext context) {
         if (args.length < 2) {
-            return "错误: 需要指定文件名称\n用法: script delete <name>";
+            context.println("错误: 需要指定文件名称", Colors.RED);
+            context.println("用法: script delete <name>", Colors.GRAY);
+            return;
         }
 
         String fileName = args[1];
@@ -540,19 +570,28 @@ public class ScriptExecutorMain extends CommandBase {
         File targetFile = new File(scriptsDir, fileName);
 
         if (!targetFile.exists()) {
-            return "错误: 文件 '" + fileName + "' 不存在";
+            context.print("错误: 文件 '", Colors.RED);
+            context.print(fileName, Colors.YELLOW);
+            context.println("' 不存在", Colors.RED);
+            return;
         }
 
-        if (targetFile.delete()) {
-            return "文件 '" + fileName + "' 已删除";
+        if (IOManager.deleteFile(targetFile.getAbsolutePath())) {
+            context.print("文件 '", Colors.GREEN);
+            context.print(fileName, Colors.YELLOW);
+            context.println("' 已删除", Colors.GREEN);
         } else {
-            return "错误: 无法删除文件 '" + fileName + "'";
+            context.print("错误: 无法删除文件 '", Colors.RED);
+            context.print(fileName, Colors.YELLOW);
+            context.println("'", Colors.RED);
         }
     }
 
-    private String handleRun(String[] args, CommandExecutor.CmdExecContext context) throws IOException {
+    private void handleRun(String[] args, CommandExecutor.CmdExecContext context) throws IOException {
         if (args.length < 2) {
-            return "错误: 需要指定文件名称\n用法: script run <name>";
+            context.println("错误: 需要指定文件名称", Colors.RED);
+            context.println("用法: script run <name>", Colors.GRAY);
+            return;
         }
 
         String fileName = args[1];
@@ -560,54 +599,62 @@ public class ScriptExecutorMain extends CommandBase {
         File targetFile = new File(scriptsDir, fileName);
 
         if (!targetFile.exists()) {
-            return "错误: 文件 '" + fileName + "' 不存在";
+            context.print("错误: 文件 '", Colors.RED);
+            context.print(fileName, Colors.YELLOW);
+            context.println("' 不存在", Colors.RED);
+            return;
         }
 
         String content = IOManager.readFile(targetFile.getAbsolutePath());
         
-        StringBuilder result = new StringBuilder();
-        result.append("===== 执行脚本: ").append(fileName).append(" =====\n\n");
+        context.print("===== 执行脚本: ", Colors.CYAN);
+        context.print(fileName, Colors.YELLOW);
+        context.println(" =====", Colors.CYAN);
+        context.println("", Colors.WHITE);
         
         try {
             ScriptRunner runner = new ScriptRunner(context.classLoader());
             runner.setClassFinder(new AppClassFinder());
             runner.execute(content, context.output(), context.output());
-            result.append("脚本执行成功");
+            context.println("脚本执行成功", Colors.GREEN);
         } catch (Exception e) {
-            result.append(CommandExceptionHandler.handleException("script run", e, context, "脚本执行失败"));
+            CommandExceptionHandler.handleException("script run", e, context, "脚本执行失败");
         }
-        
-        return result.toString();
+
     }
 
-    private String handleRunCode(CommandExecutor.CmdExecContext context) {
+    private void handleRunCode(CommandExecutor.CmdExecContext context) {
         String origCommand = context.origCommand();
         
         if (origCommand == null || origCommand.isEmpty()) {
-            return "错误: 没有提供代码\n用法: script run_code <code>";
+            context.println("错误: 没有提供代码", Colors.RED);
+            context.println("用法: script run_code <code>", Colors.GRAY);
+            return;
         }
         
         String code = extractCodeFromCommand(origCommand, "run_code");
         
         if (code == null || code.isEmpty()) {
-            return "错误: 没有提供代码\n用法: script run_code <code>";
+            context.println("错误: 没有提供代码", Colors.RED);
+            context.println("用法: script run_code <code>", Colors.GRAY);
+            return;
         }
         
-        StringBuilder result = new StringBuilder();
-        result.append("===== 执行代码 =====\n\n");
+        context.println("===== 执行代码 =====", Colors.CYAN);
+        context.println("", Colors.WHITE);
         
         try {
             ScriptRunner runner = new ScriptRunner(context.classLoader());
             runner.setClassFinder(new AppClassFinder());
             runner.execute(code, context.output(), context.output());
-            result.append("代码执行成功");
+            context.println("代码执行成功", Colors.GREEN);
         } catch (Exception e) {
-            result.append(CommandExceptionHandler.handleException("script run_code", e, context, "代码执行失败"));
+            CommandExceptionHandler.handleException("script run_code", e, context, "代码执行失败");
         }
-        
-        return result.toString();
+
     }
 
+    @SuppressWarnings("SameParameterValue")
     private String extractCodeFromCommand(String command, String keyword) {
         int keywordIndex = command.indexOf(keyword);
         if (keywordIndex == -1) {
@@ -627,41 +674,56 @@ public class ScriptExecutorMain extends CommandBase {
         return command.substring(startIndex);
     }
 
-    private String handleImport(String[] args) throws IOException {
+    private void handleImport(String[] args, CommandExecutor.CmdExecContext context) throws IOException {
         if (args.length < 2) {
-            return "错误: 需要指定文件路径\n用法: script import <file>";
+            context.println("错误: 需要指定文件路径", Colors.RED);
+            context.println("用法: script import <file>", Colors.GRAY);
+            return;
         }
 
         String filePath = args[1];
         File sourceFile = new File(filePath);
 
         if (!sourceFile.exists()) {
-            return "错误: 文件 '" + filePath + "' 不存在";
+            context.print("错误: 文件 '", Colors.RED);
+            context.print(filePath, Colors.YELLOW);
+            context.println("' 不存在", Colors.RED);
+            return;
         }
 
         String content = IOManager.readFile(sourceFile.getAbsolutePath());
         String fileName = sourceFile.getName();
         File scriptsDir = DataBridge.getScriptsDirectory();
-        scriptsDir.mkdirs();
+        IOManager.createDirectory(scriptsDir);
         File destFile = new File(scriptsDir, fileName);
 
         if (destFile.exists()) {
-            return "错误: 文件 '" + fileName + "' 已存在\n" +
-                    "提示: 使用 'script delete " + fileName + "' 删除旧文件";
+            context.print("错误: 文件 '", Colors.RED);
+            context.print(fileName, Colors.YELLOW);
+            context.println("' 已存在", Colors.RED);
+            context.print("提示: 使用 '", Colors.GRAY);
+            context.print("script delete " + fileName, Colors.CYAN);
+            context.println("' 删除旧文件", Colors.GRAY);
+            return;
         }
 
         IOManager.createDirectory(Objects.requireNonNull(destFile.getParentFile()).getAbsolutePath());
         IOManager.writeFile(destFile.getAbsolutePath(), content);
 
-        return "文件导入成功\n" +
-                "源文件: " + sourceFile.getAbsolutePath() + "\n" +
-                "文件名称: " + fileName + "\n" +
-                "目标路径: " + destFile.getAbsolutePath();
+        context.println("文件导入成功", Colors.GREEN);
+        context.print("源文件: ", Colors.CYAN);
+        context.println(sourceFile.getAbsolutePath(), Colors.GREEN);
+        context.print("文件名称: ", Colors.CYAN);
+        context.println(fileName, Colors.YELLOW);
+        context.print("目标路径: ", Colors.CYAN);
+        context.println(destFile.getAbsolutePath(), Colors.GREEN);
     }
 
-    private String handleExport(String[] args) throws IOException {
+    private void handleExport(String[] args, CommandExecutor.CmdExecContext context) throws IOException {
         if (args.length < 3) {
-            return "错误: 需要指定文件名称和导出路径\n用法: script export <name> <file>";
+            context.println("错误: 需要指定文件名称和导出路径", Colors.RED);
+            context.println("用法: script export <name> <file>", Colors.GRAY);
+            return;
         }
 
         String fileName = args[1];
@@ -683,7 +745,10 @@ public class ScriptExecutorMain extends CommandBase {
         }
         
         if (sourceFile == null) {
-            return "错误: 文件 '" + fileName + "' 不存在（已检查脚本和codebase目录）";
+            context.print("错误: 文件 '", Colors.RED);
+            context.print(fileName, Colors.YELLOW);
+            context.println("' 不存在（已检查脚本和codebase目录）", Colors.RED);
+            return;
         }
 
         File exportFile = new File(exportPath);
@@ -691,14 +756,18 @@ public class ScriptExecutorMain extends CommandBase {
 
         IOManager.writeFile(exportFile.getAbsolutePath(), content);
 
-        return fileType + "导出成功\n" +
-                "文件: " + fileName + "\n" +
-                "导出路径: " + exportFile.getAbsolutePath();
+        context.print(fileType, Colors.GREEN);
+        context.println("导出成功", Colors.GREEN);
+        context.print("文件: ", Colors.CYAN);
+        context.println(fileName, Colors.YELLOW);
+        context.print("导出路径: ", Colors.CYAN);
+        context.println(exportFile.getAbsolutePath(), Colors.GREEN);
     }
 
-    private String handleManage(CommandExecutor.CmdExecContext context) {
-        context.output().println("===== 交互式脚本管理器 =====");
-        context.output().println("输入 'help' 查看可用命令, 'exit' 或 'quit' 退出\n");
+    private void handleManage(CommandExecutor.CmdExecContext context) {
+        context.println("===== 交互式脚本管理器 =====", Colors.CYAN);
+        context.println("输入 'help' 查看可用命令, 'exit' 或 'quit' 退出", Colors.GRAY);
+        context.println("", Colors.WHITE);
 
         label:
         while (true) {
@@ -716,7 +785,7 @@ public class ScriptExecutorMain extends CommandBase {
                 case "exit":
                 case "quit":
                 case "0":
-                    context.output().println("退出脚本管理器");
+                    context.println("退出脚本管理器", Colors.GREEN);
                     break label;
                 case "help":
                 case "?":
@@ -724,101 +793,128 @@ public class ScriptExecutorMain extends CommandBase {
                     continue;
             }
 
-            String result = handleManageCommand(input, context);
-            if (result != null) {
-                context.output().println(result);
-            }
+            handleManageCommand(input, context);
         }
 
-        return "脚本管理器已退出";
+        context.println("脚本管理器已退出", Colors.GREEN);
     }
     
     private void showManageHelp(CommandExecutor.CmdExecContext context) {
-        context.output().println("");
-        context.output().println("可用命令:");
-        context.output().println("  create <name>        - 创建新脚本");
-        context.output().println("  list                 - 列出所有脚本和codebase文件");
-        context.output().println("  show <name>          - 显示文件内容");
-        context.output().println("  edit <name>          - 编辑脚本内容");
-        context.output().println("  delete <name>        - 删除文件");
-        context.output().println("  run <name>           - 执行脚本或codebase文件");
-        context.output().println("  import <path>        - 导入文件");
-        context.output().println("  export <name> <path> - 导出文件");
-        context.output().println("  codebase             - 列出codebase文件");
-        context.output().println("  help                 - 显示此帮助");
-        context.output().println("  exit / quit          - 退出管理器");
-        context.output().println("");
+        context.println("", Colors.WHITE);
+        context.println("可用命令:", Colors.CYAN);
+        context.print("  create <name>        ", Colors.YELLOW);
+        context.println("- 创建新脚本", Colors.GRAY);
+        context.print("  list                 ", Colors.YELLOW);
+        context.println("- 列出所有脚本和codebase文件", Colors.GRAY);
+        context.print("  show <name>          ", Colors.YELLOW);
+        context.println("- 显示文件内容", Colors.GRAY);
+        context.print("  edit <name>          ", Colors.YELLOW);
+        context.println("- 编辑脚本内容", Colors.GRAY);
+        context.print("  delete <name>        ", Colors.YELLOW);
+        context.println("- 删除文件", Colors.GRAY);
+        context.print("  run <name>           ", Colors.YELLOW);
+        context.println("- 执行脚本或codebase文件", Colors.GRAY);
+        context.print("  import <path>        ", Colors.YELLOW);
+        context.println("- 导入文件", Colors.GRAY);
+        context.print("  export <name> <path> ", Colors.YELLOW);
+        context.println("- 导出文件", Colors.GRAY);
+        context.print("  codebase             ", Colors.YELLOW);
+        context.println("- 列出codebase文件", Colors.GRAY);
+        context.print("  help                 ", Colors.YELLOW);
+        context.println("- 显示此帮助", Colors.GRAY);
+        context.print("  exit / quit          ", Colors.YELLOW);
+        context.println("- 退出管理器", Colors.GRAY);
+        context.println("", Colors.WHITE);
     }
     
-    private String handleManageCommand(String input, CommandExecutor.CmdExecContext context) {
+    private void handleManageCommand(String input, CommandExecutor.CmdExecContext context) {
         String[] parts = input.split("\\s+", 3);
         String cmd = parts[0].toLowerCase();
         
         try {
-            return switch (cmd) {
+            switch (cmd) {
                 case "1", "create" -> {
                     if (parts.length < 2) {
-                        yield "用法: create <name>";
+                        context.println("用法: create <name>", Colors.GRAY);
+                        break;
                     }
-                    yield handleCreate(new String[]{"create", parts[1]});
+                    handleCreate(new String[]{"create", parts[1]}, context);
                 }
-                case "2", "list" -> handleList();
+                case "2", "list" -> handleList(context);
                 case "3", "show" -> {
                     if (parts.length < 2) {
-                        yield "用法: show <name>";
+                        context.println("用法: show <name>", Colors.GRAY);
+                        break;
                     }
-                    yield handleShow(new String[]{"show", parts[1]});
+                    handleShow(new String[]{"show", parts[1]}, context);
                 }
                 case "edit" -> {
                     if (parts.length < 2) {
-                        yield "用法: edit <name>";
+                        context.println("用法: edit <name>", Colors.GRAY);
+                        break;
                     }
-                    yield handleEdit(parts[1], context);
+                    handleEdit(parts[1], context);
                 }
                 case "4", "delete" -> {
                     if (parts.length < 2) {
-                        yield "用法: delete <name>";
+                        context.println("用法: delete <name>", Colors.GRAY);
+                        break;
                     }
-                    yield handleDelete(new String[]{"delete", parts[1]});
+                    handleDelete(new String[]{"delete", parts[1]}, context);
                 }
                 case "5", "run" -> {
                     if (parts.length < 2) {
-                        yield "用法: run <name>";
+                        context.println("用法: run <name>", Colors.GRAY);
+                        break;
                     }
-                    yield handleRun(new String[]{"run", parts[1]}, context);
+                    handleRun(new String[]{"run", parts[1]}, context);
                 }
                 case "6", "import" -> {
                     if (parts.length < 2) {
-                        yield "用法: import <path>";
+                        context.println("用法: import <path>", Colors.GRAY);
+                        break;
                     }
-                    yield handleImport(new String[]{"import", parts[1]});
+                    handleImport(new String[]{"import", parts[1]}, context);
                 }
                 case "7", "export" -> {
                     if (parts.length < 3) {
-                        yield "用法: export <name> <path>";
+                        context.println("用法: export <name> <path>", Colors.GRAY);
+                        break;
                     }
-                    yield handleExport(new String[]{"export", parts[1], parts[2]});
+                    handleExport(new String[]{"export", parts[1], parts[2]}, context);
                 }
-                case "codebase" -> handleCodebaseList();
-                default -> "未知命令: " + cmd + " (输入 'help' 查看帮助)";
-            };
+                case "codebase" -> handleCodebaseList(context);
+                default -> {
+                    context.print("未知命令: ", Colors.RED);
+                    context.println(cmd, Colors.YELLOW);
+                    context.println("输入 'help' 查看帮助", Colors.GRAY);
+                }
+            }
         } catch (Exception e) {
-            return "错误: " + e.getMessage();
+            context.print("错误: ", Colors.RED);
+            context.println(Objects.requireNonNullElse(e.getMessage(), "没有详细信息"), Colors.ORANGE);
         }
     }
     
-    private String handleEdit(String name, CommandExecutor.CmdExecContext context) throws IOException {
+    private void handleEdit(String name, CommandExecutor.CmdExecContext context) throws IOException {
         File scriptFile = getScriptFile(name);
         
         if (!scriptFile.exists()) {
-            return "错误: 脚本 '" + name + "' 不存在";
+            context.print("错误: 脚本 '", Colors.RED);
+            context.print(name, Colors.YELLOW);
+            context.println("' 不存在", Colors.RED);
+            return;
         }
         
         String existingContent = IOManager.readFile(scriptFile.getAbsolutePath());
-        context.output().println("编辑脚本: " + name);
-        context.output().println("当前内容 (输入空行结束编辑):\n");
-        context.output().println(existingContent);
-        context.output().println("\n--- 开始编辑 (输入空行保存并退出) ---\n");
+        context.print("编辑脚本: ", Colors.CYAN);
+        context.println(name, Colors.YELLOW);
+        context.println("当前内容 (输入空行结束编辑):", Colors.GRAY);
+        context.println("", Colors.WHITE);
+        context.println(existingContent, Colors.WHITE);
+        context.println("", Colors.WHITE);
+        context.println("--- 开始编辑 (输入空行保存并退出) ---", Colors.CYAN);
+        context.println("", Colors.WHITE);
         
         StringBuilder newContent = new StringBuilder();
         
@@ -832,37 +928,43 @@ public class ScriptExecutorMain extends CommandBase {
         
         if (newContent.length() > 0) {
             IOManager.writeFile(scriptFile.getAbsolutePath(), newContent.toString());
-            return "脚本已保存";
+            context.println("脚本已保存", Colors.GREEN);
         } else {
-            return "编辑已取消 (未做更改)";
+            context.println("编辑已取消 (未做更改)", Colors.GRAY);
         }
     }
     
-    private String handleCodebaseList() {
+    private void handleCodebaseList(CommandExecutor.CmdExecContext context) {
         File codebaseDir = DataBridge.getCodebaseDirectory();
         
         if (!codebaseDir.exists()) {
-            return "Codebase目录不存在";
+            context.println("Codebase目录不存在", Colors.GRAY);
+            return;
         }
         
         File[] files = codebaseDir.listFiles();
         if (files == null || files.length == 0) {
-            return "Codebase目录为空";
+            context.println("Codebase目录为空", Colors.GRAY);
+            return;
         }
         
-        StringBuilder result = new StringBuilder();
-        result.append("===== Codebase文件列表 =====\n\n");
+        context.println("===== Codebase文件列表 =====", Colors.CYAN);
+        context.println("", Colors.WHITE);
         
         for (File file : files) {
-            result.append("  ").append(file.getName());
+            context.print("  ", Colors.GRAY);
+            context.print(file.getName(), Colors.GREEN);
             if (file.isDirectory()) {
-                result.append("/");
+                context.println("/", Colors.CYAN);
+            } else {
+                context.println("", Colors.WHITE);
             }
-            result.append("\n");
         }
         
-        result.append("\n总计: ").append(files.length).append(" 个文件");
-        return result.toString();
+        context.println("", Colors.WHITE);
+        context.print("总计: ", Colors.CYAN);
+        context.print(String.valueOf(files.length), Colors.YELLOW);
+        context.println(" 个文件", Colors.CYAN);
     }
 
     private File getScriptFile(String scriptName) {
@@ -887,25 +989,20 @@ public class ScriptExecutorMain extends CommandBase {
     }
 
     private String formatTime(long timestamp) {
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        return sdf.format(new java.util.Date(timestamp));
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+        return sdf.format(new Date(timestamp));
     }
 
-    private static final String ANSI_RESET = "\u001B[0m";
-    private static final String ANSI_RED = "\u001B[31m";
-    private static final String ANSI_ORANGE = "\u001B[33m";
-    private static final String ANSI_GRAY = "\u001B[90m";
-
-    private String runInteractiveMode(CommandExecutor.CmdExecContext context) {
+    private void runInteractiveMode(CommandExecutor.CmdExecContext context) {
         ClassLoader classLoader = context.classLoader();
         ScriptRunner runner = getScriptExecutor(classLoader);
         
         logger.info("进入交互式脚本执行模式");
-        context.output().println("====== 脚本交互执行模式 =====");
-        context.output().println("输入 'exit' 或 'quit' 退出 (你不会闲到拿这俩做变量名, 对吧)");
-        context.output().println("输入 ':multi' 进入多行模式, ':eval' 执行, ':clear' 清空");
-        context.output().println("输入 'setPrintAST(true)' 开启 AST 打印");
-        context.output().println("");
+        context.println("====== 脚本交互执行模式 =====", Colors.CYAN);
+        context.println("输入 'exit' 或 'quit' 退出 (你不会闲到拿这俩做变量名, 对吧)", Colors.GRAY);
+        context.println("输入 ':multi' 进入多行模式, ':eval' 执行, ':clear' 清空", Colors.GRAY);
+        context.println("输入 'setPrintAST(true)' 开启 AST 打印", Colors.GRAY);
+        context.println("", Colors.WHITE);
 
         StringBuilder multiLineBuffer = new StringBuilder();
         boolean multiLineMode = false;
@@ -917,7 +1014,7 @@ public class ScriptExecutorMain extends CommandBase {
             String code = context.readLine(prompt);
             
             if (code == null) {
-                context.output().println("");
+                context.println("", Colors.WHITE);
                 break;
             }
             
@@ -926,7 +1023,7 @@ public class ScriptExecutorMain extends CommandBase {
             switch (code) {
                 case "exit":
                 case "quit":
-                    context.output().println("Say goodbye~~~");
+                    context.println("Say goodbye~~~", Colors.GREEN);
                     break label;
                 case "":
                     if (autoMultiLine) {
@@ -936,7 +1033,7 @@ public class ScriptExecutorMain extends CommandBase {
                 case ":multi":
                     multiLineMode = true;
                     autoMultiLine = false;
-                    context.output().println("进入多行模式, 输入 ':eval' 执行, ':clear' 清空, ':exit' 退出多行模式");
+                    context.println("进入多行模式, 输入 ':eval' 执行, ':clear' 清空, ':exit' 退出多行模式", Colors.CYAN);
                     continue;
             }
 
@@ -944,13 +1041,13 @@ public class ScriptExecutorMain extends CommandBase {
                 multiLineMode = false;
                 autoMultiLine = false;
                 multiLineBuffer.setLength(0);
-                context.output().println("退出多行模式");
+                context.println("退出多行模式", Colors.CYAN);
                 continue;
             }
             
             if (code.equals(":clear") && (multiLineMode || autoMultiLine)) {
                 multiLineBuffer.setLength(0);
-                context.output().println("已清空");
+                context.println("已清空", Colors.GREEN);
                 continue;
             }
             
@@ -961,7 +1058,7 @@ public class ScriptExecutorMain extends CommandBase {
                 autoMultiLine = false;
                 
                 if (fullCode.isEmpty()) {
-                    context.output().println("没有代码可执行");
+                    context.println("没有代码可执行", Colors.GRAY);
                     continue;
                 }
                 
@@ -990,38 +1087,39 @@ public class ScriptExecutorMain extends CommandBase {
             
             executeCode(runner, code, context);
         }
-        return "交互式模式已退出";
+        context.println("交互式模式已退出", Colors.GREEN);
     }
     
     private void executeCode(ScriptRunner runner, String code, CommandExecutor.CmdExecContext context) {
         try {
             Object result = runner.executeWithResult(code, context.output(), context.output());
             if (result != null) {
-                context.output().println(ANSI_GRAY + result.toString() + ANSI_RESET);
+                context.println(String.valueOf(result), Colors.GRAY);
             }
         } catch (Exception e) {
             Throwable cause = e.getCause();
             String message = e.getMessage();
             boolean isParseError = message != null && message.startsWith("Parse error:");
             
-            context.output().print(isParseError ? ANSI_ORANGE : ANSI_RED);
+            byte errorColor = isParseError ? Colors.ORANGE : Colors.RED;
             
             if (cause instanceof EvaluationException evalEx) {
                 Throwable innerCause = evalEx.getCause();
-                context.output().println("错误: " + evalEx.getMessage());
+                context.print("错误: ", errorColor);
+                context.println(evalEx.getMessage(), errorColor);
                 if (innerCause != null) {
                     context.output().printStackTrace(innerCause);
                 }
             } else if (cause instanceof ParseException parseEx) {
-                context.output().println("语法错误: " + parseEx.getMessage());
+                context.print("语法错误: ", errorColor);
+                context.println(parseEx.getMessage(), errorColor);
             } else if (cause != null) {
-                context.output().println((isParseError ? "语法错误: " : "错误: ") + cause.getMessage());
+                context.print((isParseError ? "语法错误: " : "错误: ") + cause.getMessage(), errorColor);
                 context.output().printStackTrace(cause);
             } else {
-                context.output().println((isParseError ? "语法错误: " : "错误: ") + message);
+                context.print((isParseError ? "语法错误: " : "错误: ") + message, errorColor);
                 context.output().printStackTrace(e);
             }
-            context.output().print(ANSI_RESET);
         }
     }
     

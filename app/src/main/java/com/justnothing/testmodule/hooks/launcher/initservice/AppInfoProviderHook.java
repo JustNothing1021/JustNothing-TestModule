@@ -27,7 +27,7 @@ public class AppInfoProviderHook extends PackageHook {
             Uri.class, String[].class, String.class, String[].class, String.class,
             new XC_MethodHook() {
                 @Override
-                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                protected void beforeHookedMethod(MethodHookParam param) {
                     try {
                         String callingPackage = (String) XposedHelpers.callMethod(param.thisObject,
                                 "getCallingPackage");
@@ -50,7 +50,7 @@ public class AppInfoProviderHook extends PackageHook {
                 }
 
                 @Override
-                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                protected void afterHookedMethod(MethodHookParam param) {
                     try {
                         if (param.getResult() == null) {
                             warn("查询依旧返回null");

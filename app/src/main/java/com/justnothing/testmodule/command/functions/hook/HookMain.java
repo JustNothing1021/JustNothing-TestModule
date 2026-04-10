@@ -51,13 +51,18 @@ public class HookMain extends CommandBase {
                     clear                       - 清除所有Hook
                 
                 选项:
-                    sig              - 指定方法签名，如 "String,int" 表示(String, int)参数的方法
+                    sig              - 指定方法签名
                     before code      - 在方法调用前执行的代码
                     before codebase  - 包含before代码的文件, 可以是文件路径或script脚本名称
                     after code       - 在方法调用后执行的代码
                     after codebase   - 包含after代码的文件, 可以是文件路径或script脚本名称
                     replace code     - 替换方法执行的代码, 会覆盖原方法
                     replace codebase - 包含replace代码的文件, 可以是文件路径或script脚本名称
+
+                关于sig (signature)参数:
+                    可以是用逗号分割的类名列表，如 "String,int" 表示(String, int)参数的方法
+                    也可以是JVM内部格式的签名，如 "(Ljava/lang/String;I;)V" 也是一样
+                    （不过因为理论上不会有同参数列表不同返回类型的情况，所以返回类型的解析不会有实际作用）
                 
                 示例:
                     hook add com.example.MainActivity onCreate before code 'println("onCreate called");'
@@ -97,17 +102,18 @@ public class HookMain extends CommandBase {
     }
 
     @Override
-    public String runMain(CommandExecutor.CmdExecContext context) {
+    public void runMain(CommandExecutor.CmdExecContext context) {
         String[] args = context.args();
         
         if (args.length < 1) {
-            return getHelpText();
+            context.println(getHelpText(), Colors.WHITE);
+            return;
         }
 
         String subCommand = args[0];
 
         try {
-            return switch (subCommand) {
+            switch (subCommand) {
                 case "add" -> handleAdd(args, context);
                 case "remove" -> handleRemove(args, context);
                 case "list" -> handleList(context);
@@ -119,19 +125,18 @@ public class HookMain extends CommandBase {
                 default -> {
                     context.print("未知子命令: ", Colors.RED);
                     context.println(subCommand, Colors.YELLOW);
-                    yield null;
                 }
-            };
+            }
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("hook " + subCommand, e, context, "执行hook命令失败");
+            CommandExceptionHandler.handleException("hook " + subCommand, e, context, "执行hook命令失败");
         }
     }
 
-    private String handleAdd(String[] args, CommandExecutor.CmdExecContext context) {
+    private void handleAdd(String[] args, CommandExecutor.CmdExecContext context) {
         if (args.length < 3) {
             context.println("错误: 需要指定类名和方法名", Colors.RED);
             context.println("用法: hook add <class_name> <method_name> [sig|signature <signature>] [before (code <code> | codebase <file>) | after (code <code> | codebase <file>)] [replace (code <code> | codebase <file>)]", Colors.GRAY);
-            return null;
+            return;
         }
 
         String className = stripQuotes(args[1]);
@@ -154,7 +159,7 @@ public class HookMain extends CommandBase {
             } else if (arg.equals("before") && i + 2 < args.length) {
                 if (beforeCode != null || beforeCodebase != null) {
                     context.println("错误: before阶段已经指定过，不能重复指定", Colors.RED);
-                    return null;
+                    return;
                 }
                 String type = args[i + 1];
                 String value = args[i + 2];
@@ -164,13 +169,13 @@ public class HookMain extends CommandBase {
                     beforeCodebase = value;
                 } else {
                     context.println("错误: before参数必须为 'code' 或 'codebase'", Colors.RED);
-                    return null;
+                    return;
                 }
                 i += 3;
             } else if (arg.equals("after") && i + 2 < args.length) {
                 if (afterCode != null || afterCodebase != null) {
                     context.println("错误: after阶段已经指定过，不能重复指定", Colors.RED);
-                    return null;
+                    return;
                 }
                 String type = args[i + 1];
                 String value = args[i + 2];
@@ -180,13 +185,13 @@ public class HookMain extends CommandBase {
                     afterCodebase = value;
                 } else {
                     context.println("错误: after参数必须为 'code' 或 'codebase'", Colors.RED);
-                    return null;
+                    return;
                 }
                 i += 3;
             } else if (arg.equals("replace") && i + 2 < args.length) {
                 if (replaceCode != null || replaceCodebase != null) {
                     context.println("错误: replace阶段已经指定过，不能重复指定", Colors.RED);
-                    return null;
+                    return;
                 }
                 String type = args[i + 1];
                 String value = args[i + 2];
@@ -196,111 +201,104 @@ public class HookMain extends CommandBase {
                     replaceCodebase = value;
                 } else {
                     context.println("错误: replace参数必须为 'code' 或 'codebase'", Colors.RED);
-                    return null;
+                    return;
                 }
                 i += 3;
             } else {
                 context.print("错误: 无效参数 '", Colors.RED);
                 context.print(arg, Colors.YELLOW);
                 context.println("'", Colors.RED);
-                return null;
+                return;
             }
         }
 
         if (beforeCode == null && afterCode == null && replaceCode == null && 
             beforeCodebase == null && afterCodebase == null && replaceCodebase == null) {
             context.println("错误: 需要指定至少一个Hook阶段（before/after/replace）", Colors.RED);
-            return null;
+            return;
         }
 
-        return HookManager.addHook(className, methodName, signature, 
-                                  beforeCode, afterCode, replaceCode,
-                                  beforeCodebase, afterCodebase, replaceCodebase,
-                                  context);
+        HookManager.addHook(className, methodName, signature,
+                beforeCode, afterCode, replaceCode,
+                beforeCodebase, afterCodebase, replaceCodebase,
+                context);
     }
 
-    private String handleRemove(String[] args, CommandExecutor.CmdExecContext context) {
+    private void handleRemove(String[] args, CommandExecutor.CmdExecContext context) {
         if (args.length < 2) {
             context.println("错误: 需要指定Hook ID", Colors.RED);
             context.println("用法: hook remove <id>", Colors.GRAY);
-            return null;
+            return;
         }
 
         String hookId = args[1];
         HookManager.removeHook(hookId, context);
-        return null;
     }
 
-    private String handleList(CommandExecutor.CmdExecContext context) {
+    private void handleList(CommandExecutor.CmdExecContext context) {
         HookManager.listHooks(context);
-        return null;
     }
 
-    private String handleInfo(String[] args, CommandExecutor.CmdExecContext context) {
+    private void handleInfo(String[] args, CommandExecutor.CmdExecContext context) {
         if (args.length < 2) {
             context.println("错误: 需要指定Hook ID", Colors.RED);
             context.println("用法: hook info <id>", Colors.GRAY);
-            return null;
+            return;
         }
 
         String hookId = args[1];
         HookManager.getHookInfo(hookId, context);
-        return null;
     }
 
-    private String handleOutput(String[] args, CommandExecutor.CmdExecContext context) {
+    private void handleOutput(String[] args, CommandExecutor.CmdExecContext context) {
         if (args.length < 2) {
             context.println("错误: 需要指定Hook ID", Colors.RED);
             context.println("用法: hook output <id> [count]", Colors.GRAY);
-            return null;
+            return;
         }
 
         String hookId = args[1];
-        int count = 10;
+        int count = 2147483647;
         
         if (args.length >= 3) {
             try {
                 count = Integer.parseInt(args[2]);
             } catch (NumberFormatException e) {
                 context.println("错误: count必须是数字", Colors.RED);
-                return null;
+                return;
             }
         }
 
-        HookManager.getHookOutput(hookId, count, context);
-        return null;
+        HookManager.getHookOutput(hookId, context, count);
     }
 
-    private String handleEnable(String[] args, CommandExecutor.CmdExecContext context) {
+    private void handleEnable(String[] args, CommandExecutor.CmdExecContext context) {
         if (args.length < 2) {
             context.println("错误: 需要指定Hook ID", Colors.RED);
             context.println("用法: hook enable <id>", Colors.GRAY);
-            return null;
+            return;
         }
 
         String hookId = args[1];
         HookManager.enableHook(hookId, context);
-        return null;
     }
 
-    private String handleDisable(String[] args, CommandExecutor.CmdExecContext context) {
+    private void handleDisable(String[] args, CommandExecutor.CmdExecContext context) {
         if (args.length < 2) {
             context.println("错误: 需要指定Hook ID", Colors.RED);
             context.println("用法: hook disable <id>", Colors.GRAY);
-            return null;
+            return;
         }
 
         String hookId = args[1];
         HookManager.disableHook(hookId, context);
-        return null;
     }
 
-    private String handleClear(CommandExecutor.CmdExecContext context) {
+    private void handleClear(CommandExecutor.CmdExecContext context) {
         int count = HookManager.getHookCount();
         HookManager.clearAllHooks();
         context.print("已清除", Colors.LIGHT_GREEN);
         context.print(" " + count + " ", Colors.YELLOW);
         context.println("个Hook", Colors.LIGHT_GREEN);
-        return null;
     }
 }

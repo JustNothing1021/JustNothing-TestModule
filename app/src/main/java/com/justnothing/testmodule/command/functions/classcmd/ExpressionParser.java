@@ -2,7 +2,7 @@ package com.justnothing.testmodule.command.functions.classcmd;
 
 import com.justnothing.javainterpreter.ScriptRunner;
 import com.justnothing.testmodule.utils.functions.Logger;
-import com.justnothing.testmodule.utils.script.AppClassFinder;
+import com.justnothing.testmodule.utils.reflect.AppClassFinder;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -11,23 +11,15 @@ public class ExpressionParser {
     private static final Logger logger = Logger.getLoggerForName("ExpressionParser");
     
     private static final ThreadLocal<Map<ClassLoader, ScriptRunner>> runners = new ThreadLocal<>();
-    
-    public static class ParseResult {
-        public final Object value;
-        public final Class<?> type;
-        public final boolean hasTypeHint;
-        
-        public ParseResult(Object value, Class<?> type, boolean hasTypeHint) {
-            this.value = value;
-            this.type = type;
-            this.hasTypeHint = hasTypeHint;
-        }
+
+    public record ParseResult(Object value, Class<?> type, boolean hasTypeHint) {
     }
     
     public static ParseResult parse(String expression, ClassLoader classLoader) {
         return parse(expression, classLoader, null);
     }
 
+    @SuppressWarnings("unused")
     public static ParseResult parse(String expression, ClassLoader classLoader, Class<?> expectedType) {
         if (expression == null || expression.trim().isEmpty()) {
             return new ParseResult(null, Void.class, false);
@@ -156,17 +148,4 @@ public class ExpressionParser {
         return runner;
     }
     
-    public static void clearCache() {
-        Map<ClassLoader, ScriptRunner> map = runners.get();
-        if (map != null) {
-            map.clear();
-        }
-    }
-    
-    public static void clearCache(ClassLoader classLoader) {
-        Map<ClassLoader, ScriptRunner> map = runners.get();
-        if (map != null) {
-            map.remove(classLoader);
-        }
-    }
 }

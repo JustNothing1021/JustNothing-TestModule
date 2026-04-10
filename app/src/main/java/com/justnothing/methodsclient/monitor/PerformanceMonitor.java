@@ -134,7 +134,7 @@ public class PerformanceMonitor {
     private static void saveStats() {
         File dir = new File(Objects.requireNonNull(new File(PERFORMANCE_DATA_FILE).getParent()));
         if (!dir.exists()) {
-            if (!dir.mkdirs()) {
+            if (!IOManager.createDirectory(dir)) {
                 logger.warn("无法创建性能统计目录: " + dir.getAbsolutePath());
                 return;
             }
@@ -255,7 +255,7 @@ public class PerformanceMonitor {
 
         File file = new File(PERFORMANCE_DATA_FILE);
         if (file.exists()) {
-            if (!file.delete()) logger.warn("性能统计文件删除失败");
+            if (!IOManager.deleteFile(file.getAbsolutePath())) logger.warn("性能统计文件删除失败");
             logger.info("性能统计数据已清除");
         }
     }

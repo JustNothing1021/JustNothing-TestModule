@@ -5,6 +5,7 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_BEAN_SHELL_
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.data.DataBridge;
 import com.justnothing.testmodule.utils.io.IOManager;
@@ -30,9 +31,6 @@ public class BeanShellExecutorMain extends CommandBase {
 
     private final String commandName;
 
-    public BeanShellExecutorMain() {
-        this("bsh");
-    }
 
     public BeanShellExecutorMain(String commandName) {
         super("BeanShellExecutor");
@@ -109,30 +107,26 @@ public class BeanShellExecutorMain extends CommandBase {
         };
     }
     @Override
-    public String runMain(CommandExecutor.CmdExecContext context) {
+    public void runMain(CommandExecutor.CmdExecContext context) {
         String cmdName = context.cmdName();
         String[] args = context.args();
         ClassLoader classLoader = context.classLoader();
 
         switch (cmdName) {
-            case "bvars" -> {
-                return listVariables(context);
-            }
-            case "bclear" -> {
-                return clearVariables(context);
-            }
+            case "bvars" -> listVariables(context);
+            case "bclear" -> clearVariables(context);
             case "bscript" -> {
                 try {
-                    return handleScriptCommand(args, context);
+                    handleScriptCommand(args, context);
                 } catch (IOException e) {
                     context.output().println("执行脚本时发生错误");
                     context.output().printStackTrace(e);
-                    return "";
                 }
             }
             default -> {
                 if (args.length < 1) {
-                    return getHelpText();
+                    context.println(getHelpText(), Colors.WHITE);
+                    return;
                 }
 
                 try {
@@ -145,44 +139,48 @@ public class BeanShellExecutorMain extends CommandBase {
                     }
                     logger.info("执行BeanShell代码: " + code);
                     String result = getBeanShellExecutor(classLoader).execute(code.toString(), beanShellExecutionContext);
-                    return "BeanShell执行器结果:\n\n" + result;
+                    context.println("BeanShell执行器结果:", Colors.CYAN);
+                    context.println("", Colors.WHITE);
+                    context.println(result, Colors.GRAY);
 
                 } catch (Exception e) {
-                    return CommandExceptionHandler.handleException(cmdName, e, context, "BeanShell执行出错");
+                    CommandExceptionHandler.handleException(cmdName, e, context, "BeanShell执行出错");
                 }
             }
         }
     }
 
-    public String listVariables(CommandExecutor.CmdExecContext context) {
+    public void listVariables(CommandExecutor.CmdExecContext context) {
         ClassLoader classLoader = context.classLoader();
         String targetPackage = context.targetPackage();
 
-        StringBuilder sb = new StringBuilder("(当前ClassLoader: " + (targetPackage == null ? "默认加载器" : targetPackage) + ")");
-
-        sb.append("\n\nBeanShell执行器的变量列表:\n");
+        context.print("(当前ClassLoader: ", Colors.GRAY);
+        context.println((targetPackage == null ? "默认加载器" : targetPackage) + ")", Colors.YELLOW);
+        context.println("", Colors.WHITE);
+        context.println("BeanShell执行器的变量列表:", Colors.CYAN);
+        
         Map<String, Object> bshVars = getBeanShellExecutor(classLoader).getVariables();
         if (bshVars.isEmpty()) {
-            sb.append("  (空)\n");
+            context.println("  (空)", Colors.GRAY);
         } else {
             for (Map.Entry<String, Object> entry : bshVars.entrySet()) {
                 Object value = entry.getValue();
-                sb.append("  ").append(entry.getKey())
-                        .append(" = ").append(value)
-                        .append(" (").append(value != null ? value.getClass().getSimpleName() : "null")
-                        .append(")\n");
+                context.print("  " + entry.getKey() + " = ", Colors.CYAN);
+                context.print(String.valueOf(value), Colors.GREEN);
+                context.println(" (" + (value != null ? value.getClass().getSimpleName() : "null") + ")", Colors.GRAY);
             }
         }
 
-        return sb.toString();
     }
 
-    public String clearVariables(CommandExecutor.CmdExecContext context) {
+    public void clearVariables(CommandExecutor.CmdExecContext context) {
         ClassLoader classLoader = context.classLoader();
         String targetPackage = context.targetPackage();
         getBeanShellExecutor(classLoader).clearVariables();
-        return "已清空BeanShell执行器的所有变量\n提示: 只清空了" +
-                (targetPackage == null ? "默认" : targetPackage) + "的ClassLoader的执行器的变量，其他ClassLoader的并没有被清空";
+        context.println("已清空BeanShell执行器的所有变量", Colors.GREEN);
+        context.print("提示: 只清空了", Colors.GRAY);
+        context.print(targetPackage == null ? "默认" : targetPackage, Colors.YELLOW);
+        context.println("的ClassLoader的执行器的变量，其他ClassLoader的并没有被清空", Colors.GRAY);
     }
 
     private static BeanShellExecutor getBeanShellExecutor(ClassLoader cl) {
@@ -190,24 +188,28 @@ public class BeanShellExecutorMain extends CommandBase {
         return beanShellExecutors.computeIfAbsent(cl, BeanShellExecutor::new);
     }
 
-    private String handleScriptCommand(String[] args, CommandExecutor.CmdExecContext context) throws IOException {
+    private void handleScriptCommand(String[] args, CommandExecutor.CmdExecContext context) throws IOException {
         if (args.length < 1) {
-            return getHelpText();
+            getHelpText();
+            return;
         }
 
         String subCommand = args[0];
 
-        return switch (subCommand) {
-            case "create" -> handleScriptCreate(args);
-            case "edit" -> handleScriptEdit(args);
-            case "list" -> handleScriptList();
-            case "show" -> handleScriptShow(args);
-            case "delete" -> handleScriptDelete(args);
+        switch (subCommand) {
+            case "create" -> handleScriptCreate(args, context);
+            case "edit" -> handleScriptEdit(args, context);
+            case "list" -> handleScriptList(context);
+            case "show" -> handleScriptShow(args, context);
+            case "delete" -> handleScriptDelete(args, context);
             case "run" -> handleScriptRun(args, context);
-            case "import" -> handleScriptImport(args);
-            case "export" -> handleScriptExport(args);
-            default -> "未知子命令: " + subCommand + "\n" + getHelpText();
-        };
+            case "import" -> handleScriptImport(args, context);
+            case "export" -> handleScriptExport(args, context);
+            default -> {
+                context.println("未知子命令: " + subCommand, Colors.RED);
+                getHelpText();
+            }
+        }
     }
 
     private File getBeanShellScriptFile(String scriptName) {
@@ -215,19 +217,23 @@ public class BeanShellExecutorMain extends CommandBase {
         return new File(scriptsDir, scriptName + ".bsh");
     }
 
-    private String handleScriptCreate(String[] args) throws IOException {
+    private void handleScriptCreate(String[] args, CommandExecutor.CmdExecContext context) throws IOException {
         if (args.length < 2) {
-            return "错误: 需要指定脚本名称\n用法: bscript create <name>";
+            context.println("错误: 需要指定脚本名称", Colors.RED);
+            context.println("用法: bscript create <name>", Colors.GRAY);
+            return;
         }
 
         String scriptName = args[1];
         if (!isValidScriptName(scriptName)) {
-            return "错误: 脚本名称只能包含字母、数字和下划线";
+            context.println("错误: 脚本名称只能包含字母、数字和下划线", Colors.RED);
+            return;
         }
 
         File scriptFile = getBeanShellScriptFile(scriptName);
         if (scriptFile.exists()) {
-            return "错误: 脚本 '" + scriptName + "' 已存在";
+            context.println("错误: 脚本 '" + scriptName + "' 已存在", Colors.RED);
+            return;
         }
 
         IOManager.createDirectory(Objects.requireNonNull(scriptFile.getParentFile()).getAbsolutePath());
@@ -239,132 +245,162 @@ public class BeanShellExecutorMain extends CommandBase {
         
         IOManager.writeFile(scriptFile.getAbsolutePath(), content);
 
-        return "BeanShell脚本 '" + scriptName + "' 创建成功\n" +
-               "路径: " + scriptFile.getAbsolutePath() + "\n" +
-               "提示: 使用 'bscript edit " + scriptName + "' 编辑脚本";
+        context.println("BeanShell脚本创建成功", Colors.GREEN);
+        context.print("名称: ", Colors.CYAN);
+        context.println(scriptName, Colors.YELLOW);
+        context.print("路径: ", Colors.CYAN);
+        context.println(scriptFile.getAbsolutePath(), Colors.GRAY);
+        context.println("提示: 使用 'bscript edit " + scriptName + "' 编辑脚本", Colors.GRAY);
     }
 
-    private String handleScriptEdit(String[] args) {
+    private void handleScriptEdit(String[] args, CommandExecutor.CmdExecContext context) {
         if (args.length < 2) {
-            return "错误: 需要指定脚本名称\n用法: bscript edit <name>";
+            context.println("错误: 需要指定脚本名称", Colors.RED);
+            context.println("用法: bscript edit <name>", Colors.GRAY);
+            return;
         }
 
         String scriptName = args[1];
         File scriptFile = getBeanShellScriptFile(scriptName);
 
         if (!scriptFile.exists()) {
-            return "错误: 脚本 '" + scriptName + "' 不存在";
+            context.println("错误: 脚本 '" + scriptName + "' 不存在", Colors.RED);
+            return;
         }
 
-        return "BeanShell脚本 '" + scriptName + "' 已准备好编辑\n" +
-               "路径: " + scriptFile.getAbsolutePath() + "\n" +
-               "提示: 使用外部编辑器编辑脚本文件";
+        context.println("BeanShell脚本已准备好编辑", Colors.GREEN);
+        context.print("名称: ", Colors.CYAN);
+        context.println(scriptName, Colors.YELLOW);
+        context.print("路径: ", Colors.CYAN);
+        context.println(scriptFile.getAbsolutePath(), Colors.GRAY);
+        context.println("提示: 使用外部编辑器编辑脚本文件", Colors.GRAY);
     }
 
-    private String handleScriptList() throws IOException {
+    private void handleScriptList(CommandExecutor.CmdExecContext context) {
         File scriptsDir = DataBridge.getScriptsDirectory();
         if (!scriptsDir.exists()) {
-            return "脚本目录不存在: " + scriptsDir.getAbsolutePath();
+            context.println("脚本目录不存在: " + scriptsDir.getAbsolutePath(), Colors.RED);
+            return;
         }
 
         File[] scriptFiles = scriptsDir.listFiles((dir, name) -> name.endsWith(".bsh"));
 
         if (scriptFiles == null || scriptFiles.length == 0) {
-            return "没有找到BeanShell脚本";
+            context.println("没有找到BeanShell脚本", Colors.GRAY);
+            return;
         }
 
-        StringBuilder result = new StringBuilder();
-        result.append("===== BeanShell脚本列表 =====\n\n");
+        context.println("===== BeanShell脚本列表 =====", Colors.CYAN);
+        context.println("", Colors.WHITE);
 
         for (File scriptFile : scriptFiles) {
             String name = scriptFile.getName();
             long size = scriptFile.length();
             long lastModified = scriptFile.lastModified();
             
-            result.append("名称: ").append(name).append("\n");
-            result.append("  大小: ").append(formatSize(size)).append("\n");
-            result.append("  修改时间: ").append(formatTime(lastModified)).append("\n");
-            result.append("  路径: ").append(scriptFile.getAbsolutePath()).append("\n\n");
+            context.print("名称: ", Colors.CYAN);
+            context.println(name, Colors.GREEN);
+            context.print("  大小: ", Colors.CYAN);
+            context.println(formatSize(size), Colors.YELLOW);
+            context.print("  修改时间: ", Colors.CYAN);
+            context.println(formatTime(lastModified), Colors.GRAY);
+            context.print("  路径: ", Colors.CYAN);
+            context.println(scriptFile.getAbsolutePath(), Colors.GRAY);
+            context.println("", Colors.WHITE);
         }
 
-        result.append("总计: ").append(scriptFiles.length).append(" 个脚本");
-        return result.toString();
+        context.print("总计: ", Colors.CYAN);
+        context.println(scriptFiles.length + " 个脚本", Colors.YELLOW);
     }
 
-    private String handleScriptShow(String[] args) throws IOException {
+    private void handleScriptShow(String[] args, CommandExecutor.CmdExecContext context) throws IOException {
         if (args.length < 2) {
-            return "错误: 需要指定脚本名称\n用法: bscript show <name>";
+            context.println("错误: 需要指定脚本名称", Colors.RED);
+            context.println("用法: bscript show <name>", Colors.GRAY);
+            return;
         }
 
         String scriptName = args[1];
         File scriptFile = getBeanShellScriptFile(scriptName);
 
         if (!scriptFile.exists()) {
-            return "错误: 脚本 '" + scriptName + "' 不存在";
+            context.println("错误: 脚本 '" + scriptName + "' 不存在", Colors.RED);
+            return;
         }
 
         String content = IOManager.readFile(scriptFile.getAbsolutePath());
-        return "===== BeanShell脚本内容: " + scriptName + " =====\n\n" + content;
+        context.println("===== BeanShell脚本内容: " + scriptName + " =====", Colors.CYAN);
+        context.println("", Colors.WHITE);
+        context.println(content, Colors.GRAY);
     }
 
-    private String handleScriptDelete(String[] args) {
+    private void handleScriptDelete(String[] args, CommandExecutor.CmdExecContext context) {
         if (args.length < 2) {
-            return "错误: 需要指定脚本名称\n用法: bscript delete <name>";
+            context.println("错误: 需要指定脚本名称", Colors.RED);
+            context.println("用法: bscript delete <name>", Colors.GRAY);
+            return;
         }
 
         String scriptName = args[1];
         File scriptFile = getBeanShellScriptFile(scriptName);
 
         if (!scriptFile.exists()) {
-            return "错误: 脚本 '" + scriptName + "' 不存在";
+            context.println("错误: 脚本 '" + scriptName + "' 不存在", Colors.RED);
+            return;
         }
 
-        if (scriptFile.delete()) {
-            return "BeanShell脚本 '" + scriptName + "' 已删除";
+        if (IOManager.deleteFile(scriptFile.getAbsolutePath())) {
+            context.println("BeanShell脚本已删除", Colors.GREEN);
+            context.print("名称: ", Colors.CYAN);
+            context.println(scriptName, Colors.YELLOW);
         } else {
-            return "错误: 无法删除脚本 '" + scriptName + "'";
+            context.println("错误: 无法删除脚本 '" + scriptName + "'", Colors.RED);
         }
     }
 
-    private String handleScriptRun(String[] args, CommandExecutor.CmdExecContext context) throws IOException {
+    private void handleScriptRun(String[] args, CommandExecutor.CmdExecContext context) throws IOException {
         if (args.length < 2) {
-            return "错误: 需要指定脚本名称\n用法: bscript run <name>";
+            context.println("错误: 需要指定脚本名称", Colors.RED);
+            context.println("用法: bscript run <name>", Colors.GRAY);
+            return;
         }
 
         String scriptName = args[1];
         File scriptFile = getBeanShellScriptFile(scriptName);
 
         if (!scriptFile.exists()) {
-            return "错误: 脚本 '" + scriptName + "' 不存在";
+            context.println("错误: 脚本 '" + scriptName + "' 不存在", Colors.RED);
+            return;
         }
 
         String content = IOManager.readFile(scriptFile.getAbsolutePath());
         
-        context.output().print("===== 执行BeanShell脚本: ");
-        context.output().print(scriptName);
-        context.output().print(" =====\n\n");
+        context.println("===== 执行BeanShell脚本: " + scriptName + " =====", Colors.CYAN);
+        context.println("", Colors.WHITE);
         
         try {
             String execResult = getBeanShellExecutor(context.classLoader()).execute(content, beanShellExecutionContext);
-            context.output().print("执行结果:\n");
-            context.output().print(execResult);
+            context.println("执行结果:", Colors.GREEN);
+            context.println(execResult, Colors.GRAY);
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("bsh", e, context, "BeanShell执行出错");
+            CommandExceptionHandler.handleException("bsh", e, context, "BeanShell执行出错");
         }
-        
-        return "";
+
     }
 
-    private String handleScriptImport(String[] args) throws IOException {
+    private void handleScriptImport(String[] args, CommandExecutor.CmdExecContext context) throws IOException {
         if (args.length < 2) {
-            return "错误: 需要指定文件路径\n用法: bscript import <file>";
+            context.println("错误: 需要指定文件路径", Colors.RED);
+            context.println("用法: bscript import <file>", Colors.GRAY);
+            return;
         }
 
         String filePath = args[1];
         File sourceFile = new File(filePath);
 
         if (!sourceFile.exists()) {
-            return "错误: 文件 '" + filePath + "' 不存在";
+            context.println("错误: 文件 '" + filePath + "' 不存在", Colors.RED);
+            return;
         }
 
         String content = IOManager.readFile(sourceFile.getAbsolutePath());
@@ -372,22 +408,28 @@ public class BeanShellExecutorMain extends CommandBase {
         File destFile = getBeanShellScriptFile(scriptName);
 
         if (destFile.exists()) {
-            return "错误: 脚本 '" + scriptName + "' 已存在\n" +
-                   "提示: 使用 'bscript delete " + scriptName + "' 删除旧脚本";
+            context.println("错误: 脚本 '" + scriptName + "' 已存在", Colors.RED);
+            context.println("提示: 使用 'bscript delete " + scriptName + "' 删除旧脚本", Colors.GRAY);
+            return;
         }
 
         IOManager.createDirectory(Objects.requireNonNull(destFile.getParentFile()).getAbsolutePath());
         IOManager.writeFile(destFile.getAbsolutePath(), content);
 
-        return "BeanShell脚本导入成功\n" +
-               "源文件: " + sourceFile.getAbsolutePath() + "\n" +
-               "脚本名称: " + scriptName + "\n" +
-               "目标路径: " + destFile.getAbsolutePath();
+        context.println("BeanShell脚本导入成功", Colors.GREEN);
+        context.print("源文件: ", Colors.CYAN);
+        context.println(sourceFile.getAbsolutePath(), Colors.GRAY);
+        context.print("脚本名称: ", Colors.CYAN);
+        context.println(scriptName, Colors.YELLOW);
+        context.print("目标路径: ", Colors.CYAN);
+        context.println(destFile.getAbsolutePath(), Colors.GRAY);
     }
 
-    private String handleScriptExport(String[] args) throws IOException {
+    private void handleScriptExport(String[] args, CommandExecutor.CmdExecContext context) throws IOException {
         if (args.length < 3) {
-            return "错误: 需要指定脚本名称和导出路径\n用法: bscript export <name> <file>";
+            context.println("错误: 需要指定脚本名称和导出路径", Colors.RED);
+            context.println("用法: bscript export <name> <file>", Colors.GRAY);
+            return;
         }
 
         String scriptName = args[1];
@@ -395,7 +437,8 @@ public class BeanShellExecutorMain extends CommandBase {
         File scriptFile = getBeanShellScriptFile(scriptName);
 
         if (!scriptFile.exists()) {
-            return "错误: 脚本 '" + scriptName + "' 不存在";
+            context.println("错误: 脚本 '" + scriptName + "' 不存在", Colors.RED);
+            return;
         }
 
         File exportFile = new File(exportPath);
@@ -403,9 +446,11 @@ public class BeanShellExecutorMain extends CommandBase {
 
         IOManager.writeFile(exportFile.getAbsolutePath(), content);
 
-        return "BeanShell脚本导出成功\n" +
-               "脚本: " + scriptName + "\n" +
-               "导出路径: " + exportFile.getAbsolutePath();
+        context.println("BeanShell脚本导出成功", Colors.GREEN);
+        context.print("脚本: ", Colors.CYAN);
+        context.println(scriptName, Colors.YELLOW);
+        context.print("导出路径: ", Colors.CYAN);
+        context.println(exportFile.getAbsolutePath(), Colors.GRAY);
     }
 
     private boolean isValidScriptName(String name) {
@@ -433,7 +478,7 @@ public class BeanShellExecutorMain extends CommandBase {
     }
 
     private String formatTime(long timestamp) {
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
         return sdf.format(new Date(timestamp));
     }
 

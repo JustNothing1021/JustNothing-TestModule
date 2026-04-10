@@ -4,6 +4,7 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_PACKAGES_VE
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.utils.reflect.ClassLoaderManager;
 
 import java.util.List;
@@ -32,14 +33,13 @@ public class PackagesMain extends CommandBase {
     }
 
     @Override
-    public String runMain(CommandExecutor.CmdExecContext context) {
+    public void runMain(CommandExecutor.CmdExecContext context) {
         List<String> packages = ClassLoaderManager.getAllKnownPackages();
-        StringBuilder sb = new StringBuilder();
-        sb.append(String.format(Locale.getDefault(), "当前进程的ClassLoader (总计%d个):\n", packages.size()));
+        context.println(String.format(Locale.getDefault(), "当前进程的ClassLoader (总计%d个):", packages.size()), Colors.CYAN);
         for (String pkg : packages) {
-            sb.append("  ").append(pkg).append("\n");
+            context.println("  " + pkg, Colors.WHITE);
         }
-        sb.append("\n提示: 用 'methods -cl <package> <command>' 可以指定ClassLoader");
-        return sb.toString();
+        context.println("");
+        context.println("提示: 用 'methods -cl <package> <command>' 可以指定ClassLoader", Colors.GRAY);
     }
 }

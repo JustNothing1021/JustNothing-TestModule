@@ -53,6 +53,7 @@ import de.robv.android.xposed.IXposedHookZygoteInit;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
 public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygoteInit {
+
     public static final String TAG = "HookEntry";
     private static final Logger logger = Logger.getLoggerForName(TAG);
     public static List<PackageHook> packageHooks = new ArrayList<>();
@@ -60,10 +61,8 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
     public static ShellService mService;
     public static boolean hooksSetup = false;
     private static boolean zygoteInitCompleted = false;
-
-    private static final ConcurrentHashMap<String, ClassLoader>
-            classLoaders = new ConcurrentHashMap<>();
-
+    private static final ConcurrentHashMap<String, ClassLoader> classLoaders = new ConcurrentHashMap<>();
+    private static XC_LoadPackage.LoadPackageParam lastLoadPackageParam;
     private PerformanceMonitor performanceMonitor = null;
     private static final long FILE_OPERATION_DELAY = 1000;
     private static final long FILE_OPERATION_THROTTLE = 10000;
@@ -362,6 +361,7 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam param) {
         logger.info("通过handleLoadPackage处理" + param.packageName);
+        lastLoadPackageParam = param;
         BootMonitor.markPackageLoadStarted(param.packageName, param.processName);
         boolean packageLoadSuccess = true;
         
@@ -467,6 +467,10 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
 
     public static List<String> getLocalPackages() {
         return new ArrayList<>(classLoaders.keySet());
+    }
+
+    public static XC_LoadPackage.LoadPackageParam getLastLoadPackageParam() {
+        return lastLoadPackageParam;
     }
 
 }

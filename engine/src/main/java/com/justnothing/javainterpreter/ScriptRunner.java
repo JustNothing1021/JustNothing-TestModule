@@ -46,14 +46,13 @@ public class ScriptRunner {
         this.context.getBuiltins().setContextClassLoader(classLoader);
     }
     
-    public ExecutionContext getContext() {
+    public ExecutionContext getExecutionContext() {
         return context;
     }
     
-    public ExecutionContext setContext(ExecutionContext context) {
+    public void setExecutionContext(ExecutionContext context) {
         this.context = context;
         this.context.getBuiltins().setContextClassLoader(context.getClassLoader());
-        return context;
     }
     
     public ParseContext getParseContext() {
@@ -80,8 +79,6 @@ public class ScriptRunner {
             return ASTEvaluator.evaluate(ast, context);
         } catch (ParseException e) {
             throw new RuntimeException("Parse error: " + e.getMessage(), e);
-        } catch (EvaluationException e) {
-            throw simplifyException(e);
         } catch (Exception e) {
             throw simplifyException(e);
         }

@@ -269,8 +269,7 @@ public class CommandExecutor {
         // 使用命令注册表分发命令
         CommandBase commandObj = getCommand(command);
         if (commandObj != null) {
-            String result = commandObj.runMain(context);
-            context.output().println(result != null ? result : "");
+            commandObj.runMain(context);
         } else {
             output.println("未知的命令: " + command + ", 输入help获取帮助", Colors.ORANGE);
         }

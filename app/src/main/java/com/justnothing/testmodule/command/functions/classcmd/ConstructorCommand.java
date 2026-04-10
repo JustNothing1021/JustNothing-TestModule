@@ -19,16 +19,17 @@ public class ConstructorCommand extends AbstractClassCommand {
     }
 
     @Override
-    protected String executeInternal(ClassCommandContext context) throws Exception {
+    protected void executeInternal(ClassCommandContext context) throws Exception {
         String[] args = context.getArgs();
         
         if (args.length < 1) {
-            return CommandExceptionHandler.handleException(
+            CommandExceptionHandler.handleException(
                 "class constructor",
                 new IllegalArgumentException("参数不足, 需要至少1个参数: class constructor <class_name> [params...]"),
                 context.getExecContext(),
                 "参数错误"
             );
+            return;
         }
 
         String className = args[0];
@@ -40,19 +41,20 @@ public class ConstructorCommand extends AbstractClassCommand {
 
             try {
                 ExpressionParser.ParseResult result = ExpressionParser.parse(paramStr, context.getClassLoader());
-                params.add(result.value);
-                paramTypes.add(result.type);
+                params.add(result.value());
+                paramTypes.add(result.type());
                 
-                String typeHint = result.hasTypeHint ? " (有类型提示)" : "";
-                String valueStr = result.value != null ? result.value.toString() : "null";
+                String typeHint = result.hasTypeHint() ? " (有类型提示)" : "";
+                String valueStr = result.value() != null ? result.value().toString() : "null";
                 context.getLogger().info("参数" + (params.size() - 1) +
-                        ": (" + result.type.getName() + ")" + valueStr + typeHint);
+                        ": (" + result.type().getName() + ")" + valueStr + typeHint);
             } catch (Exception e) {
                 context.getLogger().warn("无法解析参数: " + paramStr);
                 Map<String, Object> errContext = new HashMap<>();
                 errContext.put("参数索引", i - 1);
                 errContext.put("参数表达式", paramStr);
-                return CommandExceptionHandler.handleException("class constructor", e, context.getExecContext(), errContext, "解析参数失败");
+                CommandExceptionHandler.handleException("class constructor", e, context.getExecContext(), errContext, "解析参数失败");
+                return;
             }
         }
 
@@ -99,7 +101,7 @@ public class ConstructorCommand extends AbstractClassCommand {
                 DescriptorColorizer.printColoredDescriptor(context.getExecContext(), c, true);
                 context.getExecContext().println("");
             }
-            return "";
+            return;
         }
 
         context.getExecContext().print("找到构造函数: ", Colors.CYAN);
@@ -119,7 +121,6 @@ public class ConstructorCommand extends AbstractClassCommand {
         context.getExecContext().println(instance.getClass().getName(), Colors.YELLOW);
         context.getExecContext().print("Hash: ", Colors.CYAN);
         context.getExecContext().println(String.valueOf(System.identityHashCode(instance)), Colors.LIGHT_GREEN);
-        return "";
     }
 
     @Override

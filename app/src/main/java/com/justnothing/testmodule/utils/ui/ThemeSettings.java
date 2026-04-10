@@ -47,7 +47,7 @@ public class ThemeSettings extends Logger {
         debug("设置主题模式: " + getThemeModeName(mode));
     }
     
-    public void applyTheme(Context context) {
+    public void applyTheme() {
         int appCompatMode = switch (currentThemeMode) {
             case MODE_LIGHT -> AppCompatDelegate.MODE_NIGHT_NO;
             case MODE_DARK -> AppCompatDelegate.MODE_NIGHT_YES;
@@ -56,17 +56,8 @@ public class ThemeSettings extends Logger {
         AppCompatDelegate.setDefaultNightMode(appCompatMode);
         debug("应用主题模式: " + getThemeModeName(currentThemeMode));
     }
-    
-    public boolean isDarkMode() {
-        return currentThemeMode == MODE_DARK || 
-               (currentThemeMode == MODE_AUTO && isSystemDarkMode());
-    }
-    
-    private boolean isSystemDarkMode() {
-        int nightMode = AppCompatDelegate.getDefaultNightMode();
-        return nightMode == AppCompatDelegate.MODE_NIGHT_YES;
-    }
-    
+
+
     public String getThemeModeName(int mode) {
         // TODO: i18n
         return switch (mode) {

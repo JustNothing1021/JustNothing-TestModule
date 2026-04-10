@@ -81,7 +81,7 @@ public class ClientPortManager {
             String tmpDir = UPDATE_PORT_TEMP_DIR + "/" + SESSION_PREFIX + System.nanoTime() + "_" + android.os.Process.myPid();
             File tempDir = new File(tmpDir);
             if (!tempDir.exists()) {
-                if (!tempDir.mkdirs()) logger.warn("创建新目录失败");
+                if (!IOManager.createDirectory(tempDir)) logger.warn("创建新目录失败");
             }
 
             String outputFilePath = tmpDir + "/" + RESULT_FILE_NAME;
@@ -154,7 +154,7 @@ public class ClientPortManager {
             File portFile = new File(PORT_FILE);
             File parent = portFile.getParentFile();
             if (parent != null && !parent.exists()) {
-                if (!parent.mkdirs()) {
+                if (!IOManager.createDirectory(parent)) {
                     logger.error("创建端口文件目录失败: " + parent.getAbsolutePath());
                     return;
                 }

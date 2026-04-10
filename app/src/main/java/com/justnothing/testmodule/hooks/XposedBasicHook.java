@@ -23,8 +23,8 @@ public abstract class XposedBasicHook<ParamType> extends Logger {
     private final List<BaseHook> hooks;
     private HookCondition<ParamType> hookCondition = null;
 
-    private String hookName;
-    private boolean enableCheckEnabled;
+    private final String hookName;
+    private final boolean enableCheckEnabled; // final是因为一次启动就不用再改了（懒得做那个逻辑）
     protected String hookDisplayName;
     protected String hookDescription;
     protected boolean defaultEnable = true;
@@ -41,19 +41,12 @@ public abstract class XposedBasicHook<ParamType> extends Logger {
         // useXposedLog(true);
     }
 
-    protected void setHookName(String name) {
-        this.hookName = name;
-    }
 
     protected void setHookDescription(String desc) {
         this.hookDescription = desc;
     }
 
 
-
-    protected void setEnableCheckEnabled(boolean enabled) {
-        this.enableCheckEnabled = enabled;
-    }
 
     protected boolean isHookEnabled() {
         if (!enableCheckEnabled) return true;
@@ -300,9 +293,6 @@ public abstract class XposedBasicHook<ParamType> extends Logger {
             this(className, methodName, signature, hook, null);
         }
 
-        public String getHookName() {
-            return className + "." + methodName;
-        }
     }
 
     public abstract class BaseFieldHook extends BaseHook {
@@ -318,9 +308,6 @@ public abstract class XposedBasicHook<ParamType> extends Logger {
             this.value = value;
         }
 
-        public BaseFieldHook(String className, String fieldName, Object value) {
-            this(className, fieldName, value, null);
-        }
 
     }
 
@@ -331,10 +318,6 @@ public abstract class XposedBasicHook<ParamType> extends Logger {
                                 HookCondition<ParamType> shouldLoad) {
             super(shouldLoad);
             callback = hookCallback;
-        }
-
-        public BaseCallbackHook(HookCallback<ParamType> hookCallback) {
-            this(hookCallback, null);
         }
 
     }
@@ -353,17 +336,20 @@ public abstract class XposedBasicHook<ParamType> extends Logger {
         return createCallbackHook(hookCallback, null);
     }
 
+    @SuppressWarnings("SameParameterValue")
     protected abstract BaseMethodHook createMethodHook(
             String className, String methodName, Object[] signature, XC_MethodHook hook,
             HookCondition<ParamType> shouldLoad
     );
 
+    @SuppressWarnings("SameParameterValue")
     protected abstract BaseFieldHook createFieldHook(
             String className, String fieldName, Object value,
             HookCondition<ParamType> shouldLoad
     );
 
 
+    @SuppressWarnings("SameParameterValue")
     protected abstract BaseCallbackHook createCallbackHook(
         HookCallback<ParamType> hookCallback,
         HookCondition<ParamType> shouldLoad
@@ -383,6 +369,7 @@ public abstract class XposedBasicHook<ParamType> extends Logger {
         addHook(createMethodHook(className, methodName, sig, hook));
     }
 
+    @SuppressWarnings("unused")
     protected void hookField(String className, String fieldName, Object value) {
         addHook(createFieldHook(className, fieldName, value));
     }
@@ -408,7 +395,7 @@ public abstract class XposedBasicHook<ParamType> extends Logger {
             String className, String methodName, Object... sig) {
         XC_MethodHook hook = new XC_MethodReplacement() {
             @Override
-            protected Object replaceHookedMethod(MethodHookParam methodHookParam) throws Throwable {
+            protected Object replaceHookedMethod(MethodHookParam methodHookParam) {
                 if (!SILENT_IN_CONST_HOOK)
                     info(className + "." + methodName + "被调用，强制返回false");
                 return false;
@@ -421,7 +408,7 @@ public abstract class XposedBasicHook<ParamType> extends Logger {
             String className, String methodName, Object... sig) {
         XC_MethodHook hook = new XC_MethodReplacement() {
             @Override
-            protected Object replaceHookedMethod(MethodHookParam methodHookParam) throws Throwable {
+            protected Object replaceHookedMethod(MethodHookParam methodHookParam) {
                 if (!SILENT_IN_CONST_HOOK) {
                     info(className + "." + methodName + "被调用，忽略该操作");
                     info("参数列表：" + Arrays.toString(methodHookParam.args));
@@ -432,6 +419,7 @@ public abstract class XposedBasicHook<ParamType> extends Logger {
         return createMethodHook(className, methodName, sig, hook);
     }
 
+    @SuppressWarnings("SameParameterValue")
     protected void hookAlwaysTrue(String className, String methodName, Object... sig) {
         addHook(createAlwaysTrueHook(className, methodName, sig));
     }
@@ -444,6 +432,7 @@ public abstract class XposedBasicHook<ParamType> extends Logger {
         addHook(createDoNothingHook(className, methodName, sig));
     }
 
+    @SuppressWarnings("unused")
     protected void hookStaticField(String className, String memberName, Object value) {
         addHook(createFieldHook(className, memberName, value));
     }
@@ -482,6 +471,7 @@ public abstract class XposedBasicHook<ParamType> extends Logger {
         this.hookCondition = cond;
     }
 
+    @SuppressWarnings("unused")
     protected void setDefaultEnable(boolean state) {
         defaultEnable = state;
     }
@@ -504,6 +494,7 @@ public abstract class XposedBasicHook<ParamType> extends Logger {
 
     protected abstract boolean installHooks(ParamType param);
 
+    @SuppressWarnings("unused")
     protected final boolean installHooksWithCheck(ParamType param) {
         if (!isHookEnabled()) {
             info("Hook已禁用，跳过安装: " + (hookName != null ? hookName : getClass().getSimpleName()));

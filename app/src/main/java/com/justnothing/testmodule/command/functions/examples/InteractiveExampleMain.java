@@ -25,7 +25,7 @@ public class InteractiveExampleMain extends CommandBase {
     }
 
     @Override
-    public String runMain(CommandExecutor.CmdExecContext context) {
+    public void runMain(CommandExecutor.CmdExecContext context) {
         ICommandOutputHandler output = context.output();
         output.println("=== 交互式示例 ===");
         String name = context.readLine("请输入你的名字: ");
@@ -40,6 +40,5 @@ public class InteractiveExampleMain extends CommandBase {
         String password = context.readPassword("请输入密码: ");
         output.println("密码长度: " + password.length() + " 个字符");
         output.println("=== 交互完成 ===");
-        return "交互命令执行完成";
     }
 }

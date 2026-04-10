@@ -26,11 +26,4 @@ public class ClassCommandRegistry {
         return commands.get(name);
     }
 
-    public static boolean hasCommand(String name) {
-        return commands.containsKey(name);
-    }
-
-    public static Map<String, ClassCommand> getAllCommands() {
-        return new HashMap<>(commands);
-    }
 }

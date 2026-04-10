@@ -1,136 +1,112 @@
 package com.justnothing.testmodule.command.functions.watch;
 
+import com.justnothing.testmodule.command.functions.intercept.InterceptTaskManager;
+import com.justnothing.testmodule.command.functions.intercept.TaskType;
+import com.justnothing.testmodule.command.functions.intercept.WatchInterceptTask;
 import com.justnothing.testmodule.utils.functions.Logger;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
-import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import de.robv.android.xposed.XposedHelpers;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class WatchManager {
-    
 
     private static final WatchManager instance = new WatchManager();
     private static final Logger logger = Logger.getLoggerForName("WatchManager");
-    
-    private final ConcurrentHashMap<Integer, WatchTask> watchTasks;
-    private final AtomicInteger nextId;
-    private final int maxOutputSize;
-    
+    private static final int MAX_OUTPUT_SIZE = 100;
+
+    private final InterceptTaskManager taskManager;
+
     private WatchManager() {
-        this.watchTasks = new ConcurrentHashMap<>();
-        this.nextId = new AtomicInteger(1);
-        this.maxOutputSize = 100;
+        this.taskManager = InterceptTaskManager.getInstance();
     }
-    
+
     public static WatchManager getInstance() {
         return instance;
     }
-    
+
     public int addFieldWatch(ClassLoader classLoader, String className, String fieldName, long interval) {
         try {
-            Class<?> targetClass = XposedHelpers.findClass(className, classLoader);
-            int id = nextId.getAndIncrement();
-            WatchTask task = new WatchTask(id, WatchTask.WatchType.FIELD, targetClass, fieldName, null, interval, maxOutputSize, classLoader);
-            watchTasks.put(id, task);
-            ThreadPoolManager.submitFastRunnable(task);
-            logger.info("添加字段watch任务: " + id);
-            return id;
+            WatchInterceptTask task = new WatchInterceptTask(
+                    0, className, fieldName, null, classLoader,
+                    WatchInterceptTask.WatchType.FIELD, interval, MAX_OUTPUT_SIZE
+            );
+            return taskManager.addAndStartTask(task);
         } catch (Exception e) {
             logger.error("添加字段watch任务失败", e);
             throw new RuntimeException("添加字段watch任务失败: " + e.getMessage(), e);
         }
     }
-    
+
     public int addMethodWatch(ClassLoader classLoader, String className, String methodName, String signature, long interval) {
         try {
             logger.debug("尝试加载类: " + className + " 使用类加载器: " + classLoader);
             Class<?> targetClass = ClassResolver.findClassOrFail(className, classLoader);
             logger.debug("成功加载类: " + targetClass.getName());
-            
-            int id = nextId.getAndIncrement();
-            logger.info("创建方法watch任务: ID=" + id + ", 类=" + className + ", 方法=" + methodName + (signature != null ? ", 签名=" + signature : "") + ", 间隔=" + interval + "ms");
-            
-            WatchTask task = new WatchTask(id, WatchTask.WatchType.METHOD, targetClass, methodName, signature, interval, maxOutputSize, classLoader);
-            watchTasks.put(id, task);
-            ThreadPoolManager.submitFastRunnable(task);
-            logger.info("成功添加方法watch任务: " + id);
-            return id;
+
+            logger.info("创建方法watch任务: 类=" + className + ", 方法=" + methodName + 
+                    (signature != null ? ", 签名=" + signature : "") + ", 间隔=" + interval + "ms");
+
+            WatchInterceptTask task = new WatchInterceptTask(
+                    0, className, methodName, signature, classLoader,
+                    WatchInterceptTask.WatchType.METHOD, interval, MAX_OUTPUT_SIZE
+            );
+            return taskManager.addAndStartTask(task);
         } catch (Exception e) {
             logger.error("添加方法watch任务失败", e);
             throw new RuntimeException("添加方法watch任务失败: " + e.getMessage(), e);
         }
     }
-    
+
     public boolean stopWatch(int id) {
-        WatchTask task = watchTasks.get(id);
-        if (task != null) {
-            task.stop();
-            watchTasks.remove(id);
-            logger.info("停止watch任务: " + id);
-            return true;
-        }
-        logger.warn("未找到watch任务: " + id);
-        return false;
+        return taskManager.stopTask(id);
     }
-    
+
     public void clearAll() {
-        logger.info("清除所有watch任务，共 " + watchTasks.size() + " 个");
-        for (WatchTask task : watchTasks.values()) {
-            task.stop();
-        }
-        watchTasks.clear();
+        taskManager.clearByType(TaskType.WATCH);
     }
-    
+
     public String listWatches() {
-        if (watchTasks.isEmpty()) {
-            return "当前没有活跃的watch任务";
-        }
-        
-        StringBuilder sb = new StringBuilder();
-        sb.append("=== 活跃的Watch任务 ===\n");
-        sb.append("总计: ").append(watchTasks.size()).append(" 个任务\n\n");
-        
-        for (WatchTask task : watchTasks.values()) {
-            sb.append(task.toString()).append("\n");
-        }
-        
-        return sb.toString();
+        return taskManager.getTaskListString(TaskType.WATCH);
     }
-    
+
     public String getWatchOutput(int id, int limit) {
-        WatchTask task = watchTasks.get(id);
+        WatchInterceptTask task = taskManager.getTask(id, WatchInterceptTask.class);
         if (task == null) {
             return "未找到watch任务: " + id;
         }
         return task.getOutput(limit);
     }
-    
+
     public String getAllWatchOutput(int limit) {
-        if (watchTasks.isEmpty()) {
+        List<WatchInterceptTask> tasks = taskManager.<WatchInterceptTask>getTasksByType(TaskType.WATCH)
+                .stream()
+                .map(t -> (WatchInterceptTask) t)
+                .collect(Collectors.toList());
+
+        if (tasks.isEmpty()) {
             return "当前没有活跃的watch任务";
         }
-        
+
         StringBuilder sb = new StringBuilder();
         sb.append("=== 所有Watch任务输出 ===\n\n");
-        
-        for (WatchTask task : watchTasks.values()) {
+
+        for (WatchInterceptTask task : tasks) {
             sb.append(task.getOutput(limit)).append("\n");
         }
-        
+
         return sb.toString();
     }
-    
+
     public int getWatchCount() {
-        return watchTasks.size();
+        return taskManager.getTaskCount(TaskType.WATCH);
     }
-    
+
     public boolean hasWatch(int id) {
-        return watchTasks.containsKey(id);
+        WatchInterceptTask task = taskManager.getTask(id, WatchInterceptTask.class);
+        return task != null;
     }
-    
+
     public void shutdown() {
         logger.info("关闭WatchManager");
         clearAll();

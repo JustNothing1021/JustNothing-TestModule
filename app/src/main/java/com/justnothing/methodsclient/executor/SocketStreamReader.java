@@ -24,8 +24,8 @@ import java.util.concurrent.atomic.AtomicLong;
 public class SocketStreamReader {
 
     private static final int BUFFER_SIZE = 8192;
-    private static final int SERVER_RESPONSE_TIMEOUT = 30000;
-    private static final long PING_SERVER_INTERVAL = 5000;
+    private static final int SERVER_RESPONSE_TIMEOUT_MS = 30000;
+    private static final long PING_SERVER_INTERVAL_MS = 5000;
 
     private static final StreamClient.ClientLogger logger = new StreamClient.ClientLogger();
 
@@ -94,7 +94,7 @@ public class SocketStreamReader {
             Object writeLock = new Object();
 
             startConsoleReaderThread(reading, inputQueue);
-            startPingThread(reading, output, lastResponseTime, writeLock);
+            startPingThread(output, lastResponseTime, writeLock);
 
             return runMainLoop(input, output, reading, bytesRead, socket, lastResponseTime, inputQueue, writeLock);
 
@@ -128,13 +128,13 @@ public class SocketStreamReader {
         });
     }
 
-    private static void startPingThread(AtomicBoolean reading, OutputStream output,
-                                         AtomicLong lastResponseTime, Object writeLock) {
+    private static void startPingThread(OutputStream output,
+                                        AtomicLong lastResponseTime, Object writeLock) {
         ThreadPoolManager.submitSocketRunnable(() -> {
             while (!Thread.currentThread().isInterrupted() &&
-                    (System.currentTimeMillis() - lastResponseTime.get()) < SERVER_RESPONSE_TIMEOUT) {
+                    (System.currentTimeMillis() - lastResponseTime.get()) < SERVER_RESPONSE_TIMEOUT_MS) {
                 try {
-                    Thread.sleep(PING_SERVER_INTERVAL);
+                    Thread.sleep(PING_SERVER_INTERVAL_MS);
                     synchronized (writeLock) {
                         InteractiveProtocol.writeMessage(output,
                                 InteractiveProtocol.TYPE_CLIENT_PING,
@@ -196,7 +196,7 @@ public class SocketStreamReader {
 
     private static boolean isServerTimeout(AtomicLong lastResponseTime) {
         long elapsed = System.currentTimeMillis() - lastResponseTime.get();
-        if (elapsed > SERVER_RESPONSE_TIMEOUT) {
+        if (elapsed > SERVER_RESPONSE_TIMEOUT_MS) {
             String msg = "服务端响应超时 (" + elapsed + "ms)";
             logger.error(msg);
             System.err.println(msg);
@@ -306,12 +306,6 @@ public class SocketStreamReader {
             case Colors.LIGHT_MAGENTA -> "\u001B[95m";
             case Colors.LIGHT_CYAN -> "\u001B[96m";
             case Colors.DARK_GRAY -> "\u001B[90m";
-            case Colors.DARK_RED -> "\u001B[31m";
-            case Colors.DARK_GREEN -> "\u001B[32m";
-            case Colors.DARK_YELLOW -> "\u001B[33m";
-            case Colors.DARK_BLUE -> "\u001B[34m";
-            case Colors.DARK_CYAN -> "\u001B[36m";
-            case Colors.PURPLE -> "\u001B[35m";
             case Colors.ORANGE -> "\u001B[38;5;208m";
             case Colors.PINK -> "\u001B[38;5;218m";
             case Colors.BROWN -> "\u001B[38;5;130m";
@@ -464,7 +458,7 @@ public class SocketStreamReader {
             BlockingQueue<String> inputQueue = new LinkedBlockingQueue<>();
             Object writeLock = new Object();
 
-            startPingThread(reading, output, lastResponseTime, writeLock);
+            startPingThread(output, lastResponseTime, writeLock);
 
             while (reading.get() && !Thread.currentThread().isInterrupted()) {
                 try {
@@ -484,7 +478,7 @@ public class SocketStreamReader {
                     byte[] data = (byte[]) packet[1];
                     lastResponseTime.set(System.currentTimeMillis());
 
-                    Boolean result = handlePacketForColoredOutput(type, data, output, bytesRead, inputQueue, reading, writeLock, segments);
+                    Boolean result = handlePacketForColoredOutput(type, data, output, bytesRead, writeLock, segments);
                     if (result != null) {
                         return result;
                     }
@@ -511,9 +505,9 @@ public class SocketStreamReader {
     }
 
     private static Boolean handlePacketForColoredOutput(byte type, byte[] data, OutputStream output,
-                                                         AtomicLong bytesRead, BlockingQueue<String> inputQueue,
-                                                         AtomicBoolean reading, Object writeLock,
-                                                         java.util.List<ColoredSegment> segments) {
+                                                         AtomicLong bytesRead,
+                                                        Object writeLock,
+                                                         List<ColoredSegment> segments) {
         return switch (type) {
             case InteractiveProtocol.TYPE_SERVER_OUTPUT -> {
                 if (data != null) {

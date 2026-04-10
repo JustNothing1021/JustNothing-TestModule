@@ -5,7 +5,6 @@ import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
 import com.justnothing.testmodule.utils.reflect.DescriptorColorizer;
-import com.justnothing.testmodule.utils.reflect.ReflectionUtils;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -25,17 +24,18 @@ public class AnalyzeCommand extends AbstractClassCommand {
     }
 
     @Override
-    protected String executeInternal(ClassCommandContext context) throws Exception {
+    protected void executeInternal(ClassCommandContext context) throws Exception {
         String[] args = context.getArgs();
         CommandExecutor.CmdExecContext cmd = context.getExecContext();
         
         if (args.length < 1) {
-            return CommandExceptionHandler.handleException(
+            CommandExceptionHandler.handleException(
                 "class analyze",
                 new IllegalArgumentException("参数不足, 需要至少1个参数: class analyze <class_name>"),
                 context.getExecContext(),
                 "参数错误"
             );
+            return;
         }
 
         boolean showFields = false;
@@ -226,7 +226,6 @@ public class AnalyzeCommand extends AbstractClassCommand {
         }
 
         context.getLogger().info("执行成功");
-        return "";
     }
 
     @Override

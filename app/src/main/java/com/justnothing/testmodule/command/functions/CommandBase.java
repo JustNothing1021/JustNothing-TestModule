@@ -26,7 +26,7 @@ public abstract class CommandBase {
 
     public abstract String getHelpText();
 
-    public abstract String runMain(CommandExecutor.CmdExecContext context);
+    public abstract void runMain(CommandExecutor.CmdExecContext context);
 
     public String getCommandName() {
         return logger.getTag();

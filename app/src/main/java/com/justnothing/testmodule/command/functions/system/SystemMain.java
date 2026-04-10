@@ -2,17 +2,20 @@ package com.justnothing.testmodule.command.functions.system;
 
 import static com.justnothing.testmodule.constants.CommandServer.CMD_SYSTEM_VER;
 
+import android.annotation.SuppressLint;
 import android.app.ActivityManager;
 import android.content.Context;
 import android.os.Build;
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.output.Colors;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.util.Locale;
 
 public class SystemMain extends CommandBase {
 
@@ -46,7 +49,7 @@ public class SystemMain extends CommandBase {
     }
 
     @Override
-    public String runMain(CommandExecutor.CmdExecContext context) {
+    public void runMain(CommandExecutor.CmdExecContext context) {
         String[] args = context.args();
         
         boolean showCpu = false;
@@ -56,68 +59,80 @@ public class SystemMain extends CommandBase {
         boolean showAll = true;
         
         for (String arg : args) {
-            if (arg.equals("--cpu")) {
-                showCpu = true;
-                showAll = false;
-            } else if (arg.equals("--memory")) {
-                showMemory = true;
-                showAll = false;
-            } else if (arg.equals("--os")) {
-                showOs = true;
-                showAll = false;
-            } else if (arg.equals("--props")) {
-                showProps = true;
-                showAll = false;
-            } else if (arg.equals("--all")) {
-                showAll = true;
+            switch (arg) {
+                case "--cpu" -> {
+                    showCpu = true;
+                    showAll = false;
+                }
+                case "--memory" -> {
+                    showMemory = true;
+                    showAll = false;
+                }
+                case "--os" -> {
+                    showOs = true;
+                    showAll = false;
+                }
+                case "--props" -> {
+                    showProps = true;
+                    showAll = false;
+                }
+                case "--all" -> showAll = true;
             }
         }
         
-        StringBuilder result = new StringBuilder();
-        
         try {
             if (showAll || showOs) {
-                result.append("=== 操作系统信息 ===\n\n");
-                result.append("操作系统: ").append(System.getProperty("os.name")).append("\n");
-                result.append("系统版本: ").append(System.getProperty("os.version")).append("\n");
-                result.append("架构: ").append(System.getProperty("os.arch")).append("\n");
-                result.append("处理器数: ").append(Runtime.getRuntime().availableProcessors()).append("\n\n");
+                context.println("=== 操作系统信息 ===", Colors.CYAN);
+                context.println("", Colors.WHITE);
+                printInfoLine(context, "操作系统: ", System.getProperty("os.name"));
+                printInfoLine(context, "系统版本: ", System.getProperty("os.version"));
+                printInfoLine(context, "架构: ", System.getProperty("os.arch"));
+                printInfoLine(context, "处理器数: ", String.valueOf(Runtime.getRuntime().availableProcessors()));
+                context.println("", Colors.WHITE);
                 
-                result.append("=== Android信息 ===\n\n");
-                result.append("设备制造商: ").append(Build.MANUFACTURER).append("\n");
-                result.append("设备品牌: ").append(Build.BRAND).append("\n");
-                result.append("设备型号: ").append(Build.MODEL).append("\n");
-                result.append("设备名称: ").append(Build.DEVICE).append("\n");
-                result.append("产品名称: ").append(Build.PRODUCT).append("\n");
-                result.append("硬件名称: ").append(Build.HARDWARE).append("\n");
-                result.append("序列号: ").append(Build.getSerial()).append("\n");
-                result.append("Android版本: ").append(Build.VERSION.RELEASE).append("\n");
-                result.append("SDK版本: ").append(Build.VERSION.SDK_INT).append("\n");
-                result.append("构建版本: ").append(Build.DISPLAY).append("\n");
-                result.append("构建类型: ").append(Build.TYPE).append("\n");
-                result.append("构建标签: ").append(Build.TAGS).append("\n\n");
+                context.println("=== Android信息 ===", Colors.CYAN);
+                context.println("", Colors.WHITE);
+                printInfoLine(context, "设备制造商: ", Build.MANUFACTURER);
+                printInfoLine(context, "设备品牌: ", Build.BRAND);
+                printInfoLine(context, "设备型号: ", Build.MODEL);
+                printInfoLine(context, "设备名称: ", Build.DEVICE);
+                printInfoLine(context, "产品名称: ", Build.PRODUCT);
+                printInfoLine(context, "硬件名称: ", Build.HARDWARE);
+                printInfoLine(context, "序列号: ", Build.getSerial());
+                printInfoLine(context, "Android版本: ", Build.VERSION.RELEASE);
+                printInfoLine(context, "SDK版本: ", String.valueOf(Build.VERSION.SDK_INT));
+                printInfoLine(context, "构建版本: ", Build.DISPLAY);
+                printInfoLine(context, "构建类型: ", Build.TYPE);
+                printInfoLine(context, "构建标签: ", Build.TAGS);
+                context.println("", Colors.WHITE);
             }
             
             if (showAll || showCpu) {
-                result.append("=== CPU信息 ===\n\n");
-                result.append("CPU架构: ").append(System.getProperty("os.arch")).append("\n");
-                result.append("CPU信息: ").append(System.getProperty("ro.product.cpu")).append("\n");
-                result.append("CPU ABI: ").append(Build.SUPPORTED_ABIS.length > 0 ? Build.SUPPORTED_ABIS[0] : "unknown").append("\n");
-                result.append("CPU ABI2: ").append(Build.SUPPORTED_ABIS.length > 1 ? Build.SUPPORTED_ABIS[1] : "unknown").append("\n");
-                result.append("处理器数: ").append(Runtime.getRuntime().availableProcessors()).append("\n\n");
+                context.println("=== CPU信息 ===", Colors.CYAN);
+                context.println("", Colors.WHITE);
+                printInfoLine(context, "CPU架构: ", System.getProperty("os.arch"));
+                printInfoLine(context, "CPU信息: ", System.getProperty("ro.product.cpu"));
+                printInfoLine(context, "CPU ABI: ", Build.SUPPORTED_ABIS.length > 0 ? Build.SUPPORTED_ABIS[0] : "unknown");
+                printInfoLine(context, "CPU ABI2: ", Build.SUPPORTED_ABIS.length > 1 ? Build.SUPPORTED_ABIS[1] : "unknown");
+                printInfoLine(context, "处理器数: ", String.valueOf(Runtime.getRuntime().availableProcessors()));
+                context.println("", Colors.WHITE);
                 
-                result.append("=== CPU使用率 ===\n\n");
-                result.append(readCpuInfo());
+                context.println("=== CPU使用率 ===", Colors.CYAN);
+                context.println("", Colors.WHITE);
+                String cpuInfo = readCpuInfo();
+                context.println(cpuInfo, Colors.GRAY);
             }
             
             if (showAll || showMemory) {
-                result.append("=== 内存信息 ===\n\n");
-                result.append("Java堆内存:\n");
+                context.println("=== 内存信息 ===", Colors.CYAN);
+                context.println("", Colors.WHITE);
+                context.println("Java堆内存:", Colors.GREEN);
                 Runtime runtime = Runtime.getRuntime();
-                result.append("  最大: ").append(formatBytes(runtime.maxMemory())).append("\n");
-                result.append("  已分配: ").append(formatBytes(runtime.totalMemory())).append("\n");
-                result.append("  空闲: ").append(formatBytes(runtime.freeMemory())).append("\n");
-                result.append("  已用: ").append(formatBytes(runtime.totalMemory() - runtime.freeMemory())).append("\n\n");
+                printInfoLine(context, "  最大: ", formatBytes(runtime.maxMemory()));
+                printInfoLine(context, "  已分配: ", formatBytes(runtime.totalMemory()));
+                printInfoLine(context, "  空闲: ", formatBytes(runtime.freeMemory()));
+                printInfoLine(context, "  已用: ", formatBytes(runtime.totalMemory() - runtime.freeMemory()));
+                context.println("", Colors.WHITE);
                 
                 Context appContext = getApplicationContext();
                 if (appContext != null) {
@@ -126,31 +141,40 @@ public class SystemMain extends CommandBase {
                         ActivityManager.MemoryInfo memoryInfo = new ActivityManager.MemoryInfo();
                         activityManager.getMemoryInfo(memoryInfo);
                         
-                        result.append("系统内存:\n");
-                        result.append("  可用: ").append(formatBytes(memoryInfo.availMem)).append("\n");
-                        result.append("  总计: ").append(formatBytes(memoryInfo.totalMem)).append("\n");
-                        result.append("  阈值: ").append(formatBytes(memoryInfo.threshold)).append("\n");
-                        result.append("  低内存: ").append(memoryInfo.lowMemory ? "是" : "否").append("\n\n");
+                        context.println("系统内存:", Colors.GREEN);
+                        printInfoLine(context, "  可用: ", formatBytes(memoryInfo.availMem));
+                        printInfoLine(context, "  总计: ", formatBytes(memoryInfo.totalMem));
+                        printInfoLine(context, "  阈值: ", formatBytes(memoryInfo.threshold));
+                        context.print("  低内存: ", Colors.CYAN);
+                        context.println(memoryInfo.lowMemory ? "是" : "否", memoryInfo.lowMemory ? Colors.RED : Colors.GREEN);
+                        context.println("", Colors.WHITE);
                     }
                 }
                 
-                result.append("=== 内存详细信息 ===\n\n");
-                result.append(readMeminfo());
+                context.println("=== 内存详细信息 ===", Colors.CYAN);
+                context.println("", Colors.WHITE);
+                String memInfo = readMeminfo();
+                context.println(memInfo, Colors.GRAY);
             }
             
             if (showAll || showProps) {
-                result.append("=== 系统属性 ===\n\n");
-                result.append(readSystemProperties());
+                context.println("=== 系统属性 ===", Colors.CYAN);
+                context.println("", Colors.WHITE);
+                String props = readSystemProperties();
+                context.println(props, Colors.GRAY);
             }
             
             logger.info("系统信息查询完成");
             
         } catch (Exception e) {
             logger.error("获取系统信息失败", e);
-            return "错误: " + e.getMessage();
+            context.println("错误: " + e.getMessage(), Colors.RED);
         }
-        
-        return result.toString();
+    }
+    
+    private void printInfoLine(CommandExecutor.CmdExecContext context, String label, String value) {
+        context.print(label, Colors.CYAN);
+        context.println(value, Colors.YELLOW);
     }
     
     private static String readCpuInfo() {
@@ -217,17 +241,17 @@ public class SystemMain extends CommandBase {
         if (bytes < 1024) {
             return bytes + " B";
         } else if (bytes < 1024 * 1024) {
-            return String.format("%.2f KB", bytes / 1024.0);
+            return String.format(Locale.getDefault(), "%.2f KB", bytes / 1024.0);
         } else if (bytes < 1024 * 1024 * 1024) {
-            return String.format("%.2f MB", bytes / (1024.0 * 1024.0));
+            return String.format(Locale.getDefault(), "%.2f MB", bytes / (1024.0 * 1024.0));
         } else {
-            return String.format("%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0));
+            return String.format(Locale.getDefault(), "%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0));
         }
     }
     
     private Context getApplicationContext() {
         try {
-            Class<?> activityThreadClass = Class.forName("android.app.ActivityThread");
+            @SuppressLint("PrivateApi") Class<?> activityThreadClass = Class.forName("android.app.ActivityThread");
             Method currentActivityThreadMethod = activityThreadClass.getMethod("currentActivityThread");
             Object activityThread = currentActivityThreadMethod.invoke(null);
             

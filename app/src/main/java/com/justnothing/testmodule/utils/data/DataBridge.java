@@ -38,34 +38,34 @@ public class DataBridge {
 
     private static final Queue<String> logBuffer = new LinkedList<>();
     private static String lastLogError = null;
-    private static long lastLogErrorTime = 0;
-    private static final long LOG_ERROR_REPORT_INTERVAL = 60000;
+    private static long lastLogErrorTimestamp = 0;
+    private static final long LOG_ERROR_REPORT_INTERVAL_MS = 60000;
     private static String lastPermissionError = null;
-    private static long lastPermissionErrorTime = 0;
+    private static long lastPermissionErrorTimestamp = 0;
     private static final long PERMISSION_ERROR_REPORT_INTERVAL = 120000;
     
     private static boolean logDirPermissionIssue = false;
-    private static long lastPermissionCheckTime = 0;
-    private static final long PERMISSION_CHECK_INTERVAL = 30000;
+    private static long lastPermissionCheckTimestamp = 0;
+    private static final long PERMISSION_CHECK_INTERVAL_MS = 30000;
 
     private static final Map<String, Long> lastWarningTimes = new ConcurrentHashMap<>();
-    private static final long WARNING_COOLDOWN_INTERVAL = 30000;
+    private static final long WARNING_COOLDOWN_INTERVAL_MS = 30000;
 
     private static JSONObject cachedModuleStatus = null;
-    private static long moduleStatusCacheTime = 0;
-    private static final long MODULE_STATUS_CACHE_TTL = 30000;
+    private static long moduleStatusCacheTimestamp = 0;
+    private static final long MODULE_STATUS_CACHE_TTL_MS = 30000;
 
     private static JSONObject cachedPerformanceData = null;
-    private static long performanceDataCacheTime = 0;
-    private static final long PERFORMANCE_DATA_CACHE_TTL = 30000;
+    private static long performanceDataCacheTimestamp = 0;
+    private static final long PERFORMANCE_DATA_CACHE_TTL_MS = 30000;
     
     private static JSONObject clientHookConfig = null;
-    private static long clientHookConfigCacheTime = 0;
-    private static final long CLIENT_HOOK_CONFIG_CACHE_TTL = 10000;
+    private static long clientHookConfigCacheTimestamp = 0;
+    private static final long CLIENT_HOOK_CONFIG_CACHE_TTL_MS = 10000;
     
     private static JSONObject serverHookConfig = null;
-    private static long serverHookConfigCacheTime = 0;
-    private static final long SERVER_HOOK_CONFIG_CACHE_TTL = 10000;
+    private static long serverHookConfigCacheTimestamp = 0;
+    private static final long SERVER_HOOK_CONFIG_CACHE_TTL_MS = 10000;
 
     private static String modulePath = null;
 
@@ -130,7 +130,7 @@ public class DataBridge {
         long currentTime = System.currentTimeMillis();
         Long lastTime = lastWarningTimes.get(message);
         
-        if (lastTime == null || (currentTime - lastTime) >= WARNING_COOLDOWN_INTERVAL) {
+        if (lastTime == null || (currentTime - lastTime) >= WARNING_COOLDOWN_INTERVAL_MS) {
             lastWarningTimes.put(message, currentTime);
             logger.warn(message);
         }
@@ -176,7 +176,7 @@ public class DataBridge {
             logger.debug("模块状态文件写入完成");
             
             cachedModuleStatus = mergedStatus;
-            moduleStatusCacheTime = System.currentTimeMillis();
+            moduleStatusCacheTimestamp = System.currentTimeMillis();
             logger.debug("模块状态已写入文件");
         } catch (Exception e) {
             reportLogError("写入模块状态失败: " + e.getMessage(), e);
@@ -193,7 +193,7 @@ public class DataBridge {
         lock.readLock().lock();
         try {
             File file = getModuleStatusFile();
-            if (!forceRefresh && isCacheValid(file, moduleStatusCacheTime, MODULE_STATUS_CACHE_TTL) && cachedModuleStatus != null) {
+            if (!forceRefresh && isCacheValid(file, moduleStatusCacheTimestamp, MODULE_STATUS_CACHE_TTL_MS) && cachedModuleStatus != null) {
                 logger.debug("从缓存读取模块状态");
                 return new JSONObject(cachedModuleStatus.toString());
             }
@@ -201,7 +201,7 @@ public class DataBridge {
             if (!file.exists()) {
                 logger.debug("模块状态文件不存在，创建空对象");
                 cachedModuleStatus = new JSONObject();
-                moduleStatusCacheTime = System.currentTimeMillis();
+                moduleStatusCacheTimestamp = System.currentTimeMillis();
                 return cachedModuleStatus;
             }
             
@@ -210,7 +210,7 @@ public class DataBridge {
             logger.debug("模块状态文件读取完成");
             if (content != null) {
                 cachedModuleStatus = new JSONObject(content);
-                moduleStatusCacheTime = System.currentTimeMillis();
+                moduleStatusCacheTimestamp = System.currentTimeMillis();
                 return new JSONObject(cachedModuleStatus.toString());
             }
             return new JSONObject();
@@ -226,7 +226,7 @@ public class DataBridge {
         lock.writeLock().lock();
         try {
             cachedModuleStatus = null;
-            moduleStatusCacheTime = 0;
+            moduleStatusCacheTimestamp = 0;
             logger.info("强制刷新Hook状态缓存");
         } finally {
             lock.writeLock().unlock();
@@ -248,7 +248,7 @@ public class DataBridge {
             logger.debug("性能数据文件写入完成");
             
             cachedPerformanceData = data;
-            performanceDataCacheTime = System.currentTimeMillis();
+            performanceDataCacheTimestamp = System.currentTimeMillis();
             logger.debug("性能数据已写入文件");
         } catch (Exception e) {
             reportLogError("写入性能数据失败: " + e.getMessage(), e);
@@ -261,7 +261,7 @@ public class DataBridge {
         lock.readLock().lock();
         try {
             File file = getPerformanceFile();
-            if (isCacheValid(file, performanceDataCacheTime, PERFORMANCE_DATA_CACHE_TTL) && cachedPerformanceData != null) {
+            if (isCacheValid(file, performanceDataCacheTimestamp, PERFORMANCE_DATA_CACHE_TTL_MS) && cachedPerformanceData != null) {
                 logger.debug("从缓存读取性能数据");
                 return new JSONObject(cachedPerformanceData.toString());
             }
@@ -269,7 +269,7 @@ public class DataBridge {
             if (!file.exists()) {
                 logger.debug("性能数据文件不存在，创建空对象");
                 cachedPerformanceData = new JSONObject();
-                performanceDataCacheTime = System.currentTimeMillis();
+                performanceDataCacheTimestamp = System.currentTimeMillis();
                 return cachedPerformanceData;
             }
             
@@ -278,7 +278,7 @@ public class DataBridge {
             logger.debug("性能数据文件读取完成");
             if (content != null) {
                 cachedPerformanceData = new JSONObject(content);
-                performanceDataCacheTime = System.currentTimeMillis();
+                performanceDataCacheTimestamp = System.currentTimeMillis();
                 return new JSONObject(cachedPerformanceData.toString());
             }
             return new JSONObject();
@@ -294,19 +294,19 @@ public class DataBridge {
         long currentTime = System.currentTimeMillis();
         
         if (error != null && (error.contains("Permission denied") || error.contains("权限不足"))) {
-            if (error.equals(lastPermissionError) && (currentTime - lastPermissionErrorTime) < PERMISSION_ERROR_REPORT_INTERVAL) {
+            if (error.equals(lastPermissionError) && (currentTime - lastPermissionErrorTimestamp) < PERMISSION_ERROR_REPORT_INTERVAL) {
                 return;
             }
             lastPermissionError = error;
-            lastPermissionErrorTime = currentTime;
+            lastPermissionErrorTimestamp = currentTime;
         }
 
-        if (error != null && error.equals(lastLogError) && (currentTime - lastLogErrorTime) < LOG_ERROR_REPORT_INTERVAL) {
+        if (error != null && error.equals(lastLogError) && (currentTime - lastLogErrorTimestamp) < LOG_ERROR_REPORT_INTERVAL_MS) {
             return;
         }
         
         lastLogError = error;
-        lastLogErrorTime = currentTime;
+        lastLogErrorTimestamp = currentTime;
         
         if (logSystemInitialized) {
             logger.error(error, e);
@@ -323,7 +323,7 @@ public class DataBridge {
         File dir = getDataDir();
         if (!dir.exists()) {
             try {
-                if (!dir.mkdirs()) {
+                if (!IOManager.createDirectory(dir)) {
                     reportLogError("创建日志目录失败, mkdirs返回false", null);
                     return false;
                 }
@@ -384,12 +384,12 @@ public class DataBridge {
         }
         
         long currentTime = System.currentTimeMillis();
-        if (logDirPermissionIssue && (currentTime - lastPermissionCheckTime) < PERMISSION_CHECK_INTERVAL) {
+        if (logDirPermissionIssue && (currentTime - lastPermissionCheckTimestamp) < PERMISSION_CHECK_INTERVAL_MS) {
             return;
         }
 
         logDirPermissionIssue = true;
-        lastPermissionCheckTime = currentTime;
+        lastPermissionCheckTimestamp = currentTime;
 
         final String dirPath = getDataDir().getAbsolutePath();
         final String filePath = file.getAbsolutePath();
@@ -508,7 +508,7 @@ public class DataBridge {
             
             File file = getLogFile();
             if (file.exists()) {
-                if (!file.delete()) logger.warn("清除日志失败, delete返回false");
+                if (!IOManager.deleteFile(file.getAbsolutePath())) logger.warn("清除日志失败, delete返回false");
             }
         } catch (Exception e) {
             reportLogError("清除日志失败: " + e.getMessage(), e);
@@ -562,7 +562,7 @@ public class DataBridge {
             logger.debug("Hook客户端配置文件写入完成");
             
             clientHookConfig = config;
-            clientHookConfigCacheTime = System.currentTimeMillis();
+            clientHookConfigCacheTimestamp = System.currentTimeMillis();
             logger.info("Hook客户端配置已写入文件");
         } catch (Exception e) {
             reportLogError("写入Hook客户端配置失败: " + e.getMessage(), e);
@@ -580,7 +580,7 @@ public class DataBridge {
         try {
             File file = getClientHookConfigFile();
             
-            if (!forceRefresh && isCacheValid(file, clientHookConfigCacheTime, CLIENT_HOOK_CONFIG_CACHE_TTL) && clientHookConfig != null) {
+            if (!forceRefresh && isCacheValid(file, clientHookConfigCacheTimestamp, CLIENT_HOOK_CONFIG_CACHE_TTL_MS) && clientHookConfig != null) {
                 logger.debug("从缓存读取客户端Hook配置");
                 return new JSONObject(clientHookConfig.toString());
             }
@@ -590,12 +590,12 @@ public class DataBridge {
                 if (!DataDirectoryManager.ensureFileExistsWithPermissions(file, "Hook配置文件")) {
                     warnWithCooldown("无法确保Hook配置文件存在，使用内存配置");
                     clientHookConfig = new JSONObject();
-                    clientHookConfigCacheTime = System.currentTimeMillis();
+                    clientHookConfigCacheTimestamp = System.currentTimeMillis();
                     return clientHookConfig;
                 }
                 
                 clientHookConfig = new JSONObject();
-                clientHookConfigCacheTime = System.currentTimeMillis();
+                clientHookConfigCacheTimestamp = System.currentTimeMillis();
                 return clientHookConfig;
             }
             
@@ -605,17 +605,17 @@ public class DataBridge {
             if (content != null && !content.trim().isEmpty()) {
                 try {
                     clientHookConfig = new JSONObject(content);
-                    clientHookConfigCacheTime = System.currentTimeMillis();
+                    clientHookConfigCacheTimestamp = System.currentTimeMillis();
                     return new JSONObject(clientHookConfig.toString());
                 } catch (Exception jsonException) {
                     logger.warn("Hook配置文件JSON解析失败，使用默认配置: " + jsonException.getMessage());
                     clientHookConfig = new JSONObject();
-                    clientHookConfigCacheTime = System.currentTimeMillis();
+                    clientHookConfigCacheTimestamp = System.currentTimeMillis();
                     return clientHookConfig;
                 }
             }
             clientHookConfig = new JSONObject();
-            clientHookConfigCacheTime = System.currentTimeMillis();
+            clientHookConfigCacheTimestamp = System.currentTimeMillis();
             return clientHookConfig;
         } catch (Exception e) {
             if (!Objects.requireNonNull(e.getMessage())
@@ -645,7 +645,7 @@ public class DataBridge {
             logger.debug("服务端Hook配置文件写入完成");
 
             serverHookConfig = hookList;
-            serverHookConfigCacheTime = System.currentTimeMillis();
+            serverHookConfigCacheTimestamp = System.currentTimeMillis();
             ServerHookConfig.invalidateCache();
             logger.info("服务端Hook配置已写入文件");
         } catch (Exception e) {
@@ -664,7 +664,7 @@ public class DataBridge {
         try {
             File file = getServerHookListFile();
             
-            if (!forceRefresh && isCacheValid(file, serverHookConfigCacheTime, SERVER_HOOK_CONFIG_CACHE_TTL) && serverHookConfig != null) {
+            if (!forceRefresh && isCacheValid(file, serverHookConfigCacheTimestamp, SERVER_HOOK_CONFIG_CACHE_TTL_MS) && serverHookConfig != null) {
                 logger.debug("从缓存读取服务端Hook配置");
                 return new JSONObject(serverHookConfig.toString());
             }
@@ -672,7 +672,7 @@ public class DataBridge {
             if (!file.exists()) {
                 logger.debug("服务端Hook配置文件不存在，创建空对象");
                 serverHookConfig = new JSONObject();
-                serverHookConfigCacheTime = System.currentTimeMillis();
+                serverHookConfigCacheTimestamp = System.currentTimeMillis();
                 return serverHookConfig;
             }
             
@@ -681,11 +681,11 @@ public class DataBridge {
             logger.debug("服务端Hook配置文件读取完成");
             if (content != null) {
                 serverHookConfig = new JSONObject(content);
-                serverHookConfigCacheTime = System.currentTimeMillis();
+                serverHookConfigCacheTimestamp = System.currentTimeMillis();
                 return new JSONObject(serverHookConfig.toString());
             }
             serverHookConfig = new JSONObject();
-            serverHookConfigCacheTime = System.currentTimeMillis();
+            serverHookConfigCacheTimestamp = System.currentTimeMillis();
             return serverHookConfig;
         } catch (Exception e) {
             reportLogError("读取服务端Hook配置失败: " + e.getMessage(), e);

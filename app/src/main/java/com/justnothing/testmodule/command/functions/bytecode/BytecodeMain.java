@@ -4,6 +4,7 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_BYTECODE_VE
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.io.IOManager;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
@@ -33,7 +34,7 @@ import java.util.Arrays;
 
 public class BytecodeMain extends CommandBase {
 
-    private String commandName;
+    private final String commandName;
 
     public BytecodeMain() {
         super("Bytecode");
@@ -47,57 +48,54 @@ public class BytecodeMain extends CommandBase {
 
     @Override
     public String getHelpText() {
-        if ("binfo".equals(commandName)) {
-            return String.format("""
+        return switch (commandName) {
+            case "binfo" -> String.format("""
                     语法: binfo [options] <class>
-
+                    
                     查看类的字节码信息.
-
+                    
                     可选项:
                         -v, --verbose                详细输出
-
+                    
                     示例:
                         binfo java.lang.String
                         binfo -v java.util.ArrayList
-
+                    
                     (Submodule bytecode %s)
                     """, CMD_BYTECODE_VER);
-        } else if ("banalyze".equals(commandName)) {
-            return String.format("""
+            case "banalyze" -> String.format("""
                     语法: banalyze [options] <class>
-
+                    
                     分析类的字节码结构.
-
+                    
                     可选项:
                         -v, --verbose                详细输出
-
+                    
                     示例:
                         banalyze java.lang.String
                         banalyze -v java.util.ArrayList
-
+                    
                     (Submodule bytecode %s)
                     """, CMD_BYTECODE_VER);
-        } else if ("bdecompile".equals(commandName)) {
-            return String.format("""
+            case "bdecompile" -> String.format("""
                     语法: bdecompile [options] <class>
-
+                    
                     反编译类为Java代码.
-
+                    
                     可选项:
                         -o, --output <path>         指定输出文件路径
-
+                    
                     示例:
                         bdecompile java.lang.String
                         bdecompile com.example.MyClass -o /sdcard/MyClass.java
-
+                    
                     (Submodule bytecode %s)
                     """, CMD_BYTECODE_VER);
-        } else {
-            return String.format("""
+            case null, default -> String.format("""
                     语法: bytecode <subcmd> [args...]
-
+                    
                     查看和分析Java字节码，研究类和方法实现.
-
+                    
                     子命令:
                         info <class_name>                         - 查看类的字节码信息
                         method <class_name> <method_name>         - 查看指定方法的字节码
@@ -109,12 +107,12 @@ public class BytecodeMain extends CommandBase {
                         decompile <class_name>                    - 反编译为Java代码
                         batch_export                              - 批量导出类型信息
                         list_classes                              - 列出所有类
-
+                    
                     选项:
                         -o, --output <path>                      - 指定输出文件路径
                         -v, --verbose                            - 详细输出
                         -h, --hex                                - 以十六进制格式显示
-
+                    
                     示例:
                         bytecode info java.lang.String
                         bytecode method java.lang.String valueOf
@@ -126,12 +124,12 @@ public class BytecodeMain extends CommandBase {
                         bytecode verify java.lang.String
                         bytecode decompile java.lang.String
                         bytecode decompile com.example.MyClass -o /sdcard/MyClass.java
-
+                    
                     快捷命令:
                         binfo      - 等同于 bytecode info
                         banalyze   - 等同于 bytecode analyze
                         bdecompile - 等同于 bytecode decompile
-
+                    
                     注意:
                         - 需要类已加载才能查看字节码
                         - 反汇编使用ASM库
@@ -140,57 +138,60 @@ public class BytecodeMain extends CommandBase {
                         - 字节码验证会检查类文件的完整性
                         - DEX格式可能无法完全分析，建议使用dexdump工具
                         - 使用上层命令指定ClassLoader（如：methods -cl android）
-
+                    
                     (Submodule bytecode %s)
                     """, CMD_BYTECODE_VER);
-        }
+        };
     }
 
     @Override
-    public String runMain(CommandExecutor.CmdExecContext context) {
+    public void runMain(CommandExecutor.CmdExecContext context) {
         String[] args = context.args();
 
         if (args.length < 1) {
-            return getHelpText();
+            context.println(getHelpText(), Colors.WHITE);
+            return;
         }
 
         String subcmd = args[0];
-        String targetPackage = context.targetPackage();
         String outputPath = null;
         boolean verbose = false;
         boolean hexFormat = false;
 
         for (int i = 1; i < args.length; i++) {
             String arg = args[i];
-            if (arg.equals("-o") || arg.equals("--output")) {
-                if (i + 1 < args.length) {
-                    outputPath = args[++i];
+            switch (arg) {
+                case "-o", "--output" -> {
+                    if (i + 1 < args.length) {
+                        outputPath = args[++i];
+                    }
                 }
-            } else if (arg.equals("-v") || arg.equals("--verbose")) {
-                verbose = true;
-            } else if (arg.equals("-h") || arg.equals("--hex")) {
-                hexFormat = true;
+                case "-v", "--verbose" -> verbose = true;
+                case "-h", "--hex" -> hexFormat = true;
             }
         }
 
         ClassLoader classLoader = context.classLoader();
 
-        return switch (subcmd) {
-            case "info" -> handleInfo(args, classLoader, targetPackage, verbose, context);
-            case "method" -> handleMethod(args, classLoader, targetPackage, hexFormat, context);
-            case "dump" -> handleDump(args, classLoader, targetPackage, outputPath, context);
-            case "analyze" -> handleAnalyze(args, classLoader, targetPackage, verbose, context);
-            case "disasm" -> handleDisasm(args, classLoader, targetPackage, hexFormat, context);
-            case "constants" -> handleConstants(args, classLoader, targetPackage, context);
+        switch (subcmd) {
+            case "info" -> handleInfo(args, classLoader, verbose, context);
+            case "method" -> handleMethod(args, classLoader, hexFormat, context);
+            case "dump" -> handleDump(args, classLoader, outputPath, context);
+            case "analyze" -> handleAnalyze(args, classLoader, verbose, context);
+            case "disasm" -> handleDisasm(args, classLoader, context);
+            case "constants" -> handleConstants(args, classLoader, context);
             case "verify" -> handleVerify(args, classLoader, context);
-            case "decompile" -> handleDecompile(args, classLoader, targetPackage, outputPath, context);
-            case "batch_export" -> handleBatchExport(classLoader, outputPath);
-            case "list_classes" -> handleListClasses(classLoader);
-            default -> "未知子命令: " + subcmd + "\n" + getHelpText();
+            case "decompile" -> handleDecompile(args, classLoader, outputPath, context);
+            case "batch_export" -> handleBatchExport(classLoader, outputPath, context);
+            case "list_classes" -> handleListClasses(classLoader, context);
+            default -> {
+                context.println("未知子命令: " + subcmd, Colors.RED);
+                context.println(getHelpText(), Colors.WHITE);
+            }
         };
     }
 
-    private String handleInfo(String[] args, ClassLoader classLoader, String targetPackage, boolean verbose, CommandExecutor.CmdExecContext context) {
+    private String handleInfo(String[] args, ClassLoader classLoader, boolean verbose, CommandExecutor.CmdExecContext context) {
         if (args.length < 2) {
             return "参数不足，需要指定类名";
         }
@@ -199,9 +200,6 @@ public class BytecodeMain extends CommandBase {
 
         try {
             Class<?> targetClass = loadClass(className, classLoader);
-            if (targetClass == null) {
-                return "找不到类: " + className;
-            }
 
             StringBuilder sb = new StringBuilder();
             sb.append("类名: ").append(targetClass.getName()).append("\n");
@@ -214,7 +212,7 @@ public class BytecodeMain extends CommandBase {
 
             Class<?>[] interfaces = targetClass.getInterfaces();
             sb.append("接口: ").append(interfaces.length).append(" 个\n");
-            if (verbose && interfaces.length > 0) {
+            if (verbose) {
                 for (Class<?> iface : interfaces) {
                     sb.append("  - ").append(iface.getName()).append("\n");
                 }
@@ -246,7 +244,7 @@ public class BytecodeMain extends CommandBase {
         }
     }
 
-    private String handleMethod(String[] args, ClassLoader classLoader, String targetPackage, boolean hexFormat, CommandExecutor.CmdExecContext context) {
+    private String handleMethod(String[] args, ClassLoader classLoader, boolean hexFormat, CommandExecutor.CmdExecContext context) {
         if (args.length < 3) {
             return "参数不足，需要指定类名和方法名";
         }
@@ -292,7 +290,7 @@ public class BytecodeMain extends CommandBase {
 
                         if (hexFormat) {
                             sb.append("\n字节码（十六进制）:\n");
-                            sb.append(disasmMethodWithASM(targetClass, targetMethod, bytecode));
+                            sb.append(disasmMethodWithASM(targetMethod, bytecode));
                         }
                     }
                 } catch (Exception e) {
@@ -307,7 +305,7 @@ public class BytecodeMain extends CommandBase {
         }
     }
 
-    private String handleDump(String[] args, ClassLoader classLoader, String targetPackage, String outputPath, CommandExecutor.CmdExecContext context) {
+    private String handleDump(String[] args, ClassLoader classLoader, String outputPath, CommandExecutor.CmdExecContext context) {
         if (args.length < 2) {
             return "参数不足，需要指定类名";
         }
@@ -320,9 +318,6 @@ public class BytecodeMain extends CommandBase {
 
         try {
             Class<?> targetClass = loadClass(className, classLoader);
-            if (targetClass == null) {
-                return "找不到类: " + className;
-            }
 
             byte[] bytecode = getClassBytecode(targetClass);
 
@@ -340,7 +335,7 @@ public class BytecodeMain extends CommandBase {
         }
     }
 
-    private String handleAnalyze(String[] args, ClassLoader classLoader, String targetPackage, boolean verbose, CommandExecutor.CmdExecContext context) {
+    private String handleAnalyze(String[] args, ClassLoader classLoader, boolean verbose, CommandExecutor.CmdExecContext context) {
         if (args.length < 2) {
             return "参数不足，需要指定类名";
         }
@@ -349,11 +344,6 @@ public class BytecodeMain extends CommandBase {
 
         try {
             Class<?> targetClass = loadClass(className, classLoader);
-            if (targetClass == null) {
-                return "找不到类: " + className +
-                        "\n使用的包: " + (targetPackage != null ? targetPackage : "default") +
-                        "\n类加载器: " + (classLoader != null ? classLoader.getClass().getName() : "无");
-            }
 
             byte[] bytecode = getClassBytecode(targetClass);
 
@@ -415,7 +405,7 @@ public class BytecodeMain extends CommandBase {
         }
     }
 
-    private String handleDisasm(String[] args, ClassLoader classLoader, String targetPackage, boolean hexFormat, CommandExecutor.CmdExecContext context) {
+    private String handleDisasm(String[] args, ClassLoader classLoader, CommandExecutor.CmdExecContext context) {
         if (args.length < 2) {
             return "参数不足，需要指定类名";
         }
@@ -425,11 +415,6 @@ public class BytecodeMain extends CommandBase {
 
         try {
             Class<?> targetClass = loadClass(className, classLoader);
-            if (targetClass == null) {
-                return "找不到类: " + className +
-                        "\n使用的包: " + (targetPackage != null ? targetPackage : "default") +
-                        "\n类加载器: " + (classLoader != null ? classLoader.getClass().getName() : "无");
-            }
 
             byte[] bytecode = getClassBytecode(targetClass);
             if (bytecode == null) {
@@ -455,12 +440,12 @@ public class BytecodeMain extends CommandBase {
                 Method[] methods = targetClass.getDeclaredMethods();
                 for (Method method : methods) {
                     if (method.getName().equals(methodName)) {
-                        sb.append(disasmMethodWithASM(targetClass, method, bytecode));
+                        sb.append(disasmMethodWithASM(method, bytecode));
                         break;
                     }
                 }
             } else {
-                sb.append(disasmClassWithASM(targetClass, bytecode));
+                sb.append(disasmClassWithASM(bytecode));
             }
 
             return sb.toString();
@@ -470,7 +455,7 @@ public class BytecodeMain extends CommandBase {
         }
     }
 
-    private String handleConstants(String[] args, ClassLoader classLoader, String targetPackage, CommandExecutor.CmdExecContext context) {
+    private String handleConstants(String[] args, ClassLoader classLoader, CommandExecutor.CmdExecContext context) {
         if (args.length < 2) {
             return "参数不足，需要指定类名";
         }
@@ -593,7 +578,7 @@ public class BytecodeMain extends CommandBase {
         }
     }
 
-    private String handleDecompile(String[] args, ClassLoader classLoader, String targetPackage, String outputPath, CommandExecutor.CmdExecContext context) {
+    private String handleDecompile(String[] args, ClassLoader classLoader, String outputPath, CommandExecutor.CmdExecContext context) {
         if (args.length < 2) {
             return "参数不足，需要指定类名";
         }
@@ -602,11 +587,6 @@ public class BytecodeMain extends CommandBase {
 
         try {
             Class<?> targetClass = loadClass(className, classLoader);
-            if (targetClass == null) {
-                return "找不到类: " + className +
-                        "\n使用的包: " + (targetPackage != null ? targetPackage : "default") +
-                        "\n类加载器: " + (classLoader != null ? classLoader.getClass().getName() : "无");
-            }
 
             byte[] bytecode = getClassBytecode(targetClass);
             if (bytecode == null) {
@@ -625,7 +605,7 @@ public class BytecodeMain extends CommandBase {
                 return errorMsg;
             }
 
-            String decompiledCode = decompileWithCFR(bytecode, className);
+            String decompiledCode = decompileWithCFR(className);
 
             if (outputPath != null) {
                 IOManager.writeFile(outputPath, decompiledCode.getBytes());
@@ -640,21 +620,21 @@ public class BytecodeMain extends CommandBase {
         }
     }
 
-    private String handleBatchExport(ClassLoader classLoader, String outputPath) {
+    private void handleBatchExport(ClassLoader classLoader, String outputPath, CommandExecutor.CmdExecContext context) {
         if (outputPath == null) {
             outputPath = "/sdcard/class_dump_" + System.currentTimeMillis() + "/";
         }
 
         try {
             SystemBytecodeExtractor.exportAllClasses(classLoader, outputPath);
-            return "批量导出完成，保存到: " + outputPath;
+            context.println("批量导出完成，保存到: " + outputPath, Colors.LIGHT_GREEN);
         } catch (Exception e) {
             logger.error("批量导出失败", e);
-            return "错误: " + e.getMessage();
+            context.println("错误: " + e.getMessage(), Colors.RED);
         }
     }
 
-    private String handleListClasses(ClassLoader classLoader) {
+    private void handleListClasses(ClassLoader classLoader, CommandExecutor.CmdExecContext context) {
         try {
             Map<String, byte[]> classes = SystemBytecodeExtractor.getAllClassesBytecode(classLoader);
 
@@ -669,16 +649,16 @@ public class BytecodeMain extends CommandBase {
             for (String className : classNames) {
                 sb.append(className).append("\n");
                 count++;
-                if (count >= 100) { // 只显示前100个
-                    sb.append("... (总共 " + classes.size() + " 个类)\n");
+                if (count >= 100) {
+                    sb.append("... (总共 ").append(classes.size()).append(" 个类)\n");
                     break;
                 }
             }
 
-            return sb.toString();
+            context.println(sb.toString(), Colors.DEFAULT);
         } catch (Exception e) {
             logger.error("获取类列表失败", e);
-            return "错误: " + e.getMessage();
+            context.println("错误: " + e.getMessage(), Colors.RED);
         }
     }
 
@@ -690,7 +670,7 @@ public class BytecodeMain extends CommandBase {
         return SystemBytecodeExtractor.getClassBytecode(clazz);
     }
 
-    private String disasmClassWithASM(Class<?> clazz, byte[] bytecode) {
+    private String disasmClassWithASM(byte[] bytecode) {
         try {
             StringWriter sw = new StringWriter();
             PrintWriter pw = new PrintWriter(sw);
@@ -707,7 +687,7 @@ public class BytecodeMain extends CommandBase {
         }
     }
 
-    private String disasmMethodWithASM(Class<?> clazz, Method method, byte[] bytecode) {
+    private String disasmMethodWithASM(Method method, byte[] bytecode) {
         try {
             StringWriter sw = new StringWriter();
             PrintWriter pw = new PrintWriter(sw);
@@ -784,7 +764,7 @@ public class BytecodeMain extends CommandBase {
         }
     }
 
-    private String decompileWithCFR(byte[] bytecode, String className) {
+    private String decompileWithCFR(String className) {
         try {
             StringBuilder sb = new StringBuilder();
 
@@ -797,13 +777,8 @@ public class BytecodeMain extends CommandBase {
 
                         @Override
                         public <T> Sink<T> getSink(SinkType sinkType, SinkClass sinkClass) {
-                            return new Sink<>() {
-                                @Override
-                                public void write(Object o) {
-                                    if (o != null) {
-                                        sb.append(o.toString());
-                                    }
-                                }
+                            return o -> {
+                                if (o != null) sb.append(o);
                             };
                         }
                     })

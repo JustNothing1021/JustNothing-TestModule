@@ -18,10 +18,10 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.lang.reflect.Method;
-import java.text.DecimalFormat;
 import java.util.Date;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 
 public class MemoryMain extends CommandBase {
 
@@ -135,12 +135,13 @@ public class MemoryMain extends CommandBase {
     }
 
     @Override
-    public String runMain(CommandExecutor.CmdExecContext context) {
+    public void runMain(CommandExecutor.CmdExecContext context) {
         String cmdName = context.cmdName();
         String[] args = context.args();
         
         if (args.length < 1 && !cmdName.equals("minfo") && !cmdName.equals("mgc") && !cmdName.equals("mdump")) {
-            return getHelpText();
+            context.println(getHelpText(), Colors.WHITE);
+            return;
         }
 
         String subCommand;
@@ -166,22 +167,21 @@ public class MemoryMain extends CommandBase {
         }
 
         try {
-            return switch (subCommand) {
+            switch (subCommand) {
                 case "info" -> handleInfo(subArgs, context);
                 case "gc" -> handleGc(subArgs, context);
                 case "dump" -> handleDump(subArgs, context);
                 default -> {
                     context.print("未知子命令: ", Colors.RED);
                     context.println(subCommand, Colors.YELLOW);
-                    yield null;
                 }
-            };
+            }
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("memory", e, context, "执行memory命令失败");
+            CommandExceptionHandler.handleException("memory", e, context, "执行memory命令失败");
         }
     }
 
-    private String handleInfo(String[] args, CommandExecutor.CmdExecContext ctx) {
+    private void handleInfo(String[] args, CommandExecutor.CmdExecContext ctx) {
         boolean showHeapOnly = false;
 
         for (String arg : args) {
@@ -285,10 +285,8 @@ public class MemoryMain extends CommandBase {
             logger.info("内存信息查询完成");
             
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("memory info", e, ctx, "获取内存信息失败");
+            CommandExceptionHandler.handleException("memory info", e, ctx, "获取内存信息失败");
         }
-        
-        return null;
     }
 
     private byte getPercentColor(double percent) {
@@ -328,22 +326,7 @@ public class MemoryMain extends CommandBase {
         ctx.print(" " + units[unitIndex], Colors.CYAN);
     }
 
-    private void printMemoryWithPercent(CommandExecutor.CmdExecContext ctx, String label, long used, long total) {
-        ctx.print(label, Colors.GRAY);
-        printBytes(ctx, used);
-        ctx.print(" / ", Colors.GRAY);
-        printBytes(ctx, total);
-        
-        if (total > 0) {
-            double percent = (double) used / total * 100;
-            ctx.print(" (", Colors.GRAY);
-            ctx.print(String.format(Locale.US, "%.1f", percent), getPercentColor(percent));
-            ctx.print("%)", Colors.GRAY);
-        }
-        ctx.println("", Colors.DEFAULT);
-    }
-
-    private String handleGc(String[] args, CommandExecutor.CmdExecContext ctx) {
+    private void handleGc(String[] args, CommandExecutor.CmdExecContext ctx) {
         boolean fullGc = false;
         boolean showStats = false;
         
@@ -470,13 +453,12 @@ public class MemoryMain extends CommandBase {
             logger.info("垃圾回收完成");
             
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("memory gc", e, ctx, "垃圾回收失败");
+            CommandExceptionHandler.handleException("memory gc", e, ctx, "垃圾回收失败");
         }
         
-        return null;
     }
 
-    private String handleDump(String[] args, CommandExecutor.CmdExecContext ctx) {
+    private void handleDump(String[] args, CommandExecutor.CmdExecContext ctx) {
         boolean dumpHeap = false;
         boolean dumpThreads = false;
         boolean dumpFull = true;
@@ -527,12 +509,10 @@ public class MemoryMain extends CommandBase {
                 logger.info("堆信息导出完成");
                 ctx.print("堆信息已导出到: ", Colors.LIGHT_GREEN);
                 ctx.println(filePath, Colors.CYAN);
-                return null;
             } catch (IOException e) {
                 logger.error("导出堆信息失败", e);
                 ctx.print("错误: ", Colors.RED);
-                ctx.println(e.getMessage(), Colors.YELLOW);
-                return null;
+                ctx.println(Objects.requireNonNullElse(e.getMessage(), "未知错误"), Colors.YELLOW);
             }
         } else {
             ctx.println("=== 系统堆转储 ===", Colors.CYAN);
@@ -551,8 +531,6 @@ public class MemoryMain extends CommandBase {
             if (dumpFull) {
                 dumpSystemInfoColored(ctx);
             }
-            
-            return null;
         }
     }
 
@@ -620,7 +598,7 @@ public class MemoryMain extends CommandBase {
             ctx.print("  优先级: ", Colors.GRAY);
             ctx.println(String.valueOf(thread.getPriority()), Colors.YELLOW);
             ctx.print("  守护: ", Colors.GRAY);
-            ctx.println(thread.isDaemon() ? "是" : "否", thread.isDaemon() ? Colors.PURPLE : Colors.LIGHT_GREEN);
+            ctx.println(thread.isDaemon() ? "是" : "否", thread.isDaemon() ? Colors.MAGENTA : Colors.LIGHT_GREEN);
             ctx.print("  中断: ", Colors.GRAY);
             ctx.println(thread.isInterrupted() ? "是" : "否", thread.isInterrupted() ? Colors.RED : Colors.LIGHT_GREEN);
             
@@ -635,27 +613,31 @@ public class MemoryMain extends CommandBase {
             ctx.println("");
         }
     }
+
+    private String getProperty(String key) {
+        return Objects.requireNonNullElse(System.getProperty(key), "未知");
+    }
     
     private void dumpSystemInfoColored(CommandExecutor.CmdExecContext ctx) {
         ctx.println("=== 系统信息 ===", Colors.CYAN);
         ctx.println("");
         
         ctx.print("操作系统: ", Colors.GRAY);
-        ctx.println(System.getProperty("os.name"), Colors.YELLOW);
+        ctx.println(getProperty("os.name"), Colors.YELLOW);
         ctx.print("系统版本: ", Colors.GRAY);
-        ctx.println(System.getProperty("os.version"), Colors.YELLOW);
+        ctx.println(getProperty("os.version"), Colors.YELLOW);
         ctx.print("架构: ", Colors.GRAY);
-        ctx.println(System.getProperty("os.arch"), Colors.YELLOW);
+        ctx.println(getProperty("os.arch"), Colors.YELLOW);
         ctx.print("处理器数: ", Colors.GRAY);
         ctx.println(String.valueOf(Runtime.getRuntime().availableProcessors()), Colors.YELLOW);
         ctx.print("Java版本: ", Colors.GRAY);
-        ctx.println(System.getProperty("java.version"), Colors.YELLOW);
+        ctx.println(getProperty("java.version"), Colors.YELLOW);
         ctx.print("Java供应商: ", Colors.GRAY);
-        ctx.println(System.getProperty("java.vendor"), Colors.YELLOW);
+        ctx.println(getProperty("java.vendor"), Colors.YELLOW);
         ctx.print("Java虚拟机: ", Colors.GRAY);
-        ctx.println(System.getProperty("java.vm.name"), Colors.YELLOW);
+        ctx.println(getProperty("java.vm.name"), Colors.YELLOW);
         ctx.print("Java虚拟机版本: ", Colors.GRAY);
-        ctx.println(System.getProperty("java.vm.version"), Colors.YELLOW);
+        ctx.println(getProperty("java.vm.version"), Colors.YELLOW);
         ctx.println("");
     }
 
@@ -772,37 +754,7 @@ public class MemoryMain extends CommandBase {
         }
         return result.toString();
     }
-    
-    private static String readProcessMemoryStats() {
-        StringBuilder result = new StringBuilder();
-        try {
-            int pid = android.os.Process.myPid();
-            try (BufferedReader reader = new BufferedReader(new FileReader("/proc/" + pid + "/statm"))) {
-                String line = reader.readLine();
-                if (line != null) {
-                    String[] parts = line.split("\\s+");
-                    if (parts.length >= 7) {
-                        long pageSize = 4096;
-                        long size = Long.parseLong(parts[0]) * pageSize;
-                        long resident = Long.parseLong(parts[1]) * pageSize;
-                        long shared = Long.parseLong(parts[2]) * pageSize;
-                        long text = Long.parseLong(parts[3]) * pageSize;
-                        long data = Long.parseLong(parts[5]) * pageSize;
-                        
-                        result.append("总大小: ").append(formatBytes(size)).append("\n");
-                        result.append("驻留内存: ").append(formatBytes(resident)).append("\n");
-                        result.append("共享内存: ").append(formatBytes(shared)).append("\n");
-                        result.append("代码段: ").append(formatBytes(text)).append("\n");
-                        result.append("数据段: ").append(formatBytes(data)).append("\n");
-                    }
-                }
-            }
-        } catch (IOException e) {
-            result.append("无法读取进程内存统计: ").append(e.getMessage()).append("\n");
-        }
-        return result.toString();
-    }
-    
+
     private static String formatBytes(long bytes) {
         if (bytes < 1024) {
             return bytes + " B";
@@ -813,15 +765,6 @@ public class MemoryMain extends CommandBase {
         } else {
             return String.format(Locale.getDefault(), "%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0));
         }
-    }
-
-    private static String formatPercent(long used, long max) {
-        if (max > 0) {
-            DecimalFormat df = new DecimalFormat("#,##0.00");
-            double percent = (double) used / max * 100;
-            return df.format(percent) + "%";
-        }
-        return "N/A";
     }
 
     private void printMeminfoColored(CommandExecutor.CmdExecContext ctx) {
@@ -856,7 +799,7 @@ public class MemoryMain extends CommandBase {
             }
         } catch (IOException e) {
             ctx.print("无法读取 /proc/meminfo: ", Colors.RED);
-            ctx.println(e.getMessage(), Colors.YELLOW);
+            ctx.println(Objects.requireNonNullElse(e.getMessage(), "未知错误"), Colors.YELLOW);
         }
     }
     
@@ -885,7 +828,7 @@ public class MemoryMain extends CommandBase {
             }
         } catch (IOException e) {
             ctx.print("无法读取进程内存统计: ", Colors.RED);
-            ctx.println(e.getMessage(), Colors.YELLOW);
+            ctx.println(Objects.requireNonNullElse(e.getMessage(), "未知错误"), Colors.YELLOW);
         }
     }
     

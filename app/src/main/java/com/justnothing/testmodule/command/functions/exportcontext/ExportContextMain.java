@@ -12,6 +12,7 @@ import android.text.TextUtils;
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.xtchttplib.ContextManager;
 import com.xtc.sync.elt;
@@ -47,13 +48,14 @@ public class ExportContextMain extends CommandBase {
     }
 
     @Override
-    public String runMain(CommandExecutor.CmdExecContext context) {
+    public void runMain(CommandExecutor.CmdExecContext context) {
         logger.debug("执行export-context命令");
         
         Context appContext = getApplicationContext();
         if (appContext == null) {
             logger.error("无法获取应用上下文");
-            return "错误: 无法获取应用上下文";
+            context.println("错误: 无法获取应用上下文", Colors.RED);
+            return;
         }
 
         try {
@@ -134,11 +136,11 @@ public class ExportContextMain extends CommandBase {
             logger.info("成功导出设备上下文信息");
             logger.debug("导出的JSON:\n" + json);
             
-            return json;
+            context.println(json);
             
         } catch (Exception e) {
             logger.error("导出设备上下文信息失败", e);
-            return CommandExceptionHandler.handleException("export-context", e, context, "导出设备上下文信息失败");
+            CommandExceptionHandler.handleException("export-context", e, context, "导出设备上下文信息失败");
         }
     }
 
@@ -190,6 +192,7 @@ public class ExportContextMain extends CommandBase {
         }
     }
 
+    @SuppressWarnings("SameParameterValue")
     private int getCursorIntValue(Cursor cursor, String columnName) {
         if (cursor == null || TextUtils.isEmpty(columnName)) {
             return 0;

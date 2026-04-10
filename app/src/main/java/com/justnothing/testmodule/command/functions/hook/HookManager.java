@@ -4,19 +4,23 @@ package com.justnothing.testmodule.command.functions.hook;
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.output.SystemOutputRedirector;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.javainterpreter.ScriptRunner;
 import com.justnothing.javainterpreter.evaluator.ExecutionContext;
 import com.justnothing.testmodule.command.output.ICommandOutputHandler;
-import com.justnothing.testmodule.command.output.OutputHandler;
+import com.justnothing.testmodule.command.output.HookOutputHandler;
+import com.justnothing.testmodule.hooks.HookEntry;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
 import com.justnothing.testmodule.utils.data.DataBridge;
 import com.justnothing.testmodule.utils.io.IOManager;
 import com.justnothing.testmodule.utils.functions.Logger;
 import com.justnothing.testmodule.utils.reflect.SignatureUtils;
-import com.justnothing.testmodule.utils.script.AppClassFinder;
+import com.justnothing.testmodule.utils.reflect.AppClassFinder;
 
 import java.io.File;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -24,6 +28,7 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedHelpers;
@@ -37,17 +42,20 @@ public class HookManager {
     private static final ConcurrentHashMap<String, HookInfo> hooks = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, XC_MethodHook.Unhook> activeHooks = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, ScriptRunner> scriptRunners = new ConcurrentHashMap<>();
-    
+    private static final ConcurrentHashMap<String, ICommandOutputHandler> outputHandlers = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, ICommandOutputHandler> errorHandlers = new ConcurrentHashMap<>();
+
+
     private static XC_LoadPackage.LoadPackageParam currentLoadPackageParam;
     private static final List<String> imports = new ArrayList<>(Arrays.asList("java.lang.*", "java.util.*"));
 
     private static final Logger logger = Logger.getLoggerForName(TAG);
 
-
-    public static void setLoadPackageParam(XC_LoadPackage.LoadPackageParam param) {
-        currentLoadPackageParam = param;
+    private HookManager() {
+        throw new UnsupportedOperationException("不能实例化HookManager...");
     }
 
+    @SuppressWarnings("SequencedCollectionMethodCanBeUsed")
     public static void addHookBuiltIn(ExecutionContext context,
                                       MethodHookParam methodHookParam,
                                       LoadPackageParam loadPackageParam,
@@ -103,7 +111,6 @@ public class HookManager {
                 }
                 return null;
             });
-
             context.addBuiltIn("setThrowable", args -> {
                 if (args.isEmpty()) {
                     logger.warn("setThrowable() 必须提供一个异常");
@@ -123,14 +130,21 @@ public class HookManager {
             });
     }
 
+    public static void setLoadPackageParam(XC_LoadPackage.LoadPackageParam param) {
+        currentLoadPackageParam = param;
+    }
+
     public static XC_LoadPackage.LoadPackageParam getLoadPackageParam() {
+        // 因为一个线程里边的LoadPackageParam不会变（虽然只是理论上，也有一个线程初始化多个包的情况）
+        // 所以直接设置就行
+        if (currentLoadPackageParam == null) setLoadPackageParam(HookEntry.getLastLoadPackageParam());
         return currentLoadPackageParam;
     }
 
-    public static String addHook(String className, String methodName, String signature,
-                                 String beforeCode, String afterCode, String replaceCode,
-                                 String beforeCodebase, String afterCodebase, String replaceCodebase,
-                                 CommandExecutor.CmdExecContext context) {
+    public static void addHook(String className, String methodName, String signature,
+                               String beforeCode, String afterCode, String replaceCode,
+                               String beforeCodebase, String afterCodebase, String replaceCodebase,
+                               CommandExecutor.CmdExecContext context) {
         ClassLoader classLoader = context.classLoader();
         HookInfo hookInfo = new HookInfo(className, methodName, signature, 
                                         beforeCode, afterCode, replaceCode, 
@@ -145,12 +159,13 @@ public class HookManager {
         } catch (Exception e) {
             context.print("Hook代码验证失败: ", Colors.RED);
             context.println(Objects.requireNonNullElse(e.getMessage(), "没有详细信息"), Colors.YELLOW);
-            return CommandExceptionHandler.handleException(
-                "hook add", 
-                e, 
-                context,
-                "Hook代码验证失败"
+            CommandExceptionHandler.handleException(
+                    "hook add",
+                    e,
+                    context,
+                    "Hook代码验证失败"
             );
+            return;
         }
         
         hooks.put(hookInfo.getId(), hookInfo);
@@ -177,7 +192,6 @@ public class HookManager {
             context.println(hookInfo.getId(), Colors.YELLOW);
             context.println("");
             hookInfo.printDisplayInfo(context);
-            return null;
         } catch (Exception e) {
             hooks.remove(hookInfo.getId());
             context.print("Hook添加失败: ", Colors.RED);
@@ -187,17 +201,17 @@ public class HookManager {
             errContext.put("方法名", methodName);
             errContext.put("签名", signature != null ? signature : "默认");
             errContext.put("Hook ID", hookInfo.getId());
-            return CommandExceptionHandler.handleException(
-                "hook add", 
-                e,
-                context,
-                errContext,
-                "Hook添加失败"
+            CommandExceptionHandler.handleException(
+                    "hook add",
+                    e,
+                    context,
+                    errContext,
+                    "Hook添加失败"
             );
         }
     }
 
-    private static void validateHookCode(HookInfo hookInfo, ClassLoader classLoader) throws Exception {
+    private static void validateHookCode(HookInfo hookInfo, ClassLoader classLoader) throws RuntimeException {
         ScriptRunner runner = new ScriptRunner(classLoader);
         runner.setClassFinder(new AppClassFinder());
         if (hookInfo.getBeforeCode() != null && !hookInfo.getBeforeCode().isEmpty()) {
@@ -243,11 +257,11 @@ public class HookManager {
         }
     }
 
-    private static void validateCode(ScriptRunner runner, String code, String phase) throws Exception {
+    private static void validateCode(ScriptRunner runner, String code, String phase) throws RuntimeException {
         try {
             runner.tryParse(code);
         } catch (Exception e) {
-            throw new Exception(phase + " 代码验证失败: " + e.getMessage(), e);
+            throw new RuntimeException(phase + " 代码验证失败: " + e.getMessage(), e);
         }
     }
 
@@ -265,7 +279,7 @@ public class HookManager {
         
         logger.info("是否为构造函数: " + isConstructor);
         
-        Class<?>[] paramTypes = SignatureUtils.parseSignature(hookInfo.getSignature(), hookInfo.getClassLoader());
+        Class<?>[] paramTypes = SignatureUtils.parseParamList(hookInfo.getSignature(), hookInfo.getClassLoader());
         logger.info("参数类型: " + Arrays.toString(paramTypes));
         
         if (paramTypes.length == 0) {
@@ -293,7 +307,7 @@ public class HookManager {
             logger.info("创建替换Hook");
             XC_MethodHook replacementHook = new XC_MethodHook() {
                 @Override
-                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                protected void beforeHookedMethod(MethodHookParam param) {
                     if (!hookInfo.isEnabled() || !hookInfo.isActive()) {
                         logger.debug("hook未启用或未激活，跳过Hook执行，id = " + hookInfo.getId());
                         return;
@@ -316,7 +330,7 @@ public class HookManager {
                     logger.info("准备执行replace Hook，id = " + hookInfo.getId());
                     hookInfo.incrementCallCount();
                     
-                    java.util.concurrent.atomic.AtomicBoolean returnValueSet = new java.util.concurrent.atomic.AtomicBoolean(false);
+                    AtomicBoolean returnValueSet = new AtomicBoolean(false);
                     
                     if (hookInfo.getReplaceCode() != null && !hookInfo.getReplaceCode().isEmpty()) {
                         executeHookCodeWithReturnFlag(hookInfo, hookInfo.getReplaceCode(), param, "replace", returnValueSet);
@@ -326,12 +340,10 @@ public class HookManager {
                             executeHookCodeWithReturnFlag(hookInfo, code, param, "replace", returnValueSet);
                         }
                     }
-
-
                 }
                 
                 @Override
-                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                protected void afterHookedMethod(MethodHookParam param) {
                     if (!hasAfter) {
                         return;
                     }
@@ -368,7 +380,7 @@ public class HookManager {
             logger.info("创建普通Hook (before: " + hasBefore + ", after: " + hasAfter + ")");
             XC_MethodHook methodHook = new XC_MethodHook() {
                 @Override
-                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                protected void beforeHookedMethod(MethodHookParam param) {
                     if (!hasBefore) {
                         return;
                     }
@@ -391,7 +403,7 @@ public class HookManager {
                 }
 
                 @Override
-                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                protected void afterHookedMethod(MethodHookParam param) {
                     if (!hasAfter) {
                         return;
                     }
@@ -443,7 +455,12 @@ public class HookManager {
 
     private static void executeHookCodeWithReturnFlag(HookInfo hookInfo, String code,
                                         MethodHookParam param, String phase,
-                                        java.util.concurrent.atomic.AtomicBoolean returnValueSet) {
+                                        AtomicBoolean returnValueSet) {
+        String prefix = "[" + hookInfo.getId() + "][" + phase + "] ";
+        ICommandOutputHandler outputHandler = outputHandlers.computeIfAbsent(hookInfo.getId(), k -> new HookOutputHandler(logger, prefix));
+        ICommandOutputHandler errorHandler = errorHandlers.computeIfAbsent(hookInfo.getId(), k -> new HookOutputHandler(logger, prefix));
+        SystemOutputRedirector redirector = new SystemOutputRedirector(outputHandler, errorHandler);
+        redirector.startRedirect();
         try {
             ClassLoader cl = hookInfo.getClassLoader();
             ScriptRunner runner = scriptRunners.computeIfAbsent(
@@ -453,22 +470,22 @@ public class HookManager {
                     return r;
                 });
             logger.debug("运行代码, hook id = " + hookInfo.getId() + "\n" + code);
-            String prefix = "[" + hookInfo.getId() + "][" + phase + "] ";
-            ICommandOutputHandler outputHandler = new OutputHandler(logger, prefix);
-            ICommandOutputHandler errorHandler = new OutputHandler(logger, prefix);
+
             ExecutionContext context = new ExecutionContext(cl, outputHandler, errorHandler);
+            for (String item : imports) context.addImport(item);
             addHookBuiltIn(context, param, getLoadPackageParam(), hookInfo, phase, returnValueSet);
-            runner.setContext(context);
+            runner.setExecutionContext(context);
             runner.execute(code);
-            runner.getAllVariablesAsObject().get("result");
         } catch (Exception e) {
-            logger.error("Hook 代码执行失败: " + hookInfo.getId(), e);
+            logger.error("Hook代码执行失败: " + hookInfo.getId(), e);
+        } finally {
+            redirector.stopRedirect();
         }
     }
 
     private static String loadCodeFromCodebase(String codebase) {
         try {
-            java.io.File scriptFile;
+            File scriptFile;
             
             File scriptsDir = DataBridge.getScriptsDirectory();
             
@@ -482,15 +499,13 @@ public class HookManager {
                     return null;
                 }
             } else {
-                // 包含路径分隔符，提取文件名
-                String fileName = new java.io.File(codebase).getName();
+                String fileName = new File(codebase).getName();
                 scriptFile = new File(scriptsDir, fileName);
                 
                 if (scriptFile.exists()) {
                     logger.info("从codebase目录加载脚本（使用文件名）: " + fileName);
                 } else {
-                    // 如果 codebase 目录中没有，尝试作为完整路径
-                    scriptFile = new java.io.File(codebase);
+                    scriptFile = new File(codebase);
                     if (scriptFile.exists()) {
                         logger.info("从指定路径加载脚本: " + codebase);
                     } else {
@@ -509,10 +524,10 @@ public class HookManager {
 
     private static Class<?>[] findMethodParameters(Class<?> targetClass, String methodName) {
         try {
-            java.lang.reflect.Method[] methods = targetClass.getDeclaredMethods();
-            java.lang.reflect.Method matchedMethod = null;
+            Method[] methods = targetClass.getDeclaredMethods();
+            Method matchedMethod = null;
             
-            for (java.lang.reflect.Method method : methods) {
+            for (Method method : methods) {
                 if (method.getName().equals(methodName)) {
                     if (matchedMethod == null) {
                         matchedMethod = method;
@@ -539,10 +554,10 @@ public class HookManager {
 
     private static Class<?>[] findConstructorParameters(Class<?> targetClass) {
         try {
-            java.lang.reflect.Constructor<?>[] constructors = targetClass.getDeclaredConstructors();
-            java.lang.reflect.Constructor<?> matchedConstructor = null;
+            Constructor<?>[] constructors = targetClass.getDeclaredConstructors();
+            Constructor<?> matchedConstructor = null;
             
-            for (java.lang.reflect.Constructor<?> constructor : constructors) {
+            for (Constructor<?> constructor : constructors) {
                 if (matchedConstructor == null) {
                     matchedConstructor = constructor;
                 } else {
@@ -612,23 +627,6 @@ public class HookManager {
         ctx.println(hookId, Colors.YELLOW);
     }
 
-    public static String listHooks() {
-        if (hooks.isEmpty()) {
-            return "没有活动的Hook";
-        }
-        
-        StringBuilder sb = new StringBuilder();
-        sb.append("===== Hook列表 =====\n\n");
-        
-        for (HookInfo hookInfo : hooks.values()) {
-            sb.append(hookInfo.getDisplayInfo()).append("\n");
-            sb.append("------------------------\n\n");
-        }
-        
-        sb.append("总计: ").append(hooks.size()).append(" 个Hook");
-        return sb.toString();
-    }
-
     public static void listHooks(CommandExecutor.CmdExecContext ctx) {
         if (hooks.isEmpty()) {
             ctx.println("没有活动的Hook", Colors.GRAY);
@@ -649,15 +647,6 @@ public class HookManager {
         ctx.println(" 个Hook", Colors.CYAN);
     }
 
-    public static String getHookInfo(String hookId) {
-        HookInfo hookInfo = hooks.get(hookId);
-        if (hookInfo == null) {
-            return "Hook 不存在: " + hookId;
-        }
-        
-        return hookInfo.getDisplayInfo();
-    }
-
     public static void getHookInfo(String hookId, CommandExecutor.CmdExecContext ctx) {
         HookInfo hookInfo = hooks.get(hookId);
         if (hookInfo == null) {
@@ -667,17 +656,6 @@ public class HookManager {
         }
         
         hookInfo.printDisplayInfo(ctx);
-    }
-
-    public static String enableHook(String hookId) {
-        HookInfo hookInfo = hooks.get(hookId);
-        if (hookInfo == null) {
-            return "Hook 不存在: " + hookId;
-        }
-        
-        hookInfo.setEnabled(true);
-        logger.info("启用Hook: " + hookId);
-        return "Hook已启用: " + hookId;
     }
 
     public static void enableHook(String hookId, CommandExecutor.CmdExecContext ctx) {
@@ -694,17 +672,6 @@ public class HookManager {
         ctx.println(hookId, Colors.YELLOW);
     }
 
-    public static String disableHook(String hookId) {
-        HookInfo hookInfo = hooks.get(hookId);
-        if (hookInfo == null) {
-            return "Hook不存在: " + hookId;
-        }
-        
-        hookInfo.setEnabled(false);
-        logger.info("禁用Hook: " + hookId);
-        return "Hook已禁用: " + hookId;
-    }
-
     public static void disableHook(String hookId, CommandExecutor.CmdExecContext ctx) {
         HookInfo hookInfo = hooks.get(hookId);
         if (hookInfo == null) {
@@ -719,33 +686,49 @@ public class HookManager {
         ctx.println(hookId, Colors.YELLOW);
     }
 
-    public static String getHookOutput(String hookId, int count) {
-        return "Hook 输出功能待实现\n" +
-               "HookID: " + hookId + "\n" +
-               "调用次数: " + (hooks.get(hookId) != null ? Objects.requireNonNull(hooks.get(hookId)).getCallCount() : "N/A");
-    }
-
-    public static void getHookOutput(String hookId, int count, CommandExecutor.CmdExecContext ctx) {
+    public static void getHookOutput(String hookId, CommandExecutor.CmdExecContext ctx, int count) {
         HookInfo hookInfo = hooks.get(hookId);
         if (hookInfo == null) {
             ctx.print("Hook不存在: ", Colors.RED);
             ctx.println(hookId, Colors.YELLOW);
             return;
         }
-        
-        ctx.println("Hook 输出功能待实现", Colors.GRAY);
+        ctx.println("Hook基本信息: ", Colors.CYAN);
+    
+        ctx.println("------------------------", Colors.GRAY);
         ctx.print("HookID: ", Colors.CYAN);
-        ctx.println(hookId, Colors.YELLOW);
-        ctx.print("调用次数: ", Colors.CYAN);
-        ctx.println(String.valueOf(hookInfo.getCallCount()), Colors.LIGHT_GREEN);
+        ctx.println(hookId, Colors.GREEN);
+        ctx.print("Hook状态: ", Colors.CYAN);
+        ctx.println(hookInfo.isActive() ? "已激活" : "未激活", hookInfo.isActive() ? Colors.GREEN : Colors.RED);
+        ctx.println("------------------------", Colors.GRAY);
+        ctx.println("");
+        ctx.println("");
+        ICommandOutputHandler outputHandler = outputHandlers.get(hookId);
+        ICommandOutputHandler errorHandler = errorHandlers.get(hookId);
+        
+        
+        ctx.println("============ 输出 ============", Colors.GREEN);
+        if (outputHandler != null) {
+            ctx.println(Arrays.stream(outputHandler.getString().split("\n"))
+                            .limit(count)
+                            .collect(Collectors.joining("\n")));
+        } else {
+            ctx.println("还没有被执行过，没有输出", Colors.GRAY);
+        }
+        ctx.println("=============================", Colors.GRAY);
+        ctx.println("");
+        if (errorHandler != null && !errorHandler.getString().isEmpty()) {
+            ctx.println("============ 错误输出 ============", Colors.ORANGE);
+            ctx.println(Arrays.stream(errorHandler.getString().split("\n"))
+                            .limit(count)
+                            .collect(Collectors.joining("\n")));
+            ctx.println("=============================", Colors.GRAY);
+        }
+
     }
 
     public static int getHookCount() {
         return hooks.size();
-    }
-
-    public static List<HookInfo> getAllHooks() {
-        return new ArrayList<>(hooks.values());
     }
 
     public static void clearAllHooks() {

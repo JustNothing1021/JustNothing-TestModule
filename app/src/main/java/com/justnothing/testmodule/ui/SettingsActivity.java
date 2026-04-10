@@ -115,7 +115,7 @@ public class SettingsActivity extends AppCompatActivity {
                 newThemeMode = ThemeSettings.MODE_AUTO;
             }
             themeSettings.setThemeMode(newThemeMode);
-            themeSettings.applyTheme(SettingsActivity.this);
+            themeSettings.applyTheme();
             logger.info("应用主题: " + themeSettings.getThemeModeName(newThemeMode));
             recreate();
         });
@@ -135,7 +135,7 @@ public class SettingsActivity extends AppCompatActivity {
             themeSettings.resetToDefault();
             loadCurrentSettings();
             uiSettings.applyUIScale(SettingsActivity.this);
-            themeSettings.applyTheme(SettingsActivity.this);
+            themeSettings.applyTheme();
             logger.info("重置界面缩放和主题为默认值");
             recreate();
         });

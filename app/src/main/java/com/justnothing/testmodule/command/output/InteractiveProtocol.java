@@ -71,12 +71,6 @@ public class InteractiveProtocol {
             case Colors.LIGHT_CYAN -> "LIGHT_CYAN";
             case Colors.LIGHT_MAGENTA -> "LIGHT_MAGENTA";
             case Colors.DARK_GRAY -> "DARK_GRAY";
-            case Colors.DARK_RED -> "DARK_RED";
-            case Colors.DARK_GREEN -> "DARK_GREEN";
-            case Colors.DARK_YELLOW -> "DARK_YELLOW";
-            case Colors.DARK_BLUE -> "DARK_BLUE";
-            case Colors.DARK_CYAN -> "DARK_CYAN";
-            case Colors.PURPLE -> "PURPLE";
             case Colors.ORANGE -> "ORANGE";
             case Colors.PINK -> "PINK";
             case Colors.BROWN -> "BROWN";

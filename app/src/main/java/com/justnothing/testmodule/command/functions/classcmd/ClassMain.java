@@ -4,9 +4,11 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_CLASS_VER;
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 
 import java.util.Arrays;
+import java.util.Locale;
 
 public class ClassMain extends CommandBase {
 
@@ -24,7 +26,9 @@ public class ClassMain extends CommandBase {
     @Override
     public String getHelpText() {
         return switch (commandName) {
-            case "cinfo" -> String.format("""
+            case "cinfo" -> String.format(
+                    Locale.getDefault(),
+                    """
                     语法: cinfo [options] <class_name>
                     
                     查看类的详细信息.
@@ -44,7 +48,9 @@ public class ClassMain extends CommandBase {
                     
                     (Submodule class %s)
                     """, CMD_CLASS_VER);
-            case "cgraph" -> String.format("""
+            case "cgraph" -> String.format(
+                    Locale.getDefault(),
+                    """
                     语法: cgraph <class_name>
                     
                     生成类继承图.
@@ -54,7 +60,9 @@ public class ClassMain extends CommandBase {
                     
                     (Submodule class %s)
                     """, CMD_CLASS_VER);
-            case "canalyze" -> String.format("""
+            case "canalyze" -> String.format(
+                    Locale.getDefault(),
+                    """
                     语法: canalyze [options] <class_name>
                     
                     分析类的字段和方法.
@@ -71,7 +79,9 @@ public class ClassMain extends CommandBase {
                     
                     (Submodule class %s)
                     """, CMD_CLASS_VER);
-            case "cinvoke" -> String.format("""
+            case "cinvoke" -> String.format(
+                    Locale.getDefault(),
+                    """
                     语法: cinvoke <class> <method> [params...]
                     
                     调用某个类中的单一方法.
@@ -83,7 +93,9 @@ public class ClassMain extends CommandBase {
                     
                     (Submodule class %s)
                     """, CMD_CLASS_VER);
-            case "cfield" -> String.format("""
+            case "cfield" -> String.format(
+                    Locale.getDefault(),
+                    """
                     语法: cfield [options] <class_name> [field_name]
                     
                     查看类的字段详细信息或获取/设置字段值.
@@ -104,7 +116,9 @@ public class ClassMain extends CommandBase {
                     
                     (Submodule class %s)
                     """, CMD_CLASS_VER);
-            case "clist" -> String.format("""
+            case "clist" -> String.format(
+                    Locale.getDefault(),
+                    """
                         语法: clist [options] <class>
                     
                         列出一个类的所有方法.
@@ -118,7 +132,9 @@ public class ClassMain extends CommandBase {
                     
                         (Submodule class %s)
                     """, CMD_CLASS_VER);
-            case "csearch" -> String.format("""
+            case "csearch" -> String.format(
+                    Locale.getDefault(),
+                    """
                     语法: csearch <subcmd> <pattern>
                     
                     搜索类, 方法, 字段或注解.
@@ -158,7 +174,9 @@ public class ClassMain extends CommandBase {
                     
                     (Submodule class %s)
                     """, CMD_CLASS_VER);
-            default -> String.format("""
+            default -> String.format(
+                    Locale.getDefault(),
+                    """
                     语法: class <subcmd> [args...]
                     
                     查看类的详细信息, 包括继承关系, 接口, 构造函数等.
@@ -287,7 +305,7 @@ public class ClassMain extends CommandBase {
     }
 
     @Override
-    public String runMain(CommandExecutor.CmdExecContext context) {
+    public void runMain(CommandExecutor.CmdExecContext context) {
         String cmdName = context.cmdName();
         String[] args = context.args();
         ClassLoader classLoader = context.classLoader();
@@ -302,7 +320,8 @@ public class ClassMain extends CommandBase {
         if (cmdName.equals("class")) {
             if (args.length < 1) {
                 logger.warn("参数不足，需要至少1个参数");
-                return getHelpText();
+                context.println(getHelpText(), Colors.WHITE);
+                return;
             }
             subCommand = args[0];
             subArgs = Arrays.copyOfRange(args, 1, args.length);
@@ -314,16 +333,17 @@ public class ClassMain extends CommandBase {
         try {
             ClassCommand command = ClassCommandRegistry.getCommand(subCommand);
             if (command == null) {
-                return handleLegacyCommand(cmdName);
+                handleLegacyCommand(cmdName, context);
+                return;
             }
 
             ClassCommandContext cmdContext = new ClassCommandContext(
                 subArgs, classLoader, targetPackage, context, logger
             );
             
-            return command.execute(cmdContext);
+            command.execute(cmdContext);
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException(
+            CommandExceptionHandler.handleException(
                 "class " + subCommand, 
                 e, 
                 context,
@@ -347,7 +367,8 @@ public class ClassMain extends CommandBase {
         };
     }
 
-    private String handleLegacyCommand(String cmdName) {
-        return "命令 '" + cmdName + "' 还未迁移到新架构或者根本没有这个命令\n" + getHelpText();
+    private void handleLegacyCommand(String cmdName, CommandExecutor.CmdExecContext context) {
+        context.println("命令 '" + cmdName + "' 还未迁移到新架构或者根本没有这个命令", Colors.RED);
+        context.println(getHelpText(), Colors.WHITE);
     }
 }

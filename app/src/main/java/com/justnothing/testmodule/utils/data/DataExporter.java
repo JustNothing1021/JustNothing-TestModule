@@ -128,7 +128,7 @@ public class DataExporter extends Logger {
     public String saveToFile(String fileName, String content) throws IOException {
         File exportDir = new File(Environment.getExternalStorageDirectory(), FileDirectory.EXPORT_DIR_NAME);
         if (!exportDir.exists()) {
-            if (!exportDir.mkdirs()) {
+            if (!IOManager.createDirectory(exportDir)) {
                 throw new IOException("无法创建导出目录: " + exportDir.getAbsolutePath());
             }
         }
@@ -150,7 +150,7 @@ public class DataExporter extends Logger {
     public File getExportDirectory() {
         File exportDir = new File(Environment.getExternalStorageDirectory(), FileDirectory.EXPORT_DIR_NAME);
         if (!exportDir.exists()) {
-            if (!exportDir.mkdirs()) {
+            if (!IOManager.createDirectory(exportDir)) {
                 error("无法创建导出目录: " + exportDir.getAbsolutePath());
             }
         }
@@ -168,7 +168,7 @@ public class DataExporter extends Logger {
 
     public boolean deleteExportedFile(File file) {
         if (file.exists() && Objects.equals(file.getParentFile(), getExportDirectory())) {
-            return file.delete();
+            return IOManager.deleteFile(file.getAbsolutePath());
         }
         return false;
     }
@@ -181,7 +181,7 @@ public class DataExporter extends Logger {
         }
         boolean allDeleted = true;
         for (File file : files) {
-            if (!file.delete()) {
+            if (!IOManager.deleteFile(file.getAbsolutePath())) {
                 allDeleted = false;
             }
         }

@@ -72,7 +72,7 @@ public class CommandArgumentParser {
                 
                 if (c == quoteChar) {
                     if (inQuotes) inQuotes = false;
-                    else if (inSingleQuotes) inSingleQuotes = false;
+                    else inSingleQuotes = false;
                 }
             } else {
                 if (c == '"' || c == '\'') {
@@ -181,7 +181,7 @@ public class CommandArgumentParser {
         }
     }
     
-    public static void requireArgsLength(String[] args, int min, String commandName) {
+    public static void requireArgsLength(String[] args, int min) {
         if (args.length < min) {
             throw new IllegalArgumentException(
                 String.format(Locale.getDefault(), "参数不足，至少需要%d个参数", min)

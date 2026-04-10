@@ -320,7 +320,7 @@ public class SystemBytecodeExtractor {
         
         File dir = new File(outputDir);
         if (!dir.exists()) {
-            dir.mkdirs();
+            IOManager.createDirectory(dir);
         }
         
         int success = 0;

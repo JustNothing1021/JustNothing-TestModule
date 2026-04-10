@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Enumeration;
+import java.util.Objects;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -106,8 +107,8 @@ public class ShellService extends Binder {
                 IOManager.ProcessResult result = RootProcessPool.executeCommand("chmod -R 777 " + dataDir, timeoutMs, true);
 
                 logger.info("chmod命令执行结果 - 退出码: " + result.exitCode() +
-                            ", stdout: " + (result.stdout() != null ? result.stdout() : "(空)") + 
-                            ", stderr: " + (result.stderr() != null ? result.stderr() : "(空)"));
+                            ", stdout: " + Objects.requireNonNullElse(result.stdout(), "空") +
+                            ", stderr: " + Objects.requireNonNullElse(result.stderr(), "空"));
                 
                 if (result.isSuccess()) {
                     logger.info("chmod -R 777 " + dataDir + " 执行成功");
@@ -300,7 +301,7 @@ public class ShellService extends Binder {
                 }
                 
                 try (InputStream inputStream = zipFile.getInputStream(entry)) {
-                    byte[] content = inputStream.readAllBytes();
+                    byte[] content = readAllBytesCompat(inputStream);
                     IOManager.writeFile(targetFile.getAbsolutePath(), content);
                     
                     logger.debug("成功复制Hook示例文件: " + fileName);
@@ -318,5 +319,14 @@ public class ShellService extends Binder {
         }
     }
 
+    private byte[] readAllBytesCompat(InputStream inputStream) throws IOException {
+        byte[] buffer = new byte[8192];
+        int bytesRead;
+        java.io.ByteArrayOutputStream outputStream = new java.io.ByteArrayOutputStream();
+        while ((bytesRead = inputStream.read(buffer)) != -1) {
+            outputStream.write(buffer, 0, bytesRead);
+        }
+        return outputStream.toByteArray();
+    }
 
 }

@@ -24,14 +24,18 @@ import java.util.Objects;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class SocketClientHandler {
     private static final Logger logger = Logger.getLoggerForName("SocketClientHandler");
 
-
-    private static final long PING_CLIENT_INTERVAL = 5000;
-    public static final int PROTOCOL_REQUEST_TIMEOUT = 30000;
+    public static final long PING_CLIENT_INTERVAL_MS = 5000;
+    public static final int CLIENT_CONNECT_SOCKET_TIMEOUT_MS = 5000;
+    public static final int TEXT_PROTOCOL_SOCKET_TIMEOUT_MS = 10000;
+    public static final int INTERACTIVE_PROTOCOL_SOCKET_TIMEOUT_MS = 10000;
+    public static final int INTERACTIVE_PROTOCOL_REQUEST_TIMEOUT_MS = 30000;
+    public static final int OUTPUT_HANDLER_CLOSE_TIMEOUT_MS = 5000;
 
     private final CommandExecutor commandExecutor;
 
@@ -45,7 +49,7 @@ public class SocketClientHandler {
                 InputStream input = clientSocket.getInputStream();
                 OutputStream output = clientSocket.getOutputStream();
 
-                clientSocket.setSoTimeout(5000);
+                clientSocket.setSoTimeout(CLIENT_CONNECT_SOCKET_TIMEOUT_MS);
 
                 int firstByte = input.read();
                 if (firstByte == -1) {
@@ -77,7 +81,7 @@ public class SocketClientHandler {
     private void handleTextProtocolClient(Socket clientSocket, PushbackInputStream input, OutputStream output) {
         try (clientSocket) {
             try {
-                clientSocket.setSoTimeout(30000);
+                clientSocket.setSoTimeout(TEXT_PROTOCOL_SOCKET_TIMEOUT_MS);
 
                 BufferedReader reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8));
                 PrintWriter writer = new PrintWriter(new OutputStreamWriter(output, StandardCharsets.UTF_8), true);
@@ -118,7 +122,7 @@ public class SocketClientHandler {
         try {
             while (readerRunning.get() && !Thread.currentThread().isInterrupted()) {
                 try {
-                    clientSocket.setSoTimeout(1000);
+                    clientSocket.setSoTimeout(INTERACTIVE_PROTOCOL_SOCKET_TIMEOUT_MS);
 
                     Object[] packet = InteractiveProtocol.readMessage(input);
 
@@ -165,7 +169,7 @@ public class SocketClientHandler {
                     }
 
                 } catch (SocketTimeoutException e) {
-                    if (System.currentTimeMillis() - lastResponseTime.get() > PROTOCOL_REQUEST_TIMEOUT) {
+                    if (System.currentTimeMillis() - lastResponseTime.get() > INTERACTIVE_PROTOCOL_REQUEST_TIMEOUT_MS) {
                         logger.error("客户端响应超时 (" + (System.currentTimeMillis() - lastResponseTime.get()) + "ms)");
                         return;
                     }
@@ -189,14 +193,11 @@ public class SocketClientHandler {
     ) {
 
         try {
-            Thread.sleep(PING_CLIENT_INTERVAL);
             InteractiveProtocol.writeMessage(output,
                     InteractiveProtocol.TYPE_SERVER_PING,
                     null);
             logger.debug("向客户端发送SERVER_PING包");
 
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
         } catch (IOException e) {
             logger.warn("发送SERVER_PING失败", e);
         }
@@ -247,9 +248,9 @@ public class SocketClientHandler {
                         input, output, readerRunning, clientSocket, lastResponseTime, finalOutputHandler
                 ));
 
-                ScheduledFuture<?> future = ThreadPoolManager.scheduleAtFixedRate(
+                ScheduledFuture<?> future = ThreadPoolManager.scheduleWithFixedDelay(
                         () -> runInteractiveProtocolPing(output),
-                        PING_CLIENT_INTERVAL, PING_CLIENT_INTERVAL, TimeUnit.MILLISECONDS);
+                        PING_CLIENT_INTERVAL_MS, PING_CLIENT_INTERVAL_MS, TimeUnit.MILLISECONDS);
 
                 try {
                     commandExecutor.execute(command, outputHandler);
@@ -259,17 +260,13 @@ public class SocketClientHandler {
                         outputHandler.println("执行命令失败: " + e.getMessage());
                     } catch (Exception ignored) {}
                 }
-
-                try {
-                    int maxWait = 5000;
-                    int waited = 0;
-                    while (waited < maxWait && !outputHandler.isClosed()) {
-                        Thread.sleep(100);
-                        waited += 100;
-                    }
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
+                AtomicInteger waited = new AtomicInteger(0);
+                ThreadPoolManager.scheduleWithFixedDelayUntil(
+                    () -> waited.getAndAdd(100),
+                    0,
+                    100, TimeUnit.MILLISECONDS,
+                    () -> waited.get() < OUTPUT_HANDLER_CLOSE_TIMEOUT_MS && !outputHandler.isClosed()
+                );
 
                 logger.info("命令执行完成");
                 if (future != null) future.cancel(true);

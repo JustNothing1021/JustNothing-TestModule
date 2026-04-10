@@ -16,18 +16,21 @@ public class GraphCommand extends AbstractClassCommand {
     }
 
     @Override
-    protected String executeInternal(ClassCommandContext context) throws Exception {
+    protected void executeInternal(ClassCommandContext context) throws Exception {
         String[] args = context.getArgs();
-        String error = requireArgs(context, args, 1);
-        if (error != null) {
-            return error;
+        if (args.length < 1) {
+            CommandExceptionHandler.handleException(
+                    "class graph",
+                    new IllegalArgumentException("参数不足, 需要至少1个参数: class graph <class_name>"),
+                    context.getExecContext(),
+                    "参数错误"
+            );
+            return;
         }
-
         String className = args[0];
         Class<?> clazz = ClassResolver.findClassOrFail(className, context.getClassLoader());
         
         generateClassInheritanceGraph(clazz, context);
-        return null;
     }
 
     @Override
@@ -90,6 +93,7 @@ public class GraphCommand extends AbstractClassCommand {
         }
     }
 
+    @SuppressWarnings("SequencedCollectionMethodCanBeUsed")
     private List<Class<?>> getClassHierarchy(Class<?> clazz) {
         List<Class<?>> hierarchy = new ArrayList<>();
         Class<?> current = clazz;

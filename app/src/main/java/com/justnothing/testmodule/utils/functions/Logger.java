@@ -8,9 +8,6 @@ import android.widget.Toast;
 import com.justnothing.testmodule.constants.AppEnvironment;
 import com.justnothing.testmodule.utils.data.LogWriter;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public abstract class Logger {
 
     public static final String MAIN_TAG = "JustNothing";
@@ -19,7 +16,6 @@ public abstract class Logger {
     public static final Boolean USE_ONE_LOGGER_ONLY = true;
     
     private static final LogWriter SHARED_LOG_WRITER = new LogWriter(!AppEnvironment.isHookEnv());
-    public static final List<Logger> instances = new ArrayList<>();
 
     private static final String RESET = "\u001B[0m";
     private static final String GRAY = "\u001B[90m";
@@ -55,21 +51,9 @@ public abstract class Logger {
 
     public abstract String getTag();
 
-    public static void setContext(Context ctx) {
-//        for (Logger logger : instances) logger.context = ctx;
-    }
+    public static void setContext(Context ctx) { }
 
-    private static void showToast(String message, int duration) {
-//        try {
-//            if (!instances.isEmpty()) {
-//                Context context = instances.get(0).context;
-//                if (context != null) {
-//                    Toast.makeText(context, message, duration).show();
-//                }
-//            }
-//        } catch (RuntimeException ignored) {}
-    }
-
+    private static void showToast(String message, int duration) { }
 
 
     public static void handleWarn(String s) {

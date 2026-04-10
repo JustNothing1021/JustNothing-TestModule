@@ -17,17 +17,18 @@ public class ListCommand extends AbstractClassCommand {
     }
 
     @Override
-    protected String executeInternal(ClassCommandContext context) throws Exception {
+    protected void executeInternal(ClassCommandContext context) throws Exception {
         String[] args = context.getArgs();
         
         boolean verbose = args.length > 0 && (args[0].equals("-v") || args[0].equals("--verbose"));
         if (verbose && args.length < 2) {
-            return CommandExceptionHandler.handleException(
+            CommandExceptionHandler.handleException(
                 "class list",
                 new IllegalArgumentException("详细模式需要指定类名: class list -v <class>"),
                 context.getExecContext(),
                 "参数错误"
             );
+            return;
         }
         
         String className = args[args.length - 1];
@@ -78,7 +79,6 @@ public class ListCommand extends AbstractClassCommand {
         context.getExecContext().println(String.valueOf(methods.length), Colors.YELLOW);
         
         context.getLogger().info("执行成功，找到 " + methods.length + " 个方法 (静态: " + staticCount + ", 实例: " + instanceCount + ")");
-        return null;
     }
 
     @Override

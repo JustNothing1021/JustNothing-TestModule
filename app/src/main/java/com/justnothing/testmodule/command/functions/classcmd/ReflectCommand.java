@@ -20,16 +20,17 @@ public class ReflectCommand extends AbstractClassCommand {
     }
 
     @Override
-    protected String executeInternal(ClassCommandContext context) throws Exception {
+    protected void executeInternal(ClassCommandContext context) throws Exception {
         String[] args = context.getArgs();
         
         if (args.length < 3) {
-            return CommandExceptionHandler.handleException(
+            CommandExceptionHandler.handleException(
                 "class reflect",
                 new IllegalArgumentException("参数不足, 需要至少3个参数: class reflect <class> <type> <name> [options]"),
                 context.getExecContext(),
                 "参数错误"
             );
+            return;
         }
 
         String className = args[0];
@@ -65,21 +66,17 @@ public class ReflectCommand extends AbstractClassCommand {
         Class<?> targetClass = ClassResolver.findClassOrFail(className, context.getClassLoader());
 
         switch (type) {
-            case "field" -> handleReflectField(targetClass, memberName, valueToSet, accessSuper, accessInterfaces, rawOutput, context);
+            case "field" -> handleReflectField(targetClass, memberName, valueToSet, accessInterfaces, rawOutput, context);
             case "method" -> handleReflectMethod(targetClass, memberName, methodParams, accessSuper, accessInterfaces, rawOutput, context);
             case "constructor" -> handleReflectConstructor(targetClass, methodParams, rawOutput, context);
             case "static" -> handleReflectStatic(targetClass, memberName, valueToSet, rawOutput, context);
-            default -> {
-                return CommandExceptionHandler.handleException(
-                    "class reflect",
-                    new IllegalArgumentException("未知类型: " + type),
-                    context.getExecContext(),
-                    "参数错误"
-                );
-            }
+            default -> CommandExceptionHandler.handleException(
+                "class reflect",
+                new IllegalArgumentException("未知类型: " + type),
+                context.getExecContext(),
+                "参数错误"
+            );
         }
-        
-        return null;
     }
 
     @Override
@@ -110,10 +107,10 @@ public class ReflectCommand extends AbstractClassCommand {
             """;
     }
 
-    private void handleReflectField(Class<?> targetClass, String fieldName, String valueToSet, 
-                                     boolean accessSuper, boolean accessInterfaces, boolean rawOutput, ClassCommandContext context) {
+    private void handleReflectField(Class<?> targetClass, String fieldName, String valueToSet,
+                                    boolean accessInterfaces, boolean rawOutput, ClassCommandContext context) {
         try {
-            Field field = findReflectField(targetClass, fieldName, accessSuper, accessInterfaces);
+            Field field = findReflectField(targetClass, fieldName, accessInterfaces);
             
             if (field == null) {
                 CommandExceptionHandler.handleException(
@@ -132,28 +129,24 @@ public class ReflectCommand extends AbstractClassCommand {
             DescriptorColorizer.printColoredDescriptor(context.getExecContext(), field, true);
             context.getExecContext().println("");
             context.getExecContext().println("");
-            
+
+            Object value;
             if (valueToSet != null) {
-                Object value = context.parseValue(valueToSet, field.getType());
-                if (Modifier.isStatic(field.getModifiers())) {
-                    field.set(null, value);
-                } else {
-                    field.set(null, value);
-                }
+                value = context.parseValue(valueToSet, field.getType());
+                field.set(null, value);
                 context.getLogger().info("设置字段 " + fieldName + " = " + value);
                 context.getExecContext().print("字段 ", Colors.CYAN);
                 context.getExecContext().print(fieldName, Colors.CYAN);
                 context.getExecContext().print(" 已设置为: ", Colors.CYAN);
-                context.getExecContext().println(context.formatValue(value, rawOutput), Colors.LIGHT_GREEN);
             } else {
-                Object value = field.get(null);
+                value = field.get(null);
                 context.getLogger().info("获取字段 " + fieldName + " = " + value);
                 context.getExecContext().print("字段 ", Colors.CYAN);
                 context.getExecContext().print(fieldName, Colors.CYAN);
                 context.getExecContext().print(" = ", Colors.WHITE);
-                context.getExecContext().println(context.formatValue(value, rawOutput), Colors.LIGHT_GREEN);
             }
-            
+            context.getExecContext().println(context.formatValue(value, rawOutput), Colors.LIGHT_GREEN);
+
         } catch (Exception e) {
             CommandExceptionHandler.handleException("class reflect field", e, context.getExecContext(), "处理字段失败");
         }
@@ -242,7 +235,7 @@ public class ReflectCommand extends AbstractClassCommand {
 
     private void handleReflectStatic(Class<?> targetClass, String memberName, String valueToSet, boolean rawOutput, ClassCommandContext context) {
         try {
-            Field field = findReflectField(targetClass, memberName, false, false);
+            Field field = findReflectField(targetClass, memberName, false);
             
             if (field == null) {
                 CommandExceptionHandler.handleException(
@@ -272,30 +265,30 @@ public class ReflectCommand extends AbstractClassCommand {
             DescriptorColorizer.printColoredDescriptor(context.getExecContext(), field, true);
             context.getExecContext().println("");
             context.getExecContext().println("");
-            
+
+            Object value;
             if (valueToSet != null) {
-                Object value = context.parseValue(valueToSet, field.getType());
+                value = context.parseValue(valueToSet, field.getType());
                 field.set(null, value);
                 context.getLogger().info("设置静态字段 " + memberName + " = " + value);
                 context.getExecContext().print("静态字段 ", Colors.CYAN);
                 context.getExecContext().print(memberName, Colors.CYAN);
                 context.getExecContext().print(" 已设置为: ", Colors.CYAN);
-                context.getExecContext().println(context.formatValue(value, rawOutput), Colors.LIGHT_GREEN);
             } else {
-                Object value = field.get(null);
+                value = field.get(null);
                 context.getLogger().info("获取静态字段 " + memberName + " = " + value);
                 context.getExecContext().print("静态字段 ", Colors.CYAN);
                 context.getExecContext().print(memberName, Colors.CYAN);
                 context.getExecContext().print(" = ", Colors.WHITE);
-                context.getExecContext().println(context.formatValue(value, rawOutput), Colors.LIGHT_GREEN);
             }
-            
+            context.getExecContext().println(context.formatValue(value, rawOutput), Colors.LIGHT_GREEN);
+
         } catch (Exception e) {
             CommandExceptionHandler.handleException("class reflect static", e, context.getExecContext(), "处理静态字段失败");
         }
     }
 
-    private Field findReflectField(Class<?> targetClass, String fieldName, boolean accessSuper, boolean accessInterfaces) {
+    private Field findReflectField(Class<?> targetClass, String fieldName, boolean accessInterfaces) {
         Class<?> currentClass = targetClass;
         
         while (currentClass != null) {

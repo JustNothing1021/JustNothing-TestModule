@@ -17,16 +17,17 @@ public class SearchCommand extends AbstractClassCommand {
     }
 
     @Override
-    protected String executeInternal(ClassCommandContext context) throws Exception {
+    protected void executeInternal(ClassCommandContext context) throws Exception {
         String[] args = context.getArgs();
         
         if (args.length < 2) {
-            return CommandExceptionHandler.handleException(
+            CommandExceptionHandler.handleException(
                 "class search",
                 new IllegalArgumentException("参数不足, 需要至少2个参数: class search <subcmd> <pattern>"),
                 context.getExecContext(),
                 "参数错误"
             );
+            return;
         }
 
         String subCommand = args[0];
@@ -38,7 +39,7 @@ public class SearchCommand extends AbstractClassCommand {
             case "field" -> searchFields(pattern, context);
             case "annotation" -> searchAnnotations(pattern, context);
             default -> {
-                return CommandExceptionHandler.handleException(
+                CommandExceptionHandler.handleException(
                     "class search",
                     new IllegalArgumentException("未知子命令: " + subCommand),
                     context.getExecContext(),
@@ -46,8 +47,6 @@ public class SearchCommand extends AbstractClassCommand {
                 );
             }
         }
-        
-        return null;
     }
 
     @Override
@@ -282,10 +281,10 @@ public class SearchCommand extends AbstractClassCommand {
                         String[] parts = annotation.split(" -> ");
                         context.getExecContext().print(parts[0], Colors.YELLOW);
                         context.getExecContext().print(" -> ", Colors.WHITE);
-                        context.getExecContext().print("@", Colors.PURPLE);
+                        context.getExecContext().print("@", Colors.MAGENTA);
                         context.getExecContext().println(parts[1], Colors.GREEN);
                     } else {
-                        context.getExecContext().print("@", Colors.PURPLE);
+                        context.getExecContext().print("@", Colors.MAGENTA);
                         context.getExecContext().println(annotation, Colors.GREEN);
                     }
                 }

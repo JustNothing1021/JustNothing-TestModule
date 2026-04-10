@@ -5,7 +5,7 @@ import android.util.Log;
 import com.justnothing.testmodule.constants.FileDirectory;
 
 import java.io.File;
-import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.text.SimpleDateFormat;
@@ -141,6 +141,7 @@ public class LogWriter {
         return Objects.requireNonNull(TIMESTAMP_FORMAT.get()).format(new Date(timestampMs));
     }
 
+    @SuppressWarnings("SequencedCollectionMethodCanBeUsed")
     public void addLog(String level, String tag, String message, long timestamp) {
         if (!enabled) return;
 
@@ -214,12 +215,12 @@ public class LogWriter {
         }
     }
     
+    @SuppressWarnings("SequencedCollectionMethodCanBeUsed")
     private static void flushLogFile() {
         if (logWriteBuffer.isEmpty()) {
             return;
         }
         
-        FileOutputStream fos = null;
         try {
             File logFile = getCachedLogFile();
             if (logFile == null) {
@@ -229,7 +230,7 @@ public class LogWriter {
             File logDir = logFile.getParentFile();
             if (logDir != null && !logDir.exists()) {
                 Log.d(TAG, "创建日志目录: " + logDir.getAbsolutePath());
-                if (!logDir.mkdirs()) Log.w(TAG, "创建日志目录失败，mkdirs返回false");
+                if (!logDir.mkdirs()) Log.w(TAG, "创建日志目录失败");
             }
             
             if (!logFile.exists()) {
@@ -241,14 +242,15 @@ public class LogWriter {
                     ", 缓冲区数量: " + logBufferCount + 
                     ", 总大小: " + totalBufferSize + " bytes");
             
-            fos = new FileOutputStream(logFile, true);
-            
+            StringBuilder sb = new StringBuilder();
             while (!logWriteBuffer.isEmpty()) {
                 String log = logWriteBuffer.remove(0);
-                fos.write((log + "\n").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                sb.append(log).append("\n");
             }
             
-            fos.flush();
+            try (FileWriter writer = new FileWriter(logFile, true)) {
+                writer.write(sb.toString());
+            }
             
             Log.d(TAG, "日志文件写入完成");
             
@@ -256,14 +258,6 @@ public class LogWriter {
             totalBufferSize = 0;
         } catch (IOException e) {
             Log.e(TAG, "写入日志文件失败", e);
-        } finally {
-            if (fos != null) {
-                try {
-                    fos.close();
-                } catch (IOException e) {
-                    Log.e(TAG, "关闭文件输出流失败", e);
-                }
-            }
         }
     }
     

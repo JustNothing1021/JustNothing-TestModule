@@ -206,7 +206,7 @@ public class REPL {
             
             if (c == '"' && !inChar) {
                 if (i > 0 && code.charAt(i - 1) == 'f' && !inString && !inFString) {
-                    inFString = !inFString;
+                    inFString = true;
                 } else if (inFString) {
                     inFString = false;
                 } else {
@@ -250,9 +250,7 @@ public class REPL {
             Object result = ASTEvaluator.evaluate(ast, context);
             
             System.out.println("Result: " + formatValue(result));
-        } catch (ParseException e) {
-            System.out.println("错误: " + e.getMessage());
-        } catch (EvaluationException e) {
+        } catch (ParseException | EvaluationException e) {
             System.out.println("错误: " + e.getMessage());
         } catch (Exception e) {
             System.out.println("内部错误: " + e.getMessage());

@@ -1,5 +1,7 @@
 package com.justnothing.testmodule.command.functions.threads;
 
+import androidx.annotation.NonNull;
+
 import com.justnothing.testmodule.utils.functions.Logger;
 import com.justnothing.testmodule.utils.io.IOManager;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
@@ -81,6 +83,7 @@ public class ProfileManager {
         threadStatsMap.put(threadName, stats);
     }
     
+    @SuppressWarnings("SequencedCollectionMethodCanBeUsed")
     public String getProfileReport() {
         if (samples.isEmpty()) {
             return "暂无性能分析数据";
@@ -89,11 +92,11 @@ public class ProfileManager {
         StringBuilder sb = new StringBuilder();
         sb.append("===== 性能分析报告 =====\n");
         sb.append("样本数量: ").append(samples.size()).append("\n");
-        sb.append("分析时间: ").append(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())).append("\n\n");
+        sb.append("分析时间: ").append(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date())).append("\n\n");
         
         sb.append("===== 系统资源概况 =====\n");
         ProfileSample lastSample = samples.get(samples.size() - 1);
-        sb.append("CPU使用率: ").append(String.format("%.2f%%", lastSample.cpuUsage * 100)).append("\n");
+        sb.append("CPU使用率: ").append(String.format(Locale.getDefault(), "%.2f%%", lastSample.cpuUsage * 100)).append("\n");
         sb.append("内存使用: ").append(formatBytes(lastSample.memoryUsage)).append("\n");
         sb.append("线程数: ").append(lastSample.threadCount).append("\n");
         sb.append("进程数: ").append(lastSample.processCount).append("\n\n");
@@ -137,13 +140,14 @@ public class ProfileManager {
         return sb.toString();
     }
     
+    @SuppressWarnings("SequencedCollectionMethodCanBeUsed")
     public boolean exportToFile(String filePath) {
         synchronized (samples) {
             try {
                 StringBuilder content = new StringBuilder();
                 content.append("===== 性能分析报告 =====\n");
                 content.append("样本数量: ").append(samples.size()).append("\n");
-                content.append("分析时间: ").append(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())).append("\n\n");
+                content.append("分析时间: ").append(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date())).append("\n\n");
                 
                 content.append("===== 系统资源概况 =====\n");
                 if (!samples.isEmpty()) {
@@ -191,18 +195,7 @@ public class ProfileManager {
         }
     }
     
-    public boolean isProfiling() {
-        return profiling.get();
-    }
-    
-    public int getProfilingDuration() {
-        return profilingDuration.get();
-    }
-    
-    public int getSampleCount() {
-        return samples.size();
-    }
-    
+
     private static String formatBytes(long bytes) {
         if (bytes < 1024) {
             return bytes + " B";
@@ -214,65 +207,35 @@ public class ProfileManager {
             return String.format(Locale.getDefault(), "%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0));
         }
     }
-    
-    public static class ProfileSample {
-        public final String timestamp;
-        public final double cpuUsage;
-        public final long memoryUsage;
-        public final int threadCount;
-        public final int processCount;
-        
-        public ProfileSample(String timestamp, double cpuUsage, long memoryUsage, int threadCount, int processCount) {
-            this.timestamp = timestamp;
-            this.cpuUsage = cpuUsage;
-            this.memoryUsage = memoryUsage;
-            this.threadCount = threadCount;
-            this.processCount = processCount;
-        }
-        
+
+    public record ProfileSample(String timestamp, double cpuUsage, long memoryUsage,
+                                int threadCount, int processCount) {
+
+        @NonNull
         @Override
-        public String toString() {
-            return String.format(Locale.getDefault(),
-                    "[%s] CPU=%.2f%%, 内存=%s, 线程=%d, 进程=%d",
-                    timestamp, cpuUsage * 100, formatBytes(memoryUsage), threadCount, processCount);
-        }
-        
+            public String toString() {
+                return String.format(Locale.getDefault(),
+                        "[%s] CPU=%.2f%%, 内存=%s, 线程=%d, 进程=%d",
+                        timestamp, cpuUsage * 100, formatBytes(memoryUsage), threadCount, processCount);
+            }
+
         private static String formatBytes(long bytes) {
-            if (bytes < 1024) {
-                return bytes + " B";
-            } else if (bytes < 1024 * 1024) {
-                return String.format(Locale.getDefault(), "%.2f KB", bytes / 1024.0);
-            } else if (bytes < 1024 * 1024 * 1024) {
-                return String.format(Locale.getDefault(), "%.2f MB", bytes / (1024.0 * 1024.0));
-            } else {
-                return String.format(Locale.getDefault(), "%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0));
+                if (bytes < 1024) {
+                    return bytes + " B";
+                } else if (bytes < 1024 * 1024) {
+                    return String.format(Locale.getDefault(), "%.2f KB", bytes / 1024.0);
+                } else if (bytes < 1024 * 1024 * 1024) {
+                    return String.format(Locale.getDefault(), "%.2f MB", bytes / (1024.0 * 1024.0));
+                } else {
+                    return String.format(Locale.getDefault(), "%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0));
+                }
             }
         }
+
+    public record ProcessStats(String packageName, double cpuUsage, long memoryUsage,
+                               int threadCount) {
     }
-    
-    public static class ProcessStats {
-        public final String packageName;
-        public final double cpuUsage;
-        public final long memoryUsage;
-        public final int threadCount;
-        
-        public ProcessStats(String packageName, double cpuUsage, long memoryUsage, int threadCount) {
-            this.packageName = packageName;
-            this.cpuUsage = cpuUsage;
-            this.memoryUsage = memoryUsage;
-            this.threadCount = threadCount;
-        }
-    }
-    
-    public static class ThreadStats {
-        public final String threadName;
-        public final double cpuUsage;
-        public final String state;
-        
-        public ThreadStats(String threadName, double cpuUsage, String state) {
-            this.threadName = threadName;
-            this.cpuUsage = cpuUsage;
-            this.state = state;
-        }
+
+    public record ThreadStats(String threadName, double cpuUsage, String state) {
     }
 }

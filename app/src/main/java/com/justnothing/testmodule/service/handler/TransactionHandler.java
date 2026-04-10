@@ -14,7 +14,7 @@ import com.justnothing.testmodule.utils.io.IOManager;
 import com.justnothing.testmodule.utils.io.RootProcessPool;
 
 import java.io.File;
-import java.io.PrintWriter;
+import java.util.Objects;
 
 public class TransactionHandler {
     private static final Logger logger = Logger.getLoggerForName("TransactionHandler");
@@ -110,7 +110,6 @@ public class TransactionHandler {
 
     private boolean handleUpdatePort(Parcel data, Parcel reply) {
         File outputFile = null;
-        PrintWriter writer = null;
 
         try {
             int newPort = data.readInt();
@@ -129,7 +128,7 @@ public class TransactionHandler {
 
             File parentDir = outputFile.getParentFile();
             if (parentDir != null && !parentDir.exists()) {
-                boolean mkdirSuccess = parentDir.mkdirs();
+                boolean mkdirSuccess = IOManager.createDirectory(parentDir);
                 if (!mkdirSuccess) {
                     logger.warn("无法创建输出文件目录: " + parentDir.getAbsolutePath());
                 }
@@ -144,9 +143,7 @@ public class TransactionHandler {
                 String errorMsg = "端口号无效，必须在1024-65535范围内: " + newPort;
                 logger.error(errorMsg);
 
-                writer = new PrintWriter(outputFile);
-                writer.println(errorMsg);
-                writer.flush();
+                IOManager.writeFile(outputFile.getAbsolutePath(), errorMsg);
 
                 reply.writeNoException();
                 reply.writeInt(-1);
@@ -157,9 +154,7 @@ public class TransactionHandler {
                 String errorMsg = "端口 " + newPort + " 已被占用";
                 logger.error(errorMsg);
 
-                writer = new PrintWriter(outputFile);
-                writer.println(errorMsg);
-                writer.flush();
+                IOManager.writeFile(outputFile.getAbsolutePath(), errorMsg);
 
                 reply.writeNoException();
                 reply.writeInt(-2);
@@ -170,38 +165,38 @@ public class TransactionHandler {
             boolean result = socketServer.restartWithNewPort(newPort);
             logger.info("端口更新结果: " + (result ? "成功" : "失败"));
 
-            writer = new PrintWriter(outputFile);
             if (result) {
                 String successMsg = "端口更新成功，新端口: " + serverPortManager.getCurrentPort();
                 logger.info(successMsg);
-                writer.println(successMsg);
-                writer.println("端口文件已更新: " + PORT_FILE);
-                writer.println("服务器已重启，正在监听新端口");
+                StringBuilder sb = new StringBuilder();
+                sb.append(successMsg).append("\n");
+                sb.append("端口文件已更新: ").append(PORT_FILE).append("\n");
+                sb.append("服务器已重启，正在监听新端口");
+                IOManager.writeFile(outputFile.getAbsolutePath(), sb.toString());
 
                 reply.writeNoException();
                 reply.writeInt(0);
             } else {
                 String errorMsg = "端口更新失败，服务器重启失败";
                 logger.error(errorMsg);
-                writer.println(errorMsg);
-                writer.println("当前端口仍为: " + serverPortManager.getCurrentPort());
-                writer.println("建议：请检查端口是否被其他程序占用");
+                StringBuilder sb = new StringBuilder();
+                sb.append(errorMsg).append("\n");
+                sb.append("当前端口仍为: ").append(serverPortManager.getCurrentPort()).append("\n");
+                sb.append("建议：请检查端口是否被其他程序占用");
+                IOManager.writeFile(outputFile.getAbsolutePath(), sb.toString());
 
                 reply.writeNoException();
                 reply.writeInt(-4);
             }
-            writer.flush();
 
             return true;
 
         } catch (Exception e) {
             logger.error("处理更新端口事务失败", e);
 
-            if (writer == null && outputFile != null) {
+            if (outputFile != null) {
                 try {
-                    writer = new PrintWriter(outputFile);
-                    writer.println("处理更新端口时发生错误: " + e.getMessage());
-                    writer.flush();
+                    IOManager.writeFile(outputFile.getAbsolutePath(), "处理更新端口时发生错误: " + e.getMessage());
                 } catch (Exception e2) {
                     logger.error("写入错误信息到输出文件失败", e2);
                 }
@@ -209,10 +204,6 @@ public class TransactionHandler {
 
             reply.writeException(e);
             return false;
-        } finally {
-            if (writer != null) {
-                writer.close();
-            }
         }
     }
 
@@ -226,7 +217,6 @@ public class TransactionHandler {
 
     private boolean handleExportContext(Parcel data, Parcel reply) {
         File outputFile = null;
-        PrintWriter writer = null;
 
         try {
             logger.info("开始处理导出上下文事务");
@@ -244,7 +234,7 @@ public class TransactionHandler {
 
             File parentDir = outputFile.getParentFile();
             if (parentDir != null && !parentDir.exists()) {
-                boolean mkdirSuccess = parentDir.mkdirs();
+                boolean mkdirSuccess = IOManager.createDirectory(parentDir);
                 if (!mkdirSuccess) {
                     logger.warn("无法创建输出文件目录: " + parentDir.getAbsolutePath());
                 }
@@ -257,9 +247,7 @@ public class TransactionHandler {
 
             String result = commandHandler.executeCommand("export-context");
             
-            writer = new PrintWriter(outputFile);
-            writer.println(result);
-            writer.flush();
+            IOManager.writeFile(outputFile.getAbsolutePath(), result);
 
             logger.info("上下文导出成功");
             reply.writeNoException();
@@ -269,11 +257,9 @@ public class TransactionHandler {
         } catch (Exception e) {
             logger.error("处理导出上下文事务失败", e);
 
-            if (writer == null && outputFile != null) {
+            if (outputFile != null) {
                 try {
-                    writer = new PrintWriter(outputFile);
-                    writer.println("处理导出上下文时发生错误: " + e.getMessage());
-                    writer.flush();
+                    IOManager.writeFile(outputFile.getAbsolutePath(), "处理导出上下文时发生错误: " + e.getMessage());
                 } catch (Exception e2) {
                     logger.error("写入错误信息到输出文件失败", e2);
                 }
@@ -281,10 +267,6 @@ public class TransactionHandler {
 
             reply.writeException(e);
             return false;
-        } finally {
-            if (writer != null) {
-                writer.close();
-            }
         }
     }
 
@@ -359,15 +341,15 @@ public class TransactionHandler {
                 IOManager.ProcessResult result = RootProcessPool.executeCommand("chmod -R 777 " + dataDir, timeoutMs, true);
                 
                 logger.info("chmod命令执行结果 - 退出码: " + result.exitCode() +
-                            ", stdout: " + (result.getOutput() != null ? result.getOutput() : "(空)") + 
-                            ", stderr: " + (result.stderr() != null ? result.stderr() : "(空)"));
+                            ", stdout: " + Objects.requireNonNullElse(result.stdout(), "(空)") +
+                            ", stderr: " + Objects.requireNonNullElse(result.stderr(), "(空)"));
                 
                 if (result.isSuccess()) {
                     logger.info("chmod -R 777 " + dataDir + " 执行成功");
                     return true;
                 } else {
                     logger.warn("chmod尝试 " + attempt + " 失败，退出码: " + result.exitCode() +
-                               ", 错误: " + (result.stderr() != null ? result.stderr() : "(空)"));
+                               ", 错误信息: " + Objects.requireNonNullElse(result.getOutput(), "(空)"));
                 }
             } catch (Exception e) {
                 logger.error("chmod尝试 " + attempt + " 异常: " + e.getMessage(), e);

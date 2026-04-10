@@ -1,13 +1,47 @@
 package com.justnothing.testmodule.utils.reflect;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Member;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class SignatureUtils {
 
-    public static Class<?>[] parseSignature(String signature) throws ClassNotFoundException {
+    private static final Map<String, Class<?>> PRIMITIVE_TYPES = new HashMap<>();
+    
+    static {
+        PRIMITIVE_TYPES.put("B", byte.class);
+        PRIMITIVE_TYPES.put("C", char.class);
+        PRIMITIVE_TYPES.put("D", double.class);
+        PRIMITIVE_TYPES.put("F", float.class);
+        PRIMITIVE_TYPES.put("I", int.class);
+        PRIMITIVE_TYPES.put("J", long.class);
+        PRIMITIVE_TYPES.put("S", short.class);
+        PRIMITIVE_TYPES.put("Z", boolean.class);
+        PRIMITIVE_TYPES.put("V", void.class);
+    }
+
+
+    public static Class<?>[] parseParamList(String signature) throws ClassNotFoundException {
+        if (signature == null || signature.isEmpty()) {
+            return new Class<?>[0];
+        }
+        if (signature.startsWith("(") && !signature.endsWith(")")) return parseJVMMethodParamList(signature);
+        else return parseReadableParamList(signature);
+    }
+
+    public static Class<?>[] parseParamList(String signature, ClassLoader cl) throws ClassNotFoundException {
+        if (signature == null || signature.isEmpty()) {
+            return new Class<?>[0];
+        }
+        if (signature.endsWith(")V")) return parseJVMMethodParamList(signature);
+        else return parseReadableParamList(signature, cl);
+    }
+
+    public static Class<?>[] parseReadableParamList(String signature) throws ClassNotFoundException {
         if (signature == null || signature.isEmpty()) {
             return new Class<?>[0];
         }
@@ -22,7 +56,7 @@ public class SignatureUtils {
         return types;
     }
 
-    public static Class<?>[] parseSignature(String signature, ClassLoader classLoader) throws ClassNotFoundException {
+    private static Class<?>[] parseReadableParamList(String signature, ClassLoader classLoader) throws ClassNotFoundException {
         if (signature == null || signature.isEmpty()) {
             return new Class<?>[0];
         }
@@ -37,7 +71,7 @@ public class SignatureUtils {
         return types;
     }
 
-    public static Class<?>[] parseSignature(String signature, ClassLoader classLoader, List<String> imports)
+    private static Class<?>[] parseReadableParamList(String signature, ClassLoader classLoader, List<String> imports)
             throws ClassNotFoundException {
         if (signature == null || signature.isEmpty()) {
             return new Class<?>[0];
@@ -53,92 +87,87 @@ public class SignatureUtils {
         return types;
     }
 
-    public static String[] splitParams(String paramStr) {
-        List<String> params = new ArrayList<>();
-        StringBuilder current = new StringBuilder();
-        int parenDepth = 0;
-        boolean inQuotes = false;
+    public static String formatReadableParamList(Member member) {
+        if (!(member instanceof Method method)) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        Class<?>[] paramTypes = method.getParameterTypes();
+        for (int i = 0; i < paramTypes.length; i++) {
+            if (i > 0) {
+                sb.append(", ");
+            }
+            sb.append(paramTypes[i].getName());
+        }
+        return sb.toString();
+    }
 
-        for (char c : paramStr.toCharArray()) {
-            if (c == '"' && (current.length() == 0 || current.charAt(current.length() - 1) != '\\')) {
-                inQuotes = !inQuotes;
-                current.append(c);
-            } else if (c == '(' && !inQuotes) {
-                parenDepth++;
-                current.append(c);
-            } else if (c == ')' && !inQuotes) {
-                parenDepth--;
-                current.append(c);
-            } else if (c == ',' && parenDepth == 0 && !inQuotes) {
-                params.add(current.toString());
-                current = new StringBuilder();
+    public static Class<?>[] parseJVMMethodParamList(String jvmSignature) throws ClassNotFoundException {
+        if (jvmSignature == null || jvmSignature.isEmpty()) {
+            return new Class<?>[0];
+        }
+
+        int paramStart = jvmSignature.indexOf('(');
+        int paramEnd = jvmSignature.indexOf(')');
+
+        if (paramStart == -1 || paramEnd == -1 || paramEnd <= paramStart + 1) {
+            return new Class<?>[0];
+        }
+
+        String paramPart = jvmSignature.substring(paramStart + 1, paramEnd);
+        if (paramPart.isEmpty()) {
+            return new Class<?>[0];
+        }
+
+        List<Class<?>> paramTypes = new ArrayList<>();
+        int i = 0;
+        while (i < paramPart.length()) {
+            int arrayDepth = 0;
+            while (i < paramPart.length() && paramPart.charAt(i) == '[') {
+                arrayDepth++;
+                i++;
+            }
+
+            String typeCode;
+            if (i >= paramPart.length()) {
+                break;
+            }
+
+            char c = paramPart.charAt(i);
+            if (c == 'L') {
+                int semiColonIndex = paramPart.indexOf(';', i);
+                if (semiColonIndex == -1) {
+                    break;
+                }
+                typeCode = paramPart.substring(i + 1, semiColonIndex);
+                i = semiColonIndex + 1;
             } else {
-                current.append(c);
+                typeCode = String.valueOf(c);
+                i++;
+            }
+
+            Class<?> clazz = PRIMITIVE_TYPES.get(typeCode);
+            if (clazz == null && typeCode.startsWith("L")) {
+                String className = typeCode.replace('/', '.');
+                try {
+                    clazz = Class.forName(className);
+                } catch (ClassNotFoundException e) {
+                    try {
+                        clazz = ClassResolver.findClassOrFail(className);
+                    } catch (Exception ex) {
+                        throw new ClassNotFoundException("无法找到类: " + className);
+                    }
+                }
+            }
+
+            if (clazz != null) {
+                for (int d = 0; d < arrayDepth; d++) {
+                    clazz = Array.newInstance(clazz, 0).getClass();
+                }
+                paramTypes.add(clazz);
             }
         }
 
-        if (current.length() > 0) {
-            params.add(current.toString());
-        }
-
-        return params.toArray(new String[0]);
-    }
-
-    public static String formatSignature(Class<?>[] paramTypes) {
-        if (paramTypes == null || paramTypes.length == 0) {
-            return "";
-        }
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < paramTypes.length; i++) {
-            sb.append(paramTypes[i].getName());
-            if (i < paramTypes.length - 1) {
-                sb.append(", ");
-            }
-        }
-        return sb.toString();
-    }
-
-    public static String formatSignature(Member member) {
-        if (!(member instanceof Method method)) {
-            return "";
-        }
-        StringBuilder sb = new StringBuilder();
-        Class<?>[] paramTypes = method.getParameterTypes();
-        for (int i = 0; i < paramTypes.length; i++) {
-            if (i > 0) {
-                sb.append(", ");
-            }
-            sb.append(paramTypes[i].getName());
-        }
-        return sb.toString();
-    }
-
-    public static String formatSimpleSignature(Class<?>[] paramTypes) {
-        if (paramTypes == null || paramTypes.length == 0) {
-            return "";
-        }
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < paramTypes.length; i++) {
-            sb.append(paramTypes[i].getSimpleName());
-            if (i < paramTypes.length - 1) {
-                sb.append(", ");
-            }
-        }
-        return sb.toString();
-    }
-
-    public static String formatSimpleSignature(Member member) {
-        if (!(member instanceof Method method)) {
-            return "";
-        }
-        StringBuilder sb = new StringBuilder();
-        Class<?>[] paramTypes = method.getParameterTypes();
-        for (int i = 0; i < paramTypes.length; i++) {
-            if (i > 0) {
-                sb.append(", ");
-            }
-            sb.append(paramTypes[i].getSimpleName());
-        }
-        return sb.toString();
+        return paramTypes.toArray(new Class<?>[0]);
     }
 }

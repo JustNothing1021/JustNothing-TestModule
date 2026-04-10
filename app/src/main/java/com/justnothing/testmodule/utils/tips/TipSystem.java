@@ -90,6 +90,7 @@ public class TipSystem {
     }
 
 
+    @SuppressWarnings("SequencedCollectionMethodCanBeUsed")
     public TipCallback getDisplayTipForWelcome() {
         logger.info("内存中没有特殊提示");
         List<TipCallback> specialTips = tipMap.get(TipType.SPECIAL_TIP);

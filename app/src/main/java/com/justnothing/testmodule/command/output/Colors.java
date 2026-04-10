@@ -24,13 +24,7 @@ public class Colors {
     
     // 深色 (0x20-0x2F)
     public static final byte DARK_GRAY = 0x20;
-    public static final byte DARK_RED = 0x21;
-    public static final byte DARK_GREEN = 0x22;
-    public static final byte DARK_YELLOW = 0x23;
-    public static final byte DARK_BLUE = 0x24;
-    public static final byte DARK_CYAN = 0x25;
-    public static final byte PURPLE = 0x26;
-    
+
     // 特殊颜色 (0x30-0x3F)
     public static final byte ORANGE = 0x30;
     public static final byte PINK = 0x31;

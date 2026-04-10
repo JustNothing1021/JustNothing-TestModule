@@ -369,6 +369,10 @@ public class IOManager {
         }
     }
 
+    public static boolean createDirectory(File file) {
+        return createDirectory(file.getAbsolutePath());
+    }
+
     public static Future<Boolean> deleteDirectoryAsync(String dirPath) {
         return ThreadPoolManager.submitIOCallable(() -> deleteDirectory(dirPath));
     }

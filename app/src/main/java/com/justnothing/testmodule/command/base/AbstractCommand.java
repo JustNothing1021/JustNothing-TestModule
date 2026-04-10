@@ -10,11 +10,11 @@ public abstract class AbstractCommand implements Command {
     }
 
     @Override
-    public String execute(CommandContext context) {
+    public void execute(CommandContext context) {
         try {
-            return executeInternal(context);
+            executeInternal(context);
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException(
+            CommandExceptionHandler.handleException(
                 commandName, 
                 e, 
                 context.getExecContext(),
@@ -23,7 +23,7 @@ public abstract class AbstractCommand implements Command {
         }
     }
 
-    protected abstract String executeInternal(CommandContext context) throws Exception;
+    protected abstract void executeInternal(CommandContext context) throws Exception;
 
 
     @Override

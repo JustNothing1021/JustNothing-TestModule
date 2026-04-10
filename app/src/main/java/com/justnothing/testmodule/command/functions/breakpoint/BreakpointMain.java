@@ -4,51 +4,29 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_BREAKPOINT_
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.functions.intercept.BreakpointInterceptTask;
+import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandArgumentParser;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
-import com.justnothing.testmodule.utils.reflect.ClassResolver;
-import com.justnothing.testmodule.utils.functions.Logger;
 
+import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class BreakpointMain extends CommandBase {
-
-    private static final Logger staticLogger = Logger.getLoggerForName("Breakpoint");
-    private static final AtomicInteger nextId = new AtomicInteger(1);
-    private static final ConcurrentHashMap<Integer, BreakpointInfo> breakpoints = new ConcurrentHashMap<>();
 
     public BreakpointMain() {
         super("Breakpoint");
     }
 
-    public static class BreakpointInfo {
-        public final int id;
-        public final String className;
-        public final String methodName;
-        public final String signature;
-        public volatile boolean enabled;
-        public volatile int hitCount;
-        public final long createdAt;
-        public volatile long lastHitAt;
-
-        public BreakpointInfo(int id, String className, String methodName, String signature) {
-            this.id = id;
-            this.className = className;
-            this.methodName = methodName;
-            this.signature = signature;
-            this.enabled = true;
-            this.hitCount = 0;
-            this.createdAt = System.currentTimeMillis();
-            this.lastHitAt = 0;
-        }
-    }
-
     @Override
     public String getHelpText() {
-        return String.format("""
+        return String.format(
+                Locale.getDefault(),
+                """
                 语法: breakpoint <subcmd> [args...]
                 
                 设置和管理断点。
@@ -63,7 +41,10 @@ public class BreakpointMain extends CommandBase {
                     hits                                                        - 显示断点命中统计
                 
                 选项:
-                    sig, signature   - 指定方法签名，如 "String,int" 表示(String, int)参数的方法
+                    sig, signature   - 指定方法签名
+                        可以是用逗号分割的类名列表，如 "String,int" 表示(String, int)参数的方法
+                        也可以是JVM内部格式的签名，如 "(Ljava/lang/String;I;)V" 也是一样
+                        （不过因为理论上不会有同参数列表不同返回类型的情况，所以返回类型的解析不会有实际作用）
                 
                 示例:
                     breakpoint add com.example.MyClass myMethod
@@ -89,218 +70,213 @@ public class BreakpointMain extends CommandBase {
     }
 
     @Override
-    public String runMain(CommandExecutor.CmdExecContext context) {
+    public void runMain(CommandExecutor.CmdExecContext context) {
         String[] args = context.args();
         ClassLoader classLoader = context.classLoader();
-        
-        logger.debug("执行breakpoint命令，参数: " + java.util.Arrays.toString(args));
-        
+
+        logger.debug("执行breakpoint命令，参数: " + Arrays.toString(args));
+
         if (args.length < 1) {
             logger.warn("参数不足");
-            return getHelpText();
+            context.println(getHelpText(), Colors.WHITE);
+            return;
         }
 
         String subCommand = args[0];
+        BreakpointManager manager = BreakpointManager.getInstance();
 
         try {
-            return switch (subCommand) {
-                case "add" -> handleAdd(args, classLoader);
-                case "list" -> handleList();
-                case "enable" -> handleEnable(args);
-                case "disable" -> handleDisable(args);
-                case "remove" -> handleRemove(args);
-                case "clear" -> handleClear();
-                case "hits" -> handleHits();
-                default -> "未知子命令: " + subCommand + "\n" + getHelpText();
-            };
+            switch (subCommand) {
+                case "add" -> handleAdd(args, classLoader, manager, context);
+                case "list" -> handleList(manager, context);
+                case "enable" -> handleEnable(args, manager, context);
+                case "disable" -> handleDisable(args, manager, context);
+                case "remove" -> handleRemove(args, manager, context);
+                case "clear" -> handleClear(manager, context);
+                case "hits" -> handleHits(manager, context);
+                default -> {
+                    context.println("未知子命令: " + subCommand, Colors.RED);
+                    context.println(getHelpText(), Colors.WHITE);
+                }
+            }
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("breakpoint " + subCommand, e, context, "执行breakpoint的某个子命令时出错");
+            CommandExceptionHandler.handleException("breakpoint " + subCommand, e, context, "执行breakpoint的某个子命令时出错");
         }
     }
 
-    private String handleAdd(String[] args, ClassLoader classLoader) {
+    private void handleAdd(String[] args, ClassLoader classLoader, BreakpointManager manager, CommandExecutor.CmdExecContext context) {
         if (args.length < 3) {
-            return "错误: 参数不足\n用法: breakpoint add <class_name> <method_name> [sig/signature <signature>]";
+            context.println("错误: 参数不足", Colors.RED);
+            context.println("用法: breakpoint add <class_name> <method_name> [sig/signature <signature>]", Colors.GRAY);
+            return;
         }
 
         String className = args[1];
         String methodName = args[2];
-        String signature = null;
-
-        for (int i = 3; i < args.length; i++) {
-            if ((args[i].equals("sig") || args[i].equals("signature")) && i + 1 < args.length) {
-                signature = args[++i];
-                break;
-            }
-        }
+        String signature = CommandArgumentParser.getOptionValue(args, "sig", "signature");
 
         try {
-            ClassResolver.findClassOrFail(className, classLoader);
+            int id = manager.addBreakpoint(className, methodName, signature, classLoader);
 
-            int id = nextId.getAndIncrement();
-            
-            BreakpointInfo info = new BreakpointInfo(id, className, methodName, signature);
-            breakpoints.put(id, info);
-            
-            String sigText = signature != null ? " (签名: " + signature + ")" : " (所有重载)";
-            logger.info("添加断点: " + className + "." + methodName + sigText);
-            
-            BreakpointHook.setupBreakpoints(classLoader);
-            
-            return "断点已添加 (ID: " + id + ")\n" +
-                    "  类: " + className + "\n" +
-                    "  方法: " + methodName + "\n" +
-                    "  签名: " + (signature != null ? signature : "所有重载") + "\n" +
-                    "  状态: 启用\n" +
-                    "\n" +
-                    "断点已设置并生效！";
-            
-        } catch (ClassNotFoundException e) {
-            logger.error("类未找到: " + className, e);
-            return "错误: 类未找到: " + className;
+            context.println("断点已添加", Colors.GREEN);
+            context.print("ID: ", Colors.CYAN);
+            context.println(String.valueOf(id), Colors.YELLOW);
+            context.print("类: ", Colors.CYAN);
+            context.println(className, Colors.GREEN);
+            context.print("方法: ", Colors.CYAN);
+            context.println(methodName, Colors.GREEN);
+            context.print("签名: ", Colors.CYAN);
+            context.println(signature != null ? signature : "所有重载", Colors.GRAY);
+            context.print("状态: ", Colors.CYAN);
+            context.println("启用", Colors.GREEN);
+            context.println("", Colors.WHITE);
+            context.println("断点已设置并生效！", Colors.GREEN);
+
+        } catch (Exception e) {
+            Map<String, Object> errorContext = new HashMap<>();
+            errorContext.put("类名", className);
+            errorContext.put("方法名", methodName);
+            errorContext.put("签名", signature != null ? signature : "无");
+            CommandExceptionHandler.handleException("breakpoint add", e, context, errorContext, "添加断点失败");
         }
     }
 
-    private String handleList() {
+    private void handleList(BreakpointManager manager, CommandExecutor.CmdExecContext context) {
+        List<BreakpointInterceptTask> breakpoints = manager.listBreakpoints();
         if (breakpoints.isEmpty()) {
-            return "没有设置任何断点";
+            context.println("没有设置任何断点", Colors.GRAY);
+            return;
         }
 
-        StringBuilder result = new StringBuilder();
-        result.append("=== 断点列表 ===\n\n");
-        
-        for (BreakpointInfo info : breakpoints.values()) {
-            result.append("ID: ").append(info.id).append("\n");
-            result.append("  类: ").append(info.className).append("\n");
-            result.append("  方法: ").append(info.methodName).append("\n");
-            result.append("  签名: ").append(info.signature != null ? info.signature : "所有重载").append("\n");
-            result.append("  状态: ").append(info.enabled ? "启用" : "禁用").append("\n");
-            result.append("  命中次数: ").append(info.hitCount).append("\n");
-            result.append("  创建时间: ").append(new java.util.Date(info.createdAt)).append("\n");
-            if (info.lastHitAt > 0) {
-                result.append("  最后命中: ").append(new java.util.Date(info.lastHitAt)).append("\n");
+        context.println("=== 断点列表 ===", Colors.CYAN);
+        context.println("", Colors.WHITE);
+
+        for (BreakpointInterceptTask task : breakpoints) {
+            context.print("ID: ", Colors.CYAN);
+            context.println(String.valueOf(task.getId()), Colors.YELLOW);
+            context.print("  类: ", Colors.CYAN);
+            context.println(task.getClassName(), Colors.GREEN);
+            context.print("  方法: ", Colors.CYAN);
+            context.println(task.getMethodName(), Colors.GREEN);
+            context.print("  签名: ", Colors.CYAN);
+            context.println(task.getSignature() != null ? task.getSignature() : "所有重载", Colors.GRAY);
+            context.print("  状态: ", Colors.CYAN);
+            context.println(task.isEnabled() ? "启用" : "禁用", task.isEnabled() ? Colors.GREEN : Colors.RED);
+            context.print("  命中次数: ", Colors.CYAN);
+            context.println(String.valueOf(task.getHitCount()), Colors.YELLOW);
+            if (task.getLastHitAt() > 0) {
+                context.print("  最后命中: ", Colors.CYAN);
+                context.println(String.valueOf(new Date(task.getLastHitAt())), Colors.GRAY);
             }
-            result.append("\n");
+            context.println("", Colors.WHITE);
         }
-        
-        return result.toString();
     }
 
-    private String handleEnable(String[] args) {
+    private void handleEnable(String[] args, BreakpointManager manager, CommandExecutor.CmdExecContext context) {
         try {
-            CommandArgumentParser.requireArgsLength(args, 2, "breakpoint enable");
+            CommandArgumentParser.requireArgsLength(args, 2);
         } catch (IllegalArgumentException e) {
-            return "错误: " + e.getMessage() + "\n用法: breakpoint enable <id>";
+            context.println("错误: " + e.getMessage(), Colors.RED);
+            context.println("用法: breakpoint enable <id>", Colors.GRAY);
+            return;
         }
 
         Integer id = CommandArgumentParser.parseId(args, 1);
         if (id == null) {
-            return "错误: 无效的断点ID";
+            context.println("错误: 无效的断点ID", Colors.RED);
+            return;
         }
-        
-        BreakpointInfo info = breakpoints.get(id);
-        
-        if (info == null) {
-            return "错误: 断点不存在 (ID: " + id + ")";
+
+        if (manager.enableBreakpoint(id)) {
+            context.println("断点已启用", Colors.GREEN);
+            context.print("ID: ", Colors.CYAN);
+            context.println(String.valueOf(id), Colors.YELLOW);
+        } else {
+            context.println("错误: 断点不存在", Colors.RED);
         }
-        
-        info.enabled = true;
-        logger.info("启用断点: " + id);
-        return "断点已启用 (ID: " + id + ")";
     }
 
-    private String handleDisable(String[] args) {
+    private void handleDisable(String[] args, BreakpointManager manager, CommandExecutor.CmdExecContext context) {
         try {
-            CommandArgumentParser.requireArgsLength(args, 2, "breakpoint disable");
+            CommandArgumentParser.requireArgsLength(args, 2);
         } catch (IllegalArgumentException e) {
-            return "错误: " + e.getMessage() + "\n用法: breakpoint disable <id>";
+            context.println("错误: " + e.getMessage(), Colors.RED);
+            context.println("用法: breakpoint disable <id>", Colors.GRAY);
+            return;
         }
 
         Integer id = CommandArgumentParser.parseId(args, 1);
         if (id == null) {
-            return "错误: 无效的断点ID";
+            context.println("错误: 无效的断点ID", Colors.RED);
+            return;
         }
-        
-        BreakpointInfo info = breakpoints.get(id);
-        
-        if (info == null) {
-            return "错误: 断点不存在 (ID: " + id + ")";
+
+        if (manager.disableBreakpoint(id)) {
+            context.println("断点已禁用", Colors.YELLOW);
+            context.print("ID: ", Colors.CYAN);
+            context.println(String.valueOf(id), Colors.YELLOW);
+        } else {
+            context.println("错误: 断点不存在", Colors.RED);
         }
-        
-        info.enabled = false;
-        logger.info("禁用断点: " + id);
-        return "断点已禁用 (ID: " + id + ")";
     }
 
-    private String handleRemove(String[] args) {
+    private void handleRemove(String[] args, BreakpointManager manager, CommandExecutor.CmdExecContext context) {
         try {
-            CommandArgumentParser.requireArgsLength(args, 2, "breakpoint remove");
+            CommandArgumentParser.requireArgsLength(args, 2);
         } catch (IllegalArgumentException e) {
-            return "错误: " + e.getMessage() + "\n用法: breakpoint remove <id>";
+            context.println("错误: " + e.getMessage(), Colors.RED);
+            context.println("用法: breakpoint remove <id>", Colors.GRAY);
+            return;
         }
 
         Integer id = CommandArgumentParser.parseId(args, 1);
         if (id == null) {
-            return "错误: 无效的断点ID";
+            context.println("错误: 无效的断点ID", Colors.RED);
+            return;
         }
-        
-        BreakpointInfo info = breakpoints.remove(id);
-        
-        if (info == null) {
-            return "错误: 断点不存在 (ID: " + id + ")";
+
+        if (manager.removeBreakpoint(id)) {
+            context.println("断点已移除", Colors.GREEN);
+            context.print("ID: ", Colors.CYAN);
+            context.println(String.valueOf(id), Colors.YELLOW);
+        } else {
+            context.println("错误: 断点不存在", Colors.RED);
         }
-        
-        BreakpointHook.removeBreakpoint(id);
-        logger.info("移除断点: " + id);
-        return "断点已移除 (ID: " + id + ")";
     }
 
-    private String handleClear() {
-        int count = breakpoints.size();
-        BreakpointHook.clearAllBreakpoints();
-        breakpoints.clear();
-        nextId.set(1);
-        logger.info("清除所有断点");
-        return "已清除所有断点 (共 " + count + " 个)";
+    private void handleClear(BreakpointManager manager, CommandExecutor.CmdExecContext context) {
+        int count = manager.getBreakpointCount();
+        manager.clearAll();
+        context.println("已清除所有断点", Colors.GREEN);
+        context.print("清除数量: ", Colors.CYAN);
+        context.println(String.valueOf(count), Colors.YELLOW);
     }
 
-    private String handleHits() {
+    private void handleHits(BreakpointManager manager, CommandExecutor.CmdExecContext context) {
+        List<BreakpointInterceptTask> breakpoints = manager.listBreakpoints();
         if (breakpoints.isEmpty()) {
-            return "没有设置任何断点";
+            context.println("没有设置任何断点", Colors.GRAY);
+            return;
         }
 
-        StringBuilder result = new StringBuilder();
-        result.append("=== 断点命中统计 ===\n\n");
-        
+        context.println("=== 断点命中统计 ===", Colors.CYAN);
+        context.println("", Colors.WHITE);
+
         int totalHits = 0;
-        for (BreakpointInfo info : breakpoints.values()) {
-            result.append("ID ").append(info.id).append(": ")
-                  .append(info.className).append(".").append(info.methodName)
-                  .append(" - 命中 ").append(info.hitCount).append(" 次\n");
-            totalHits += info.hitCount;
+        for (BreakpointInterceptTask task : breakpoints) {
+            context.print("ID ", Colors.CYAN);
+            context.print(String.valueOf(task.getId()), Colors.YELLOW);
+            context.print(": ", Colors.WHITE);
+            context.print(task.getClassName() + "." + task.getMethodName(), Colors.GREEN);
+            context.print(" - 命中 ", Colors.WHITE);
+            context.print(String.valueOf(task.getHitCount()), Colors.YELLOW);
+            context.println(" 次", Colors.WHITE);
+            totalHits += task.getHitCount();
         }
-        
-        result.append("\n总计: ").append(totalHits).append(" 次命中\n");
-        
-        return result.toString();
-    }
 
-    public static Map<Integer, BreakpointInfo> getBreakpoints() {
-        return new HashMap<>(breakpoints);
+        context.println("", Colors.WHITE);
+        context.print("总计: ", Colors.CYAN);
+        context.print(String.valueOf(totalHits), Colors.YELLOW);
+        context.println(" 次命中", Colors.WHITE);
     }
-
-    public static void onBreakpointHit(int id) {
-        BreakpointInfo info = breakpoints.get(id);
-        if (info != null && info.enabled) {
-            info.hitCount++;
-            info.lastHitAt = System.currentTimeMillis();
-            staticLogger.info("断点命中: " + info.className + "." + info.methodName + " (ID: " + id + ")");
-            StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
-            staticLogger.info("调用栈:");
-            for (StackTraceElement element : stackTrace) {
-                staticLogger.info("  " + element.toString());
-            }
-        }
-    }
-
 }

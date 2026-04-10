@@ -5,7 +5,6 @@ import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
 import com.justnothing.testmodule.utils.reflect.DescriptorColorizer;
-import com.justnothing.testmodule.utils.reflect.ReflectionUtils;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -20,16 +19,17 @@ public class InfoCommand extends AbstractClassCommand {
     }
 
     @Override
-    protected String executeInternal(ClassCommandContext context) throws Exception {
+    protected void executeInternal(ClassCommandContext context) throws Exception {
         String[] args = context.getArgs();
         
         if (args.length < 1) {
-            return CommandExceptionHandler.handleException(
+            CommandExceptionHandler.handleException(
                 "class info", 
                 new IllegalArgumentException("参数不足, 需要至少1个参数: class info <class_name>"),
                 context.getExecContext(),
                 "参数错误"
             );
+            return;
         }
 
 
@@ -74,7 +74,7 @@ public class InfoCommand extends AbstractClassCommand {
             context.getExecContext().println(targetClass.getName(), Colors.WHITE);
             context.getExecContext().print("修饰符: ", Colors.CYAN);
             context.getExecContext().println(Modifier.toString(targetClass.getModifiers()), Colors.YELLOW);
-            
+
             StringBuilder flags = new StringBuilder();
             if (targetClass.isInterface()) flags.append("接口类 ");
             if (targetClass.isArray()) flags.append("数组 ");
@@ -152,7 +152,6 @@ public class InfoCommand extends AbstractClassCommand {
         }
         
         context.getLogger().info("查看类信息: " + className);
-        return "";
     }
 
     @Override

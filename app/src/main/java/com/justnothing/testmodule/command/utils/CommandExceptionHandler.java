@@ -3,8 +3,6 @@ package com.justnothing.testmodule.command.utils;
 import android.util.Log;
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.output.Colors;
-import com.justnothing.testmodule.command.output.ICommandOutputHandler;
-import com.justnothing.testmodule.utils.functions.Logger;
 
 import java.util.LinkedHashMap;
 import java.util.Locale;

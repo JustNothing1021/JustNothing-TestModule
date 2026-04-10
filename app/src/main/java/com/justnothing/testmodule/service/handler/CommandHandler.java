@@ -174,7 +174,7 @@ public class CommandHandler {
         File outputParentDir = output.getParentFile();
         if (outputParentDir != null && !outputParentDir.exists()) {
             logger.debug("创建输出文件目录: " + outputParentDir.getAbsolutePath());
-            if (!outputParentDir.mkdirs()) {
+            if (!IOManager.createDirectory(outputParentDir)) {
                 logger.error("创建输出文件目录失败: " + outputParentDir.getAbsolutePath());
                 return 2;
             }

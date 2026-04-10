@@ -18,16 +18,17 @@ public class FieldCommand extends AbstractClassCommand {
     }
 
     @Override
-    protected String executeInternal(ClassCommandContext context) throws Exception {
+    protected void executeInternal(ClassCommandContext context) throws Exception {
         String[] args = context.getArgs();
         
         if (args.length < 1) {
-            return CommandExceptionHandler.handleException(
+            CommandExceptionHandler.handleException(
                 "class field",
                 new IllegalArgumentException("参数不足, 需要至少1个参数: class field <class_name> [field_name]"),
                 context.getExecContext(),
                 "参数错误"
             );
+            return;
         }
 
         boolean getValue = false;
@@ -58,12 +59,13 @@ public class FieldCommand extends AbstractClassCommand {
                         fieldName = args[i + 2];
                         valueToSet = args[i + 3];
                     } else {
-                        return CommandExceptionHandler.handleException(
+                        CommandExceptionHandler.handleException(
                             "class field",
                             new IllegalArgumentException("提供给-s的参数不足, 需要至少3个: class field -s <class> <field> <value>"),
                             context.getExecContext(),
                             "参数错误"
                         );
+                        return;
                     }
                 }
                 case "-v", "--value" -> {
@@ -85,12 +87,13 @@ public class FieldCommand extends AbstractClassCommand {
         }
         
         if ((getValue || setValue || showValue) && args.length < 2) {
-            return CommandExceptionHandler.handleException(
+            CommandExceptionHandler.handleException(
                 "class field",
                 new IllegalArgumentException("获取/设置字段值需要指定字段名: class field -g <class> <field>"),
                 context.getExecContext(),
                 "参数错误"
             );
+            return;
         }
         
         if (args.length >= 2) {
@@ -109,13 +112,14 @@ public class FieldCommand extends AbstractClassCommand {
             Field field = ClassResolver.findStaticField(targetClass, fieldName, accessSuper, accessInterfaces);
 
             if (field == null) {
-                return CommandExceptionHandler.handleException(
+                CommandExceptionHandler.handleException(
                     "class field",
                     new NoSuchFieldException("找不到字段: " + fieldName),
                     context.getExecContext(),
                     Map.of("类名", className, "字段名", fieldName),
                     "字段查找失败"
                 );
+                return;
             }
 
             field.setAccessible(true);
@@ -137,15 +141,16 @@ public class FieldCommand extends AbstractClassCommand {
                         context.getExecContext().print("成功设置字段值: ", Colors.CYAN);
                         context.getExecContext().println(valueToSet, Colors.LIGHT_GREEN);
                     }
-                    return null;
+                    return;
                 } else {
-                    return CommandExceptionHandler.handleException(
+                    CommandExceptionHandler.handleException(
                         "class field",
                         new IllegalStateException("无法获取/设置非静态字段，需要提供实例对象"),
                         context.getExecContext(),
                         Map.of("类名", className, "字段名", fieldName),
                         "非静态字段访问失败"
                     );
+                    return;
                 }
             }
 
@@ -162,7 +167,7 @@ public class FieldCommand extends AbstractClassCommand {
 
             if (showAll || showModifiers) {
                 context.getExecContext().print("修饰符: ", Colors.CYAN);
-                context.getExecContext().println(ReflectionUtils.getModifiersString(field.getModifiers()), Colors.DARK_BLUE);
+                context.getExecContext().println(ReflectionUtils.getModifiersString(field.getModifiers()), Colors.BLUE);
             }
 
             if (showAll || showValue) {
@@ -212,7 +217,6 @@ public class FieldCommand extends AbstractClassCommand {
             }
 
         }
-        return null;
     }
 
     @Override

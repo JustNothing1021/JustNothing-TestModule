@@ -9,6 +9,7 @@ import java.util.Map;
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandArgumentParser;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 
@@ -37,10 +38,14 @@ public class WatchMain extends CommandBase {
                 选项:
                     field            - 监控字段值变化
                     method           - 监控方法调用
-                    sig, signature   - 指定方法签名（仅method有效），如 "String,int" 表示(String, int)参数的方法
+                    sig, signature   - 指定方法签名（仅method有效）
                     interval         - 检查间隔（毫秒），默认1000ms
                     count            - 输出条数，默认20条
 
+                关于signature参数:
+                    可以是用逗号分割的类名列表，如 "String,int" 表示(String, int)参数的方法
+                    也可以是JVM内部格式的签名，如 "(Ljava/lang/String;I;)V" 也是一样
+                    （不过因为理论上不会有同参数列表不同返回类型的情况，所以返回类型的解析不会有实际作用）
                 
                 示例:
                     watch add field java.lang.System out 1000
@@ -68,7 +73,7 @@ public class WatchMain extends CommandBase {
     }
 
     @Override
-    public String runMain(CommandExecutor.CmdExecContext context) {
+    public void runMain(CommandExecutor.CmdExecContext context) {
         String[] args = context.args();
         ClassLoader classLoader = context.classLoader();
         
@@ -76,31 +81,37 @@ public class WatchMain extends CommandBase {
         
         if (args.length < 1) {
             logger.warn("参数不足");
-            return getHelpText();
+            context.println(getHelpText(), Colors.WHITE);
+            return;
         }
 
         String subCommand = args[0];
         WatchManager manager = WatchManager.getInstance();
 
         try {
-            return switch (subCommand) {
+            switch (subCommand) {
                 case "add" -> handleAdd(args, classLoader, manager, context);
-                case "list" -> handleList(manager);
-                case "stop" -> handleStop(args, manager);
-                case "clear" -> handleClear(manager);
-                case "output" -> handleOutput(args, manager);
-                default -> "未知子命令: " + subCommand + "\n" + getHelpText();
-            };
+                case "list" -> handleList(manager, context);
+                case "stop" -> handleStop(args, manager, context);
+                case "clear" -> handleClear(manager, context);
+                case "output" -> handleOutput(args, manager, context);
+                default -> {
+                    context.println("未知子命令: " + subCommand, Colors.RED);
+                    context.println(getHelpText(), Colors.WHITE);
+                }
+            }
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("watch", e, context, "执行watch命令失败");
+            CommandExceptionHandler.handleException("watch", e, context, "执行watch命令失败");
         }
     }
 
-    private String handleAdd(String[] args, ClassLoader classLoader, WatchManager manager, CommandExecutor.CmdExecContext context) {
+    private void handleAdd(String[] args, ClassLoader classLoader, WatchManager manager, CommandExecutor.CmdExecContext context) {
         try {
-            CommandArgumentParser.requireArgsLength(args, 4, "watch add");
+            CommandArgumentParser.requireArgsLength(args, 4);
         } catch (IllegalArgumentException e) {
-            return e.getMessage() + "\n用法: watch add <field|method> <class_name> <member_name> [sig/signature <signature>] [interval]\n" + getHelpText();
+            context.println("错误: " + e.getMessage(), Colors.RED);
+            context.println("用法: watch add <field|method> <class_name> <member_name> [sig/signature <signature>] [interval]", Colors.GRAY);
+            return;
         }
 
         String type = args[1];
@@ -121,37 +132,51 @@ public class WatchMain extends CommandBase {
             try {
                 interval = Long.parseLong(intervalStr);
             } catch (NumberFormatException e) {
-                return CommandExceptionHandler.handleException("watch add", e, context, "无效的interval参数");
+                context.println("错误: 无效的interval参数", Colors.RED);
+                return;
             }
         }
 
         try {
             CommandArgumentParser.requireMin(interval, 10, "间隔");
         } catch (IllegalArgumentException e) {
-            return e.getMessage() + " (指定的是" + interval + "ms, 频率过高容易炸掉系统)";
+            context.println("错误: " + e.getMessage(), Colors.RED);
+            context.println("(指定的是" + interval + "ms, 频率过高容易炸掉系统)", Colors.YELLOW);
+            return;
         }
 
         try {
             int id;
             if (type.equals("field")) {
                 id = manager.addFieldWatch(classLoader, className, memberName, interval);
-                return "字段watch任务已添加\n" +
-                       "ID: " + id + "\n" +
-                       "类: " + className + "\n" +
-                       "字段: " + memberName + "\n" +
-                       "间隔: " + interval + "ms\n" +
-                       "提示: 使用 'watch output " + id + "' 查看输出";
+                context.println("字段watch任务已添加", Colors.GREEN);
+                context.print("ID: ", Colors.CYAN);
+                context.println(String.valueOf(id), Colors.YELLOW);
+                context.print("类: ", Colors.CYAN);
+                context.println(className, Colors.GREEN);
+                context.print("字段: ", Colors.CYAN);
+                context.println(memberName, Colors.GREEN);
+                context.print("间隔: ", Colors.CYAN);
+                context.println(interval + "ms", Colors.YELLOW);
+                context.println("提示: 使用 'watch output " + id + "' 查看输出", Colors.GRAY);
             } else if (type.equals("method")) {
                 id = manager.addMethodWatch(classLoader, className, memberName, signature, interval);
-                return "方法watch任务已添加\n" +
-                       "ID: " + id + "\n" +
-                       "类: " + className + "\n" +
-                       "方法: " + memberName + "\n" +
-                       (signature != null ? "签名: " + signature + "\n" : "") +
-                       "间隔: " + interval + "ms\n" +
-                       "提示: 使用 'watch output " + id + "' 查看输出";
+                context.println("方法watch任务已添加", Colors.GREEN);
+                context.print("ID: ", Colors.CYAN);
+                context.println(String.valueOf(id), Colors.YELLOW);
+                context.print("类: ", Colors.CYAN);
+                context.println(className, Colors.GREEN);
+                context.print("方法: ", Colors.CYAN);
+                context.println(memberName, Colors.GREEN);
+                if (signature != null) {
+                    context.print("签名: ", Colors.CYAN);
+                    context.println(signature, Colors.GRAY);
+                }
+                context.print("间隔: ", Colors.CYAN);
+                context.println(interval + "ms", Colors.YELLOW);
+                context.println("提示: 使用 'watch output " + id + "' 查看输出", Colors.GRAY);
             } else {
-                return "未知类型: " + type + "，必须是 'field' 或 'method'";
+                context.println("错误: 未知类型: " + type + "，必须是 'field' 或 'method'", Colors.RED);
             }
         } catch (Exception e) {
             Map<String, Object> errorContext = new HashMap<>();
@@ -160,47 +185,53 @@ public class WatchMain extends CommandBase {
             errorContext.put("成员名", memberName);
             errorContext.put("签名", signature != null ? signature : "无");
             errorContext.put("间隔", interval + "ms");
-            return CommandExceptionHandler.handleException("watch add", e, context, errorContext, "添加watch任务失败");
+            CommandExceptionHandler.handleException("watch add", e, context, errorContext, "添加watch任务失败");
         }
     }
 
-    private String handleList(WatchManager manager) {
-        return manager.listWatches();
+    private void handleList(WatchManager manager, CommandExecutor.CmdExecContext context) {
+        String result = manager.listWatches();
+        context.println(result, Colors.WHITE);
     }
 
-    private String handleStop(String[] args, WatchManager manager) {
+    private void handleStop(String[] args, WatchManager manager, CommandExecutor.CmdExecContext context) {
         if (args.length < 2) {
-            return "参数不足\n用法: watch stop <id>\n" + getHelpText();
+            context.println("错误: 参数不足", Colors.RED);
+            context.println("用法: watch stop <id>", Colors.GRAY);
+            return;
         }
 
         try {
             int id = Integer.parseInt(args[1]);
             if (manager.stopWatch(id)) {
-                return "已停止watch任务: " + id;
+                context.println("已停止watch任务", Colors.GREEN);
+                context.print("ID: ", Colors.CYAN);
+                context.println(String.valueOf(id), Colors.YELLOW);
             } else {
-                return "未找到watch任务: " + id;
+                context.println("错误: 未找到watch任务", Colors.RED);
+                context.print("ID: ", Colors.CYAN);
+                context.println(String.valueOf(id), Colors.YELLOW);
             }
         } catch (NumberFormatException e) {
-            return "ID必须是数字: " + args[1];
+            context.println("错误: ID必须是数字: " + args[1], Colors.RED);
         }
     }
 
-    private String handleClear(WatchManager manager) {
+    private void handleClear(WatchManager manager, CommandExecutor.CmdExecContext context) {
         int count = manager.getWatchCount();
         manager.clearAll();
-        return "已清除所有watch任务，共 " + count + " 个";
+        context.println("已清除所有watch任务", Colors.GREEN);
+        context.print("清除数量: ", Colors.CYAN);
+        context.println(String.valueOf(count), Colors.YELLOW);
     }
 
-    private String handleOutput(String[] args, WatchManager manager) {
+    private void handleOutput(String[] args, WatchManager manager, CommandExecutor.CmdExecContext context) {
         if (args.length < 2) {
-            return  """
-                    参数不足
-                    
-                    用法: watch output <id|all> [limit]
-
-                    选项:
-                        - limit: 输出条数限制，默认20
-                    """ + getHelpText();
+            context.println("错误: 参数不足", Colors.RED);
+            context.println("用法: watch output <id|all> [limit]", Colors.GRAY);
+            context.println("选项:", Colors.CYAN);
+            context.println("  - limit: 输出条数限制，默认20", Colors.GRAY);
+            return;
         }
 
         int limit = 20;
@@ -208,18 +239,21 @@ public class WatchMain extends CommandBase {
             try {
                 limit = Integer.parseInt(args[2]);
             } catch (NumberFormatException e) {
-                return "数量必须是数字: " + args[2];
+                context.println("错误: 数量必须是数字: " + args[2], Colors.RED);
+                return;
             }
         }
 
         if (args[1].equals("all")) {
-            return manager.getAllWatchOutput(limit);
+            String result = manager.getAllWatchOutput(limit);
+            context.println(result, Colors.WHITE);
         } else {
             try {
                 int id = Integer.parseInt(args[1]);
-                return manager.getWatchOutput(id, limit);
+                String result = manager.getWatchOutput(id, limit);
+                context.println(result, Colors.WHITE);
             } catch (NumberFormatException e) {
-                return "ID必须是数字: " + args[1];
+                context.println("错误: ID必须是数字: " + args[1], Colors.RED);
             }
         }
     }

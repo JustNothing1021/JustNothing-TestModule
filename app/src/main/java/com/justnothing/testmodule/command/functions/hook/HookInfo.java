@@ -6,6 +6,7 @@ import com.justnothing.testmodule.command.output.Colors;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -105,6 +106,7 @@ public class HookInfo {
         callCount.incrementAndGet();
     }
 
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     public boolean isActive() {
         return active;
     }
@@ -200,32 +202,32 @@ public class HookInfo {
         
         if (beforeCode != null && !beforeCode.isEmpty()) {
             ctx.print("before阶段代码: ", Colors.CYAN);
-            ctx.println(truncateCode(beforeCode), Colors.PURPLE);
+            ctx.println(truncateCode(beforeCode), Colors.MAGENTA);
         }
         if (beforeCodebase != null && !beforeCodebase.isEmpty()) {
             ctx.print("before阶段代码文件: ", Colors.CYAN);
-            ctx.println(beforeCodebase, Colors.PURPLE);
+            ctx.println(beforeCodebase, Colors.MAGENTA);
         }
         if (afterCode != null && !afterCode.isEmpty()) {
             ctx.print("after阶段代码: ", Colors.CYAN);
-            ctx.println(truncateCode(afterCode), Colors.PURPLE);
+            ctx.println(truncateCode(afterCode), Colors.MAGENTA);
         }
         if (afterCodebase != null && !afterCodebase.isEmpty()) {
             ctx.print("after阶段代码文件: ", Colors.CYAN);
-            ctx.println(afterCodebase, Colors.PURPLE);
+            ctx.println(afterCodebase, Colors.MAGENTA);
         }
         if (replaceCode != null && !replaceCode.isEmpty()) {
             ctx.print("replace代码: ", Colors.CYAN);
-            ctx.println(truncateCode(replaceCode), Colors.PURPLE);
+            ctx.println(truncateCode(replaceCode), Colors.MAGENTA);
         }
         if (replaceCodebase != null && !replaceCodebase.isEmpty()) {
             ctx.print("replace代码文件: ", Colors.CYAN);
-            ctx.println(replaceCodebase, Colors.PURPLE);
+            ctx.println(replaceCodebase, Colors.MAGENTA);
         }
     }
 
     private String formatTime(long timestamp) {
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
         return sdf.format(new Date(timestamp));
     }
 

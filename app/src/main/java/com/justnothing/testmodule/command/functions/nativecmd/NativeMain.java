@@ -4,6 +4,7 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_NATIVE_VER;
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
 import com.justnothing.testmodule.utils.io.IOManager;
@@ -16,6 +17,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -68,11 +70,12 @@ public class NativeMain extends CommandBase {
     }
 
     @Override
-    public String runMain(CommandExecutor.CmdExecContext context) {
+    public void runMain(CommandExecutor.CmdExecContext context) {
         String[] args = context.args();
         
         if (args.length < 1) {
-            return getHelpText();
+            context.println(getHelpText(), Colors.WHITE);
+            return;
         }
 
         String subcmd = args[0];
@@ -91,7 +94,7 @@ public class NativeMain extends CommandBase {
             }
         }
         
-        return switch (subcmd) {
+        switch (subcmd) {
             case "list" -> handleList(args, verbose, context);
             case "info" -> handleInfo(args, verbose, context);
             case "functions" -> handleFunctions(args, verbose, context);
@@ -101,41 +104,46 @@ public class NativeMain extends CommandBase {
             case "stack" -> handleStack(threadId, context);
             case "maps" -> handleMaps(verbose, context);
             case "search" -> handleSearch(args, context);
-            default -> "未知子命令: " + subcmd + "\n" + getHelpText();
-        };
+            default -> {
+                context.println("未知子命令: " + subcmd, Colors.RED);
+                context.println(getHelpText(), Colors.WHITE);
+            }
+        }
     }
     
-    private String handleList(String[] args, boolean verbose, CommandExecutor.CmdExecContext context) {
+    private void handleList(String[] args, boolean verbose, CommandExecutor.CmdExecContext context) {
         String pattern = args.length > 1 ? args[1] : null;
         
         try {
             List<String> libraries = getLoadedLibraries();
             
-            StringBuilder sb = new StringBuilder();
-            sb.append("已加载的Native库: ").append(libraries.size()).append(" 个\n\n");
+            context.print("已加载的Native库: ", Colors.CYAN);
+            context.println(String.valueOf(libraries.size()) + " 个", Colors.YELLOW);
+            context.println("", Colors.WHITE);
             
             for (String lib : libraries) {
                 if (pattern == null || lib.contains(pattern)) {
-                    sb.append("  - ").append(lib).append("\n");
+                    context.print("  - ", Colors.GRAY);
+                    context.println(lib, Colors.GREEN);
                     if (verbose) {
                         String libPath = getLibraryPath(lib);
                         if (libPath != null) {
-                            sb.append("    路径: ").append(libPath).append("\n");
+                            context.print("    路径: ", Colors.CYAN);
+                            context.println(libPath, Colors.GRAY);
                         }
                     }
                 }
             }
             
-            return sb.toString();
-            
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("native list", e, context, "获取native库列表失败");
+            CommandExceptionHandler.handleException("native list", e, context, "获取native库列表失败");
         }
     }
     
-    private String handleInfo(String[] args, boolean verbose, CommandExecutor.CmdExecContext context) {
+    private void handleInfo(String[] args, boolean verbose, CommandExecutor.CmdExecContext context) {
         if (args.length < 2) {
-            return "参数不足，需要指定库名";
+            context.println("参数不足，需要指定库名", Colors.RED);
+            return;
         }
         
         String libName = args[1];
@@ -143,37 +151,42 @@ public class NativeMain extends CommandBase {
         try {
             String libPath = getLibraryPath(libName);
             
-            StringBuilder sb = new StringBuilder();
-            sb.append("库信息: ").append(libName).append("\n");
-            sb.append("路径: ").append(libPath != null ? libPath : "未知").append("\n");
+            context.print("库信息: ", Colors.CYAN);
+            context.println(libName, Colors.GREEN);
+            context.print("路径: ", Colors.CYAN);
+            context.println(libPath != null ? libPath : "未知", Colors.GRAY);
             
             if (libPath != null) {
                 File libFile = new File(libPath);
                 if (libFile.exists()) {
-                    sb.append("大小: ").append(libFile.length()).append(" 字节\n");
-                    sb.append("可读: ").append(libFile.canRead()).append("\n");
-                    sb.append("可执行: ").append(libFile.canExecute()).append("\n");
+                    context.print("大小: ", Colors.CYAN);
+                    context.println(libFile.length() + " 字节", Colors.YELLOW);
+                    context.print("可读: ", Colors.CYAN);
+                    context.println(String.valueOf(libFile.canRead()), libFile.canRead() ? Colors.GREEN : Colors.RED);
+                    context.print("可执行: ", Colors.CYAN);
+                    context.println(String.valueOf(libFile.canExecute()), libFile.canExecute() ? Colors.GREEN : Colors.RED);
                 }
             }
             
             if (verbose) {
-                sb.append("\n导出符号:\n");
+                context.println("", Colors.WHITE);
+                context.println("导出符号:", Colors.CYAN);
                 List<String> symbols = getLibrarySymbols(libName);
                 for (String symbol : symbols) {
-                    sb.append("  - ").append(symbol).append("\n");
+                    context.print("  - ", Colors.GRAY);
+                    context.println(symbol, Colors.GRAY);
                 }
             }
             
-            return sb.toString();
-            
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("native info", e, context, "获取库信息失败");
+            CommandExceptionHandler.handleException("native info", e, context, "获取库信息失败");
         }
     }
     
-    private String handleFunctions(String[] args, boolean verbose, CommandExecutor.CmdExecContext context) {
+    private void handleFunctions(String[] args, boolean verbose, CommandExecutor.CmdExecContext context) {
         if (args.length < 2) {
-            return "参数不足，需要指定类名";
+            context.println("参数不足，需要指定类名", Colors.RED);
+            return;
         }
         
         String className = args[1];
@@ -190,32 +203,34 @@ public class NativeMain extends CommandBase {
                 }
             }
             
-            StringBuilder sb = new StringBuilder();
-            sb.append("Native方法: ").append(className).append("\n");
-            sb.append("数量: ").append(nativeMethods.size()).append(" 个\n\n");
+            context.print("Native方法: ", Colors.CYAN);
+            context.println(className, Colors.GREEN);
+            context.print("数量: ", Colors.CYAN);
+            context.println(nativeMethods.size() + " 个", Colors.YELLOW);
+            context.println("", Colors.WHITE);
             
             for (Method method : nativeMethods) {
-                sb.append("  ").append(Modifier.toString(method.getModifiers()))
-                  .append(" ").append(method.getReturnType().getSimpleName())
-                  .append(" ").append(method.getName())
-                  .append("(").append(Arrays.toString(method.getParameterTypes())).append(")\n");
+                context.print("  " + Modifier.toString(method.getModifiers()), Colors.GRAY);
+                context.print(" " + method.getReturnType().getSimpleName(), Colors.CYAN);
+                context.print(" " + method.getName(), Colors.GREEN);
+                context.println("(" + Arrays.toString(method.getParameterTypes()) + ")", Colors.GRAY);
                 
                 if (verbose) {
                     String signature = getNativeSignature(method);
-                    sb.append("    JNI签名: ").append(signature).append("\n");
+                    context.print("    JNI签名: ", Colors.CYAN);
+                    context.println(signature, Colors.GRAY);
                 }
             }
             
-            return sb.toString();
-            
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("native functions", e, context, "获取native方法失败");
+            CommandExceptionHandler.handleException("native functions", e, context, "获取native方法失败");
         }
     }
 
-    private String handleSymbols(String[] args, CommandExecutor.CmdExecContext context) {
+    private void handleSymbols(String[] args, CommandExecutor.CmdExecContext context) {
         if (args.length < 2) {
-            return "参数不足，需要指定库名";
+            context.println("参数不足，需要指定库名", Colors.RED);
+            return;
         }
         
         String libName = args[1];
@@ -223,115 +238,115 @@ public class NativeMain extends CommandBase {
         try {
             List<String> symbols = getLibrarySymbols(libName);
             
-            StringBuilder sb = new StringBuilder();
-            sb.append("符号表: ").append(libName).append("\n");
-            sb.append("数量: ").append(symbols.size()).append(" 个\n\n");
+            context.print("符号表: ", Colors.CYAN);
+            context.println(libName, Colors.GREEN);
+            context.print("数量: ", Colors.CYAN);
+            context.println(symbols.size() + " 个", Colors.YELLOW);
+            context.println("", Colors.WHITE);
             
             for (String symbol : symbols) {
-                sb.append("  - ").append(symbol).append("\n");
+                context.print("  - ", Colors.GRAY);
+                context.println(symbol, Colors.GRAY);
             }
             
-            return sb.toString();
-            
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("native symbols", e, context, "获取符号表失败");
+            CommandExceptionHandler.handleException("native symbols", e, context, "获取符号表失败");
         }
     }
     
-    private String handleMemory(CommandExecutor.CmdExecContext context) {
+    private void handleMemory(CommandExecutor.CmdExecContext context) {
         try {
             Map<String, String> memoryInfo = getNativeMemoryInfo();
             
-            StringBuilder sb = new StringBuilder();
-            sb.append("Native内存使用情况:\n\n");
+            context.println("Native内存使用情况:", Colors.CYAN);
+            context.println("", Colors.WHITE);
             
             for (Map.Entry<String, String> entry : memoryInfo.entrySet()) {
-                sb.append("  ").append(entry.getKey()).append(": ").append(entry.getValue()).append("\n");
+                context.print("  " + entry.getKey() + ": ", Colors.CYAN);
+                context.println(entry.getValue(), Colors.YELLOW);
             }
             
-
-            return sb.toString();
-            
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("native memory", e, context, "获取native内存信息失败");
+            CommandExceptionHandler.handleException("native memory", e, context, "获取native内存信息失败");
         }
     }
     
-    private String handleHeap(boolean verbose, CommandExecutor.CmdExecContext context) {
+    private void handleHeap(boolean verbose, CommandExecutor.CmdExecContext context) {
         try {
             Map<String, String> heapInfo = getNativeHeapInfo();
             
-            StringBuilder sb = new StringBuilder();
-            sb.append("Native堆内存:\n\n");
+            context.println("Native堆内存:", Colors.CYAN);
+            context.println("", Colors.WHITE);
             
             for (Map.Entry<String, String> entry : heapInfo.entrySet()) {
-                sb.append("  ").append(entry.getKey()).append(": ").append(entry.getValue()).append("\n");
+                context.print("  " + entry.getKey() + ": ", Colors.CYAN);
+                context.println(entry.getValue(), Colors.YELLOW);
             }
             
             if (verbose) {
-                sb.append("\n详细信息:\n");
-                sb.append("  注意: 完整的native堆分析需要:\n");
-                sb.append("    - malloc_hook 或类似工具\n");
-                sb.append("    - jemalloc 或 tcmalloc 支持\n");
-                sb.append("    - ASAN 或 Valgrind 等工具\n");
+                context.println("", Colors.WHITE);
+                context.println("详细信息:", Colors.CYAN);
+                context.println("  注意: 完整的native堆分析需要:", Colors.GRAY);
+                context.println("    - malloc_hook 或类似工具", Colors.GRAY);
+                context.println("    - jemalloc 或 tcmalloc 支持", Colors.GRAY);
+                context.println("    - ASAN 或 Valgrind 等工具", Colors.GRAY);
             }
             
-            return sb.toString();
-            
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("native heap", e, context, "获取native堆信息失败");
+            CommandExceptionHandler.handleException("native heap", e, context, "获取native堆信息失败");
         }
     }
     
-    private String handleStack(String threadId, CommandExecutor.CmdExecContext context) {
+    private void handleStack(String threadId, CommandExecutor.CmdExecContext context) {
         try {
             String stackTrace = getNativeStackTrace(threadId);
             
-            StringBuilder sb = new StringBuilder();
-            sb.append("Native栈跟踪");
+            context.print("Native栈跟踪", Colors.CYAN);
             if (threadId != null) {
-                sb.append(" (TID: ").append(threadId).append(")");
+                context.print(" (TID: ", Colors.GRAY);
+                context.print(threadId, Colors.YELLOW);
+                context.print(")", Colors.GRAY);
             }
-            sb.append(":\n\n");
-            sb.append(stackTrace);
-            
-            return sb.toString();
+            context.println(":", Colors.CYAN);
+            context.println("", Colors.WHITE);
+            context.println(stackTrace, Colors.GRAY);
             
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("native stack", e, context, "获取native栈失败");
+            CommandExceptionHandler.handleException("native stack", e, context, "获取native栈失败");
         }
     }
     
-    private String handleMaps(boolean verbose, CommandExecutor.CmdExecContext context) {
+    private void handleMaps(boolean verbose, CommandExecutor.CmdExecContext context) {
         try {
             List<String> maps = getMemoryMaps();
             
-            StringBuilder sb = new StringBuilder();
-            sb.append("内存映射: ").append(maps.size()).append(" 个区域\n\n");
+            context.print("内存映射: ", Colors.CYAN);
+            context.println(maps.size() + " 个区域", Colors.YELLOW);
+            context.println("", Colors.WHITE);
             
             for (String map : maps) {
-                sb.append("  ").append(map).append("\n");
+                context.println("  " + map, Colors.GRAY);
             }
             
             if (verbose) {
-                sb.append("\n说明:\n");
-                sb.append("  r - 读权限\n");
-                sb.append("  w - 写权限\n");
-                sb.append("  x - 执行权限\n");
-                sb.append("  p - 私有映射\n");
-                sb.append("  s - 共享映射\n");
+                context.println("", Colors.WHITE);
+                context.println("说明:", Colors.CYAN);
+                context.println("  r - 读权限", Colors.GRAY);
+                context.println("  w - 写权限", Colors.GRAY);
+                context.println("  x - 执行权限", Colors.GRAY);
+                context.println("  p - 私有映射", Colors.GRAY);
+                context.println("  s - 共享映射", Colors.GRAY);
             }
             
-            return sb.toString();
-            
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("native maps", e, context, "获取内存映射失败");
+            CommandExceptionHandler.handleException("native maps", e, context, "获取内存映射失败");
         }
     }
     
-    private String handleSearch(String[] args, CommandExecutor.CmdExecContext context) {
+    private void handleSearch(String[] args, CommandExecutor.CmdExecContext context) {
         if (args.length < 2) {
-            return "参数不足，需要指定搜索模式";
+            context.println("参数不足，需要指定搜索模式", Colors.RED);
+            return;
         }
         
         String pattern = args[1];
@@ -353,18 +368,20 @@ public class NativeMain extends CommandBase {
                 }
             }
             
-            StringBuilder sb = new StringBuilder();
-            sb.append("搜索结果: \"").append(pattern).append("\"\n");
-            sb.append("数量: ").append(results.size()).append(" 个\n\n");
+            context.print("搜索结果: \"", Colors.CYAN);
+            context.print(pattern, Colors.YELLOW);
+            context.println("\"", Colors.CYAN);
+            context.print("数量: ", Colors.CYAN);
+            context.println(results.size() + " 个", Colors.YELLOW);
+            context.println("", Colors.WHITE);
             
             for (String result : results) {
-                sb.append("  - ").append(result).append("\n");
+                context.print("  - ", Colors.GRAY);
+                context.println(result, Colors.GREEN);
             }
             
-            return sb.toString();
-            
         } catch (Exception e) {
-            return CommandExceptionHandler.handleException("native search", e, context, "搜索失败");
+            CommandExceptionHandler.handleException("native search", e, context, "搜索失败");
         }
     }
     
@@ -527,9 +544,7 @@ public class NativeMain extends CommandBase {
             
             if (result.isSuccess()) {
                 String[] lines = result.stdout().split("\n");
-                for (String line : lines) {
-                    maps.add(line);
-                }
+                Collections.addAll(maps, lines);
             }
             
         } catch (Exception e) {

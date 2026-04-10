@@ -4,6 +4,7 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_HELP_VER;
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.output.Colors;
 
 public class HelpMain extends CommandBase {
 
@@ -31,23 +32,23 @@ public class HelpMain extends CommandBase {
     }
 
     @Override
-    public String runMain(CommandExecutor.CmdExecContext context) {
+    public void runMain(CommandExecutor.CmdExecContext context) {
         String[] args = context.args();
         if (args.length > 0) {
             String commandName = args[0];
             CommandBase command = CommandExecutor.getCommand(commandName);
             if (command != null) {
-                return command.getHelpText();
+                context.println(command.getHelpText(), Colors.WHITE);
             } else {
                 StringBuilder sb = new StringBuilder("未知的命令: " + commandName);
                 sb.append("\n\n可用命令:\n");
                 for (String name : CommandExecutor.getAllCommands().keySet()) {
                     sb.append("  ").append(name).append("\n");
                 }
-                return sb.toString();
+                context.println(sb.toString(), Colors.WHITE);
             }
         } else {
-            return CommandExecutor.getHelpText();
+            context.println(CommandExecutor.getHelpText(), Colors.WHITE);
         }
     }
 }

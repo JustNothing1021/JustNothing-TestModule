@@ -4,14 +4,12 @@ import android.content.ContentValues;
 
 import com.justnothing.testmodule.hooks.PackageHook;
 
-import java.util.List;
-
 import de.robv.android.xposed.XC_MethodReplacement;
 
 public class BehaviorUtilHook extends PackageHook {
 
     public final String TAG = "BehaviorUtilHook";
-    public final List<String> whiteList = List.of("app_activity_time");
+    // public final List<String> whiteList = List.of("app_activity_time"); // TODO
     @Override
     protected void hookImplements() {
         setHookDisplayName("屏蔽行为上报工具");
@@ -25,7 +23,7 @@ public class BehaviorUtilHook extends PackageHook {
                 ContentValues.class,
                 new XC_MethodReplacement() {
                     @Override
-                    protected Object replaceHookedMethod(MethodHookParam param) throws Throwable {
+                    protected Object replaceHookedMethod(MethodHookParam param) {
                         try {
                             ContentValues content = (ContentValues) param.args[0];
                             String data = content.valueSet().toString();

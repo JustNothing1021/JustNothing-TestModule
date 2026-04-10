@@ -23,10 +23,6 @@ public abstract class ZygoteHook extends XposedBasicHook<IXposedHookZygoteInit.S
             super(className, methodName, signature, hook, shouldLoad);
         }
 
-        public ZygoteMethodHook(String className, String methodName,
-                                Object[] signature, XC_MethodHook hook) {
-            super(className, methodName, signature, hook);
-        }
 
         @Override
         public Boolean loads(IXposedHookZygoteInit.StartupParam param) {
@@ -62,10 +58,6 @@ public abstract class ZygoteHook extends XposedBasicHook<IXposedHookZygoteInit.S
                                HookCondition<IXposedHookZygoteInit.StartupParam> shouldLoad) {
             super(className, fieldName, value, shouldLoad);
         }
-        public ZygoteFieldHook(String className, String fieldName, Object value) {
-            super(className, fieldName, value, null);
-        }
-
         @Override
         public Boolean loads(IXposedHookZygoteInit.StartupParam param) {
             try {
@@ -96,10 +88,6 @@ public abstract class ZygoteHook extends XposedBasicHook<IXposedHookZygoteInit.S
                                   HookCondition<IXposedHookZygoteInit.StartupParam> shouldLoad) {
             super(hookCallback, shouldLoad);
         }
-        public ZygoteCallbackHook(HookCallback<IXposedHookZygoteInit.StartupParam> hookCallback) {
-            super(hookCallback, null);
-        }
-
         @Override
         public Boolean loads(IXposedHookZygoteInit.StartupParam param) {
             try {
@@ -142,6 +130,7 @@ public abstract class ZygoteHook extends XposedBasicHook<IXposedHookZygoteInit.S
         return createMethodHook(className, "<init>", paramTypes, hook);
     }
 
+    @SuppressWarnings("unused")
     protected void hookConstructor(String className, XC_MethodHook hook, Object... paramTypes) {
         addHook(createHookConstructor(className, hook, paramTypes));
     }

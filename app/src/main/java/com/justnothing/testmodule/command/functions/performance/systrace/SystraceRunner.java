@@ -3,6 +3,7 @@ package com.justnothing.testmodule.command.functions.performance.systrace;
 import android.util.Log;
 
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
+import com.justnothing.testmodule.utils.io.IOManager;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -44,7 +45,7 @@ public class SystraceRunner {
             
             File dir = new File(outputDir);
             if (!dir.exists()) {
-                if (!dir.mkdirs()) {
+                if (!IOManager.createDirectory(dir)) {
                     throw new IOException("无法创建输出目录: " + outputDir);
                 }
             }
@@ -72,19 +73,19 @@ public class SystraceRunner {
                 try {
                     BufferedReader reader = new BufferedReader(
                         new InputStreamReader(systraceProcess.getInputStream()));
-                    
+
                     String line;
                     while ((line = reader.readLine()) != null) {
                         Log.d(TAG, "Systrace: " + line);
                     }
-                    
+
                     int timeout = duration + 10;
                     boolean completed = systraceProcess.waitFor(timeout, TimeUnit.SECONDS);
-                    
+
                     if (completed) {
                         int exitCode = systraceProcess.exitValue();
                         Log.i(TAG, "Systrace 完成，退出码: " + exitCode);
-                        
+
                         if (exitCode == 0) {
                             Log.i(TAG, "Systrace 输出文件: " + outputFile);
                         } else {
@@ -93,7 +94,7 @@ public class SystraceRunner {
                     } else {
                         Log.w(TAG, "Systrace 超时（" + timeout + " 秒）");
                     }
-                    
+
                 } catch (InterruptedException e) {
                     Log.w(TAG, "Systrace 线程被中断");
                     Thread.currentThread().interrupt();
@@ -135,6 +136,8 @@ public class SystraceRunner {
                     systraceProcess.destroyForcibly();
                 }
             }
+
+            if (!outputFuture.isDone()) outputFuture.cancel(true);
             
             running.set(false);
             Log.i(TAG, "Systrace 已停止");

@@ -28,7 +28,6 @@ import com.justnothing.methodsclient.executor.ColoredSegment;
 import com.justnothing.methodsclient.executor.SocketCommandExecutor;
 import com.justnothing.testmodule.R;
 import com.justnothing.testmodule.command.output.Colors;
-import com.justnothing.testmodule.command.output.InteractiveProtocol;
 import com.justnothing.testmodule.constants.FileDirectory;
 import com.justnothing.testmodule.utils.functions.Logger;
 import com.justnothing.testmodule.utils.io.IOManager;
@@ -62,6 +61,7 @@ public class ScriptManagerActivity extends AppCompatActivity {
     private List<Script> scripts;
     private ScriptAdapter adapter;
     private File scriptsFile;
+    private RecyclerView recyclerView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,7 +73,7 @@ public class ScriptManagerActivity extends AppCompatActivity {
     }
 
     private void initViews() {
-        RecyclerView recyclerView = findViewById(R.id.script_list);
+        recyclerView = findViewById(R.id.script_list);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         adapter = new ScriptAdapter();
         recyclerView.setAdapter(adapter);
@@ -99,10 +99,14 @@ public class ScriptManagerActivity extends AppCompatActivity {
                     scripts.add(script);
                 }
                 logger.info("加载了 " + scripts.size() + " 个脚本");
+                if (!scripts.isEmpty()) {
+                    adapter.notifyItemRangeInserted(0, scripts.size());
+                }
             } catch (Exception e) {
                 logger.error("加载脚本失败", e);
             }
         } else {
+            // 添加三个默认脚本
             Script defaultScript = new Script(
                     getString(R.string.script_example_script_name),
                     getString(R.string.script_example_script_desc),
@@ -124,8 +128,8 @@ public class ScriptManagerActivity extends AppCompatActivity {
             scripts.add(defaultScript);
             scripts.add(defaultScript2);
             scripts.add(defaultScript3);
+            adapter.notifyItemRangeInserted(0, scripts.size());
         }
-        adapter.notifyDataSetChanged();
     }
 
     private void saveScripts() {
@@ -169,9 +173,11 @@ public class ScriptManagerActivity extends AppCompatActivity {
                     }
 
                     Script script = new Script(name, description, commands, category);
+                    int newPosition = scripts.size(); // 新位置
                     scripts.add(script);
                     saveScripts();
-                    adapter.notifyDataSetChanged();
+                    adapter.notifyItemInserted(newPosition);
+                    recyclerView.smoothScrollToPosition(newPosition); // 滚动到新项
                     logger.info("添加脚本: " + name);
                 })
                 .setNegativeButton(getString(R.string.general_cancel), null)
@@ -200,9 +206,11 @@ public class ScriptManagerActivity extends AppCompatActivity {
                                 obj.getString(COMMAND),
                                 obj.optString(CATEGORY, getString(R.string.general_default))
                         );
+                        int newPosition = scripts.size();
                         scripts.add(script);
                         saveScripts();
-                        adapter.notifyDataSetChanged();
+                        adapter.notifyItemInserted(newPosition);
+                        recyclerView.smoothScrollToPosition(newPosition);
                         logger.info("导入脚本: " + script.name);
                         Toast.makeText(this, getString(R.string.script_import_succeed), Toast.LENGTH_SHORT).show();
                     } catch (JSONException e) {
@@ -218,11 +226,10 @@ public class ScriptManagerActivity extends AppCompatActivity {
         return IOManager.readFile(file.getAbsolutePath());
     }
 
-
     private void writeFile(File file, String content) throws IOException {
         File parentDir = file.getParentFile();
         if (parentDir != null && !parentDir.exists()) {
-            if (!parentDir.mkdirs()) {
+            if (!IOManager.createDirectory(parentDir)) {
                 throw new IOException("无法创建目录: " + parentDir.getAbsolutePath());
             }
         }
@@ -255,7 +262,7 @@ public class ScriptManagerActivity extends AppCompatActivity {
         @Override
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
             Script script = scripts.get(position);
-            holder.bind(script);
+            holder.bind(script, position);
         }
 
         @Override
@@ -277,17 +284,17 @@ public class ScriptManagerActivity extends AppCompatActivity {
                 textCommands = itemView.findViewById(R.id.text_script_commands);
             }
 
-            void bind(Script script) {
+            void bind(Script script, int position) {
                 textName.setText(script.name);
                 textDescription.setText(TextUtils.isEmpty(script.description) ? getString(R.string.script_no_description) : script.description);
                 textCategory.setText(script.category);
                 textCommands.setText(script.command);
-                itemView.setOnClickListener(v -> showScriptOptions(script));
+                itemView.setOnClickListener(v -> showScriptOptions(script, position));
             }
         }
     }
 
-    private void showScriptOptions(Script script) {
+    private void showScriptOptions(Script script, int position) {
         String[] options = {getString(R.string.script_execute), getString(R.string.script_edit),
                 getString(R.string.script_export), getString(R.string.script_delete)};
 
@@ -299,13 +306,13 @@ public class ScriptManagerActivity extends AppCompatActivity {
                             executeScript(script);
                             break;
                         case 1:
-                            editScript(script);
+                            editScript(script, position);
                             break;
                         case 2:
                             exportScript(script);
                             break;
                         case 3:
-                            deleteScript(script);
+                            deleteScript(script, position);
                             break;
                     }
                 })
@@ -319,7 +326,7 @@ public class ScriptManagerActivity extends AppCompatActivity {
             String cmd = script.command;
             boolean succeed = false;
             SpannableStringBuilder coloredOutput = new SpannableStringBuilder();
-            
+
             try {
                 if (!TextUtils.isEmpty(cmd.trim())) {
                     String trimmedCmd = cmd.trim();
@@ -329,37 +336,36 @@ public class ScriptManagerActivity extends AppCompatActivity {
 
                     SocketCommandExecutor socketExecutor = new SocketCommandExecutor();
                     SocketCommandExecutor.ColoredExecutionResult result =
-                        socketExecutor.executeInteractiveWithColoredOutput(trimmedCmd, false);
+                            socketExecutor.executeInteractiveWithColoredOutput(trimmedCmd, false);
 
                     runOnUiThread(() -> Toast.makeText(this, getString(R.string.script_execute_finished), Toast.LENGTH_SHORT).show());
 
-                    if (result.success) {
-                        SpannableString resultSpan = buildColoredSpan(result.segments);
+                    if (result.success()) {
+                        SpannableString resultSpan = buildColoredSpan(result.segments());
                         coloredOutput.append(resultSpan);
                         coloredOutput.append("\n");
                         succeed = true;
                     } else {
-                        coloredOutput.append(getString(R.string.script_result_info_error, result.error)).append("\n");
+                        coloredOutput.append(getString(R.string.script_result_info_error, result.error())).append("\n");
                     }
                     coloredOutput.append("\n");
                 }
-                
-                SpannableStringBuilder finalOutput = coloredOutput;
+
                 boolean finalSucceed = succeed;
                 runOnUiThread(() -> {
                     if (finalSucceed) {
                         Toast.makeText(this, getString(R.string.script_result_toast_execution_succeed, script.name), Toast.LENGTH_SHORT).show();
                     } else {
-                        Toast.makeText(this, getString(R.string.script_result_toast_execution_failure, script.name) , Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, getString(R.string.script_result_toast_execution_failure, script.name), Toast.LENGTH_SHORT).show();
                     }
-                    
+
                     View dialogView = LayoutInflater.from(ScriptManagerActivity.this).inflate(R.layout.dialog_script_result, null);
                     TextView textTitle = dialogView.findViewById(R.id.text_title);
                     TextView textResult = dialogView.findViewById(R.id.text_result);
-                    
+
                     textTitle.setText(getString(R.string.script_result_info_result_of, script.name));
-                    textResult.setText(finalOutput);
-                    
+                    textResult.setText(coloredOutput);
+
                     new AlertDialog.Builder(ScriptManagerActivity.this)
                             .setView(dialogView)
                             .setPositiveButton(getString(R.string.general_confirm), null)
@@ -382,23 +388,23 @@ public class ScriptManagerActivity extends AppCompatActivity {
 
     private SpannableString buildColoredSpan(java.util.List<ColoredSegment> segments) {
         SpannableStringBuilder builder = new SpannableStringBuilder();
-        
+
         for (ColoredSegment segment : segments) {
             int start = builder.length();
             builder.append(segment.text());
             int end = builder.length();
-            
+
             int color = getColorFromCode(segment.color());
             if (color != 0) {
                 builder.setSpan(
-                    new ForegroundColorSpan(color),
-                    start,
-                    end,
-                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                        new ForegroundColorSpan(color),
+                        start,
+                        end,
+                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
                 );
             }
         }
-        
+
         return new SpannableString(builder);
     }
 
@@ -421,14 +427,8 @@ public class ScriptManagerActivity extends AppCompatActivity {
             case Colors.LIGHT_CYAN -> Color.parseColor("#B2EBF2");
             case Colors.LIGHT_MAGENTA -> Color.parseColor("#F8BBD9");
             case Colors.DARK_GRAY -> Color.parseColor("#616161");
-            case Colors.DARK_RED -> Color.parseColor("#C62828");
-            case Colors.DARK_GREEN -> Color.parseColor("#2E7D32");
-            case Colors.DARK_YELLOW -> Color.parseColor("#F9A825");
-            case Colors.DARK_BLUE -> Color.parseColor("#1565C0");
-            case Colors.DARK_CYAN -> Color.parseColor("#00838F");
-            case Colors.PURPLE -> Color.parseColor("#7B1FA2");
             case Colors.ORANGE -> Color.parseColor("#FF9800");
-            case Colors.PINK -> Color.parseColor("#E91E63");
+            case Colors.PINK -> Color.parseColor("#FF1EA3");
             case Colors.BROWN -> Color.parseColor("#795548");
             case Colors.GOLD -> Color.parseColor("#FFD700");
             case Colors.SILVER -> Color.parseColor("#C0C0C0");
@@ -446,7 +446,7 @@ public class ScriptManagerActivity extends AppCompatActivity {
         };
     }
 
-    private void editScript(Script script) {
+    private void editScript(Script script, int position) {
         View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_add_script, null);
         EditText editName = dialogView.findViewById(R.id.edit_script_name);
         EditText editDescription = dialogView.findViewById(R.id.edit_script_description);
@@ -467,7 +467,7 @@ public class ScriptManagerActivity extends AppCompatActivity {
                     script.command = editCommands.getText().toString().trim();
                     script.category = editCategory.getText().toString().trim();
                     saveScripts();
-                    adapter.notifyDataSetChanged();
+                    adapter.notifyItemChanged(position);
                     logger.info("编辑脚本: " + script.name);
                 })
                 .setNegativeButton(getString(R.string.general_cancel), null)
@@ -501,14 +501,14 @@ public class ScriptManagerActivity extends AppCompatActivity {
         }
     }
 
-    private void deleteScript(Script script) {
+    private void deleteScript(Script script, int position) {
         new AlertDialog.Builder(this)
                 .setTitle(getString(R.string.script_confirm_deletion))
                 .setMessage(getString(R.string.script_confirm_deletion_message, script.name))
                 .setPositiveButton(R.string.general_delete, (dialog, which) -> {
-                    scripts.remove(script);
+                    scripts.remove(position);
                     saveScripts();
-                    adapter.notifyDataSetChanged();
+                    adapter.notifyItemRemoved(position);
                     logger.info("删除脚本: " + script.name);
                 })
                 .setNegativeButton(getString(R.string.general_cancel), null)

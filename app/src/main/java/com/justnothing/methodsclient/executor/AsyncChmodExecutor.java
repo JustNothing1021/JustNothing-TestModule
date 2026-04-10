@@ -1,5 +1,7 @@
 package com.justnothing.methodsclient.executor;
 
+import android.annotation.SuppressLint;
+
 import com.justnothing.testmodule.utils.data.BootMonitor;
 import com.justnothing.testmodule.utils.functions.Logger;
 import com.justnothing.testmodule.utils.io.RootProcessPool;
@@ -52,7 +54,8 @@ public class AsyncChmodExecutor extends Logger {
     private static void logDebug(String message) {
         instance.debug(message);
     }
-    
+
+    @SuppressWarnings("unused")
     public static void setAsync(boolean stat) {
         async = stat;
     }
@@ -66,7 +69,7 @@ public class AsyncChmodExecutor extends Logger {
         if (Boolean.TRUE.equals(inProgress.get())) return false;
         inProgress.set(true);
         try {
-            Class<?> systemPropertiesClass = Class.forName("android.os.SystemProperties");
+            @SuppressLint("PrivateApi") Class<?> systemPropertiesClass = Class.forName("android.os.SystemProperties");
             Method getMethod = systemPropertiesClass.getMethod("get", String.class);
             
             String bootCompleted = (String) getMethod.invoke(null, "sys.boot_completed");
@@ -226,6 +229,7 @@ public class AsyncChmodExecutor extends Logger {
                     pendingTasks.remove(taskKey);
                 }
             });
+            if (future == null) throw new RuntimeException("无法提交用来执行chmod命令的任务");
             
             pendingTasks.put(taskKey, future);
             return true;

@@ -1,76 +1,40 @@
 package com.justnothing.testmodule.command.functions.performance.sampler;
 
-import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
-
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class SimpleSampler {
-    private volatile boolean running = false;
+public class SimpleSampler extends AbstractSampler<SimpleSampleData> {
+
     private final Map<String, AtomicInteger> methodCounts = new ConcurrentHashMap<>();
-    private final AtomicInteger totalSamples = new AtomicInteger(0);
-    private Future<?> samplerFuture;
-    private final int sampleRate;
-    private long startTime;
-    private long stopTime;
 
     public SimpleSampler(int sampleRate) {
-        this.sampleRate = sampleRate;
+        super(sampleRate);
     }
 
-    public void start() {
-        if (running) {
-            throw new IllegalStateException("采样器已在运行");
-        }
-
-        running = true;
-        startTime = System.currentTimeMillis();
-        long intervalMs = 1000 / sampleRate;
-
-        samplerFuture = ThreadPoolManager.submitFastRunnable(() -> {
-            while (running) {
-                sample();
-                try {
-                    Thread.sleep(intervalMs);
-                } catch (InterruptedException e) {
-                    break;
-                }
-            }
-        });
-    }
-
-    private void sample() {
+    @Override
+    protected void doSample() {
         Map<Thread, StackTraceElement[]> allStackTraces = Thread.getAllStackTraces();
-        
+
         for (Map.Entry<Thread, StackTraceElement[]> entry : allStackTraces.entrySet()) {
             Thread thread = entry.getKey();
             StackTraceElement[] stackTrace = entry.getValue();
-            
+
             if (thread.getName().contains("Fast-Pool")) {
                 continue;
             }
-            
+
             if (stackTrace == null || stackTrace.length == 0) {
                 continue;
             }
-            
+
             for (StackTraceElement element : stackTrace) {
                 String methodKey = element.getClassName() + "." + element.getMethodName();
                 methodCounts.computeIfAbsent(methodKey, k -> new AtomicInteger(0)).incrementAndGet();
             }
         }
-        
-        totalSamples.incrementAndGet();
-    }
 
-    public void stop() {
-        running = false;
-        stopTime = System.currentTimeMillis();
-        if (samplerFuture != null) {
-            samplerFuture.cancel(true);
-        }
+        incrementSampleCount();
     }
 
     public Map<String, Integer> getReport() {
@@ -79,26 +43,15 @@ public class SimpleSampler {
         return report;
     }
 
-    public int getTotalSamples() {
-        return totalSamples.get();
-    }
-
-    public boolean isRunning() {
-        return running;
-    }
-
-    public int getSampleRate() {
-        return sampleRate;
-    }
-
-    public long getStartTime() {
-        return startTime;
-    }
-
-    public long getStopTime() {
-        if (isRunning()) {
-            return System.currentTimeMillis();
-        }
-        return stopTime;
+    @Override
+    public SimpleSampleData getData() {
+        return new SimpleSampleData(
+                0,
+                sampleRate,
+                startTime,
+                getStopTime(),
+                totalSamples.get(),
+                getReport()
+        );
     }
 }

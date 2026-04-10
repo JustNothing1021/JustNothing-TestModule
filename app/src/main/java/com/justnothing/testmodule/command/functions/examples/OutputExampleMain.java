@@ -26,7 +26,7 @@ public class OutputExampleMain extends CommandBase {
     }
 
     @Override
-    public String runMain(CommandExecutor.CmdExecContext context) {
+    public void runMain(CommandExecutor.CmdExecContext context) {
         ICommandOutputHandler output = context.output();
 
         output.println("===== 输出处理器测试 =====");
@@ -88,13 +88,7 @@ public class OutputExampleMain extends CommandBase {
 
         output.println("");
         output.println(">>> 深色系测试：");
-        output.println("深红文本", Colors.DARK_RED);
-        output.println("深绿文本", Colors.DARK_GREEN);
-        output.println("深黄文本", Colors.DARK_YELLOW);
-        output.println("深蓝文本", Colors.DARK_BLUE);
-        output.println("深青文本", Colors.DARK_CYAN);
         output.println("深灰文本", Colors.DARK_GRAY);
-        output.println("紫色文本", Colors.PURPLE);
 
         output.println("");
         output.println(">>> printf 带颜色测试：");
@@ -149,7 +143,5 @@ public class OutputExampleMain extends CommandBase {
 
         output.println("");
         output.println("===== 测试完成 =====");
-
-        return "输出测试执行完成";
     }
 }
