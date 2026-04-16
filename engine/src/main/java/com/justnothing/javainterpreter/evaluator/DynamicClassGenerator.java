@@ -1,23 +1,24 @@
 package com.justnothing.javainterpreter.evaluator;
 
-import com.justnothing.javainterpreter.ast.nodes.ClassDeclarationNode;
-import com.justnothing.javainterpreter.ast.nodes.ConstructorDeclarationNode;
-import com.justnothing.javainterpreter.ast.nodes.FieldDeclarationNode;
-import com.justnothing.javainterpreter.ast.nodes.MethodDeclarationNode;
-import com.justnothing.javainterpreter.ast.nodes.ParameterNode;
+import com.justnothing.javainterpreter.api.ClassResolver;
+import com.justnothing.javainterpreter.ast.ASTNode;
+import com.justnothing.javainterpreter.ast.nodes.*;
 import com.justnothing.javainterpreter.exception.ErrorCode;
 import com.justnothing.javainterpreter.exception.EvaluationException;
 import org.objectweb.asm.*;
+import org.objectweb.asm.Type;
 
 import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import static org.objectweb.asm.Opcodes.*;
 
 /**
- * 动态类生成器
+ * ??????
  * <p>
- * 使用ASM从ClassDeclarationNode动态生成Java类
+ * ??ASM?ClassDeclarationNode????Java?
  * </p>
  * 
  * @author JustNothing1021
@@ -32,48 +33,170 @@ public class DynamicClassGenerator {
     public DynamicClassGenerator(ExecutionContext context) {
         this.context = context;
         this.generatedClasses = new HashMap<>();
-        this.classLoader = new DynamicClassLoader(context.getClassLoader());
+        this.classLoader = new DynamicClassLoader(context.getClassLoader(), this);
+    }
+    
+    public DynamicClassGenerator(ClassLoader parentClassLoader, ExecutionContext context) {
+        this.context = context;
+        this.generatedClasses = new HashMap<>();
+        this.classLoader = new DynamicClassLoader(parentClassLoader, this);
     }
     
     /**
-     * 生成类
+     * ???
      */
     public Class<?> generateClass(ClassDeclarationNode classDecl) throws EvaluationException {
+        return generateClass(classDecl, null);
+    }
+    
+    /**
+     * ?????????????
+     */
+    public Class<?> generateClass(ClassDeclarationNode classDecl, Class<?>[] constructorArgTypes) throws EvaluationException {
         String className = classDecl.getClassName();
         
         if (generatedClasses.containsKey(className)) {
             return generatedClasses.get(className);
         }
         
+        String superClassName = null;
+        if (classDecl.getSuperClass() != null) {
+            
+            superClassName = classDecl.getSuperClass().getOriginalTypeName();
+        }
+        
+        if (superClassName != null && !superClassName.equals("java.lang.Object")) {
+            if (!isClassAvailable(superClassName)) {
+                if (context.hasCustomClass(superClassName)) {
+                    Class<?> superClass = context.getCustomClass(superClassName);
+                    
+                    try {
+                        Class.forName(superClass.getName(), true, classLoader);
+                    } catch (ClassNotFoundException e) {
+                        throw new EvaluationException(
+                            "Failed to load parent class: " + superClassName,
+                            classDecl.getLocation(),
+                            ErrorCode.EVAL_CLASS_NOT_FOUND,
+                            e
+                        );
+                    }
+                    generatedClasses.put(superClassName, superClass);
+                } else {
+                    
+                    
+                }
+            }
+        }
+        
         try {
-            ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
+            ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS);
             
-            String superClassName = classDecl.getSuperClassName();
-            String superInternalName = superClassName != null ? 
-                getInternalName(superClassName) : "java/lang/Object";
+            String superInternalName = "java/lang/Object"; 
+            List<String> interfaceList = new ArrayList<>();
             
-            String[] interfaces = null;
-            if (!classDecl.getInterfaceNames().isEmpty()) {
-                interfaces = new String[classDecl.getInterfaceNames().size()];
-                for (int i = 0; i < classDecl.getInterfaceNames().size(); i++) {
-                    interfaces[i] = getInternalName(classDecl.getInterfaceNames().get(i));
+            if (classDecl.getSuperClass() != null) {
+                
+                String superClassOriginalName = classDecl.getSuperClass().getOriginalTypeName();
+                
+                
+                if (context.hasCustomClass(superClassOriginalName)) {
+                    
+                    Class<?> superClass = context.getCustomClass(superClassOriginalName);
+                    if (superClass.isInterface()) {
+                        
+                        interfaceList.add(superClass.getName().replace('.', '/'));
+                    } else {
+                        
+                        superInternalName = superClass.getName().replace('.', '/');
+                    }
+                } else {
+                    
+                    Class<?> superClass = classDecl.getSuperClass().getResolvedClass();
+                    if (superClass.isInterface()) {
+                        
+                        interfaceList.add(classDecl.getSuperClass().getInternalName());
+                    } else {
+                        
+                        superInternalName = classDecl.getSuperClass().getInternalName();
+                    }
                 }
             }
             
-            cw.visit(V1_8, ACC_PUBLIC, className.replace('.', '/'), null, superInternalName, interfaces);
+            
+            for (ClassReferenceNode interfaceRef : classDecl.getInterfaces()) {
+                String interfaceOriginalName = interfaceRef.getOriginalTypeName();
+                if (context.hasCustomClass(interfaceOriginalName)) {
+                    Class<?> interfaceClass = context.getCustomClass(interfaceOriginalName);
+                    interfaceList.add(interfaceClass.getName().replace('.', '/'));
+                } else {
+                    interfaceList.add(interfaceRef.getInternalName());
+                }
+            }
+            
+            String[] interfaces = interfaceList.isEmpty() ? null : interfaceList.toArray(new String[0]);
+            
+            int classAccess = ACC_PUBLIC;
+            if (classDecl.isInterface()) {
+                classAccess = ACC_PUBLIC | ACC_INTERFACE | ACC_ABSTRACT;
+            }
+            cw.visit(V1_8, classAccess, className.replace('.', '/'), null, superInternalName, interfaces);
+            
+            for (AnnotationNode annotation : classDecl.getAnnotations()) {
+                addClassAnnotation(cw, annotation);
+            }
+            
             
             for (FieldDeclarationNode fieldDecl : classDecl.getFields()) {
                 addField(cw, fieldDecl);
             }
             
-            addDefaultConstructor(cw, className, superInternalName);
             
-            for (ConstructorDeclarationNode constructorDecl : classDecl.getConstructors()) {
-                addConstructor(cw, constructorDecl, className);
+            if (classDecl.getSuperClass() != null) {
+                Class<?> superClass = null;
+                
+                
+                if (context.hasCustomClass(superClassName)) {
+                    superClass = context.getCustomClass(superClassName);
+                } else {
+                    superClass = ClassResolver.findClassWithImports(
+                        superClassName, classLoader, context.getImports());
+                }
+                
+                if (superClass != null) {
+                    try {
+                        
+                        java.lang.reflect.Field[] fields = superClass.getDeclaredFields();
+                        for (java.lang.reflect.Field field : fields) {
+                            
+                            int modifiers = field.getModifiers();
+                            String fieldName = field.getName();
+                            String descriptor = getFieldDescriptor(field.getType());
+                            
+                            FieldVisitor fv = cw.visitField(modifiers, fieldName, descriptor, null, null);
+                            fv.visitEnd();
+                        }
+                    } catch (Exception e) {
+                        
+                    }
+                }
+            }
+            
+            if (!classDecl.isInterface()) {
+                if (classDecl.getConstructors().isEmpty()) {
+                    if (constructorArgTypes != null) {
+                        addConstructor(cw, className, superInternalName, constructorArgTypes, classDecl.getFields());
+                    } else {
+                        addDefaultConstructor(cw, className, superInternalName, classDecl.getFields());
+                    }
+                }
+                
+                for (ConstructorDeclarationNode constructorDecl : classDecl.getConstructors()) {
+                    addConstructor(cw, constructorDecl, className, superInternalName, classDecl.getFields());
+                }
             }
             
             for (MethodDeclarationNode methodDecl : classDecl.getMethods()) {
-                addMethod(cw, methodDecl, className);
+                addMethod(cw, methodDecl, className, classDecl.isInterface());
             }
             
             cw.visitEnd();
@@ -95,40 +218,651 @@ public class DynamicClassGenerator {
     }
     
     /**
-     * 添加字段
+     * ??????
+     */
+    private void addConstructor(ClassWriter cw, String className, String superInternalName, Class<?>[] paramTypes) {
+        addConstructor(cw, className, superInternalName, paramTypes, null);
+    }
+    
+    /**
+     * ?????????????
+     */
+    private void addConstructor(ClassWriter cw, String className, String superInternalName, Class<?>[] paramTypes, List<FieldDeclarationNode> fields) {
+        
+        StringBuilder descriptor = new StringBuilder("(");
+        for (Class<?> paramType : paramTypes) {
+            if (paramType == int.class) {
+                descriptor.append("I");
+            } else if (paramType == long.class) {
+                descriptor.append("J");
+            } else if (paramType == float.class) {
+                descriptor.append("F");
+            } else if (paramType == double.class) {
+                descriptor.append("D");
+            } else if (paramType == boolean.class) {
+                descriptor.append("Z");
+            } else if (paramType == byte.class) {
+                descriptor.append("B");
+            } else if (paramType == char.class) {
+                descriptor.append("C");
+            } else if (paramType == short.class) {
+                descriptor.append("S");
+            } else if (paramType == void.class) {
+                descriptor.append("V");
+            } else {
+                descriptor.append("L").append(paramType.getName().replace('.', '/')).append(";");
+            }
+        }
+        descriptor.append(")V");
+        
+        
+        StringBuilder superDescriptor = new StringBuilder("(");
+        for (Class<?> paramType : paramTypes) {
+            if (paramType == int.class) {
+                superDescriptor.append("I");
+            } else if (paramType == long.class) {
+                superDescriptor.append("J");
+            } else if (paramType == float.class) {
+                superDescriptor.append("F");
+            } else if (paramType == double.class) {
+                superDescriptor.append("D");
+            } else if (paramType == boolean.class) {
+                superDescriptor.append("Z");
+            } else if (paramType == byte.class) {
+                superDescriptor.append("B");
+            } else if (paramType == char.class) {
+                superDescriptor.append("C");
+            } else if (paramType == short.class) {
+                superDescriptor.append("S");
+            } else if (paramType == void.class) {
+                superDescriptor.append("V");
+            } else {
+                superDescriptor.append("L").append(paramType.getName().replace('.', '/')).append(";");
+            }
+        }
+        superDescriptor.append(")V");
+        
+        
+        MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "<init>", descriptor.toString(), null, null);
+        mv.visitCode();
+        
+        
+        mv.visitVarInsn(ALOAD, 0);
+        
+        
+        int paramIndex = 1;
+        for (int i = 0; i < paramTypes.length; i++) {
+            Class<?> paramType = paramTypes[i];
+            if (paramType == int.class) {
+                mv.visitVarInsn(ILOAD, paramIndex);
+            } else if (paramType == long.class) {
+                mv.visitVarInsn(LLOAD, paramIndex);
+                paramIndex += 1;
+            } else if (paramType == float.class) {
+                mv.visitVarInsn(FLOAD, paramIndex);
+            } else if (paramType == double.class) {
+                mv.visitVarInsn(DLOAD, paramIndex);
+                paramIndex += 1;
+            } else if (paramType == boolean.class) {
+                mv.visitVarInsn(ILOAD, paramIndex);
+            } else if (paramType == byte.class) {
+                mv.visitVarInsn(ILOAD, paramIndex);
+            } else if (paramType == char.class) {
+                mv.visitVarInsn(ILOAD, paramIndex);
+            } else if (paramType == short.class) {
+                mv.visitVarInsn(ILOAD, paramIndex);
+            } else {
+                mv.visitVarInsn(ALOAD, paramIndex);
+            }
+            paramIndex += 1;
+        }
+        
+        
+        mv.visitMethodInsn(INVOKESPECIAL, superInternalName, "<init>", superDescriptor.toString(), false);
+        
+        
+        if (fields != null) {
+            for (FieldDeclarationNode fieldDecl : fields) {
+                ASTNode initialValue = fieldDecl.getInitialValue();
+                if (initialValue != null) {
+                    
+                    mv.visitVarInsn(ALOAD, 0);
+                    
+                    
+                    if (initialValue instanceof LiteralNode) {
+                        LiteralNode literal = (LiteralNode) initialValue;
+                        Object value = literal.getValue();
+                        String descriptorField = fieldDecl.getType().getDescriptor();
+                        
+                        
+                        if (descriptorField.equals("D") && value instanceof Integer) {
+                            
+                            mv.visitLdcInsn(((Integer) value).doubleValue());
+                        } else if (descriptorField.equals("F") && value instanceof Integer) {
+                            
+                            mv.visitLdcInsn(((Integer) value).floatValue());
+                        } else if (descriptorField.equals("J") && value instanceof Integer) {
+                            
+                            mv.visitLdcInsn(((Integer) value).longValue());
+                        } else if (descriptorField.equals("S") && value instanceof Integer) {
+                            
+                            mv.visitLdcInsn(((Integer) value).shortValue());
+                        } else if (descriptorField.equals("B") && value instanceof Integer) {
+                            
+                            mv.visitLdcInsn(((Integer) value).byteValue());
+                        } else if (descriptorField.equals("C") && value instanceof Integer) {
+                            
+                            mv.visitLdcInsn((char) ((Integer) value).intValue());
+                        } else if (value instanceof Integer) {
+                            mv.visitLdcInsn(value);
+                        } else if (value instanceof Long) {
+                            mv.visitLdcInsn(value);
+                        } else if (value instanceof Float) {
+                            mv.visitLdcInsn(value);
+                        } else if (value instanceof Double) {
+                            mv.visitLdcInsn(value);
+                        } else if (value instanceof Boolean) {
+                            mv.visitLdcInsn(value);
+                        } else if (value instanceof Character) {
+                            mv.visitLdcInsn(value);
+                        } else if (value instanceof String) {
+                            mv.visitLdcInsn(value);
+                        }
+                    }
+                    
+                    
+                    String fieldName = fieldDecl.getFieldName();
+                    String descriptorField = fieldDecl.getType().getDescriptor();
+                    mv.visitFieldInsn(PUTFIELD, className.replace('.', '/'), fieldName, descriptorField);
+                }
+            }
+        }
+        
+        mv.visitInsn(RETURN);
+        
+        
+        int maxStack = 1 + paramTypes.length;
+        for (Class<?> paramType : paramTypes) {
+            if (paramType == long.class || paramType == double.class) {
+                maxStack += 1;
+            }
+        }
+        
+        maxStack += 2;
+        
+        
+        int localVarCount = 1; 
+        for (Class<?> paramType : paramTypes) {
+            if (paramType == long.class || paramType == double.class) {
+                localVarCount += 2;
+            } else {
+                localVarCount += 1;
+            }
+        }
+        
+        mv.visitMaxs(maxStack, localVarCount);
+        mv.visitEnd();
+    }
+    
+    /**
+     * ????
      */
     private void addField(ClassWriter cw, FieldDeclarationNode fieldDecl) {
         String fieldName = fieldDecl.getFieldName();
-        String descriptor = getTypeDescriptor(fieldDecl.getTypeName());
+        String descriptor = fieldDecl.getType().getDescriptor();
         int modifiers = fieldDecl.getModifiers().toAccessFlags();
         if (modifiers == 0) {
             modifiers = ACC_PUBLIC;
         }
         
-        FieldVisitor fv = cw.visitField(modifiers, fieldName, descriptor, null, null);
+        
+        ASTNode initialValue = fieldDecl.getInitialValue();
+        Object constantValue = null;
+        
+        
+        if (initialValue instanceof LiteralNode) {
+            LiteralNode literal = (LiteralNode) initialValue;
+            constantValue = literal.getValue();
+        }
+        
+        FieldVisitor fv = cw.visitField(modifiers, fieldName, descriptor, null, constantValue);
+        
+        for (AnnotationNode annotation : fieldDecl.getAnnotations()) {
+            addFieldAnnotation(fv, annotation);
+        }
+        
         fv.visitEnd();
     }
     
     /**
-     * 添加默认构造函数
+     * ????????
      */
     private void addDefaultConstructor(ClassWriter cw, String className, String superInternalName) {
-        MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "<init>", "()V", null, null);
-        mv.visitCode();
-        mv.visitVarInsn(ALOAD, 0);
-        mv.visitMethodInsn(INVOKESPECIAL, superInternalName, "<init>", "()V", false);
-        mv.visitInsn(RETURN);
-        mv.visitMaxs(1, 1);
-        mv.visitEnd();
+        addDefaultConstructor(cw, className, superInternalName, null);
     }
     
     /**
-     * 添加构造函数
+     * ???????????????
      */
-    private void addConstructor(ClassWriter cw, ConstructorDeclarationNode constructorDecl, String className) {
+    private void addDefaultConstructor(ClassWriter cw, String className, String superInternalName, List<FieldDeclarationNode> fields) {
+        try {
+            
+            Class<?> superClass = Class.forName(superInternalName.replace('/', '.'));
+            superClass.getDeclaredConstructor();
+            
+            MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "<init>", "()V", null, null);
+            mv.visitCode();
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitMethodInsn(INVOKESPECIAL, superInternalName, "<init>", "()V", false);
+            
+            
+            if (fields != null) {
+                for (FieldDeclarationNode fieldDecl : fields) {
+                    ASTNode initialValue = fieldDecl.getInitialValue();
+                    if (initialValue != null && initialValue instanceof LiteralNode) {
+                        mv.visitVarInsn(ALOAD, 0);
+                        
+                        LiteralNode literal = (LiteralNode) initialValue;
+                        Object value = literal.getValue();
+                        String descriptorField = fieldDecl.getType().getDescriptor();
+                        
+                        if (descriptorField.equals("D") && value instanceof Integer) {
+                            mv.visitLdcInsn(((Integer) value).doubleValue());
+                        } else if (descriptorField.equals("F") && value instanceof Integer) {
+                            mv.visitLdcInsn(((Integer) value).floatValue());
+                        } else if (descriptorField.equals("J") && value instanceof Integer) {
+                            mv.visitLdcInsn(((Integer) value).longValue());
+                        } else if (descriptorField.equals("S") && value instanceof Integer) {
+                            mv.visitLdcInsn(((Integer) value).shortValue());
+                        } else if (descriptorField.equals("B") && value instanceof Integer) {
+                            mv.visitLdcInsn(((Integer) value).byteValue());
+                        } else if (descriptorField.equals("C") && value instanceof Integer) {
+                            mv.visitLdcInsn((char) ((Integer) value).intValue());
+                        } else if (value instanceof Integer) {
+                            mv.visitLdcInsn(value);
+                        } else if (value instanceof Long) {
+                            mv.visitLdcInsn(value);
+                        } else if (value instanceof Float) {
+                            mv.visitLdcInsn(value);
+                        } else if (value instanceof Double) {
+                            mv.visitLdcInsn(value);
+                        } else if (value instanceof Boolean) {
+                            mv.visitLdcInsn(value);
+                        } else if (value instanceof Character) {
+                            mv.visitLdcInsn(value);
+                        } else if (value instanceof String) {
+                            mv.visitLdcInsn(value);
+                        }
+                        
+                        String fieldName = fieldDecl.getFieldName();
+                        String descriptorField2 = fieldDecl.getType().getDescriptor();
+                        mv.visitFieldInsn(PUTFIELD, className.replace('.', '/'), fieldName, descriptorField2);
+                    }
+                }
+            }
+            
+            boolean hasNonLiteralInit = false;
+            if (fields != null) {
+                for (FieldDeclarationNode field : fields) {
+                    if (field.getInitialValue() != null && !(field.getInitialValue() instanceof LiteralNode)) {
+                        hasNonLiteralInit = true;
+                        break;
+                    }
+                }
+            }
+            
+            if (hasNonLiteralInit) {
+                mv.visitLdcInsn(className);
+                mv.visitLdcInsn("<init>");
+                mv.visitVarInsn(ALOAD, 0);
+                mv.visitInsn(ACONST_NULL);
+                mv.visitMethodInsn(INVOKESTATIC, 
+                    "com/justnothing/javainterpreter/evaluator/MethodBodyExecutor", 
+                    "executeMethod", 
+                    "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;", 
+                    false);
+                mv.visitInsn(POP);
+            }
+            
+            mv.visitInsn(RETURN);
+            int maxStack = 1;
+            if (fields != null && !fields.isEmpty()) {
+                maxStack += 2;
+            }
+            if (hasNonLiteralInit) {
+                maxStack += 5;
+            }
+            mv.visitMaxs(maxStack, 1);
+            mv.visitEnd();
+            
+            registerDefaultConstructorBody(className, fields);
+        } catch (Exception e) {
+            
+            try {
+                Class<?> superClass = Class.forName(superInternalName.replace('/', '.'));
+                
+                java.lang.reflect.Constructor<?>[] constructors = superClass.getDeclaredConstructors();
+                if (constructors.length > 0) {
+                    
+                    java.lang.reflect.Constructor<?> constructor = constructors[0];
+                    Class<?>[] paramTypes = constructor.getParameterTypes();
+                    
+                    
+                    StringBuilder descriptor = new StringBuilder("(");
+                    for (Class<?> paramType : paramTypes) {
+                        if (paramType == int.class) {
+                            descriptor.append("I");
+                        } else if (paramType == long.class) {
+                            descriptor.append("J");
+                        } else if (paramType == float.class) {
+                            descriptor.append("F");
+                        } else if (paramType == double.class) {
+                            descriptor.append("D");
+                        } else if (paramType == boolean.class) {
+                            descriptor.append("Z");
+                        } else if (paramType == byte.class) {
+                            descriptor.append("B");
+                        } else if (paramType == char.class) {
+                            descriptor.append("C");
+                        } else if (paramType == short.class) {
+                            descriptor.append("S");
+                        } else if (paramType == void.class) {
+                            descriptor.append("V");
+                        } else {
+                            descriptor.append("L").append(paramType.getName().replace('.', '/')).append(";");
+                        }
+                    }
+                    descriptor.append(")V");
+                    
+                    
+                    StringBuilder superDescriptor = new StringBuilder("(");
+                    for (Class<?> paramType : paramTypes) {
+                        if (paramType == int.class) {
+                            superDescriptor.append("I");
+                        } else if (paramType == long.class) {
+                            superDescriptor.append("J");
+                        } else if (paramType == float.class) {
+                            superDescriptor.append("F");
+                        } else if (paramType == double.class) {
+                            superDescriptor.append("D");
+                        } else if (paramType == boolean.class) {
+                            superDescriptor.append("Z");
+                        } else if (paramType == byte.class) {
+                            superDescriptor.append("B");
+                        } else if (paramType == char.class) {
+                            superDescriptor.append("C");
+                        } else if (paramType == short.class) {
+                            superDescriptor.append("S");
+                        } else if (paramType == void.class) {
+                            superDescriptor.append("V");
+                        } else {
+                            superDescriptor.append("L").append(paramType.getName().replace('.', '/')).append(";");
+                        }
+                    }
+                    superDescriptor.append(")V");
+                    
+                    
+                    MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "<init>", descriptor.toString(), null, null);
+                    mv.visitCode();
+                    
+                    
+                    mv.visitVarInsn(ALOAD, 0);
+                    
+                    
+                    int paramIndex = 1;
+                    for (int i = 0; i < paramTypes.length; i++) {
+                        Class<?> paramType = paramTypes[i];
+                        if (paramType == int.class) {
+                            mv.visitVarInsn(ILOAD, paramIndex);
+                        } else if (paramType == long.class) {
+                            mv.visitVarInsn(LLOAD, paramIndex);
+                            paramIndex += 1;
+                        } else if (paramType == float.class) {
+                            mv.visitVarInsn(FLOAD, paramIndex);
+                        } else if (paramType == double.class) {
+                            mv.visitVarInsn(DLOAD, paramIndex);
+                            paramIndex += 1;
+                        } else if (paramType == boolean.class) {
+                            mv.visitVarInsn(ILOAD, paramIndex);
+                        } else if (paramType == byte.class) {
+                            mv.visitVarInsn(ILOAD, paramIndex);
+                        } else if (paramType == char.class) {
+                            mv.visitVarInsn(ILOAD, paramIndex);
+                        } else if (paramType == short.class) {
+                            mv.visitVarInsn(ILOAD, paramIndex);
+                        } else {
+                            mv.visitVarInsn(ALOAD, paramIndex);
+                        }
+                        paramIndex += 1;
+                    }
+                    
+                    
+                    mv.visitMethodInsn(INVOKESPECIAL, superInternalName, "<init>", superDescriptor.toString(), false);
+                    
+                    
+                    if (fields != null) {
+                        for (FieldDeclarationNode fieldDecl : fields) {
+                            ASTNode initialValue = fieldDecl.getInitialValue();
+                            if (initialValue != null) {
+                                
+                                mv.visitVarInsn(ALOAD, 0);
+                                
+                                
+                                if (initialValue instanceof LiteralNode) {
+                                    LiteralNode literal = (LiteralNode) initialValue;
+                                    Object value = literal.getValue();
+                                    String descriptorField = fieldDecl.getType().getDescriptor();
+                                    
+                                    
+                                    if (descriptorField.equals("D") && value instanceof Integer) {
+                                        
+                                        mv.visitLdcInsn(((Integer) value).doubleValue());
+                                    } else if (descriptorField.equals("F") && value instanceof Integer) {
+                                        
+                                        mv.visitLdcInsn(((Integer) value).floatValue());
+                                    } else if (descriptorField.equals("J") && value instanceof Integer) {
+                                        
+                                        mv.visitLdcInsn(((Integer) value).longValue());
+                                    } else if (descriptorField.equals("S") && value instanceof Integer) {
+                                        
+                                        mv.visitLdcInsn(((Integer) value).shortValue());
+                                    } else if (descriptorField.equals("B") && value instanceof Integer) {
+                                        
+                                        mv.visitLdcInsn(((Integer) value).byteValue());
+                                    } else if (descriptorField.equals("C") && value instanceof Integer) {
+                                        
+                                        mv.visitLdcInsn((char) ((Integer) value).intValue());
+                                    } else if (value instanceof Integer) {
+                                        mv.visitLdcInsn(value);
+                                    } else if (value instanceof Long) {
+                                        mv.visitLdcInsn(value);
+                                    } else if (value instanceof Float) {
+                                        mv.visitLdcInsn(value);
+                                    } else if (value instanceof Double) {
+                                        mv.visitLdcInsn(value);
+                                    } else if (value instanceof Boolean) {
+                                        mv.visitLdcInsn(value);
+                                    } else if (value instanceof Character) {
+                                        mv.visitLdcInsn(value);
+                                    } else if (value instanceof String) {
+                                        mv.visitLdcInsn(value);
+                                    }
+                                }
+                                
+                                
+                                String fieldName = fieldDecl.getFieldName();
+                                String descriptorField = fieldDecl.getType().getDescriptor();
+                                mv.visitFieldInsn(PUTFIELD, className.replace('.', '/'), fieldName, descriptorField);
+                            }
+                        }
+                    }
+                    
+                    mv.visitInsn(RETURN);
+                    
+                    
+                    int maxStack = 1 + paramTypes.length;
+                    for (Class<?> paramType : paramTypes) {
+                        if (paramType == long.class || paramType == double.class) {
+                            maxStack += 1;
+                        }
+                    }
+                    
+                    if (fields != null && !fields.isEmpty()) {
+                        maxStack += 2;
+                    }
+                    
+                    
+                    int localVarCount = 1; 
+                    for (Class<?> paramType : paramTypes) {
+                        if (paramType == long.class || paramType == double.class) {
+                            localVarCount += 2;
+                        } else {
+                            localVarCount += 1;
+                        }
+                    }
+                    
+                    mv.visitMaxs(maxStack, localVarCount);
+                    mv.visitEnd();
+                } else {
+                    
+                    MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "<init>", "()V", null, null);
+                    mv.visitCode();
+                    mv.visitVarInsn(ALOAD, 0);
+                    mv.visitMethodInsn(INVOKESPECIAL, superInternalName, "<init>", "()V", false);
+                    
+                    
+                    if (fields != null) {
+                        for (FieldDeclarationNode fieldDecl : fields) {
+                            ASTNode initialValue = fieldDecl.getInitialValue();
+                            if (initialValue != null) {
+                                
+                                mv.visitVarInsn(ALOAD, 0);
+                                
+                                
+                                if (initialValue instanceof LiteralNode) {
+                                    LiteralNode literal = (LiteralNode) initialValue;
+                                    Object value = literal.getValue();
+                                    String descriptorField = fieldDecl.getType().getDescriptor();
+                                    
+                                    
+                                    if (descriptorField.equals("D") && value instanceof Integer) {
+                                        
+                                        mv.visitLdcInsn(((Integer) value).doubleValue());
+                                    } else if (descriptorField.equals("F") && value instanceof Integer) {
+                                        
+                                        mv.visitLdcInsn(((Integer) value).floatValue());
+                                    } else if (descriptorField.equals("J") && value instanceof Integer) {
+                                        
+                                        mv.visitLdcInsn(((Integer) value).longValue());
+                                    } else if (descriptorField.equals("S") && value instanceof Integer) {
+                                        
+                                        mv.visitLdcInsn(((Integer) value).shortValue());
+                                    } else if (descriptorField.equals("B") && value instanceof Integer) {
+                                        
+                                        mv.visitLdcInsn(((Integer) value).byteValue());
+                                    } else if (descriptorField.equals("C") && value instanceof Integer) {
+                                        
+                                        mv.visitLdcInsn((char) ((Integer) value).intValue());
+                                    } else if (value instanceof Integer) {
+                                        mv.visitLdcInsn(value);
+                                    } else if (value instanceof Long) {
+                                        mv.visitLdcInsn(value);
+                                    } else if (value instanceof Float) {
+                                        mv.visitLdcInsn(value);
+                                    } else if (value instanceof Double) {
+                                        mv.visitLdcInsn(value);
+                                    } else if (value instanceof Boolean) {
+                                        mv.visitLdcInsn(value);
+                                    } else if (value instanceof Character) {
+                                        mv.visitLdcInsn(value);
+                                    } else if (value instanceof String) {
+                                        mv.visitLdcInsn(value);
+                                    }
+                                }
+                                
+                                
+                                String fieldName = fieldDecl.getFieldName();
+                                String descriptorField = fieldDecl.getType().getDescriptor();
+                                mv.visitFieldInsn(PUTFIELD, className.replace('.', '/'), fieldName, descriptorField);
+                            }
+                        }
+                    }
+                    
+                    mv.visitInsn(RETURN);
+                    
+                    int maxStack = 1;
+                    
+                    if (fields != null && !fields.isEmpty()) {
+                        maxStack += 2;
+                    }
+                    mv.visitMaxs(maxStack, 1);
+                    mv.visitEnd();
+                }
+            } catch (Exception ex) {
+                
+                MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "<init>", "()V", null, null);
+                mv.visitCode();
+                mv.visitVarInsn(ALOAD, 0);
+                mv.visitMethodInsn(INVOKESPECIAL, superInternalName, "<init>", "()V", false);
+                
+                
+                if (fields != null) {
+                    for (FieldDeclarationNode fieldDecl : fields) {
+                        ASTNode initialValue = fieldDecl.getInitialValue();
+                        if (initialValue != null) {
+                            
+                            mv.visitVarInsn(ALOAD, 0);
+                            
+                            
+                            if (initialValue instanceof LiteralNode) {
+                                LiteralNode literal = (LiteralNode) initialValue;
+                                Object value = literal.getValue();
+                                if (value instanceof Integer) {
+                                    mv.visitLdcInsn(value);
+                                } else if (value instanceof Long) {
+                                    mv.visitLdcInsn(value);
+                                } else if (value instanceof Float) {
+                                    mv.visitLdcInsn(value);
+                                } else if (value instanceof Double) {
+                                    mv.visitLdcInsn(value);
+                                } else if (value instanceof Boolean) {
+                                    mv.visitLdcInsn(value);
+                                } else if (value instanceof Character) {
+                                    mv.visitLdcInsn(value);
+                                } else if (value instanceof String) {
+                                    mv.visitLdcInsn(value);
+                                }
+                            }
+                            
+                            
+                            String fieldName = fieldDecl.getFieldName();
+                            String descriptorField = fieldDecl.getType().getDescriptor();
+                            mv.visitFieldInsn(PUTFIELD, className.replace('.', '/'), fieldName, descriptorField);
+                        }
+                    }
+                }
+                
+                mv.visitInsn(RETURN);
+                
+                int maxStack = 1;
+                
+                if (fields != null && !fields.isEmpty()) {
+                    maxStack += 2;
+                }
+                mv.visitMaxs(maxStack, 1);
+                mv.visitEnd();
+            }
+        }
+    }
+    
+    /**
+     * ??????
+     */
+    private void addConstructor(ClassWriter cw, ConstructorDeclarationNode constructorDecl, 
+                                 String className, String superInternalName, List<FieldDeclarationNode> fields) {
         StringBuilder descriptor = new StringBuilder("(");
         for (ParameterNode param : constructorDecl.getParameters()) {
-            descriptor.append(getTypeDescriptor(param.getTypeName()));
+            descriptor.append(param.getType().getDescriptor());
         }
         descriptor.append(")V");
         
@@ -139,71 +873,633 @@ public class DynamicClassGenerator {
         String internalClassName = className.replace('.', '/');
         
         MethodVisitor mv = cw.visitMethod(modifiers, "<init>", descriptor.toString(), null, null);
+        
+        for (AnnotationNode annotation : constructorDecl.getAnnotations()) {
+            addMethodAnnotation(mv, annotation);
+        }
+        
         mv.visitCode();
         
-        mv.visitVarInsn(ALOAD, 0);
-        mv.visitMethodInsn(INVOKESPECIAL, "java/lang/Object", "<init>", "()V", false);
+        generateSuperConstructorCall(mv, superInternalName, constructorDecl.getParameters());
         
+        
+        int paramIndex = 1; 
         for (int i = 0; i < constructorDecl.getParameters().size(); i++) {
             ParameterNode param = constructorDecl.getParameters().get(i);
+            String paramName = param.getParameterName();
+            
+            
             mv.visitVarInsn(ALOAD, 0);
             
-            int loadOpcode = getLoadOpcode(param.getTypeName());
-            mv.visitVarInsn(loadOpcode, i + 1);
+            int loadOpcode = param.getType().getLoadOpcode();
+            mv.visitVarInsn(loadOpcode, paramIndex);
             
-            mv.visitFieldInsn(PUTFIELD, internalClassName, param.getParameterName(), 
-                getTypeDescriptor(param.getTypeName()));
+            
+            for (FieldDeclarationNode fieldDecl : fields) {
+                if (fieldDecl.getFieldName().equals(paramName)) {
+                    mv.visitFieldInsn(PUTFIELD, internalClassName, paramName, 
+                        param.getType().getDescriptor());
+                    break;
+                }
+            }
+            
+            
+            try {
+                Class<?> superClass = Class.forName(superInternalName.replace('/', '.'));
+                java.lang.reflect.Field field = superClass.getDeclaredField(paramName);
+                if (field != null) {
+                    field.setAccessible(true);
+                    mv.visitFieldInsn(PUTFIELD, internalClassName, paramName, 
+                        param.getType().getDescriptor());
+                }
+            } catch (Exception e) {
+                
+            }
+            
+            
+            if (param.getType().getTypeName().equals("double") || param.getType().getTypeName().equals("long")) {
+                paramIndex += 2; 
+            } else {
+                paramIndex += 1; 
+            }
+        }
+        
+        
+        if (constructorDecl.getBody() != null) {
+            generateConstructorBodyCall(mv, constructorDecl, className);
         }
         
         mv.visitInsn(RETURN);
-        mv.visitMaxs(2, constructorDecl.getParameters().size() + 1);
+        
+        
+        
+        int maxStack = 2;
+        for (ParameterNode param : constructorDecl.getParameters()) {
+            if (param.getType().getTypeName().equals("double") || param.getType().getTypeName().equals("long")) {
+                maxStack += 2;
+            } else {
+                maxStack += 1;
+            }
+        }
+        
+        if (constructorDecl.getBody() != null) {
+            maxStack += 5; 
+        }
+        
+        
+        int localVarCount = 1; 
+        for (ParameterNode param : constructorDecl.getParameters()) {
+            if (param.getType().getTypeName().equals("double") || param.getType().getTypeName().equals("long")) {
+                localVarCount += 2;
+            } else {
+                localVarCount += 1;
+            }
+        }
+        mv.visitMaxs(maxStack, localVarCount);
         mv.visitEnd();
+        
+        
+        registerConstructorBody(className, constructorDecl, fields);
     }
     
     /**
-     * 添加方法
+     * ???????????
      */
-    private void addMethod(ClassWriter cw, MethodDeclarationNode methodDecl, String className) {
+    private void generateConstructorBodyCall(MethodVisitor mv, ConstructorDeclarationNode constructorDecl, String className) {
+        mv.visitLdcInsn(className);
+        mv.visitLdcInsn("<init>");
+        
+        mv.visitVarInsn(ALOAD, 0);
+        
+        int paramCount = constructorDecl.getParameters().size();
+        if (paramCount > 0) {
+            mv.visitIntInsn(BIPUSH, paramCount);
+            mv.visitTypeInsn(ANEWARRAY, "java/lang/Object");
+            
+            int paramIndex = 1; 
+            for (int i = 0; i < paramCount; i++) {
+                mv.visitInsn(DUP);
+                mv.visitIntInsn(BIPUSH, i);
+                ParameterNode param = constructorDecl.getParameters().get(i);
+                loadAndBoxParameter(mv, param.getType(), paramIndex);
+                mv.visitInsn(AASTORE);
+                
+                
+                if (param.getType().getTypeName().equals("double") || param.getType().getTypeName().equals("long")) {
+                    paramIndex += 2; 
+                } else {
+                    paramIndex += 1; 
+                }
+            }
+        } else {
+            mv.visitInsn(ACONST_NULL);
+        }
+        
+        mv.visitMethodInsn(INVOKESTATIC, 
+            "com/justnothing/javainterpreter/evaluator/MethodBodyExecutor", 
+            "executeMethod", 
+            "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;", 
+            false);
+        
+        
+        mv.visitInsn(POP);
+    }
+    
+    /**
+     * ???????
+     */
+    private void registerConstructorBody(String className, ConstructorDeclarationNode constructorDecl, List<FieldDeclarationNode> fields) {
+        List<ASTNode> allStatements = new ArrayList<>();
+        
+        if (fields != null) {
+            for (FieldDeclarationNode field : fields) {
+                ASTNode initValue = field.getInitialValue();
+                if (initValue != null && !(initValue instanceof LiteralNode)) {
+                    FieldAssignmentNode assignment = new FieldAssignmentNode(
+                        new VariableNode("this", field.getLocation()),
+                        field.getFieldName(),
+                        initValue,
+                        field.getLocation()
+                    );
+                    allStatements.add(assignment);
+                }
+            }
+        }
+        
+        if (constructorDecl.getBody() != null) {
+            ASTNode bodyNode = constructorDecl.getBody();
+            if (bodyNode instanceof BlockNode) {
+                for (ASTNode stmt : ((BlockNode) bodyNode).getStatements()) {
+                    allStatements.add(stmt);
+                }
+            } else {
+                allStatements.add(bodyNode);
+            }
+        }
+        
+        BlockNode combinedBody = new BlockNode(allStatements, constructorDecl.getLocation());
+        
+        MethodDeclarationNode methodDecl = new MethodDeclarationNode(
+            "<init>", 
+            ClassReferenceNode.of("void", void.class, true, constructorDecl.getLocation()),
+            constructorDecl.getParameters(),
+            combinedBody,
+            constructorDecl.getModifiers(),
+            constructorDecl.getLocation()
+        );
+        
+        MethodBodyExecutor.registerMethod(className, "<init>", methodDecl, context);
+    }
+    
+    private void registerDefaultConstructorBody(String className, List<FieldDeclarationNode> fields) {
+        if (fields == null || fields.isEmpty()) return;
+        
+        boolean hasNonLiteralInit = false;
+        for (FieldDeclarationNode field : fields) {
+            if (field.getInitialValue() != null && !(field.getInitialValue() instanceof LiteralNode)) {
+                hasNonLiteralInit = true;
+                break;
+            }
+        }
+        if (!hasNonLiteralInit) return;
+        
+        List<ASTNode> bodyStatements = new ArrayList<>();
+        for (FieldDeclarationNode field : fields) {
+            ASTNode initValue = field.getInitialValue();
+            if (initValue != null && !(initValue instanceof LiteralNode)) {
+                FieldAssignmentNode assignment = new FieldAssignmentNode(
+                    new VariableNode("this", field.getLocation()),
+                    field.getFieldName(),
+                    initValue,
+                    field.getLocation()
+                );
+                bodyStatements.add(assignment);
+            }
+        }
+        
+        if (bodyStatements.isEmpty()) return;
+        
+        BlockNode body = new BlockNode(bodyStatements, fields.get(0).getLocation());
+        MethodDeclarationNode methodDecl = new MethodDeclarationNode(
+            "<init>",
+            ClassReferenceNode.of("void", void.class, true, fields.get(0).getLocation()),
+            new ArrayList<>(),
+            body,
+            new ClassModifiers(),
+            fields.get(0).getLocation()
+        );
+        
+        MethodBodyExecutor.registerMethod(className, "<init>", methodDecl, context);
+    }
+    
+    /**
+     * ????
+     */
+    private void addMethod(ClassWriter cw, MethodDeclarationNode methodDecl, String className, boolean isInterface) {
         String methodName = methodDecl.getMethodName();
-        String returnDescriptor = getTypeDescriptor(methodDecl.getReturnTypeName());
+        String returnDescriptor = methodDecl.getReturnType().getDescriptor();
         
         StringBuilder descriptor = new StringBuilder("(");
         for (ParameterNode param : methodDecl.getParameters()) {
-            descriptor.append(getTypeDescriptor(param.getTypeName()));
+            descriptor.append(param.getType().getDescriptor());
         }
         descriptor.append(")").append(returnDescriptor);
         
         int modifiers = methodDecl.getModifiers().toAccessFlags();
         
+        if (isInterface) {
+            modifiers = modifiers | ACC_PUBLIC;
+        }
+        
+        if (methodDecl.getBody() == null) {
+            if (isInterface) {
+                int abstractModifiers = ACC_PUBLIC | ACC_ABSTRACT;
+                MethodVisitor mv = cw.visitMethod(abstractModifiers, methodName, descriptor.toString(), null, null);
+                mv.visitEnd();
+            }
+            return;
+        }
+        
         MethodVisitor mv = cw.visitMethod(modifiers, methodName, descriptor.toString(), null, null);
+        
+        for (AnnotationNode annotation : methodDecl.getAnnotations()) {
+            addMethodAnnotation(mv, annotation);
+        }
+        
         mv.visitCode();
         
-        addDefaultReturn(mv, methodDecl.getReturnTypeName());
+        generateMethodBodyCall(mv, methodDecl, className);
         
-        mv.visitMaxs(1, methodDecl.getParameters().size() + 1);
+        int maxLocals = methodDecl.getParameters().size() + (methodDecl.getModifiers().isStatic() ? 0 : 1);
+        mv.visitMaxs(10, maxLocals);
         mv.visitEnd();
+        
+        MethodBodyExecutor.registerMethod(className, methodName, methodDecl, context);
     }
     
     /**
-     * 添加默认返回
+     * ?????????
      */
-    private void addDefaultReturn(MethodVisitor mv, String typeName) {
-        if (typeName == null || typeName.equals("void")) {
-            mv.visitInsn(RETURN);
-        } else if (typeName.equals("int") || typeName.equals("byte") || 
-                   typeName.equals("short") || typeName.equals("char") || 
-                   typeName.equals("boolean")) {
-            mv.visitInsn(ICONST_0);
-            mv.visitInsn(IRETURN);
-        } else if (typeName.equals("long")) {
-            mv.visitInsn(LCONST_0);
-            mv.visitInsn(LRETURN);
-        } else if (typeName.equals("float")) {
-            mv.visitInsn(FCONST_0);
-            mv.visitInsn(FRETURN);
-        } else if (typeName.equals("double")) {
-            mv.visitInsn(DCONST_0);
-            mv.visitInsn(DRETURN);
+    private void generateMethodBodyCall(MethodVisitor mv, MethodDeclarationNode methodDecl, String className) {
+        mv.visitLdcInsn(className);
+        mv.visitLdcInsn(methodDecl.getMethodName());
+        
+        boolean isStatic = methodDecl.getModifiers().isStatic();
+        
+        if (isStatic) {
+            mv.visitInsn(ACONST_NULL);
+        } else {
+            mv.visitVarInsn(ALOAD, 0);
+        }
+        
+        int paramCount = methodDecl.getParameters().size();
+        if (paramCount > 0) {
+            mv.visitIntInsn(BIPUSH, paramCount);
+            mv.visitTypeInsn(ANEWARRAY, "java/lang/Object");
+            
+            int slotOffset = isStatic ? 0 : 1;
+            for (int i = 0; i < paramCount; i++) {
+                mv.visitInsn(DUP);
+                mv.visitIntInsn(BIPUSH, i);
+                ParameterNode param = methodDecl.getParameters().get(i);
+                loadAndBoxParameter(mv, param.getType(), i + slotOffset);
+                mv.visitInsn(AASTORE);
+            }
+        } else {
+            mv.visitInsn(ACONST_NULL);
+        }
+        
+        mv.visitMethodInsn(INVOKESTATIC, 
+            "com/justnothing/javainterpreter/evaluator/MethodBodyExecutor", 
+            "executeMethod", 
+            "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;", 
+            false);
+        
+        unboxAndReturn(mv, methodDecl.getReturnType());
+    }
+    
+    private void generateSuperConstructorCall(MethodVisitor mv, String superInternalName, List<ParameterNode> constructorParams) {
+        Class<?> superClass = null;
+        java.lang.reflect.Constructor<?> matchedConstructor = null;
+        
+        try {
+            superClass = Class.forName(superInternalName.replace('/', '.'));
+            matchedConstructor = findBestMatchingConstructor(superClass, constructorParams);
+        } catch (ClassNotFoundException cnfe) {
+            try {
+                superClass = classLoader.loadClass(superInternalName.replace('/', '.'));
+                matchedConstructor = findBestMatchingConstructor(superClass, constructorParams);
+            } catch (Exception ex) {
+                
+            }
+        } catch (Exception e) {
+            
+        }
+        
+        if (matchedConstructor != null) {
+            Class<?>[] superParamTypes = matchedConstructor.getParameterTypes();
+            StringBuilder superDesc = new StringBuilder("(");
+            for (Class<?> pt : superParamTypes) {
+                superDesc.append(getFieldDescriptor(pt));
+            }
+            superDesc.append(")V");
+            
+            mv.visitVarInsn(ALOAD, 0);
+            int loadIdx = 1;
+            for (int i = 0; i < superParamTypes.length && i < constructorParams.size(); i++) {
+                ParameterNode param = constructorParams.get(i);
+                int loadOpcode = param.getType().getLoadOpcode();
+                mv.visitVarInsn(loadOpcode, loadIdx);
+                if (param.getType().getTypeName().equals("double") || param.getType().getTypeName().equals("long")) {
+                    loadIdx += 2;
+                } else {
+                    loadIdx += 1;
+                }
+            }
+            for (int i = constructorParams.size(); i < superParamTypes.length; i++) {
+                Class<?> pt = superParamTypes[i];
+                if (pt == boolean.class) {
+                    mv.visitInsn(ICONST_0);
+                } else if (pt == byte.class || pt == short.class || pt == int.class) {
+                    mv.visitInsn(ICONST_0);
+                } else if (pt == long.class) {
+                    mv.visitInsn(LCONST_0);
+                } else if (pt == float.class) {
+                    mv.visitInsn(FCONST_0);
+                } else if (pt == double.class) {
+                    mv.visitInsn(DCONST_0);
+                } else if (pt == char.class) {
+                    mv.visitInsn(ICONST_0);
+                } else {
+                    mv.visitInsn(ACONST_NULL);
+                }
+            }
+            mv.visitMethodInsn(INVOKESPECIAL, superInternalName, "<init>", superDesc.toString(), false);
+        } else if (superClass != null) {
+            java.lang.reflect.Constructor<?>[] constructors = superClass.getDeclaredConstructors();
+            if (constructors.length > 0) {
+                java.lang.reflect.Constructor<?> anyConstructor = constructors[0];
+                Class<?>[] superParamTypes = anyConstructor.getParameterTypes();
+                StringBuilder superDesc = new StringBuilder("(");
+                for (Class<?> pt : superParamTypes) {
+                    superDesc.append(getFieldDescriptor(pt));
+                }
+                superDesc.append(")V");
+                
+                mv.visitVarInsn(ALOAD, 0);
+                for (Class<?> pt : superParamTypes) {
+                    if (pt == boolean.class) {
+                        mv.visitInsn(ICONST_0);
+                    } else if (pt == byte.class || pt == short.class || pt == int.class) {
+                        mv.visitInsn(ICONST_0);
+                    } else if (pt == long.class) {
+                        mv.visitInsn(LCONST_0);
+                    } else if (pt == float.class) {
+                        mv.visitInsn(FCONST_0);
+                    } else if (pt == double.class) {
+                        mv.visitInsn(DCONST_0);
+                    } else if (pt == char.class) {
+                        mv.visitInsn(ICONST_0);
+                    } else {
+                        mv.visitInsn(ACONST_NULL);
+                    }
+                }
+                mv.visitMethodInsn(INVOKESPECIAL, superInternalName, "<init>", superDesc.toString(), false);
+            } else {
+                mv.visitVarInsn(ALOAD, 0);
+                mv.visitMethodInsn(INVOKESPECIAL, superInternalName, "<init>", "()V", false);
+            }
+        } else {
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitMethodInsn(INVOKESPECIAL, superInternalName, "<init>", "()V", false);
+        }
+    }
+    
+    private java.lang.reflect.Constructor<?> findBestMatchingConstructor(Class<?> superClass, List<ParameterNode> params) {
+        java.lang.reflect.Constructor<?> bestMatch = null;
+        int bestScore = -1;
+        int paramCount = params != null ? params.size() : 0;
+        
+        for (java.lang.reflect.Constructor<?> constructor : superClass.getDeclaredConstructors()) {
+            Class<?>[] paramTypes = constructor.getParameterTypes();
+            
+            int score = 0;
+            boolean compatible = true;
+            for (int i = 0; i < paramTypes.length && i < paramCount; i++) {
+                Class<?> expectedType = paramTypes[i];
+                Class<?> actualType = params.get(i).getType().getResolvedClass();
+                if (actualType == null) {
+                    score += 1;
+                    continue;
+                }
+                Class<?> unwrappedActual = unwrapPrimitive(actualType);
+                Class<?> unwrappedExpected = unwrapPrimitive(expectedType);
+                if (unwrappedExpected.isAssignableFrom(unwrappedActual)) {
+                    score += unwrappedExpected == unwrappedActual ? 2 : 1;
+                } else if (isPrimitiveAssignable(unwrappedExpected, unwrappedActual)) {
+                    score += 1;
+                } else {
+                    compatible = false;
+                    break;
+                }
+            }
+            
+            if (compatible && score > bestScore) {
+                bestScore = score;
+                bestMatch = constructor;
+            }
+        }
+        
+        return bestMatch;
+    }
+    
+    private Class<?> unwrapPrimitive(Class<?> type) {
+        if (type == Integer.class) return int.class;
+        if (type == Long.class) return long.class;
+        if (type == Float.class) return float.class;
+        if (type == Double.class) return double.class;
+        if (type == Boolean.class) return boolean.class;
+        if (type == Byte.class) return byte.class;
+        if (type == Character.class) return char.class;
+        if (type == Short.class) return short.class;
+        return type;
+    }
+    
+    private boolean isPrimitiveAssignable(Class<?> target, Class<?> source) {
+         if (target == int.class) return source == int.class || source == short.class || source == byte.class || source == char.class;
+         if (target == long.class) return source == long.class || source == int.class || source == short.class || source == byte.class || source == char.class;
+         if (target == float.class) return source == float.class || source == long.class || source == int.class || source == short.class || source == byte.class || source == char.class;
+         if (target == double.class) return source == double.class || source == float.class || source == long.class || source == int.class || source == short.class || source == byte.class || source == char.class;
+         return false;
+     }
+     
+     private int inferSuperParamCount(List<ParameterNode> params, ClassDeclarationNode classDecl) {
+         if (classDecl.getSuperClass() == null) return 0;
+         int ownFieldCount = 0;
+         if (classDecl.getFields() != null) {
+             for (FieldDeclarationNode field : classDecl.getFields()) {
+                 boolean matchesParam = false;
+                 for (ParameterNode param : params) {
+                     if (field.getFieldName().equals(param.getParameterName())) {
+                         matchesParam = true;
+                         break;
+                     }
+                 }
+                 if (matchesParam) ownFieldCount++;
+             }
+         }
+         int superParamCount = params.size() - ownFieldCount;
+         return Math.max(0, superParamCount);
+     }
+    
+    /**
+     * ????????
+     */
+    private String getFieldDescriptor(Class<?> type) {
+        if (type == int.class) {
+            return "I";
+        } else if (type == long.class) {
+            return "J";
+        } else if (type == float.class) {
+            return "F";
+        } else if (type == double.class) {
+            return "D";
+        } else if (type == boolean.class) {
+            return "Z";
+        } else if (type == byte.class) {
+            return "B";
+        } else if (type == char.class) {
+            return "C";
+        } else if (type == short.class) {
+            return "S";
+        } else if (type == void.class) {
+            return "V";
+        } else {
+            return "L" + type.getName().replace('.', '/') + ";";
+        }
+    }
+    
+    /**
+     * ???????
+     */
+    private void loadAndBoxParameter(MethodVisitor mv, com.justnothing.javainterpreter.ast.nodes.ClassReferenceNode type, int index) {
+        if (type.isPrimitive()) {
+            switch (type.getResolvedClass().getName()) {
+                case "int" -> {
+                    mv.visitVarInsn(ILOAD, index);
+                    mv.visitMethodInsn(INVOKESTATIC, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", false);
+                }
+                case "long" -> {
+                    mv.visitVarInsn(LLOAD, index);
+                    mv.visitMethodInsn(INVOKESTATIC, "java/lang/Long", "valueOf", "(J)Ljava/lang/Long;", false);
+                }
+                case "float" -> {
+                    mv.visitVarInsn(FLOAD, index);
+                    mv.visitMethodInsn(INVOKESTATIC, "java/lang/Float", "valueOf", "(F)Ljava/lang/Float;", false);
+                }
+                case "double" -> {
+                    mv.visitVarInsn(DLOAD, index);
+                    mv.visitMethodInsn(INVOKESTATIC, "java/lang/Double", "valueOf", "(D)Ljava/lang/Double;", false);
+                }
+                case "boolean" -> {
+                    mv.visitVarInsn(ILOAD, index);
+                    mv.visitMethodInsn(INVOKESTATIC, "java/lang/Boolean", "valueOf", "(Z)Ljava/lang/Boolean;", false);
+                }
+                case "char" -> {
+                    mv.visitVarInsn(ILOAD, index);
+                    mv.visitMethodInsn(INVOKESTATIC, "java/lang/Character", "valueOf", "(C)Ljava/lang/Character;", false);
+                }
+                case "byte" -> {
+                    mv.visitVarInsn(ILOAD, index);
+                    mv.visitMethodInsn(INVOKESTATIC, "java/lang/Byte", "valueOf", "(B)Ljava/lang/Byte;", false);
+                }
+                case "short" -> {
+                    mv.visitVarInsn(ILOAD, index);
+                    mv.visitMethodInsn(INVOKESTATIC, "java/lang/Short", "valueOf", "(S)Ljava/lang/Short;", false);
+                }
+                default -> mv.visitVarInsn(ALOAD, index);
+            }
+        } else {
+            mv.visitVarInsn(ALOAD, index);
+        }
+    }
+    
+    /**
+     * ?????
+     */
+    private void unboxAndReturn(MethodVisitor mv, com.justnothing.javainterpreter.ast.nodes.ClassReferenceNode returnType) {
+        if (returnType.isPrimitive()) {
+            String typeName = returnType.getResolvedClass().getName();
+            if (typeName.equals("void")) {
+                mv.visitInsn(POP);
+                mv.visitInsn(RETURN);
+            } else if (typeName.equals("int")) {
+                mv.visitTypeInsn(CHECKCAST, "java/lang/Integer");
+                mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Integer", "intValue", "()I", false);
+                mv.visitInsn(IRETURN);
+            } else if (typeName.equals("long")) {
+                mv.visitTypeInsn(CHECKCAST, "java/lang/Number");
+                mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Number", "longValue", "()J", false);
+                mv.visitInsn(LRETURN);
+            } else if (typeName.equals("float")) {
+                mv.visitTypeInsn(CHECKCAST, "java/lang/Number");
+                mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Number", "floatValue", "()F", false);
+                mv.visitInsn(FRETURN);
+            } else if (typeName.equals("double")) {
+                mv.visitTypeInsn(CHECKCAST, "java/lang/Number");
+                mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Number", "doubleValue", "()D", false);
+                mv.visitInsn(DRETURN);
+            } else if (typeName.equals("boolean")) {
+                mv.visitTypeInsn(CHECKCAST, "java/lang/Boolean");
+                mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Boolean", "booleanValue", "()Z", false);
+                mv.visitInsn(IRETURN);
+            } else if (typeName.equals("char")) {
+                mv.visitTypeInsn(CHECKCAST, "java/lang/Character");
+                mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Character", "charValue", "()C", false);
+                mv.visitInsn(IRETURN);
+            } else if (typeName.equals("byte")) {
+                mv.visitTypeInsn(CHECKCAST, "java/lang/Number");
+                mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Number", "byteValue", "()B", false);
+                mv.visitInsn(IRETURN);
+            } else if (typeName.equals("short")) {
+                mv.visitTypeInsn(CHECKCAST, "java/lang/Number");
+                mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Number", "shortValue", "()S", false);
+                mv.visitInsn(IRETURN);
+            } else {
+                mv.visitInsn(ARETURN);
+            }
+        } else {
+            mv.visitTypeInsn(CHECKCAST, returnType.getInternalName());
+            mv.visitInsn(ARETURN);
+        }
+    }
+    
+    /**
+     * ??????
+     */
+    private void addDefaultReturn(MethodVisitor mv, com.justnothing.javainterpreter.ast.nodes.ClassReferenceNode returnType) {
+        if (returnType.isPrimitive()) {
+            String typeName = returnType.getResolvedClass().getName();
+            if (typeName.equals("void")) {
+                mv.visitInsn(RETURN);
+            } else if (typeName.equals("int") || typeName.equals("byte") || 
+                       typeName.equals("short") || typeName.equals("char") || 
+                       typeName.equals("boolean")) {
+                mv.visitInsn(ICONST_0);
+                mv.visitInsn(IRETURN);
+            } else if (typeName.equals("long")) {
+                mv.visitInsn(LCONST_0);
+                mv.visitInsn(LRETURN);
+            } else if (typeName.equals("float")) {
+                mv.visitInsn(FCONST_0);
+                mv.visitInsn(FRETURN);
+            } else if (typeName.equals("double")) {
+                mv.visitInsn(DCONST_0);
+                mv.visitInsn(DRETURN);
+            } else {
+                mv.visitInsn(ACONST_NULL);
+                mv.visitInsn(ARETURN);
+            }
         } else {
             mv.visitInsn(ACONST_NULL);
             mv.visitInsn(ARETURN);
@@ -211,111 +1507,133 @@ public class DynamicClassGenerator {
     }
     
     /**
-     * 获取类型描述符
-     */
-    private String getTypeDescriptor(String typeName) {
-        if (typeName == null || typeName.isEmpty()) {
-            return "V";
-        }
-        
-        String baseType = typeName;
-        int arrayDepth = 0;
-        
-        while (baseType.endsWith("[]")) {
-            baseType = baseType.substring(0, baseType.length() - 2);
-            arrayDepth++;
-        }
-        
-        int genericIndex = baseType.indexOf('<');
-        if (genericIndex > 0) {
-            baseType = baseType.substring(0, genericIndex);
-        }
-        
-        String descriptor = switch (baseType) {
-            case "int" -> "I";
-            case "long" -> "J";
-            case "float" -> "F";
-            case "double" -> "D";
-            case "boolean" -> "Z";
-            case "char" -> "C";
-            case "byte" -> "B";
-            case "short" -> "S";
-            case "void" -> "V";
-            default -> "L" + baseType.replace('.', '/') + ";";
-        };
-
-        StringBuilder result = new StringBuilder();
-        for (int i = 0; i < arrayDepth; i++) {
-            result.append("[");
-        }
-        result.append(descriptor);
-        
-        return result.toString();
-    }
-    
-    /**
-     * 获取内部名称
-     */
-    private String getInternalName(String className) {
-        String baseName = className;
-        while (baseName.endsWith("[]")) {
-            baseName = baseName.substring(0, baseName.length() - 2);
-        }
-        int genericIndex = baseName.indexOf('<');
-        if (genericIndex > 0) {
-            baseName = baseName.substring(0, genericIndex);
-        }
-        return baseName.replace('.', '/');
-    }
-    
-    /**
-     * 获取加载操作码
-     */
-    private int getLoadOpcode(String typeName) {
-        if (typeName == null) return ALOAD;
-        
-        String baseType = typeName;
-        while (baseType.endsWith("[]")) {
-            baseType = baseType.substring(0, baseType.length() - 2);
-        }
-        int genericIndex = baseType.indexOf('<');
-        if (genericIndex > 0) {
-            baseType = baseType.substring(0, genericIndex);
-        }
-
-        return switch (baseType) {
-            case "int", "byte", "short", "char", "boolean" -> ILOAD;
-            case "long" -> LLOAD;
-            case "float" -> FLOAD;
-            case "double" -> DLOAD;
-            default -> ALOAD;
-        };
-    }
-    
-    /**
-     * 获取已生成的类
+     * ???????
      */
     public Class<?> getGeneratedClass(String className) {
         return generatedClasses.get(className);
     }
     
     /**
-     * 检查类是否已生成
+     * ????????
      */
     public boolean hasGeneratedClass(String className) {
         return generatedClasses.containsKey(className);
     }
     
+    private void addClassAnnotation(ClassWriter cw, AnnotationNode annotation) {
+        AnnotationVisitor av = cw.visitAnnotation("L" + annotation.getAnnotationName().replace('.', '/') + ";", true);
+        addAnnotationValues(av, annotation);
+        av.visitEnd();
+    }
+    
+    private void addFieldAnnotation(FieldVisitor fv, AnnotationNode annotation) {
+        AnnotationVisitor av = fv.visitAnnotation("L" + annotation.getAnnotationName().replace('.', '/') + ";", true);
+        addAnnotationValues(av, annotation);
+        av.visitEnd();
+    }
+    
+    private void addMethodAnnotation(MethodVisitor mv, AnnotationNode annotation) {
+        AnnotationVisitor av = mv.visitAnnotation("L" + annotation.getAnnotationName().replace('.', '/') + ";", true);
+        addAnnotationValues(av, annotation);
+        av.visitEnd();
+    }
+    
+    private void addAnnotationValues(AnnotationVisitor av, AnnotationNode annotation) {
+        if (annotation.hasSingleValue()) {
+            Object value = annotation.getValue();
+            addAnnotationValue(av, "value", value);
+        } else {
+            for (Map.Entry<String, Object> entry : annotation.getValues().entrySet()) {
+                addAnnotationValue(av, entry.getKey(), entry.getValue());
+            }
+        }
+    }
+    
+    private void addAnnotationValue(AnnotationVisitor av, String name, Object value) {
+        if (value == null) {
+            av.visit(name, null);
+        } else if (value instanceof String) {
+            av.visit(name, value);
+        } else if (value instanceof Integer) {
+            av.visit(name, value);
+        } else if (value instanceof Long) {
+            av.visit(name, value);
+        } else if (value instanceof Float) {
+            av.visit(name, value);
+        } else if (value instanceof Double) {
+            av.visit(name, value);
+        } else if (value instanceof Boolean) {
+            av.visit(name, value);
+        } else if (value instanceof Character) {
+            av.visit(name, value);
+        } else if (value instanceof Short) {
+            av.visit(name, (int) (Short) value);
+        } else if (value instanceof Byte) {
+            av.visit(name, (int) (Byte) value);
+        } else if (value instanceof Class<?>) {
+            av.visit(name, Type.getType((Class<?>) value));
+        } else if (value instanceof Object[]) {
+            AnnotationVisitor arrayAv = av.visitArray(name);
+            for (Object element : (Object[]) value) {
+                addAnnotationValue(arrayAv, null, element);
+            }
+            arrayAv.visitEnd();
+        } else if (value instanceof Enum<?>) {
+            Enum<?> enumValue = (Enum<?>) value;
+            av.visitEnum(name, Type.getDescriptor(enumValue.getDeclaringClass()), enumValue.name());
+        } else {
+            av.visit(name, value.toString());
+        }
+    }
+    
+    private boolean isClassAvailable(String className) {
+        Class<?> clazz = ClassResolver.findClassWithImports(className, classLoader, context.getImports());
+        if (clazz != null) {
+            return true;
+        }
+        return generatedClasses.containsKey(className);
+    }
+    
     /**
-     * 动态类加载器
+     * ??????
      */
     private static class DynamicClassLoader extends ClassLoader {
-        public DynamicClassLoader(ClassLoader parent) {
+        private final DynamicClassGenerator generator;
+        
+        public DynamicClassLoader(ClassLoader parent, DynamicClassGenerator generator) {
             super(parent);
+            this.generator = generator;
+        }
+        
+        @Override
+        protected Class<?> findClass(String name) throws ClassNotFoundException {
+            Class<?> cached = generator.generatedClasses.get(name);
+            if (cached != null) {
+                return cached;
+            }
+            
+            if (generator.context != null && generator.context.hasCustomClass(name)) {
+                return generator.context.getCustomClass(name);
+            }
+            
+            
+            return getParent().loadClass(name);
         }
         
         public Class<?> defineClass(String name, byte[] bytecode) {
-            return defineClass(name, bytecode, 0, bytecode.length);
+            try {
+                return defineClass(name, bytecode, 0, bytecode.length);
+            } catch (LinkageError e) {
+                Class<?> existing = findLoadedClass(name);
+                if (existing != null) {
+                    return existing;
+                }
+                throw e;
+            }
+        }
+        
+        public Class<?> defineClass(String name, Class<?> clazz) {
+            return clazz;
         }
     }
 }

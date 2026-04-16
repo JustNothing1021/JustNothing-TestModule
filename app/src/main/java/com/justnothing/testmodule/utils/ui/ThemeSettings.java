@@ -4,7 +4,7 @@ import androidx.appcompat.app.AppCompatDelegate;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 
 public class ThemeSettings extends Logger {
     private static final String TAG = "ThemeSettings";

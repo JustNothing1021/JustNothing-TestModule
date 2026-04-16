@@ -6,7 +6,7 @@ import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.util.DisplayMetrics;
 
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 
 public class UISettings extends Logger {
     private static final String TAG = "UISettings";

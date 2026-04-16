@@ -188,52 +188,49 @@ public class DescriptorColorizer {
     }
 
     private static void printType(CommandExecutor.CmdExecContext ctx, Type type, byte color, boolean simple) {
-        switch (type) {
-            case Class<?> clazz -> printClassType(ctx, clazz, color, simple);
-            case GenericArrayType gat -> {
-                printType(ctx, gat.getGenericComponentType(), color, simple);
-                ctx.print("[", Colors.CYAN);
-                ctx.print("]", Colors.CYAN);
-            }
-            case ParameterizedType pt -> {
-                printType(ctx, pt.getRawType(), color, simple);
-                Type[] typeArgs = pt.getActualTypeArguments();
-                if (typeArgs.length > 0) {
-                    ctx.print("<", Colors.WHITE);
-                    for (int i = 0; i < typeArgs.length; i++) {
-                        if (i > 0) {
-                            ctx.print(", ", Colors.WHITE);
-                        }
-                        printType(ctx, typeArgs[i], color, simple);
+        if (type instanceof Class<?> clazz) {
+            printClassType(ctx, clazz, color, simple);
+        } else if (type instanceof GenericArrayType gat) {
+            printType(ctx, gat.getGenericComponentType(), color, simple);
+            ctx.print("[", Colors.CYAN);
+            ctx.print("]", Colors.CYAN);
+        } else if (type instanceof ParameterizedType pt) {
+            printType(ctx, pt.getRawType(), color, simple);
+            Type[] typeArgs = pt.getActualTypeArguments();
+            if (typeArgs.length > 0) {
+                ctx.print("<", Colors.WHITE);
+                for (int i = 0; i < typeArgs.length; i++) {
+                    if (i > 0) {
+                        ctx.print(", ", Colors.WHITE);
                     }
-                    ctx.print(">", Colors.WHITE);
+                    printType(ctx, typeArgs[i], color, simple);
                 }
+                ctx.print(">", Colors.WHITE);
             }
-            case WildcardType wt -> {
-                Type[] upperBounds = wt.getUpperBounds();
-                Type[] lowerBounds = wt.getLowerBounds();
-                if (lowerBounds.length > 0) {
-                    ctx.print("?", Colors.CYAN);
-                    ctx.print(" super ", Colors.BLUE);
-                    printType(ctx, lowerBounds[0], color, simple);
-                } else if (upperBounds.length > 0 && upperBounds[0] != Object.class) {
-                    ctx.print("?", Colors.CYAN);
-                    ctx.print(" extends ", Colors.BLUE);
-                    printType(ctx, upperBounds[0], color, simple);
-                } else {
-                    ctx.print("?", Colors.CYAN);
-                }
+        } else if (type instanceof WildcardType wt) {
+            Type[] upperBounds = wt.getUpperBounds();
+            Type[] lowerBounds = wt.getLowerBounds();
+            if (lowerBounds.length > 0) {
+                ctx.print("?", Colors.CYAN);
+                ctx.print(" super ", Colors.BLUE);
+                printType(ctx, lowerBounds[0], color, simple);
+            } else if (upperBounds.length > 0 && upperBounds[0] != Object.class) {
+                ctx.print("?", Colors.CYAN);
+                ctx.print(" extends ", Colors.BLUE);
+                printType(ctx, upperBounds[0], color, simple);
+            } else {
+                ctx.print("?", Colors.CYAN);
             }
-            case TypeVariable<?> tv -> ctx.print(tv.getName(), Colors.GREEN);
-            default -> {
-                String typeStr = type.toString();
-                if (typeStr.startsWith("class ")) {
-                    typeStr = typeStr.substring(6);
-                } else if (typeStr.startsWith("interface ")) {
-                    typeStr = typeStr.substring(10);
-                }
-                printTypeString(ctx, typeStr, color);
+        } else if (type instanceof TypeVariable<?> tv) {
+            ctx.print(tv.getName(), Colors.GREEN);
+        } else {
+            String typeStr = type.toString();
+            if (typeStr.startsWith("class ")) {
+                typeStr = typeStr.substring(6);
+            } else if (typeStr.startsWith("interface ")) {
+                typeStr = typeStr.substring(10);
             }
+            printTypeString(ctx, typeStr, color);
         }
     }
 

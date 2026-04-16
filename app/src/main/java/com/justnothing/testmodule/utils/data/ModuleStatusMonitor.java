@@ -1,7 +1,7 @@
 package com.justnothing.testmodule.utils.data;
 
 import com.justnothing.testmodule.constants.HookConfig;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 
 import org.json.JSONArray;
 import org.json.JSONException;

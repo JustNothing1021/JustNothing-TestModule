@@ -215,7 +215,7 @@ public class TraceMain extends CommandBase {
 
         try {
             int id = Integer.parseInt(args[1]);
-            boolean success = manager.stopTask(id);
+            boolean success = manager.removeTask(id);
             if (success) {
                 context.println("停止trace任务成功", Colors.GREEN);
                 context.print("ID: ", Colors.CYAN);
@@ -231,7 +231,7 @@ public class TraceMain extends CommandBase {
     }
 
     private void handleClear(TraceManager manager, CommandExecutor.CmdExecContext context) {
-        manager.clearAllTasks();
+        manager.clearAll();
         context.println("清除所有trace任务成功", Colors.GREEN);
     }
 }

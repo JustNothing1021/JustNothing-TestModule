@@ -4,6 +4,8 @@ import com.justnothing.javainterpreter.api.DefaultClassFinder;
 import com.justnothing.javainterpreter.api.DefaultOutputHandler;
 import com.justnothing.javainterpreter.api.IClassFinder;
 import com.justnothing.javainterpreter.api.IOutputHandler;
+import com.justnothing.javainterpreter.security.IPermissionChecker;
+import com.justnothing.javainterpreter.security.PermissionType;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -61,6 +63,7 @@ public class ExecutionContext {
     private IOutputHandler warnMsgBuffer;
     private boolean printAST = false;
     private IClassFinder classFinder;
+    private IPermissionChecker permissionChecker;
 
     public ExecutionContext() {
         this(Thread.currentThread().getContextClassLoader());
@@ -130,6 +133,10 @@ public class ExecutionContext {
         this.outputBuffer = parent.outputBuffer;
         this.warnMsgBuffer = parent.warnMsgBuffer;
         this.classFinder = parent.classFinder;
+    }
+    
+    public ExecutionContext createChildContext() {
+        return new ExecutionContext(this);
     }
     
     private void addDefaultImports() {
@@ -380,5 +387,63 @@ public class ExecutionContext {
             sb.append("  at ").append(frame.toString()).append("\n");
         }
         return sb.toString();
+    }
+    
+    public IPermissionChecker getPermissionChecker() {
+        return permissionChecker;
+    }
+    
+    public void setPermissionChecker(IPermissionChecker permissionChecker) {
+        this.permissionChecker = permissionChecker;
+    }
+    
+    public boolean hasPermission(PermissionType type) {
+        if (permissionChecker == null) {
+            return true;
+        }
+        return permissionChecker.hasPermission(type);
+    }
+    
+    public boolean hasPermission(PermissionType type, String target) {
+        if (permissionChecker == null) {
+            return true;
+        }
+        return permissionChecker.hasPermission(type, target);
+    }
+    
+    public void checkPermission(PermissionType type) throws SecurityException {
+        if (permissionChecker != null) {
+            permissionChecker.checkPermission(type);
+        }
+    }
+    
+    public void checkPermission(PermissionType type, String target) throws SecurityException {
+        if (permissionChecker != null) {
+            permissionChecker.checkPermission(type, target);
+        }
+    }
+    
+    public void checkClassAccess(String className) throws SecurityException {
+        if (permissionChecker != null) {
+            permissionChecker.checkClassAccess(className);
+        }
+    }
+    
+    public void checkMethodAccess(String className, String methodName, String signature) throws SecurityException {
+        if (permissionChecker != null) {
+            permissionChecker.checkMethodAccess(className, methodName, signature);
+        }
+    }
+    
+    public void checkFieldAccess(String className, String fieldName) throws SecurityException {
+        if (permissionChecker != null) {
+            permissionChecker.checkFieldAccess(className, fieldName);
+        }
+    }
+    
+    public void checkNewInstance(String className) throws SecurityException {
+        if (permissionChecker != null) {
+            permissionChecker.checkNewInstance(className);
+        }
     }
 }

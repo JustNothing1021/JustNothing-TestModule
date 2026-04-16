@@ -2,7 +2,7 @@ package com.justnothing.testmodule.command.functions.classcmd;
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.base.CommandContext;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.reflect.ReflectionUtils;
 
 import org.jetbrains.annotations.NotNull;

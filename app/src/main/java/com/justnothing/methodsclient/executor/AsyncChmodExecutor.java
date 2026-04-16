@@ -3,7 +3,7 @@ package com.justnothing.methodsclient.executor;
 import android.annotation.SuppressLint;
 
 import com.justnothing.testmodule.utils.data.BootMonitor;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.io.RootProcessPool;
 import com.justnothing.testmodule.utils.io.IOManager;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;

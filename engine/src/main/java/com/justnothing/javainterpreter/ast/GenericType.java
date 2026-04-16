@@ -1,6 +1,7 @@
 package com.justnothing.javainterpreter.ast;
 
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -60,7 +61,7 @@ public class GenericType {
     public Class<?> getRuntimeType() {
         Class<?> type = rawType;
         for (int i = 0; i < arrayDepth; i++) {
-            type = java.lang.reflect.Array.newInstance(type, 0).getClass();
+            type = Array.newInstance(type, 0).getClass();
         }
         return type;
     }

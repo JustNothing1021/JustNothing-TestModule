@@ -3,7 +3,7 @@ package com.justnothing.testmodule.command.functions.performance;
 import com.justnothing.testmodule.command.functions.intercept.InterceptTaskManager;
 import com.justnothing.testmodule.command.functions.intercept.PerformanceInterceptTask;
 import com.justnothing.testmodule.command.functions.intercept.TaskType;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
 
 import java.util.List;

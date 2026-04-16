@@ -4,7 +4,7 @@ import static com.justnothing.testmodule.constants.CommandServer.DEFAULT_SOCKET_
 import static com.justnothing.testmodule.constants.FileDirectory.PORT_FILE;
 
 import com.justnothing.testmodule.utils.data.DataDirectoryManager;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.io.IOManager;
 
 import java.io.File;

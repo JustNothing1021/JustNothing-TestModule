@@ -1,7 +1,15 @@
 package com.justnothing.testmodule.utils.data;
 
+import android.Manifest;
+import android.app.Activity;
+import android.content.Context;
+import android.content.pm.PackageManager;
+
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+
 import com.justnothing.testmodule.constants.AppEnvironment;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -98,5 +106,23 @@ public class BootMonitor {
             logger.info("  耗时: " + duration + "ms");
         }
     }
-    
+
+    public static class PermissionUtils {
+
+        public static final String TAG = "FileUtilsLogger";
+
+
+        public static boolean checkStoragePermission(Context context) {
+            return ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE
+            ) == PackageManager.PERMISSION_GRANTED;
+        }
+
+        public static void requestPermission(Activity activity) {
+            ActivityCompat.requestPermissions(activity,
+                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1145);
+        }
+
+    }
 }

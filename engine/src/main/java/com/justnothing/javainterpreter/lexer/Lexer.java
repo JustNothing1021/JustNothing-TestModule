@@ -161,7 +161,7 @@ public class Lexer {
     }
     
     private boolean isDelimiterChar(char c) {
-        return ";,(){}[]".indexOf(c) >= 0;
+        return ";,(){}[]@".indexOf(c) >= 0;
     }
     
     private void readNumber() {
@@ -683,6 +683,9 @@ public class Lexer {
                 break;
             case ']':
                 addToken(TokenType.DELIMITER_RIGHT_BRACKET, location);
+                break;
+            case '@':
+                addToken(TokenType.DELIMITER_AT, location);
                 break;
             default:
                 throw error("Unknown delimiter: '" + c + "'");

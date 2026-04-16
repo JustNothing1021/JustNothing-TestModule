@@ -1,59 +1,10 @@
 package com.justnothing.javainterpreter.parser;
 
+import com.justnothing.javainterpreter.api.ClassResolver;
 import com.justnothing.javainterpreter.ast.GenericType;
 import com.justnothing.javainterpreter.ast.SourceLocation;
-import com.justnothing.javainterpreter.api.ClassResolver;
 import com.justnothing.javainterpreter.ast.ASTNode;
-import com.justnothing.javainterpreter.ast.nodes.ArrayAccessNode;
-import com.justnothing.javainterpreter.ast.nodes.ArrayAssignmentNode;
-import com.justnothing.javainterpreter.ast.nodes.ArrayLiteralNode;
-import com.justnothing.javainterpreter.ast.nodes.AssignmentNode;
-import com.justnothing.javainterpreter.ast.nodes.AsyncNode;
-import com.justnothing.javainterpreter.ast.nodes.AwaitNode;
-import com.justnothing.javainterpreter.ast.nodes.BinaryOpNode;
-import com.justnothing.javainterpreter.ast.nodes.BlockNode;
-import com.justnothing.javainterpreter.ast.nodes.CaseNode;
-import com.justnothing.javainterpreter.ast.nodes.CastNode;
-import com.justnothing.javainterpreter.ast.nodes.CatchClause;
-import com.justnothing.javainterpreter.ast.nodes.ClassDeclarationNode;
-import com.justnothing.javainterpreter.ast.nodes.ClassModifiers;
-import com.justnothing.javainterpreter.ast.nodes.ClassReferenceNode;
-import com.justnothing.javainterpreter.ast.nodes.ConditionalAssignNode;
-import com.justnothing.javainterpreter.ast.nodes.ConstructorCallNode;
-import com.justnothing.javainterpreter.ast.nodes.ConstructorDeclarationNode;
-import com.justnothing.javainterpreter.ast.nodes.DeleteNode;
-import com.justnothing.javainterpreter.ast.nodes.DoWhileNode;
-import com.justnothing.javainterpreter.ast.nodes.FieldAccessNode;
-import com.justnothing.javainterpreter.ast.nodes.FieldAssignmentNode;
-import com.justnothing.javainterpreter.ast.nodes.FieldDeclarationNode;
-import com.justnothing.javainterpreter.ast.nodes.ForEachNode;
-import com.justnothing.javainterpreter.ast.nodes.ForNode;
-import com.justnothing.javainterpreter.ast.nodes.FunctionCallNode;
-import com.justnothing.javainterpreter.ast.nodes.IfNode;
-import com.justnothing.javainterpreter.ast.nodes.ImportNode;
-import com.justnothing.javainterpreter.ast.nodes.InstanceofNode;
-import com.justnothing.javainterpreter.ast.nodes.InterpolatedStringNode;
-import com.justnothing.javainterpreter.ast.nodes.LambdaNode;
-import com.justnothing.javainterpreter.ast.nodes.LiteralNode;
-import com.justnothing.javainterpreter.ast.nodes.MapLiteralNode;
-import com.justnothing.javainterpreter.ast.nodes.MethodCallNode;
-import com.justnothing.javainterpreter.ast.nodes.MethodDeclarationNode;
-import com.justnothing.javainterpreter.ast.nodes.MethodReferenceNode;
-import com.justnothing.javainterpreter.ast.nodes.NewArrayNode;
-import com.justnothing.javainterpreter.ast.nodes.NullCoalescingAssignNode;
-import com.justnothing.javainterpreter.ast.nodes.ParameterNode;
-import com.justnothing.javainterpreter.ast.nodes.PipelineNode;
-import com.justnothing.javainterpreter.ast.nodes.ResourceDeclaration;
-import com.justnothing.javainterpreter.ast.nodes.ReturnNode;
-import com.justnothing.javainterpreter.ast.nodes.SafeFieldAccessNode;
-import com.justnothing.javainterpreter.ast.nodes.SafeMethodCallNode;
-import com.justnothing.javainterpreter.ast.nodes.SwitchNode;
-import com.justnothing.javainterpreter.ast.nodes.TernaryNode;
-import com.justnothing.javainterpreter.ast.nodes.ThrowNode;
-import com.justnothing.javainterpreter.ast.nodes.TryNode;
-import com.justnothing.javainterpreter.ast.nodes.UnaryOpNode;
-import com.justnothing.javainterpreter.ast.nodes.VariableNode;
-import com.justnothing.javainterpreter.ast.nodes.WhileNode;
+import com.justnothing.javainterpreter.ast.nodes.*;
 import com.justnothing.javainterpreter.evaluator.AutoClass;
 import com.justnothing.javainterpreter.exception.ParseException;
 import com.justnothing.javainterpreter.lexer.Lexer;
@@ -66,9 +17,11 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -217,6 +170,14 @@ public class Parser {
         return peek().getLocation();
     }
     
+    private VariableNode createVariableNode(String name, SourceLocation location) {
+        VariableNode node = new VariableNode(name, location);
+        if (context.shouldResolveAsField(name)) {
+            node.setFieldAccess(true);
+        }
+        return node;
+    }
+    
     private int savePosition() {
         savedPositions.push(position);
         return position;
@@ -238,8 +199,29 @@ public class Parser {
      * 解析语句
      */
     private ASTNode parseStatement() throws ParseException {
+        List<AnnotationNode> annotations = parseAnnotations();
+        
+        // 处理抽象类声明
+        if (match(TokenType.KEYWORD_ABSTRACT)) {
+            if (match(TokenType.KEYWORD_CLASS)) {
+                return parseClassDeclaration(annotations);
+            } else if (match(TokenType.KEYWORD_INTERFACE)) {
+                return parseInterfaceDeclaration(annotations);
+            } else {
+                throw error("Expected 'class' or 'interface' after 'abstract'");
+            }
+        }
+        
         if (match(TokenType.KEYWORD_CLASS)) {
-            return parseClassDeclaration();
+            return parseClassDeclaration(annotations);
+        }
+        
+        if (match(TokenType.KEYWORD_INTERFACE)) {
+            return parseInterfaceDeclaration(annotations);
+        }
+        
+        if (!annotations.isEmpty()) {
+            throw error("Annotations can only be applied to class, method, or field declarations");
         }
         
         if (check(TokenType.KEYWORD_INT) || check(TokenType.KEYWORD_LONG) ||
@@ -276,7 +258,8 @@ public class Parser {
                        checkNext(TokenType.KEYWORD_INT) || checkNext(TokenType.KEYWORD_LONG) ||
                        checkNext(TokenType.KEYWORD_FLOAT) || checkNext(TokenType.KEYWORD_DOUBLE) ||
                        checkNext(TokenType.KEYWORD_BOOLEAN) || checkNext(TokenType.KEYWORD_CHAR) ||
-                       checkNext(TokenType.KEYWORD_BYTE) || checkNext(TokenType.KEYWORD_SHORT)) {
+                       checkNext(TokenType.KEYWORD_BYTE) || checkNext(TokenType.KEYWORD_SHORT) ||
+                       isGenericVariableDeclaration()) {
                 return parseVariableDeclaration();
             } else {
                 ASTNode expression = parseExpression();
@@ -662,6 +645,21 @@ public class Parser {
     private String parseTypeNameForGeneric() throws ParseException {
         StringBuilder typeName = new StringBuilder();
         
+        if (check(TokenType.OPERATOR_QUESTION)) {
+            advance();
+            typeName.append("?");
+            if (check(TokenType.KEYWORD_EXTENDS)) {
+                advance();
+                typeName.append(" extends ");
+                typeName.append(parseTypeNameForGeneric());
+            } else if (check(TokenType.KEYWORD_SUPER)) {
+                advance();
+                typeName.append(" super ");
+                typeName.append(parseTypeNameForGeneric());
+            }
+            return typeName.toString();
+        }
+        
         if (check(TokenType.IDENTIFIER)) {
             typeName.append(advance().getText());
             
@@ -785,6 +783,22 @@ public class Parser {
         while (baseTypeName.endsWith("[]")) {
             arrayDepth++;
             baseTypeName = baseTypeName.substring(0, baseTypeName.length() - 2);
+        }
+        
+        if ("?".equals(baseTypeName)) {
+            return new GenericType(Object.class, Collections.emptyList(), arrayDepth, "?");
+        }
+        
+        if (baseTypeName.startsWith("? extends ")) {
+            String boundType = baseTypeName.substring("? extends ".length());
+            GenericType bound = resolveGenericType(boundType);
+            return new GenericType(bound.getRuntimeType(), Collections.emptyList(), arrayDepth, "? extends " + boundType);
+        }
+        
+        if (baseTypeName.startsWith("? super ")) {
+            String boundType = baseTypeName.substring("? super ".length());
+            GenericType bound = resolveGenericType(boundType);
+            return new GenericType(bound.getRuntimeType(), Collections.emptyList(), arrayDepth, "? super " + boundType);
         }
         
         List<GenericType> typeArguments = Collections.emptyList();
@@ -1259,60 +1273,220 @@ public class Parser {
     
     /**
      * 解析class声明
-     * 语法: class ClassName [extends SuperClass] [implements Interface1, Interface2] { ... }
+     * 语法: [@Annotation] class ClassName [extends SuperClass] [implements Interface1, Interface2] { ... }
      */
-    private ASTNode parseClassDeclaration() throws ParseException {
+    private ASTNode parseClassDeclaration(List<AnnotationNode> annotations) throws ParseException {
         SourceLocation location = createLocation();
         
         String className = consume(TokenType.IDENTIFIER, "Expected class name").getText();
         
+        List<String> typeParams = Collections.emptyList();
+        if (check(TokenType.OPERATOR_LESS_THAN)) {
+            typeParams = parseClassTypeParameters();
+        }
+        
         context.declareClass(className);
-        
-        String superClassName = null;
-        if (match(TokenType.KEYWORD_EXTENDS)) {
-            superClassName = parseTypeName();
+        for (String typeParam : typeParams) {
+            context.declareClass(typeParam);
         }
+        context.enterClass(className);
         
-        List<String> interfaceNames = new ArrayList<>();
-        if (match(TokenType.KEYWORD_IMPLEMENTS)) {
-            do {
-                interfaceNames.add(parseTypeName());
-            } while (match(TokenType.DELIMITER_COMMA));
-        }
-        
-        ClassDeclarationNode classDecl = new ClassDeclarationNode(className, superClassName, interfaceNames, location);
-        
-        consume(TokenType.DELIMITER_LEFT_BRACE, "Expected '{' after class declaration");
-        
-        while (!check(TokenType.DELIMITER_RIGHT_BRACE) && !isAtEnd()) {
-            ClassModifiers modifiers = parseModifiers();
+        try {
+            ClassReferenceNode superClass = null;
+            if (match(TokenType.KEYWORD_EXTENDS)) {
+                superClass = parseTypeName();
+            }
             
-            if (check(TokenType.IDENTIFIER) && checkNext(TokenType.DELIMITER_LEFT_PAREN)) {
-                String constructorName = consume(TokenType.IDENTIFIER, "Expected constructor name").getText();
-                if (!constructorName.equals(className)) {
-                    throw error("Constructor name must match class name");
-                }
-                ConstructorDeclarationNode constructor = parseConstructorDeclaration(className, modifiers);
-                classDecl.addConstructor(constructor);
-            } else if (isTypeStart()) {
-                String typeName = parseTypeName();
-                String memberName = consume(TokenType.IDENTIFIER, "Expected member name").getText();
+            List<ClassReferenceNode> interfaces = new ArrayList<>();
+            if (match(TokenType.KEYWORD_IMPLEMENTS)) {
+                do {
+                    interfaces.add(parseTypeName());
+                } while (match(TokenType.DELIMITER_COMMA));
+            }
+            
+            ClassDeclarationNode classDecl = new ClassDeclarationNode(className, superClass, interfaces, location);
+            
+            for (AnnotationNode annotation : annotations) {
+                classDecl.addAnnotation(annotation);
+            }
+            
+            consume(TokenType.DELIMITER_LEFT_BRACE, "Expected '{' after class declaration");
+            
+            while (!check(TokenType.DELIMITER_RIGHT_BRACE) && !isAtEnd()) {
+                List<AnnotationNode> memberAnnotations = parseAnnotations();
+                ClassModifiers modifiers = parseModifiers();
                 
-                if (check(TokenType.DELIMITER_LEFT_PAREN)) {
-                    MethodDeclarationNode method = parseMethodDeclaration(memberName, typeName, modifiers);
-                    classDecl.addMethod(method);
+                if (check(TokenType.IDENTIFIER) && checkNext(TokenType.DELIMITER_LEFT_PAREN)) {
+                    String constructorName = consume(TokenType.IDENTIFIER, "Expected constructor name").getText();
+                    if (!constructorName.equals(className)) {
+                        throw error("Constructor name must match class name");
+                    }
+                    ConstructorDeclarationNode constructor = parseConstructorDeclaration(className, modifiers);
+                    for (AnnotationNode annotation : memberAnnotations) {
+                        constructor.addAnnotation(annotation);
+                    }
+                    classDecl.addConstructor(constructor);
+                } else if (isTypeStart()) {
+                    ClassReferenceNode type = parseTypeName();
+                    String memberName = consume(TokenType.IDENTIFIER, "Expected member name").getText();
+                    
+                    if (check(TokenType.DELIMITER_LEFT_PAREN)) {
+                        MethodDeclarationNode method = parseMethodDeclaration(memberName, type, modifiers);
+                        for (AnnotationNode annotation : memberAnnotations) {
+                            method.addAnnotation(annotation);
+                        }
+                        classDecl.addMethod(method);
+                    } else {
+                        FieldDeclarationNode field = parseFieldDeclaration(memberName, type, modifiers);
+                        for (AnnotationNode annotation : memberAnnotations) {
+                            field.addAnnotation(annotation);
+                        }
+                        classDecl.addField(field);
+                        context.addField(memberName);
+                    }
                 } else {
-                    FieldDeclarationNode field = parseFieldDeclaration(memberName, typeName, modifiers);
-                    classDecl.addField(field);
+                    throw error("Unexpected token in class body");
+                }
+            }
+            
+            consume(TokenType.DELIMITER_RIGHT_BRACE, "Expected '}' at end of class declaration");
+            
+            return classDecl;
+        } finally {
+            context.exitClass();
+        }
+    }
+    
+    private List<String> parseClassTypeParameters() throws ParseException {
+        List<String> typeParams = new ArrayList<>();
+        consume(TokenType.OPERATOR_LESS_THAN, "Expected '<'");
+        int depth = 1;
+        while (depth > 0 && !isAtEnd()) {
+            TokenType type = peek().getType();
+            if (type == TokenType.OPERATOR_LESS_THAN) {
+                advance();
+                depth++;
+            } else if (type == TokenType.OPERATOR_GREATER_THAN) {
+                advance();
+                depth--;
+            } else if (type == TokenType.OPERATOR_RIGHT_SHIFT) {
+                advance();
+                depth -= 2;
+            } else if (type == TokenType.OPERATOR_UNSIGNED_RIGHT_SHIFT) {
+                advance();
+                depth -= 3;
+            } else if (type == TokenType.IDENTIFIER && depth == 1) {
+                String paramName = advance().getText();
+                typeParams.add(paramName);
+                if (check(TokenType.OPERATOR_LESS_THAN)) {
+                    advance();
+                    depth++;
+                    continue;
+                }
+                if (check(TokenType.KEYWORD_EXTENDS)) {
+                    advance();
+                    parseTypeName();
+                }
+                if (check(TokenType.DELIMITER_COMMA)) {
+                    advance();
                 }
             } else {
-                throw error("Unexpected token in class body");
+                advance();
             }
         }
+        return typeParams;
+    }
+    /**
+     * 解析接口声明
+     */
+    private ASTNode parseInterfaceDeclaration(List<AnnotationNode> annotations) throws ParseException {
+        SourceLocation location = createLocation();
         
-        consume(TokenType.DELIMITER_RIGHT_BRACE, "Expected '}' at end of class declaration");
+        String interfaceName = consume(TokenType.IDENTIFIER, "Expected interface name").getText();
         
-        return classDecl;
+        List<String> typeParams = Collections.emptyList();
+        if (check(TokenType.OPERATOR_LESS_THAN)) {
+            typeParams = parseClassTypeParameters();
+        }
+        
+        context.declareClass(interfaceName);
+        for (String typeParam : typeParams) {
+            context.declareClass(typeParam);
+        }
+        context.enterClass(interfaceName);
+        
+        try {
+            List<ClassReferenceNode> superInterfaces = new ArrayList<>();
+            if (match(TokenType.KEYWORD_EXTENDS)) {
+                do {
+                    superInterfaces.add(parseTypeName());
+                } while (match(TokenType.DELIMITER_COMMA));
+            }
+            
+            ClassDeclarationNode interfaceDecl = new ClassDeclarationNode(interfaceName, null, superInterfaces, location);
+            interfaceDecl.setInterface(true);
+            
+            for (AnnotationNode annotation : annotations) {
+                interfaceDecl.addAnnotation(annotation);
+            }
+            
+            consume(TokenType.DELIMITER_LEFT_BRACE, "Expected '{' after interface declaration");
+            
+            while (!check(TokenType.DELIMITER_RIGHT_BRACE) && !isAtEnd()) {
+                List<AnnotationNode> memberAnnotations = parseAnnotations();
+                ClassModifiers modifiers = parseModifiers();
+                
+                if (match(TokenType.KEYWORD_DEFAULT)) {
+                    ClassReferenceNode type = parseTypeName();
+                    String memberName = consume(TokenType.IDENTIFIER, "Expected member name").getText();
+                    MethodDeclarationNode method = parseMethodDeclaration(memberName, type, modifiers);
+                    for (AnnotationNode annotation : memberAnnotations) {
+                        method.addAnnotation(annotation);
+                    }
+                    interfaceDecl.addMethod(method);
+                } else if (isTypeStart()) {
+                    ClassReferenceNode type = parseTypeName();
+                    String memberName = consume(TokenType.IDENTIFIER, "Expected member name").getText();
+                    
+                    if (check(TokenType.DELIMITER_LEFT_PAREN)) {
+                        // 接口方法默认是抽象的
+                        if (!modifiers.isAbstract()) {
+                            modifiers.setAbstract(true);
+                        }
+                        MethodDeclarationNode method = parseMethodDeclaration(memberName, type, modifiers);
+                        for (AnnotationNode annotation : memberAnnotations) {
+                            method.addAnnotation(annotation);
+                        }
+                        interfaceDecl.addMethod(method);
+                    } else {
+                        // 接口字段默认是 public static final
+                        if (!modifiers.isPublic()) {
+                            modifiers.setPublic(true);
+                        }
+                        if (!modifiers.isStatic()) {
+                            modifiers.setStatic(true);
+                        }
+                        if (!modifiers.isFinal()) {
+                            modifiers.setFinal(true);
+                        }
+                        FieldDeclarationNode field = parseFieldDeclaration(memberName, type, modifiers);
+                        for (AnnotationNode annotation : memberAnnotations) {
+                            field.addAnnotation(annotation);
+                        }
+                        interfaceDecl.addField(field);
+                        context.addField(memberName);
+                    }
+                } else {
+                    throw error("Unexpected token in interface body");
+                }
+            }
+            
+            consume(TokenType.DELIMITER_RIGHT_BRACE, "Expected '}' at end of interface declaration");
+            
+            return interfaceDecl;
+        } finally {
+            context.exitClass();
+        }
     }
     
     /**
@@ -1347,6 +1521,187 @@ public class Parser {
     }
     
     /**
+     * 解析注解
+     * 语法: @AnnotationName 或 @AnnotationName(value) 或 @AnnotationName(key1 = value1, key2 = value2)
+     */
+    private List<AnnotationNode> parseAnnotations() throws ParseException {
+        List<AnnotationNode> annotations = new ArrayList<>();
+        
+        while (check(TokenType.DELIMITER_AT)) {
+            annotations.add(parseAnnotation());
+        }
+        
+        return annotations;
+    }
+    
+    /**
+     * 解析单个注解
+     */
+    private AnnotationNode parseAnnotation() throws ParseException {
+        SourceLocation location = createLocation();
+        
+        consume(TokenType.DELIMITER_AT, "Expected '@'");
+        String annotationName = consume(TokenType.IDENTIFIER, "Expected annotation name").getText();
+        
+        if (!check(TokenType.DELIMITER_LEFT_PAREN)) {
+            return new AnnotationNode(annotationName, location);
+        }
+        
+        advance();
+        
+        if (check(TokenType.DELIMITER_RIGHT_PAREN)) {
+            advance();
+            return new AnnotationNode(annotationName, location);
+        }
+        
+        Map<String, Object> values = new LinkedHashMap<>();
+        
+        if (check(TokenType.IDENTIFIER) && checkNext(TokenType.OPERATOR_ASSIGN)) {
+            while (true) {
+                String key = consume(TokenType.IDENTIFIER, "Expected parameter name").getText();
+                consume(TokenType.OPERATOR_ASSIGN, "Expected '=' in annotation parameter");
+                Object value = parseAnnotationValue();
+                values.put(key, value);
+                
+                if (!match(TokenType.DELIMITER_COMMA)) {
+                    break;
+                }
+            }
+        } else {
+            Object singleValue = parseAnnotationValue();
+            consume(TokenType.DELIMITER_RIGHT_PAREN, "Expected ')' after annotation value");
+            return new AnnotationNode(annotationName, singleValue, "value", location);
+        }
+        
+        consume(TokenType.DELIMITER_RIGHT_PAREN, "Expected ')' after annotation parameters");
+        
+        return new AnnotationNode(annotationName, values, location);
+    }
+    
+    /**
+     * 解析注解值
+     */
+    private Object parseAnnotationValue() throws ParseException {
+        if (check(TokenType.DELIMITER_LEFT_BRACE)) {
+            advance();
+            List<Object> values = new ArrayList<>();
+            
+            if (!check(TokenType.DELIMITER_RIGHT_BRACE)) {
+                do {
+                    values.add(parseAnnotationValue());
+                } while (match(TokenType.DELIMITER_COMMA));
+            }
+            
+            consume(TokenType.DELIMITER_RIGHT_BRACE, "Expected '}' after array values");
+            return values.toArray();
+        }
+        
+        if (check(TokenType.LITERAL_STRING)) {
+            return advance().getValue();
+        }
+        
+        if (check(TokenType.LITERAL_INTEGER) || check(TokenType.LITERAL_LONG)) {
+            return advance().getValue();
+        }
+        
+        if (check(TokenType.LITERAL_DECIMAL)) {
+            return advance().getValue();
+        }
+        
+        if (check(TokenType.LITERAL_BOOLEAN)) {
+            return advance().getValue();
+        }
+        
+        if (check(TokenType.LITERAL_CHAR)) {
+            return advance().getValue();
+        }
+        
+        if (check(TokenType.KEYWORD_TRUE)) {
+            advance();
+            return true;
+        }
+        
+        if (check(TokenType.KEYWORD_FALSE)) {
+            advance();
+            return false;
+        }
+        
+        if (check(TokenType.KEYWORD_NULL)) {
+            advance();
+            return null;
+        }
+        
+        if (check(TokenType.IDENTIFIER)) {
+            String name = advance().getText();
+            
+            if (check(TokenType.DELIMITER_DOT)) {
+                StringBuilder fullName = new StringBuilder(name);
+                while (match(TokenType.DELIMITER_DOT)) {
+                    fullName.append(".");
+                    fullName.append(consume(TokenType.IDENTIFIER, "Expected identifier after '.'").getText());
+                }
+                
+                if (check(TokenType.DELIMITER_DOT) || 
+                    (peek().getText() != null && peek().getText().equals("class"))) {
+                    if (peek().getText() != null && peek().getText().equals("class")) {
+                        advance();
+                        try {
+                            Class<?> clazz = context.getClassFinder().findClassWithImports(
+                                fullName.toString(), context.getClassLoader(), context.getImports());
+                            if (clazz != null) {
+                                return clazz;
+                            }
+                        } catch (Exception ignored) {
+                        }
+                    }
+                }
+                
+                if (peek().getText() != null && peek().getText().equals("class")) {
+                    advance();
+                    try {
+                        Class<?> clazz = context.getClassFinder().findClassWithImports(
+                            fullName.toString(), context.getClassLoader(), context.getImports());
+                        if (clazz != null) {
+                            return clazz;
+                        }
+                    } catch (Exception ignored) {
+                    }
+                }
+                
+                return fullName.toString();
+            }
+            
+            if (peek().getText() != null && peek().getText().equals("class")) {
+                advance();
+                try {
+                    Class<?> clazz = context.getClassFinder().findClassWithImports(
+                        name, context.getClassLoader(), context.getImports());
+                    if (clazz != null) {
+                        return clazz;
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+            
+            return name;
+        }
+        
+        if (check(TokenType.OPERATOR_MINUS)) {
+            advance();
+            Object value = parseAnnotationValue();
+            if (value instanceof Number) {
+                if (value instanceof Integer) return -((Integer) value);
+                if (value instanceof Long) return -((Long) value);
+                if (value instanceof Double) return -((Double) value);
+                if (value instanceof Float) return -((Float) value);
+            }
+            throw error("Invalid negative value in annotation");
+        }
+        
+        throw error("Invalid annotation value");
+    }
+    
+    /**
      * 检查是否是类型开始
      */
     private boolean isTypeStart() {
@@ -1362,105 +1717,157 @@ public class Parser {
      * 支持完整类名、泛型、数组等
      * 例如: java.lang.String, List<String>, Map<String, Integer>, int[], java.util.List<java.lang.String>
      */
-    private String parseTypeName() throws ParseException {
-        StringBuilder typeName = new StringBuilder();
+    private ClassReferenceNode parseTypeName() throws ParseException {
+        StringBuilder typeNameBuilder = new StringBuilder();
+        boolean isPrimitive = false;
         
         if (check(TokenType.IDENTIFIER)) {
-            typeName.append(advance().getText());
+            typeNameBuilder.append(advance().getText());
             
             while (check(TokenType.OPERATOR_DOT)) {
                 advance();
-                typeName.append(".");
+                typeNameBuilder.append(".");
                 if (check(TokenType.IDENTIFIER)) {
-                    typeName.append(advance().getText());
+                    typeNameBuilder.append(advance().getText());
                 } else {
                     throw error("Expected identifier after '.'");
                 }
             }
             
-            if (check(TokenType.OPERATOR_LESS_THAN)) {
-                typeName.append(parseGenericString());
-            }
         } else if (check(TokenType.KEYWORD_INT)) {
             advance();
-            typeName.append("int");
+            typeNameBuilder.append("int");
+            isPrimitive = true;
         } else if (check(TokenType.KEYWORD_LONG)) {
             advance();
-            typeName.append("long");
+            typeNameBuilder.append("long");
+            isPrimitive = true;
         } else if (check(TokenType.KEYWORD_FLOAT)) {
             advance();
-            typeName.append("float");
+            typeNameBuilder.append("float");
+            isPrimitive = true;
         } else if (check(TokenType.KEYWORD_DOUBLE)) {
             advance();
-            typeName.append("double");
+            typeNameBuilder.append("double");
+            isPrimitive = true;
         } else if (check(TokenType.KEYWORD_BOOLEAN)) {
             advance();
-            typeName.append("boolean");
+            typeNameBuilder.append("boolean");
+            isPrimitive = true;
         } else if (check(TokenType.KEYWORD_CHAR)) {
             advance();
-            typeName.append("char");
+            typeNameBuilder.append("char");
+            isPrimitive = true;
         } else if (check(TokenType.KEYWORD_BYTE)) {
             advance();
-            typeName.append("byte");
+            typeNameBuilder.append("byte");
+            isPrimitive = true;
         } else if (check(TokenType.KEYWORD_SHORT)) {
             advance();
-            typeName.append("short");
+            typeNameBuilder.append("short");
+            isPrimitive = true;
         } else if (check(TokenType.KEYWORD_VOID)) {
             advance();
-            typeName.append("void");
+            typeNameBuilder.append("void");
+            isPrimitive = true;
         } else {
             throw error("Expected type name");
         }
         
+        String typeName = typeNameBuilder.toString();
+        List<ClassReferenceNode> typeArguments = null;
+        
+        if (check(TokenType.OPERATOR_LESS_THAN)) {
+            typeArguments = parseGenericTypeArguments();
+        }
+        
+        int arrayDepth = 0;
         while (check(TokenType.DELIMITER_LEFT_BRACKET)) {
             advance();
             consume(TokenType.DELIMITER_RIGHT_BRACKET, "Expected ']' in array type");
-            typeName.append("[]");
+            arrayDepth++;
         }
         
-        return typeName.toString();
+        Class<?> resolvedClass = null;
+        if (isPrimitive) {
+            // 基本类型使用对应的包装类或原始类型
+            switch (typeName) {
+                case "int": resolvedClass = int.class;
+                    break;
+                case "long": resolvedClass = long.class;
+                    break;
+                case "float": resolvedClass = float.class;
+                    break;
+                case "double": resolvedClass = double.class;
+                    break;
+                case "boolean": resolvedClass = boolean.class;
+                    break;
+                case "char": resolvedClass = char.class;
+                    break;
+                case "byte": resolvedClass = byte.class;
+                    break;
+                case "short": resolvedClass = short.class;
+                    break;
+                case "void": resolvedClass = void.class;
+                    break;
+                default: resolvedClass = Object.class;
+            }
+        } else {
+            resolvedClass = context.resolveClass(typeName);
+            if (resolvedClass == null) {
+                // 如果找不到类，使用 Object 作为默认类型
+                resolvedClass = Object.class;
+            }
+        }
+        
+        if (typeArguments != null && !typeArguments.isEmpty()) {
+            return ClassReferenceNode.generic(typeName, resolvedClass, isPrimitive, typeArguments, createLocation());
+        } else if (arrayDepth > 0) {
+            ClassReferenceNode elementType = ClassReferenceNode.of(typeName, resolvedClass, isPrimitive, createLocation());
+            return ClassReferenceNode.arrayOf(elementType, arrayDepth);
+        } else {
+            return ClassReferenceNode.of(typeName, resolvedClass, isPrimitive, createLocation());
+        }
     }
     
     /**
-     * 解析泛型参数字符串
-     * 例如: <String>, <String, Integer>, <?>, <? extends Number>
+     * 解析泛型类型参数
      */
-    private String parseGenericString() throws ParseException {
-        StringBuilder generic = new StringBuilder();
+    private List<ClassReferenceNode> parseGenericTypeArguments() throws ParseException {
+        List<ClassReferenceNode> typeArguments = new ArrayList<>();
         
         consume(TokenType.OPERATOR_LESS_THAN, "Expected '<'");
-        generic.append("<");
         
         int depth = 1;
         while (depth > 0 && !isAtEnd()) {
             if (check(TokenType.OPERATOR_GREATER_THAN)) {
                 advance();
                 depth--;
-                generic.append(">");
             } else if (check(TokenType.OPERATOR_LESS_THAN)) {
                 advance();
                 depth++;
-                generic.append("<");
+                typeArguments.add(parseTypeName());
             } else if (check(TokenType.DELIMITER_COMMA)) {
                 advance();
-                generic.append(", ");
-            } else if (check(TokenType.OPERATOR_MULTIPLY)) {
+            } else if (check(TokenType.OPERATOR_QUESTION)) {
                 advance();
-                generic.append("?");
+                ClassReferenceNode wildcard = ClassReferenceNode.of("?", Object.class, false, createLocation());
                 
                 if (match(TokenType.KEYWORD_EXTENDS)) {
-                    generic.append(" extends ");
-                    generic.append(parseTypeName());
+                    ClassReferenceNode bound = parseTypeName();
+                    typeArguments.add(ClassReferenceNode.of("? extends " + bound.getOriginalTypeName(), bound.getResolvedClass(), false, createLocation()));
                 } else if (match(TokenType.KEYWORD_SUPER)) {
-                    generic.append(" super ");
-                    generic.append(parseTypeName());
+                    ClassReferenceNode bound = parseTypeName();
+                    typeArguments.add(ClassReferenceNode.of("? super " + bound.getOriginalTypeName(), bound.getResolvedClass(), false, createLocation()));
+                } else {
+                    typeArguments.add(wildcard);
                 }
             } else {
-                generic.append(parseTypeName());
+                typeArguments.add(parseTypeName());
             }
         }
         
-        return generic.toString();
+        return typeArguments;
     }
     
     /**
@@ -1473,32 +1880,69 @@ public class Parser {
         List<ParameterNode> parameters = parseParameterList();
         consume(TokenType.DELIMITER_RIGHT_PAREN, "Expected ')' after constructor parameters");
         
-        consume(TokenType.DELIMITER_LEFT_BRACE, "Expected '{' before constructor body");
-        BlockNode body = parseBlock();
+        Set<String> paramNames = new HashSet<>();
+        if (parameters != null) {
+            for (ParameterNode p : parameters) {
+                paramNames.add(p.getParameterName());
+            }
+        }
+        context.enterMethod(paramNames);
         
-        return new ConstructorDeclarationNode(className, parameters, body, modifiers, location);
+        try {
+            consume(TokenType.DELIMITER_LEFT_BRACE, "Expected '{' before constructor body");
+            BlockNode body = parseBlock();
+            
+            return new ConstructorDeclarationNode(className, parameters, body, modifiers, location);
+        } finally {
+            context.exitMethod();
+        }
     }
     
     /**
      * 解析方法声明
      */
-    private MethodDeclarationNode parseMethodDeclaration(String methodName, String returnTypeName, ClassModifiers modifiers) throws ParseException {
+    private MethodDeclarationNode parseMethodDeclaration(String methodName, ClassReferenceNode returnType, ClassModifiers modifiers) throws ParseException {
         SourceLocation location = createLocation();
         
         consume(TokenType.DELIMITER_LEFT_PAREN, "Expected '(' after method name");
         List<ParameterNode> parameters = parseParameterList();
         consume(TokenType.DELIMITER_RIGHT_PAREN, "Expected ')' after method parameters");
         
-        consume(TokenType.DELIMITER_LEFT_BRACE, "Expected '{' before method body");
-        BlockNode body = parseBlock();
+        Set<String> paramNames = new HashSet<>();
+        if (parameters != null) {
+            for (ParameterNode p : parameters) {
+                paramNames.add(p.getParameterName());
+            }
+        }
         
-        return new MethodDeclarationNode(methodName, returnTypeName, parameters, body, modifiers, location);
+        // 处理抽象方法
+        if (modifiers.isAbstract()) {
+            consume(TokenType.DELIMITER_SEMICOLON, "Expected ';' after abstract method declaration");
+            return new MethodDeclarationNode(methodName, returnType, parameters, null, modifiers, location);
+        }
+        
+        context.enterMethod(paramNames);
+        
+        try {
+            if (match(TokenType.KEYWORD_THROWS)) {
+                do {
+                    parseTypeName();
+                } while (match(TokenType.DELIMITER_COMMA));
+            }
+            
+            consume(TokenType.DELIMITER_LEFT_BRACE, "Expected '{' before method body");
+            BlockNode body = parseBlock();
+            
+            return new MethodDeclarationNode(methodName, returnType, parameters, body, modifiers, location);
+        } finally {
+            context.exitMethod();
+        }
     }
     
     /**
      * 解析字段声明
      */
-    private FieldDeclarationNode parseFieldDeclaration(String fieldName, String typeName, ClassModifiers modifiers) throws ParseException {
+    private FieldDeclarationNode parseFieldDeclaration(String fieldName, ClassReferenceNode type, ClassModifiers modifiers) throws ParseException {
         SourceLocation location = createLocation();
         
         ASTNode initialValue = null;
@@ -1508,7 +1952,7 @@ public class Parser {
         
         consume(TokenType.DELIMITER_SEMICOLON, "Expected ';' after field declaration");
         
-        return new FieldDeclarationNode(fieldName, typeName, initialValue, modifiers, location);
+        return new FieldDeclarationNode(fieldName, type, initialValue, modifiers, location);
     }
     
     /**
@@ -1519,9 +1963,9 @@ public class Parser {
         
         if (!check(TokenType.DELIMITER_RIGHT_PAREN)) {
             do {
-                String typeName = parseTypeName();
+                ClassReferenceNode type = parseTypeName();
                 String paramName = consume(TokenType.IDENTIFIER, "Expected parameter name").getText();
-                parameters.add(new ParameterNode(paramName, typeName, createLocation()));
+                parameters.add(new ParameterNode(paramName, type, createLocation()));
             } while (match(TokenType.DELIMITER_COMMA));
         }
         
@@ -2105,8 +2549,11 @@ public class Parser {
                 expr = parseSafeMemberAccess(expr);
                 matched = true;
             } else if (match(TokenType.DELIMITER_LEFT_PAREN)) {
-                expr = parseMethodCall(expr);
-                matched = true;
+                // 如果已经是方法调用节点，不再解析
+                if (!(expr instanceof MethodCallNode)) {
+                    expr = parseMethodCall(expr);
+                    matched = true;
+                }
             } else if (match(TokenType.DELIMITER_LEFT_BRACKET)) {
                 expr = parseArrayAccess(expr);
                 matched = true;
@@ -2201,11 +2648,11 @@ public class Parser {
         }
         
         if (match(TokenType.KEYWORD_THIS)) {
-            return new VariableNode("this", createLocation());
+            return createVariableNode("this", createLocation());
         }
         
         if (match(TokenType.KEYWORD_SUPER)) {
-            return new VariableNode("super", createLocation());
+            return createVariableNode("super", createLocation());
         }
         
         if (check(TokenType.KEYWORD_INT) || check(TokenType.KEYWORD_LONG) ||
@@ -2216,7 +2663,7 @@ public class Parser {
             Token token = advance();
             String typeName = token.getText();
             Class<?> primitiveClass = getPrimitiveClass(typeName);
-            return new ClassReferenceNode(new GenericType(primitiveClass), token.getLocation());
+            return ClassReferenceNode.of(typeName, primitiveClass, true, token.getLocation());
         }
         
         if (check(TokenType.DELIMITER_LEFT_BRACKET)) {
@@ -2248,7 +2695,7 @@ public class Parser {
                 int lastValidPosition = position;
                 
                 String simpleResolved = resolveClassName(token.getText());
-                if (simpleResolved != null) {
+                if (simpleResolved != null && !context.isClassDeclared(token.getText())) {
                     lastValidClassName = token.getText();
                     lastValidPosition = position;
                 }
@@ -2270,7 +2717,7 @@ public class Parser {
                     }
                 }
                 
-                if (lastValidClassName != null) {
+                if (lastValidClassName != null && !context.isClassDeclared(token.getText())) {
                     position = lastValidPosition;
                     
                     if (check(TokenType.OPERATOR_LESS_THAN)) {
@@ -2278,11 +2725,26 @@ public class Parser {
                         StringBuilder genericType = new StringBuilder(lastValidClassName).append("<");
                         parseTypeArguments(genericType);
                         releasePosition();
-                        return new ClassReferenceNode(resolveGenericType(genericType.toString()), token.getLocation());
+                        Class<?> resolvedClass = context.resolveClass(genericType.toString());
+                        if (resolvedClass == null) {
+                            resolvedClass = Object.class;
+                        }
+                        return ClassReferenceNode.of(genericType.toString(), resolvedClass, false, token.getLocation());
                     }
                     
                     releasePosition();
-                    return new ClassReferenceNode(resolveGenericType(lastValidClassName), token.getLocation());
+                    Class<?> resolvedClass = context.resolveClass(lastValidClassName);
+                    if (resolvedClass == null) {
+                        resolvedClass = Object.class;
+                    }
+                    return ClassReferenceNode.of(lastValidClassName, resolvedClass, false, token.getLocation());
+                }
+                
+                // 检查是否是已声明的类
+                if (context.isClassDeclared(token.getText())) {
+                    // 不直接返回，继续解析后面的成员访问
+                    restorePosition();
+                    return new VariableNode(token.getText(), token.getLocation());
                 }
                 
                 restorePosition();
@@ -2463,7 +2925,81 @@ public class Parser {
         
         consume(TokenType.DELIMITER_RIGHT_PAREN, "Expected ')' after constructor arguments");
         
+        if (check(TokenType.DELIMITER_LEFT_BRACE)) {
+            return parseAnonymousClass(genericType, arguments, location);
+        }
+        
         return new ConstructorCallNode(genericType, arguments, null, location);
+    }
+    
+    /**
+     * 解析匿名内部类
+     * 语法: new ClassName(args) { field/method declarations }
+     */
+    private ConstructorCallNode parseAnonymousClass(GenericType superType, List<ASTNode> arguments, 
+                                                      SourceLocation location) throws ParseException {
+        String superClassName = superType.getTypeName();
+        Class<?> resolvedSuperClass = superType.getRawType() != null ? 
+            superType.getRawType() : null;
+        String anonymousClassName = superClassName + "$Anonymous" + System.nanoTime();
+        
+        consume(TokenType.DELIMITER_LEFT_BRACE, "Expected '{' for anonymous class body");
+        
+        context.enterClass(anonymousClassName);
+        context.addField("this$0");
+        
+        try {
+            if (resolvedSuperClass == null) {
+                // 如果找不到父类，使用 Object 作为默认父类
+                resolvedSuperClass = Object.class;
+            }
+            ClassReferenceNode superClassRef = ClassReferenceNode.of(superClassName, resolvedSuperClass, false, location);
+            ClassDeclarationNode classDecl = new ClassDeclarationNode(
+                anonymousClassName, superClassRef, new ArrayList<>(), location);
+            
+            while (!check(TokenType.DELIMITER_RIGHT_BRACE) && !isAtEnd()) {
+                List<AnnotationNode> memberAnnotations = parseAnnotations();
+                ClassModifiers modifiers = parseModifiers();
+                
+                if (check(TokenType.IDENTIFIER) && checkNext(TokenType.DELIMITER_LEFT_PAREN)) {
+                    String constructorName = consume(TokenType.IDENTIFIER, "Expected constructor name").getText();
+                    if (!constructorName.equals(anonymousClassName)) {
+                        throw error("Constructor name must match class name in anonymous class");
+                    }
+                    ConstructorDeclarationNode constructor = parseConstructorDeclaration(anonymousClassName, modifiers);
+                    for (AnnotationNode annotation : memberAnnotations) {
+                        constructor.addAnnotation(annotation);
+                    }
+                    classDecl.addConstructor(constructor);
+                } else if (isTypeStart()) {
+                    ClassReferenceNode type = parseTypeName();
+                    String memberName = consume(TokenType.IDENTIFIER, "Expected member name").getText();
+                    
+                    if (check(TokenType.DELIMITER_LEFT_PAREN)) {
+                        MethodDeclarationNode method = parseMethodDeclaration(memberName, type, modifiers);
+                        for (AnnotationNode annotation : memberAnnotations) {
+                            method.addAnnotation(annotation);
+                        }
+                        classDecl.addMethod(method);
+                    } else {
+                        FieldDeclarationNode field = parseFieldDeclaration(memberName, type, modifiers);
+                        for (AnnotationNode annotation : memberAnnotations) {
+                            field.addAnnotation(annotation);
+                        }
+                        classDecl.addField(field);
+                        context.addField(memberName);
+                    }
+                } else {
+                    throw error("Unexpected token in anonymous class body");
+                }
+            }
+            
+            consume(TokenType.DELIMITER_RIGHT_BRACE, "Expected '}' at end of anonymous class");
+            
+            return new ConstructorCallNode(superType, arguments, classDecl, location);
+        } finally {
+            context.exitClass();
+        }
     }
     
     /**
@@ -2527,8 +3063,15 @@ public class Parser {
         if (check(TokenType.KEYWORD_CLASS)) {
             advance();
             if (target instanceof ClassReferenceNode classRef) {
-                Class<?> clazz = classRef.getType().getRawType();
-                return new LiteralNode(clazz, Class.class, location);
+                Class<?> clazz = classRef.getResolvedClass();
+                if (clazz != null) {
+                    return new LiteralNode(clazz, Class.class, location);
+                }
+                throw new ParseException(
+                    "Cannot resolve class: " + classRef.getTypeName(),
+                    location,
+                    ErrorCode.PARSE_INVALID_SYNTAX
+                );
             } else if (target instanceof VariableNode) {
                 String varName = ((VariableNode) target).getName();
                 Class<?> clazz = context.getClassFinder().findClassWithImports(varName, context.getClassLoader(), context.getImports());
@@ -2554,7 +3097,27 @@ public class Parser {
                     } while (match(TokenType.DELIMITER_COMMA));
                 }
                 consume(TokenType.DELIMITER_RIGHT_PAREN, "Expected ')' after constructor arguments");
-                return new ConstructorCallNode(classRef.getType(), arguments, null, location);
+                // 尝试解析类引用为实际的 Class 对象
+                try {
+                    Class<?> clazz = context.resolveClass(classRef.getTypeName());
+                    if (clazz != null) {
+                        return new ConstructorCallNode(new GenericType(clazz), arguments, null, location);
+                    }
+                } catch (Exception e) {
+                    // 解析失败，抛出异常
+                    throw new ParseException(
+                        "Cannot resolve class: " + classRef.getTypeName(),
+                        location,
+                        ErrorCode.PARSE_INVALID_SYNTAX
+                    );
+                }
+                
+                // 如果无法解析类，抛出异常
+                throw new ParseException(
+                    "Cannot resolve class: " + classRef.getTypeName(),
+                    location,
+                    ErrorCode.PARSE_INVALID_SYNTAX
+                );
             } else if (target instanceof VariableNode) {
                 String varName = ((VariableNode) target).getName();
                 Class<?> clazz = context.getClassFinder().findClassWithImports(varName, context.getClassLoader(), context.getImports());
@@ -2580,60 +3143,70 @@ public class Parser {
         String memberName = consume(TokenType.IDENTIFIER, "Expected member name").getText();
         
         if (target instanceof ClassReferenceNode classRef) {
-            String nestedClassName = classRef.getType().getTypeName() + "." + memberName;
+            // 首先检查是否是方法调用（带括号）
+            if (check(TokenType.DELIMITER_LEFT_PAREN)) {
+                advance();
+                List<ASTNode> arguments = new ArrayList<>();
+                if (!check(TokenType.DELIMITER_RIGHT_PAREN)) {
+                    do {
+                        arguments.add(parseExpression());
+                    } while (match(TokenType.DELIMITER_COMMA));
+                }
+                consume(TokenType.DELIMITER_RIGHT_PAREN, "Expected ')' after method arguments");
+                return new MethodCallNode(target, memberName, arguments, location);
+            }
+            
+            String nestedClassName = classRef.getTypeName() + "." + memberName;
             
             String resolved = resolveClassName(nestedClassName);
             if (resolved != null) {
-                return new ClassReferenceNode(resolveGenericType(nestedClassName), location);
+                Class<?> resolvedClass = context.resolveClass(resolved);
+                if (resolvedClass == null) {
+                    resolvedClass = Object.class;
+                }
+                return ClassReferenceNode.of(nestedClassName, resolvedClass, false, location);
             }
             
-            String innerClassName = classRef.getType().getTypeName() + "$" + memberName;
+            String innerClassName = classRef.getTypeName() + "$" + memberName;
             String resolvedInner = resolveClassName(innerClassName);
             if (resolvedInner != null) {
-                return new ClassReferenceNode(resolveGenericType(nestedClassName), location);
+                Class<?> resolvedClass = context.resolveClass(resolvedInner);
+                if (resolvedClass == null) {
+                    resolvedClass = Object.class;
+                }
+                return ClassReferenceNode.of(nestedClassName, resolvedClass, false, location);
             }
             
             try {
-                Class<?> clazz = ClassResolver.findClassOrFail(classRef.getType().getTypeName(), classLoader);
-                try {
-                    clazz.getDeclaredField(memberName);
-                    FieldAccessNode fieldAccess = new FieldAccessNode(target, memberName, location);
-                    
-                    if (check(TokenType.DELIMITER_LEFT_PAREN)) {
-                        advance();
-                        List<ASTNode> arguments = new ArrayList<>();
-                        if (!check(TokenType.DELIMITER_RIGHT_PAREN)) {
-                            do {
-                                arguments.add(parseExpression());
-                            } while (match(TokenType.DELIMITER_COMMA));
-                        }
-                        consume(TokenType.DELIMITER_RIGHT_PAREN, "Expected ')' after method arguments");
-                        return new MethodCallNode(fieldAccess, memberName, arguments, location);
+                String className = classRef.getTypeName();
+                Class<?> clazz = ClassResolver.findClassWithImports(className, classLoader, context.getImports());
+                
+                if (clazz != null) {
+                    try {
+                        clazz.getDeclaredField(memberName);
+                        return new FieldAccessNode(target, memberName, location);
+                    } catch (NoSuchFieldException e) {
+                        return new FieldAccessNode(target, memberName, location);
                     }
-                    
-                    return fieldAccess;
-                } catch (NoSuchFieldException e) {
-                    // 不是字段，继续处理
                 }
-            } catch (ClassNotFoundException e) {
-                // 类不存在，继续处理
+            } catch (Exception e) {
             }
+            return new FieldAccessNode(target, memberName, location);
         }
         
+        // 检查是否是方法调用（带括号）
         if (check(TokenType.DELIMITER_LEFT_PAREN)) {
             advance();
             List<ASTNode> arguments = new ArrayList<>();
-            
             if (!check(TokenType.DELIMITER_RIGHT_PAREN)) {
                 do {
                     arguments.add(parseExpression());
                 } while (match(TokenType.DELIMITER_COMMA));
             }
-            
             consume(TokenType.DELIMITER_RIGHT_PAREN, "Expected ')' after method arguments");
-            
             return new MethodCallNode(target, memberName, arguments, location);
         } else {
+            // 字段访问
             return new FieldAccessNode(target, memberName, location);
         }
     }
@@ -2675,8 +3248,12 @@ public class Parser {
         consume(TokenType.DELIMITER_RIGHT_PAREN, "Expected ')' after method arguments");
         
         if (target instanceof VariableNode) {
-            String functionName = ((VariableNode) target).getName();
-            return new FunctionCallNode(functionName, arguments, location);
+            String variableName = ((VariableNode) target).getName();
+            if ("super".equals(variableName)) {
+                return new SuperMethodCallNode("<init>", arguments, location);
+            } else {
+                return new FunctionCallNode(variableName, arguments, location);
+            }
         }
         String methodName = null;
         if (target instanceof FieldAccessNode) {
@@ -2839,6 +3416,70 @@ public class Parser {
         return tokens.get(position + 1).getType() == TokenType.OPERATOR_DOT &&
                position + 2 < tokens.size() &&
                tokens.get(position + 2).getType() == TokenType.KEYWORD_CLASS;
+    }
+    
+    private boolean isGenericVariableDeclaration() {
+        if (!check(TokenType.IDENTIFIER)) {
+            return false;
+        }
+        if (position + 1 >= tokens.size() || tokens.get(position + 1).getType() != TokenType.OPERATOR_LESS_THAN) {
+            return false;
+        }
+        int depth = 0;
+        int pos = position + 1;
+        while (pos < tokens.size()) {
+            TokenType type = tokens.get(pos).getType();
+            if (type == TokenType.OPERATOR_LESS_THAN) {
+                depth++;
+            } else if (type == TokenType.OPERATOR_GREATER_THAN) {
+                depth--;
+                if (depth == 0) {
+                    int afterGeneric = pos + 1;
+                    if (afterGeneric < tokens.size()) {
+                        TokenType nextType = tokens.get(afterGeneric).getType();
+                        return nextType == TokenType.IDENTIFIER ||
+                               nextType == TokenType.KEYWORD_INT || nextType == TokenType.KEYWORD_LONG ||
+                               nextType == TokenType.KEYWORD_FLOAT || nextType == TokenType.KEYWORD_DOUBLE ||
+                               nextType == TokenType.KEYWORD_BOOLEAN || nextType == TokenType.KEYWORD_CHAR ||
+                               nextType == TokenType.KEYWORD_BYTE || nextType == TokenType.KEYWORD_SHORT;
+                    }
+                    return false;
+                }
+            } else if (type == TokenType.OPERATOR_RIGHT_SHIFT) {
+                depth -= 2;
+                if (depth == 0) {
+                    int afterGeneric = pos + 1;
+                    if (afterGeneric < tokens.size()) {
+                        TokenType nextType = tokens.get(afterGeneric).getType();
+                        return nextType == TokenType.IDENTIFIER ||
+                               nextType == TokenType.KEYWORD_INT || nextType == TokenType.KEYWORD_LONG ||
+                               nextType == TokenType.KEYWORD_FLOAT || nextType == TokenType.KEYWORD_DOUBLE ||
+                               nextType == TokenType.KEYWORD_BOOLEAN || nextType == TokenType.KEYWORD_CHAR ||
+                               nextType == TokenType.KEYWORD_BYTE || nextType == TokenType.KEYWORD_SHORT;
+                    }
+                    return false;
+                }
+            } else if (type == TokenType.OPERATOR_UNSIGNED_RIGHT_SHIFT) {
+                depth -= 3;
+                if (depth == 0) {
+                    int afterGeneric = pos + 1;
+                    if (afterGeneric < tokens.size()) {
+                        TokenType nextType = tokens.get(afterGeneric).getType();
+                        return nextType == TokenType.IDENTIFIER ||
+                               nextType == TokenType.KEYWORD_INT || nextType == TokenType.KEYWORD_LONG ||
+                               nextType == TokenType.KEYWORD_FLOAT || nextType == TokenType.KEYWORD_DOUBLE ||
+                               nextType == TokenType.KEYWORD_BOOLEAN || nextType == TokenType.KEYWORD_CHAR ||
+                               nextType == TokenType.KEYWORD_BYTE || nextType == TokenType.KEYWORD_SHORT;
+                    }
+                    return false;
+                }
+            } else if (type == TokenType.DELIMITER_SEMICOLON || type == TokenType.DELIMITER_LEFT_PAREN ||
+                       type == TokenType.OPERATOR_ASSIGN || type == TokenType.DELIMITER_RIGHT_BRACE) {
+                return false;
+            }
+            pos++;
+        }
+        return false;
     }
     
     private Class<?> getPrimitiveClass(String typeName) {

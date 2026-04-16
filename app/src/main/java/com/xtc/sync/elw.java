@@ -2,7 +2,7 @@ package com.xtc.sync;
 
 import android.text.TextUtils;
 
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 
 import java.util.Locale;
 

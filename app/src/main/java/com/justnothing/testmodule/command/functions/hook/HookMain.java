@@ -98,7 +98,7 @@ public class HookMain extends CommandBase {
 
                 
                 (Submodule hook %s)
-                """, DataBridge.getCodebaseDirectory().getAbsolutePath(), CMD_HOOK_VER);
+                """, DataBridge.getScriptsDirectory().getAbsolutePath(), CMD_HOOK_VER);
     }
 
     @Override

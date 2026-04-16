@@ -14,6 +14,7 @@ import com.justnothing.testmodule.command.functions.alias.AliasMain;
 import com.justnothing.testmodule.command.functions.hook.HookMain;
 import com.justnothing.testmodule.command.functions.memory.MemoryMain;
 import com.justnothing.testmodule.command.functions.nativecmd.NativeMain;
+import com.justnothing.testmodule.command.functions.network.NetworkMain;
 import com.justnothing.testmodule.command.functions.packages.PackagesMain;
 import com.justnothing.testmodule.command.functions.performance.PerformanceMain;
 import com.justnothing.testmodule.command.functions.script.ScriptExecutorMain;
@@ -21,6 +22,7 @@ import com.justnothing.testmodule.command.functions.system.SystemMain;
 import com.justnothing.testmodule.command.functions.threads.ThreadsMain;
 import com.justnothing.testmodule.command.functions.trace.TraceMain;
 import com.justnothing.testmodule.command.functions.watch.WatchMain;
+import com.justnothing.testmodule.command.functions.tests.SandboxTestMain;
 import com.justnothing.testmodule.command.functions.CommandBase;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.output.StringBuilderCollector;
@@ -29,7 +31,7 @@ import com.justnothing.testmodule.command.output.SystemOutputRedirector;
 import com.justnothing.testmodule.command.utils.ArgumentGroup;
 import com.justnothing.testmodule.command.utils.CommandArgumentParser;
 import com.justnothing.testmodule.utils.reflect.ClassLoaderManager;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -45,7 +47,7 @@ public class CommandExecutor {
         }
     }
 
-    public static final CmdExcLogger logger = new CmdExcLogger();
+    private static final CmdExcLogger logger = new CmdExcLogger();
 
     private static final Map<String, CommandBase> commandRegistry = new ConcurrentHashMap<>();
 
@@ -71,6 +73,7 @@ public class CommandExecutor {
         registerCommand("native", new NativeMain());
         registerCommand("performance", new PerformanceMain());
         registerCommand("alias", new AliasMain());
+        registerCommand("network", new NetworkMain());
         
         BytecodeMain bytecodeExecutor = new BytecodeMain("bytecode");
         registerCommand("binfo", bytecodeExecutor);
@@ -108,6 +111,8 @@ public class CommandExecutor {
         
         registerCommand("output_test", new OutputExampleMain());
         registerCommand("interactive_test", new InteractiveExampleMain());
+        
+        registerCommand("sandboxtest", new SandboxTestMain());
     }
 
     private static void registerCommand(String name, CommandBase command) {
@@ -207,13 +212,18 @@ public class CommandExecutor {
                 logger.info("命令执行完毕");
                 output.close();
             }
-        } catch (Exception e) {
-            logger.error("执行命令异常", e);
+        } catch (Throwable t) {
+            logger.error("执行命令异常", t);
             output.println("\n===============================================", Colors.RED);
             output.println("执行命令出现严重错误...", Colors.RED);
-            output.printf("错误信息: [%s] %s", e.getClass().getSimpleName(), e.getMessage());
+            output.print("（你现在看到的是命令执行基类的错误报告, 大概率是命令执行爆掉了或者命令内部", Colors.AQUA);
+            output.print("出现了Error而不是Exception!", Colors.YELLOW);
+            output.println("）", Colors.YELLOW);
+            output.print("错误信息: ", Colors.ORANGE);
+            output.printf(Colors.YELLOW, "[%s] ", t.getClass().getSimpleName());
+            output.println(t.getMessage(), Colors.GRAY);
             output.println("堆栈追踪:", Colors.GRAY);
-            output.printStackTrace(e, Colors.GRAY);
+            output.printStackTrace(t, Colors.GRAY);
             output.println("===============================================", Colors.RED);
             output.close();
         } finally {
@@ -332,49 +342,24 @@ public class CommandExecutor {
             
             可用命令:
               help                              - 显示所有命令的帮助或特定命令的帮助
+              alias                             - 管理命令别名
+              packages                          - 列出已知包名
+              export-context                    - 导出设备xtchttp上下文信息
+              bsh                               - 通过BeanShell执行代码
+              script                            - 脚本管理系统
+              hook                              - 动态Hook注入器
+              class                             - 查看类信息
+              reflect                           - 使用反射访问和操作类的私有成员
+              breakpoint                        - 设置和管理断点
               watch                             - 监控字段或方法的变化
               trace                             - 跟踪方法调用链
-              profile                           - 性能分析
-              export-context                    - 导出设备xtchttp上下文信息
-              threads                           - 列出所有线程及其状态
-              system                            - 显示系统信息
-              breakpoint                        - 设置和管理断点
-              packages                          - 列出已知包名
-              hook                              - 动态Hook注入器
-              reflect                           - 使用反射访问和操作类的私有成员
               native                            - 查看和调试Native代码
-              alias                             - 管理命令别名
-
+              system                            - 显示系统信息
+              profile                           - 性能分析
+              threads                           - 列出所有线程及其状态
               bytecode                          - 查看和分析Java字节码 (未正式使用, 很可能实现不了)
-                binfo                           - 查看类的字节码信息 (快捷方式)
-                banalyze                        - 分析类的字节码结构 (快捷方式)
-                bdecompile                      - 反编译为Java代码 (快捷方式)
-
               memory                            - 显示详细内存使用情况
-                minfo                           - 显示内存信息 (快捷方式)
-                mgc                             - 执行垃圾回收 (快捷方式)
-                mdump                           - 导出堆信息 (快捷方式)
-
-              bsh                               - 通过BeanShell执行代码
-                bvars                           - 显示BeanShell执行器的变量
-                bclear                          - 清空BeanShell执行器的变量
-
-              class                            - 查看类信息
-                cinfo                          - 查看类的详细信息 (快捷方式)
-                cgraph                         - 生成类继承图 (快捷方式)
-                canalyze                       - 分析类的字段和方法 (快捷方式)
-                clist                          - 列出一个类的所有方法 (快捷方式)
-                cinvoke                        - 调用类中的方法 (快捷方式)
-                cfield                         - 查看或操作字段 (快捷方式)
-                csearch                        - 搜索类、方法、字段或注解 (快捷方式)
-                cconstructor                   - 创建类的实例 (快捷方式)
-                creflect                      - 使用反射访问和操作类的私有成员 (快捷方式)
-            
-              script                            - 脚本管理系统
-                srun                            - 快捷执行脚本代码
-                sinteractive                    - 进入交互式脚本执行模式
-                sclear                          - 清空脚本解释器的变量
-                svars                           - 显示脚本解释器的变量
+              network                           - 进行网络调试
 
             测试类命令:
               output_test                       - 对命令行输出进行测试

@@ -1,53 +1,10 @@
 package com.justnothing.javainterpreter.evaluator;
 
+import com.justnothing.javainterpreter.api.ClassResolver;
 import com.justnothing.javainterpreter.ast.ASTNode;
 import com.justnothing.javainterpreter.ast.GenericType;
 import com.justnothing.javainterpreter.ast.SourceLocation;
-import com.justnothing.javainterpreter.ast.nodes.ArrayAccessNode;
-import com.justnothing.javainterpreter.ast.nodes.ArrayAssignmentNode;
-import com.justnothing.javainterpreter.ast.nodes.ArrayLiteralNode;
-import com.justnothing.javainterpreter.ast.nodes.AssignmentNode;
-import com.justnothing.javainterpreter.ast.nodes.AsyncNode;
-import com.justnothing.javainterpreter.ast.nodes.AwaitNode;
-import com.justnothing.javainterpreter.ast.nodes.BinaryOpNode;
-import com.justnothing.javainterpreter.ast.nodes.BlockNode;
-import com.justnothing.javainterpreter.ast.nodes.CaseNode;
-import com.justnothing.javainterpreter.ast.nodes.CastNode;
-import com.justnothing.javainterpreter.ast.nodes.CatchClause;
-import com.justnothing.javainterpreter.ast.nodes.ClassDeclarationNode;
-import com.justnothing.javainterpreter.ast.nodes.ClassReferenceNode;
-import com.justnothing.javainterpreter.ast.nodes.ConditionalAssignNode;
-import com.justnothing.javainterpreter.ast.nodes.ConstructorCallNode;
-import com.justnothing.javainterpreter.ast.nodes.DeleteNode;
-import com.justnothing.javainterpreter.ast.nodes.DoWhileNode;
-import com.justnothing.javainterpreter.ast.nodes.FieldAccessNode;
-import com.justnothing.javainterpreter.ast.nodes.FieldAssignmentNode;
-import com.justnothing.javainterpreter.ast.nodes.ForEachNode;
-import com.justnothing.javainterpreter.ast.nodes.ForNode;
-import com.justnothing.javainterpreter.ast.nodes.FunctionCallNode;
-import com.justnothing.javainterpreter.ast.nodes.IfNode;
-import com.justnothing.javainterpreter.ast.nodes.ImportNode;
-import com.justnothing.javainterpreter.ast.nodes.InstanceofNode;
-import com.justnothing.javainterpreter.ast.nodes.InterpolatedStringNode;
-import com.justnothing.javainterpreter.ast.nodes.LambdaNode;
-import com.justnothing.javainterpreter.ast.nodes.LiteralNode;
-import com.justnothing.javainterpreter.ast.nodes.MapLiteralNode;
-import com.justnothing.javainterpreter.ast.nodes.MethodCallNode;
-import com.justnothing.javainterpreter.ast.nodes.MethodReferenceNode;
-import com.justnothing.javainterpreter.ast.nodes.NewArrayNode;
-import com.justnothing.javainterpreter.ast.nodes.NullCoalescingAssignNode;
-import com.justnothing.javainterpreter.ast.nodes.PipelineNode;
-import com.justnothing.javainterpreter.ast.nodes.ResourceDeclaration;
-import com.justnothing.javainterpreter.ast.nodes.ReturnNode;
-import com.justnothing.javainterpreter.ast.nodes.SafeFieldAccessNode;
-import com.justnothing.javainterpreter.ast.nodes.SafeMethodCallNode;
-import com.justnothing.javainterpreter.ast.nodes.SwitchNode;
-import com.justnothing.javainterpreter.ast.nodes.TernaryNode;
-import com.justnothing.javainterpreter.ast.nodes.ThrowNode;
-import com.justnothing.javainterpreter.ast.nodes.TryNode;
-import com.justnothing.javainterpreter.ast.nodes.UnaryOpNode;
-import com.justnothing.javainterpreter.ast.nodes.VariableNode;
-import com.justnothing.javainterpreter.ast.nodes.WhileNode;
+import com.justnothing.javainterpreter.ast.nodes.*;
 import com.justnothing.javainterpreter.exception.ErrorCode;
 import com.justnothing.javainterpreter.exception.EvaluationException;
 import com.justnothing.javainterpreter.exception.ReturnException;
@@ -56,6 +13,7 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.Constructor;
 import java.util.Arrays;
@@ -85,198 +43,33 @@ import java.util.concurrent.Executors;
  * @since 1.0.0
  */
 public class ASTEvaluator {
+
+    private static final EvaluatorRegistry defaultRegistry = EvaluatorRegistry.getDefault();
     
     public static Object evaluate(ASTNode node, ExecutionContext context) throws EvaluationException {
-        if (node == null) {
-            return null;
-        }
-        
-        if (node instanceof BlockNode) {
-            return evaluateBlock((BlockNode) node, context);
-        }
-        
-        if (node instanceof LiteralNode) {
-            return evaluateLiteral((LiteralNode) node);
-        }
-        
-        if (node instanceof InterpolatedStringNode) {
-            return evaluateInterpolatedString((InterpolatedStringNode) node, context);
-        }
-        
-        if (node instanceof VariableNode) {
-            return evaluateVariable((VariableNode) node, context);
-        }
-        
-        if (node instanceof BinaryOpNode) {
-            return evaluateBinaryOp((BinaryOpNode) node, context);
-        }
-        
-        if (node instanceof UnaryOpNode) {
-            return evaluateUnaryOp((UnaryOpNode) node, context);
-        }
-        
-        if (node instanceof AssignmentNode) {
-            return evaluateAssignment((AssignmentNode) node, context);
-        }
-        
-        if (node instanceof ConditionalAssignNode) {
-            return evaluateConditionalAssign((ConditionalAssignNode) node, context);
-        }
-        
-        if (node instanceof NullCoalescingAssignNode) {
-            return evaluateNullCoalescingAssign((NullCoalescingAssignNode) node, context);
-        }
-        
-        if (node instanceof FieldAssignmentNode) {
-            return evaluateFieldAssignment((FieldAssignmentNode) node, context);
-        }
-        
-        if (node instanceof ArrayAssignmentNode) {
-            return evaluateArrayAssignment((ArrayAssignmentNode) node, context);
-        }
-        
-        if (node instanceof MethodCallNode) {
-            return evaluateMethodCall((MethodCallNode) node, context);
-        }
-        
-        if (node instanceof FunctionCallNode) {
-            return evaluateFunctionCall((FunctionCallNode) node, context);
-        }
-        
-        if (node instanceof FieldAccessNode) {
-            return evaluateFieldAccess((FieldAccessNode) node, context);
-        }
-        
-        if (node instanceof SafeFieldAccessNode) {
-            return evaluateSafeFieldAccess((SafeFieldAccessNode) node, context);
-        }
-        
-        if (node instanceof SafeMethodCallNode) {
-            return evaluateSafeMethodCall((SafeMethodCallNode) node, context);
-        }
-        
-        if (node instanceof ArrayAccessNode) {
-            return evaluateArrayAccess((ArrayAccessNode) node, context);
-        }
-        
-        if (node instanceof ClassReferenceNode) {
-            return evaluateClassReference((ClassReferenceNode) node, context);
-        }
-        
-        if (node instanceof NewArrayNode) {
-            return evaluateNewArray((NewArrayNode) node, context);
-        }
-        
-        if (node instanceof ArrayLiteralNode) {
-            return evaluateArrayLiteral((ArrayLiteralNode) node, context);
-        }
-        
-        if (node instanceof MapLiteralNode) {
-            return evaluateMapLiteral((MapLiteralNode) node, context);
-        }
-        
-        if (node instanceof IfNode) {
-            return evaluateIf((IfNode) node, context);
-        }
-        
-        if (node instanceof WhileNode) {
-            return evaluateWhile((WhileNode) node, context);
-        }
-        
-        if (node instanceof DoWhileNode) {
-            return evaluateDoWhile((DoWhileNode) node, context);
-        }
-        
-        if (node instanceof ForNode) {
-            return evaluateFor((ForNode) node, context);
-        }
-        
-        if (node instanceof ForEachNode) {
-            return evaluateForEach((ForEachNode) node, context);
-        }
-        
-        if (node instanceof TernaryNode) {
-            return evaluateTernary((TernaryNode) node, context);
-        }
-        
-        if (node instanceof PipelineNode) {
-            return evaluatePipeline((PipelineNode) node, context);
-        }
-        
-        if (node instanceof InstanceofNode) {
-            return evaluateInstanceof((InstanceofNode) node, context);
-        }
-        
-        if (node instanceof CastNode) {
-            return evaluateCast((CastNode) node, context);
-        }
-        
-        if (node instanceof LambdaNode) {
-            return evaluateLambda((LambdaNode) node, context);
-        }
-        
-        if (node instanceof ReturnNode) {
-            return evaluateReturn((ReturnNode) node, context);
-        }
-        
-        if (node instanceof MethodReferenceNode) {
-            return evaluateMethodReference((MethodReferenceNode) node, context);
-        }
-        
-        if (node instanceof TryNode) {
-            return evaluateTry((TryNode) node, context);
-        }
-        
-        if (node instanceof ThrowNode) {
-            return evaluateThrow((ThrowNode) node, context);
-        }
-        
-        if (node instanceof SwitchNode) {
-            return evaluateSwitch((SwitchNode) node, context);
-        }
-        
-        if (node instanceof ImportNode importNode) {
-            context.addImport(importNode.getPackageName());
-            return null;
-        }
-        
-        if (node instanceof DeleteNode) {
-            return evaluateDelete((DeleteNode) node, context);
-        }
-        
-        if (node instanceof ClassDeclarationNode) {
-            return evaluateClassDeclaration((ClassDeclarationNode) node, context);
-        }
-        
-        if (node instanceof ConstructorCallNode) {
-            return evaluateConstructorCall((ConstructorCallNode) node, context);
-        }
-        
-        if (node instanceof AsyncNode) {
-            return evaluateAsync((AsyncNode) node, context);
-        }
-        
-        if (node instanceof AwaitNode) {
-            return evaluateAwait((AwaitNode) node, context);
-        }
-        
-        throw new EvaluationException(
-            "Unsupported AST node type: " + node.getClass().getSimpleName(),
-            node.getLocation(),
-            ErrorCode.EVAL_INVALID_OPERATION
-        );
+        return defaultRegistry.evaluate(node, context);
     }
-    
-    private static Object evaluateBlock(BlockNode node, ExecutionContext context) throws EvaluationException {
+
+    public static Object evaluateBlock(BlockNode node, ExecutionContext context) throws EvaluationException {
         Object result = null;
         boolean isGlobalScope = context.getScopeManager().getCurrentLevel() == 1;
+        
+        // 首先编译所有的类声明，确保它们都已经注册到 context 中
+        List<ASTNode> nonClassStatements = new ArrayList<>();
+        for (ASTNode stmt : node.getStatements()) {
+            if (stmt instanceof ClassDeclarationNode) {
+                evaluateClassDeclaration((ClassDeclarationNode) stmt, context);
+            } else {
+                nonClassStatements.add(stmt);
+            }
+        }
         
         if (!isGlobalScope) {
             context.getScopeManager().enterScope();
         }
         
         try {
-            for (ASTNode stmt : node.getStatements()) {
+            for (ASTNode stmt : nonClassStatements) {
                 result = evaluate(stmt, context);
             }
         } catch (ReturnException e) {
@@ -293,11 +86,11 @@ public class ASTEvaluator {
         return result;
     }
     
-    private static Object evaluateLiteral(LiteralNode node) {
+    public static Object evaluateLiteral(LiteralNode node) {
         return node.getValue();
     }
     
-    private static Object evaluateInterpolatedString(InterpolatedStringNode node, ExecutionContext context) throws EvaluationException {
+    public static Object evaluateInterpolatedString(InterpolatedStringNode node, ExecutionContext context) throws EvaluationException {
         StringBuilder sb = new StringBuilder();
         for (InterpolatedStringNode.Part part : node.getParts()) {
             if (part.isExpression()) {
@@ -310,16 +103,54 @@ public class ASTEvaluator {
         return sb.toString();
     }
     
-    private static Object evaluateVariable(VariableNode node, ExecutionContext context) throws EvaluationException {
+    public static Object evaluateVariable(VariableNode node, ExecutionContext context) throws EvaluationException {
         String varName = node.getName();
-        ScopeManager.Variable variable = context.getScopeManager().getVariable(varName);
-        if (variable == null) {
-            throw new EvaluationException("Undefined variable: " + varName, node.getLocation(), ErrorCode.EVAL_UNDEFINED_VARIABLE);
+        try {
+            ScopeManager.Variable variable = context.getScopeManager().getVariable(varName);
+            return variable.getValue();
+        } catch (EvaluationException e) {
+            // 尝试从 this 对象中解析字段
+            if (!varName.equals("this")) {
+                try {
+                    ScopeManager.Variable thisVar = context.getScopeManager().getVariable("this");
+                    if (thisVar != null) {
+                        Object instance = thisVar.getValue();
+                        if (instance != null) {
+                            try {
+                                java.lang.reflect.Field field = findField(instance.getClass(), varName);
+                                if (field != null) {
+                                    field.setAccessible(true);
+                                    return field.get(instance);
+                                }
+                            } catch (Exception ex) {
+                                // 字段访问失败，继续抛出未定义变量异常
+                            }
+                        }
+                    }
+                } catch (EvaluationException ex) {
+                    // this 变量也不存在，继续抛出未定义变量异常
+                }
+            }
+            throw e;
         }
-        return variable.getValue();
     }
     
-    private static Object evaluateBinaryOp(BinaryOpNode node, ExecutionContext context) throws EvaluationException {
+    private static java.lang.reflect.Field findField(Class<?> clazz, String fieldName) {
+        try {
+            // 首先尝试在当前类中查找字段
+            java.lang.reflect.Field field = clazz.getDeclaredField(fieldName);
+            return field;
+        } catch (NoSuchFieldException e) {
+            // 如果当前类没有该字段，尝试在父类中查找
+            Class<?> superClass = clazz.getSuperclass();
+            if (superClass != null && superClass != Object.class) {
+                return findField(superClass, fieldName);
+            }
+            return null;
+        }
+    }
+    
+    public static Object evaluateBinaryOp(BinaryOpNode node, ExecutionContext context) throws EvaluationException {
         Object left = evaluate(node.getLeft(), context);
         Object right = evaluate(node.getRight(), context);
         BinaryOpNode.Operator op = node.getOperator();
@@ -512,10 +343,7 @@ public class ASTEvaluator {
         );
     }
     
-    private static boolean isIntegerType(Number n) {
-        return n instanceof Integer || n instanceof Long || n instanceof Short || n instanceof Byte;
-    }
-    
+
     private static boolean isFloatingType(Number n) {
         return n instanceof Double || n instanceof Float;
     }
@@ -644,7 +472,7 @@ public class ASTEvaluator {
         return Double.compare(a.doubleValue(), b.doubleValue());
     }
     
-    private static Object evaluateUnaryOp(UnaryOpNode node, ExecutionContext context) throws EvaluationException {
+    public static Object evaluateUnaryOp(UnaryOpNode node, ExecutionContext context) throws EvaluationException {
         UnaryOpNode.Operator op = node.getOperator();
         
         switch (op) {
@@ -767,7 +595,7 @@ public class ASTEvaluator {
         }
     }
     
-    private static Object evaluateAssignment(AssignmentNode node, ExecutionContext context) throws EvaluationException {
+    public static Object evaluateAssignment(AssignmentNode node, ExecutionContext context) throws EvaluationException {
         ASTNode valueNode = node.getValue();
         
         if (node.isDeclaration() && valueNode instanceof LambdaNode && node.getDeclaredClass() != null) {
@@ -852,7 +680,7 @@ public class ASTEvaluator {
         return value;
     }
     
-    private static Object evaluateConditionalAssign(ConditionalAssignNode node, ExecutionContext context) throws EvaluationException {
+    public static Object evaluateConditionalAssign(ConditionalAssignNode node, ExecutionContext context) throws EvaluationException {
         String varName = node.getVariableName();
         
         if (!context.getScopeManager().hasVariable(varName)) {
@@ -871,7 +699,7 @@ public class ASTEvaluator {
         return existing.getValue();
     }
     
-    private static Object evaluateNullCoalescingAssign(NullCoalescingAssignNode node, ExecutionContext context) throws EvaluationException {
+    public static Object evaluateNullCoalescingAssign(NullCoalescingAssignNode node, ExecutionContext context) throws EvaluationException {
         String varName = node.getVariableName();
         
         if (!context.getScopeManager().hasVariable(varName)) {
@@ -975,15 +803,41 @@ public class ASTEvaluator {
         return null;
     }
     
-    private static Object evaluateFieldAssignment(FieldAssignmentNode node, ExecutionContext context) throws EvaluationException {
+    public static Object evaluateFieldAssignment(FieldAssignmentNode node, ExecutionContext context) throws EvaluationException {
         Object target = evaluate(node.getTarget(), context);
         Object value = evaluate(node.getValue(), context);
         
         try {
-            Field field = target.getClass().getDeclaredField(node.getFieldName());
-            field.setAccessible(true);
-            field.set(target, value);
+            Field field;
+            if (target instanceof Class) {
+                // 处理静态字段赋值
+                Class<?> targetClass = (Class<?>) target;
+                field = findField(targetClass, node.getFieldName());
+                if (field == null) {
+                    throw new EvaluationException(
+                        "Field not found: " + node.getFieldName(),
+                        node.getLocation(),
+                        ErrorCode.EVAL_FIELD_ACCESS_FAILED
+                    );
+                }
+                field.setAccessible(true);
+                field.set(null, value);
+            } else {
+                // 处理实例字段赋值
+                field = findField(target.getClass(), node.getFieldName());
+                if (field == null) {
+                    throw new EvaluationException(
+                        "Field not found: " + node.getFieldName(),
+                        node.getLocation(),
+                        ErrorCode.EVAL_FIELD_ACCESS_FAILED
+                    );
+                }
+                field.setAccessible(true);
+                field.set(target, value);
+            }
             return value;
+        } catch (EvaluationException e) {
+            throw e;
         } catch (Exception e) {
             throw new EvaluationException(
                 "Failed to set field: " + node.getFieldName() + " - " + e.getMessage(),
@@ -993,7 +847,7 @@ public class ASTEvaluator {
         }
     }
     
-    private static Object evaluateArrayAssignment(ArrayAssignmentNode node, ExecutionContext context) throws EvaluationException {
+    public static Object evaluateArrayAssignment(ArrayAssignmentNode node, ExecutionContext context) throws EvaluationException {
         Object array = evaluate(node.getArray(), context);
         Object index = evaluate(node.getIndex(), context);
         Object value = evaluate(node.getValue(), context);
@@ -1003,8 +857,14 @@ public class ASTEvaluator {
         return value;
     }
     
-    private static Object evaluateFunctionCall(FunctionCallNode node, ExecutionContext context) throws EvaluationException {
+    public static Object evaluateFunctionCall(FunctionCallNode node, ExecutionContext context) throws EvaluationException {
         String functionName = node.getFunctionName();
+        
+        // 处理 super() 构造函数调用
+        if (functionName.equals("super")) {
+            // 构造函数中的 super() 调用不需要实际执行，因为我们已经在字节码中生成了对父类构造函数的调用
+            return null;
+        }
         
         Object[] args = new Object[node.getArguments().size()];
         for (int i = 0; i < args.length; i++) {
@@ -1048,7 +908,54 @@ public class ASTEvaluator {
                         MethodReference mr = ((MethodReference.MethodReferenceInvocationHandler) handler).getMethodReference();
                         return mr.invoke(args);
                     }
-                } catch (Exception e) {
+                } catch (Exception ignored) {
+                }
+            }
+        }
+        
+        Object currentInstance = MethodBodyExecutor.getCurrentInstanceContext();
+        if (currentInstance != null) {
+            try {
+                String instanceClassName = currentInstance.getClass().getSimpleName();
+                return MethodBodyExecutor.executeMethod(instanceClassName, functionName, currentInstance, args);
+            } catch (RuntimeException e) {
+                if (e.getMessage() != null && e.getMessage().startsWith("Method not found")) {
+                    try {
+                        java.lang.reflect.Method method = findMethod(currentInstance.getClass(), functionName, args);
+                        if (method != null) {
+                            method.setAccessible(true);
+                            return method.invoke(currentInstance, args);
+                        }
+                    } catch (Exception ex) {
+                        // fall through
+                    }
+                } else {
+                    throw e;
+                }
+            }
+        }
+        
+        // 检查当前类的静态方法
+        String currentClass = MethodBodyExecutor.getCurrentClassContext();
+        if (currentClass != null) {
+            try {
+                return MethodBodyExecutor.executeMethod(currentClass, functionName, null, args);
+            } catch (RuntimeException e) {
+                if (e.getMessage() != null && e.getMessage().startsWith("Method not found")) {
+                    Class<?> currentClassObj = ClassResolver.findClassWithImports(
+                        currentClass, context.getClassLoader(), context.getImports());
+                    if (currentClassObj != null) {
+                        java.lang.reflect.Method method = findMethod(currentClassObj, functionName, args);
+                        if (method != null && Modifier.isStatic(method.getModifiers())) {
+                            try {
+                                method.setAccessible(true);
+                                return method.invoke(null, args);
+                            } catch (Exception ex) {
+                            }
+                        }
+                    }
+                } else {
+                    throw e;
                 }
             }
         }
@@ -1060,27 +967,43 @@ public class ASTEvaluator {
         );
     }
     
-    private static Object evaluateMethodCall(MethodCallNode node, ExecutionContext context) throws EvaluationException {
+
+    
+    public static Object evaluateMethodCall(MethodCallNode node, ExecutionContext context) throws EvaluationException {
         Object target = evaluate(node.getTarget(), context);
         String methodName = node.getMethodName();
-        
+
+        // 修复：当 methodName 为 null 时，尝试从 FieldAccessNode 中获取
+        if (methodName == null && node.getTarget() instanceof FieldAccessNode fieldAccess) {
+            methodName = fieldAccess.getFieldName();
+        }
+
+        // 确保 methodName 不为 null
+        if (methodName == null) {
+            throw new EvaluationException(
+                "Method name not found",
+                node.getLocation(),
+                ErrorCode.METHOD_NOT_FOUND
+            );
+        }
+
         Object[] args = new Object[node.getArguments().size()];
         for (int i = 0; i < args.length; i++) {
             args[i] = evaluate(node.getArguments().get(i), context);
         }
-        
+
         try {
             if (target instanceof Lambda) {
                 return ((Lambda) target).invoke(args);
             }
-            
+
             if (target instanceof MethodReference) {
                 return ((MethodReference) target).invoke(args);
             }
-            
+
             Class<?> targetClass;
             Object targetInstance;
-            
+
             if (target instanceof Class<?> targetClassObj) {
                 Method classMethod = findMethod(Class.class, methodName, args);
                 if (classMethod != null) {
@@ -1088,21 +1011,37 @@ public class ASTEvaluator {
                     Object[] invokeArgs = prepareInvokeArguments(classMethod, args);
                     return classMethod.invoke(targetClassObj, invokeArgs);
                 }
-                
+
                 targetClass = targetClassObj;
                 targetInstance = null;
             } else {
                 targetClass = target.getClass();
                 targetInstance = target;
             }
-            
+
+            context.checkMethodAccess(targetClass.getName(), methodName, null);
+
             Method method = findMethod(targetClass, methodName, args);
             if (method != null) {
-                method.setAccessible(true);
+                try {
+                    method.setAccessible(true);
+                } catch (Exception ignored) {
+                }
                 Object[] invokeArgs = prepareInvokeArguments(method, args);
                 return method.invoke(targetInstance, invokeArgs);
             }
-            
+
+            if (target instanceof Class<?> targetClassObj) {
+                try {
+                    // 尝试通过 MethodBodyExecutor 执行动态类的方法
+                    String className = targetClassObj.getName();
+                    String simpleClassName = className.substring(className.lastIndexOf('.') + 1);
+                    return MethodBodyExecutor.executeMethod(simpleClassName, methodName, null, args);
+                } catch (Exception e) {
+                    // 如果失败，继续尝试其他方法
+                }
+            }
+
             throw new EvaluationException(
                 "Method not found: " + methodName,
                 node.getLocation(),
@@ -1110,6 +1049,13 @@ public class ASTEvaluator {
             );
         } catch (EvaluationException e) {
             throw e;
+        } catch (SecurityException e) {
+            throw new EvaluationException(
+                "Permission denied for method call: " + methodName + " - " + e.getMessage(),
+                node.getLocation(),
+                ErrorCode.EVAL_PERMISSION_DENIED,
+                e
+            );
         } catch (Exception e) {
             Throwable cause = e.getCause() != null ? e.getCause() : e;
             throw new EvaluationException(
@@ -1121,7 +1067,7 @@ public class ASTEvaluator {
         }
     }
     
-    private static Object evaluateSafeMethodCall(SafeMethodCallNode node, ExecutionContext context) throws EvaluationException {
+    public static Object evaluateSafeMethodCall(SafeMethodCallNode node, ExecutionContext context) throws EvaluationException {
         Object target = evaluate(node.getTarget(), context);
         
         if (target == null) {
@@ -1223,7 +1169,97 @@ public class ASTEvaluator {
         return invokeArgs;
     }
     
-    private static Object evaluateFieldAccess(FieldAccessNode node, ExecutionContext context) throws EvaluationException {
+    public static Object evaluateSuperMethodCall(SuperMethodCallNode node, ExecutionContext context) throws EvaluationException {
+        try {
+            Object thisInstance = context.getScopeManager().getVariable("this").getValue();
+            if (thisInstance == null) {
+                throw new EvaluationException(
+                    "Cannot call super method: 'this' is null",
+                    node.getLocation(),
+                    ErrorCode.EVAL_INVALID_OPERATION
+                );
+            }
+            
+            String methodName = node.getMethodName();
+            List<ASTNode> argNodes = node.getArguments();
+            
+            Object[] args = new Object[argNodes.size()];
+            for (int i = 0; i < argNodes.size(); i++) {
+                args[i] = evaluate(argNodes.get(i), context);
+            }
+            
+            String currentClass = MethodBodyExecutor.getCurrentClassContext();
+            if (currentClass != null) {
+                Class<?> currentClazz = null;
+                if (context.hasCustomClass(currentClass)) {
+                    currentClazz = context.getCustomClass(currentClass);
+                } else {
+                    currentClazz = ClassResolver.findClassWithImports(
+                        currentClass, context.getClassLoader(), context.getImports());
+                }
+                
+                if (currentClazz != null) {
+                    Class<?> superClass = currentClazz.getSuperclass();
+                    if (superClass != null) {
+                        String superClassName = superClass.getSimpleName();
+                        try {
+                            return MethodBodyExecutor.executeMethod(superClassName, methodName, thisInstance, args);
+                        } catch (RuntimeException e) {
+                            if (e.getMessage() != null && e.getMessage().startsWith("Method not found")) {
+                                Method method = findMethod(superClass, methodName, args);
+                                if (method != null) {
+                                    method.setAccessible(true);
+                                    Object[] invokeArgs = prepareInvokeArguments(method, args);
+                                    return method.invoke(thisInstance, invokeArgs);
+                                }
+                            }
+                            throw e;
+                        }
+                    }
+                }
+            }
+            
+            Class<?> superClass = thisInstance.getClass().getSuperclass();
+            if (superClass == null) {
+                throw new EvaluationException(
+                    "Cannot call super method: no superclass",
+                    node.getLocation(),
+                    ErrorCode.EVAL_INVALID_OPERATION
+                );
+            }
+            
+            try {
+                String superClassName = superClass.getSimpleName();
+                return MethodBodyExecutor.executeMethod(superClassName, methodName, thisInstance, args);
+            } catch (RuntimeException e) {
+                if (e.getMessage() != null && e.getMessage().startsWith("Method not found")) {
+                    Method method = findMethod(superClass, methodName, args);
+                    if (method == null) {
+                        throw new EvaluationException(
+                            "Method not found in superclass: " + methodName,
+                            node.getLocation(),
+                            ErrorCode.EVAL_METHOD_INVOCATION_FAILED
+                        );
+                    }
+                    method.setAccessible(true);
+                    Object[] invokeArgs = prepareInvokeArguments(method, args);
+                    return method.invoke(thisInstance, invokeArgs);
+                }
+                throw e;
+            }
+            
+        } catch (EvaluationException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new EvaluationException(
+                "Failed to call super method: " + e.getMessage(),
+                node.getLocation(),
+                ErrorCode.EVAL_INVALID_OPERATION
+            );
+        }
+    }
+    
+    public static Object evaluateFieldAccess(FieldAccessNode node, ExecutionContext context) throws EvaluationException {
         Object target = evaluate(node.getTarget(), context);
         
         try {
@@ -1238,9 +1274,31 @@ public class ASTEvaluator {
                 return Array.getLength(target);
             }
             
-            Field field = targetClass.getDeclaredField(node.getFieldName());
-            field.setAccessible(true);
-            return field.get(target);
+            context.checkFieldAccess(targetClass.getName(), node.getFieldName());
+            
+            if (target instanceof Class) {
+                java.lang.reflect.Field field = MethodBodyExecutor.findField(targetClass, node.getFieldName());
+                if (field != null) {
+                    field.setAccessible(true);
+                    return field.get(null);
+                }
+                throw new NoSuchFieldException("Field " + node.getFieldName() + " not found in " + targetClass.getName());
+            }
+            
+            Object fieldValue = MethodBodyExecutor.resolveField(node.getFieldName(), target);
+            if (fieldValue != null) {
+                return fieldValue;
+            }
+            
+            // 如果字段解析失败，抛出异常
+            throw new NoSuchFieldException("Field " + node.getFieldName() + " not found in " + targetClass.getName());
+        } catch (SecurityException e) {
+            throw new EvaluationException(
+                "Permission denied for field access: " + node.getFieldName() + " - " + e.getMessage(),
+                node.getLocation(),
+                ErrorCode.EVAL_PERMISSION_DENIED,
+                e
+            );
         } catch (Exception e) {
             throw new EvaluationException(
                 "Failed to access field: " + e.getMessage(),
@@ -1250,7 +1308,7 @@ public class ASTEvaluator {
         }
     }
     
-    private static Object evaluateSafeFieldAccess(SafeFieldAccessNode node, ExecutionContext context) throws EvaluationException {
+    public static Object evaluateSafeFieldAccess(SafeFieldAccessNode node, ExecutionContext context) throws EvaluationException {
         Object target = evaluate(node.getTarget(), context);
         
         if (target == null) {
@@ -1267,32 +1325,61 @@ public class ASTEvaluator {
             
             Field field = targetClass.getDeclaredField(node.getFieldName());
             field.setAccessible(true);
+            if (target instanceof Class) {
+                return field.get(null);
+            }
             return field.get(target);
         } catch (Exception e) {
             return null;
         }
     }
     
-    private static Object evaluateArrayAccess(ArrayAccessNode node, ExecutionContext context) throws EvaluationException {
+    public static Object evaluateArrayAccess(ArrayAccessNode node, ExecutionContext context) throws EvaluationException {
         Object array = evaluate(node.getArray(), context);
         Object index = evaluate(node.getIndex(), context);
         
         return Array.get(array, toInt(index));
     }
     
-    private static Object evaluateClassReference(ClassReferenceNode node, ExecutionContext context) throws EvaluationException {
+    public static Object evaluateClassReference(ClassReferenceNode node, ExecutionContext context) throws EvaluationException {
         try {
-            return node.getType().getRawType();
+            String className = node.getTypeName();
+            
+            // 首先尝试从自定义类中查找
+            if (context.hasCustomClass(className)) {
+                return context.getCustomClass(className);
+            }
+            
+            // 使用 ClassResolver 查找类（支持 imports）
+            Class<?> clazz = ClassResolver.findClassWithImports(
+                className, context.getClassLoader(), context.getImports());
+            if (clazz != null) {
+                context.checkClassAccess(clazz.getName());
+                return clazz;
+            }
+            
+            throw new EvaluationException(
+                "Class not found: " + node.getTypeName(),
+                node.getLocation(),
+                ErrorCode.EVAL_TYPE_MISMATCH
+            );
+        } catch (SecurityException e) {
+            throw new EvaluationException(
+                "Permission denied for class access: " + node.getTypeName() + " - " + e.getMessage(),
+                node.getLocation(),
+                ErrorCode.EVAL_PERMISSION_DENIED,
+                e
+            );
         } catch (Exception e) {
             throw new EvaluationException(
-                "Class not found: " + node.getType().getTypeName(),
+                "Class not found: " + node.getTypeName(),
                 node.getLocation(),
                 ErrorCode.EVAL_TYPE_MISMATCH
             );
         }
     }
     
-    private static Object evaluateNewArray(NewArrayNode node, ExecutionContext context) throws EvaluationException {
+    public static Object evaluateNewArray(NewArrayNode node, ExecutionContext context) throws EvaluationException {
         try {
             Class<?> componentType = node.getElementType();
             Object size = evaluate(node.getSize(), context);
@@ -1307,7 +1394,7 @@ public class ASTEvaluator {
         }
     }
     
-    private static Object evaluateConstructorCall(ConstructorCallNode node, ExecutionContext context) throws EvaluationException {
+    public static Object evaluateConstructorCall(ConstructorCallNode node, ExecutionContext context) throws EvaluationException {
         try {
             GenericType type = node.getType();
             List<ASTNode> argNodes = node.getArguments();
@@ -1320,46 +1407,109 @@ public class ASTEvaluator {
                 argTypes[i] = args[i] != null ? args[i].getClass() : Object.class;
             }
             
-            Class<?> clazz = type.getRawType();
+            Class<?> clazz;
             
-            String originalTypeName = type.getOriginalTypeName();
-            if (originalTypeName != null && context.hasCustomClass(originalTypeName)) {
-                clazz = context.getCustomClass(originalTypeName);
+            if (node.isAnonymousClass()) {
+                ClassDeclarationNode anonymousClass = node.getAnonymousClass();
+                DynamicClassGenerator generator = new DynamicClassGenerator(context);
+                // 生成类时传递构造函数参数类型
+                clazz = generator.generateClass(anonymousClass, argTypes);
+                context.registerCustomClass(anonymousClass.getClassName(), clazz);
+            } else {
+                // 首先尝试使用类名从上下文获取自定义类
+                String className = type.getTypeName();
+                if (context.hasCustomClass(className)) {
+                    clazz = context.getCustomClass(className);
+                } else {
+                    // 然后尝试使用原始类型名
+                    String originalTypeName = type.getOriginalTypeName();
+                    if (originalTypeName != null && context.hasCustomClass(originalTypeName)) {
+                        clazz = context.getCustomClass(originalTypeName);
+                    } else {
+                        // 最后使用原始类型
+                        clazz = type.getRawType();
+                    }
+                }
             }
+            
+            context.checkNewInstance(clazz.getName());
             
             Constructor<?> constructor = findConstructor(clazz, argTypes);
             return constructor.newInstance(args);
         } catch (EvaluationException e) {
             throw e;
+        } catch (SecurityException e) {
+            throw new EvaluationException(
+                "Permission denied for new instance: " + e.getMessage(),
+                node.getLocation(),
+                ErrorCode.EVAL_PERMISSION_DENIED,
+                e
+            );
         } catch (Exception e) {
             throw new EvaluationException(
-                "Failed to create instance: " + e.getMessage(),
+                "Failed to create instance: " + e.getMessage() + "\n" + java.util.Arrays.toString(e.getStackTrace()),
                 node.getLocation(),
-                ErrorCode.EVAL_INVALID_OPERATION
+                ErrorCode.EVAL_INVALID_OPERATION,
+                e
             );
         }
     }
     
     private static Constructor<?> findConstructor(Class<?> clazz, Class<?>[] argTypes) throws NoSuchMethodException {
+        // 首先尝试精确匹配
         try {
-            return clazz.getDeclaredConstructor(argTypes);
+            Constructor<?> constructor = clazz.getDeclaredConstructor(argTypes);
+            constructor.setAccessible(true);
+            return constructor;
         } catch (NoSuchMethodException ignored) {
         }
         
+        // 然后尝试公共构造函数
+        try {
+            Constructor<?> constructor = clazz.getConstructor(argTypes);
+            return constructor;
+        } catch (NoSuchMethodException ignored) {
+        }
+        
+        // 最后尝试找到最匹配的构造函数
         Constructor<?> bestMatch = null;
-        for (Constructor<?> constructor : clazz.getConstructors()) {
-            if (isApplicableArgs(constructor.getParameterTypes(), argTypes, constructor.isVarArgs())) {
-                bestMatch = constructor;
-                break;
+        int bestScore = -1;
+        
+        // 检查所有声明的构造函数
+        for (Constructor<?> constructor : clazz.getDeclaredConstructors()) {
+            Class<?>[] paramTypes = constructor.getParameterTypes();
+            if (isApplicableArgs(paramTypes, argTypes, constructor.isVarArgs())) {
+                int score = computeMatchScore(paramTypes, argTypes);
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestMatch = constructor;
+                }
+            }
+        }
+        
+        // 如果没有找到，检查公共构造函数
+        if (bestMatch == null) {
+            for (Constructor<?> constructor : clazz.getConstructors()) {
+                Class<?>[] paramTypes = constructor.getParameterTypes();
+                if (isApplicableArgs(paramTypes, argTypes, constructor.isVarArgs())) {
+                    int score = computeMatchScore(paramTypes, argTypes);
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMatch = constructor;
+                    }
+                }
             }
         }
         
         if (bestMatch != null) {
+            bestMatch.setAccessible(true);
             return bestMatch;
         }
         
-        throw new NoSuchMethodException("No suitable constructor found");
+        throw new NoSuchMethodException("No suitable constructor found for arguments: " + java.util.Arrays.toString(argTypes));
     }
+    
+
     
     private static boolean isApplicableArgs(Class<?>[] paramTypes, Class<?>[] argTypes, boolean isVarArgs) {
         if (isVarArgs) {
@@ -1390,6 +1540,7 @@ public class ASTEvaluator {
         return true;
     }
     
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     private static boolean isAssignable(Class<?> targetType, Class<?> sourceType) {
         if (sourceType == null) {
             return !targetType.isPrimitive();
@@ -1398,8 +1549,44 @@ public class ASTEvaluator {
             if (sourceType.isPrimitive()) {
                 return isPrimitiveAssignable(targetType, sourceType);
             }
+            // 检查源类型是否是目标类型的包装类
             Class<?> wrapper = getWrapperClass(targetType);
-            return wrapper != null && wrapper.isAssignableFrom(sourceType);
+            if (wrapper != null && wrapper.isAssignableFrom(sourceType)) {
+                return true;
+            }
+            // 检查源类型是否是其他基本类型的包装类，并且可以转换为目标类型
+            if (sourceType == Integer.class) {
+                return isPrimitiveAssignable(targetType, int.class);
+            }
+            if (sourceType == Long.class) {
+                return isPrimitiveAssignable(targetType, long.class);
+            }
+            if (sourceType == Float.class) {
+                return isPrimitiveAssignable(targetType, float.class);
+            }
+            if (sourceType == Double.class) {
+                return isPrimitiveAssignable(targetType, double.class);
+            }
+            if (sourceType == Byte.class) {
+                return isPrimitiveAssignable(targetType, byte.class);
+            }
+            if (sourceType == Short.class) {
+                return isPrimitiveAssignable(targetType, short.class);
+            }
+            if (sourceType == Character.class) {
+                return isPrimitiveAssignable(targetType, char.class);
+            }
+            if (sourceType == Boolean.class) {
+                return isPrimitiveAssignable(targetType, boolean.class);
+            }
+            return false;
+        }
+        if (sourceType.isPrimitive()) {
+            // 检查目标类型是否是源类型的包装类
+            Class<?> wrapper = getWrapperClass(sourceType);
+            if (wrapper != null && targetType.isAssignableFrom(wrapper)) {
+                return true;
+            }
         }
         return targetType.isAssignableFrom(sourceType);
     }
@@ -1409,25 +1596,25 @@ public class ASTEvaluator {
             return true;
         }
         if (targetType == byte.class) {
-            return sourceType == short.class || sourceType == int.class || sourceType == long.class;
+            return sourceType == short.class || sourceType == int.class || sourceType == long.class || sourceType == float.class || sourceType == double.class;
         }
         if (targetType == short.class) {
-            return sourceType == int.class || sourceType == long.class;
+            return sourceType == int.class || sourceType == long.class || sourceType == float.class || sourceType == double.class;
         }
         if (targetType == int.class) {
-            return sourceType == long.class;
+            return sourceType == long.class || sourceType == float.class || sourceType == double.class;
         }
         if (targetType == long.class) {
-            return false;
+            return sourceType == float.class || sourceType == double.class;
         }
         if (targetType == float.class) {
             return sourceType == double.class;
         }
         if (targetType == double.class) {
-            return false;
+            return sourceType == byte.class || sourceType == short.class || sourceType == int.class || sourceType == long.class || sourceType == float.class;
         }
         if (targetType == char.class) {
-            return sourceType == int.class || sourceType == long.class;
+            return sourceType == int.class || sourceType == long.class || sourceType == float.class || sourceType == double.class;
         }
         if (targetType == boolean.class) {
             return false;
@@ -1448,7 +1635,7 @@ public class ASTEvaluator {
         return null;
     }
     
-    private static Object evaluateArrayLiteral(ArrayLiteralNode node, ExecutionContext context) throws EvaluationException {
+    public static Object evaluateArrayLiteral(ArrayLiteralNode node, ExecutionContext context) throws EvaluationException {
         List<ASTNode> elements = node.getElements();
         Class<?> expectedType = node.getExpectedElementType();
         
@@ -1528,7 +1715,7 @@ public class ASTEvaluator {
     }
 
     
-    private static Object evaluateMapLiteral(MapLiteralNode node, ExecutionContext context) throws EvaluationException {
+    public static Object evaluateMapLiteral(MapLiteralNode node, ExecutionContext context) throws EvaluationException {
         Map<Object, Object> map = new java.util.LinkedHashMap<>();
         
         for (Map.Entry<ASTNode, ASTNode> entry : node.getEntries().entrySet()) {
@@ -1540,7 +1727,7 @@ public class ASTEvaluator {
         return map;
     }
     
-    private static Object evaluateIf(IfNode node, ExecutionContext context) throws EvaluationException {
+    public static Object evaluateIf(IfNode node, ExecutionContext context) throws EvaluationException {
         Object condition = evaluate(node.getCondition(), context);
         
         if (toBoolean(condition)) {
@@ -1552,7 +1739,7 @@ public class ASTEvaluator {
         return null;
     }
     
-    private static Object evaluateWhile(WhileNode node, ExecutionContext context) throws EvaluationException {
+    public static Object evaluateWhile(WhileNode node, ExecutionContext context) throws EvaluationException {
         context.incrementLoopDepth();
         try {
             while (toBoolean(evaluate(node.getCondition(), context))) {
@@ -1569,7 +1756,7 @@ public class ASTEvaluator {
         return null;
     }
     
-    private static Object evaluateDoWhile(DoWhileNode node, ExecutionContext context) throws EvaluationException {
+    public static Object evaluateDoWhile(DoWhileNode node, ExecutionContext context) throws EvaluationException {
         context.incrementLoopDepth();
         try {
             do {
@@ -1586,7 +1773,7 @@ public class ASTEvaluator {
         return null;
     }
     
-    private static Object evaluateFor(ForNode node, ExecutionContext context) throws EvaluationException {
+    public static Object evaluateFor(ForNode node, ExecutionContext context) throws EvaluationException {
         context.getScopeManager().enterScope();
         context.incrementLoopDepth();
         
@@ -1610,7 +1797,7 @@ public class ASTEvaluator {
         return null;
     }
     
-    private static Object evaluateForEach(ForEachNode node, ExecutionContext context) throws EvaluationException {
+    public static Object evaluateForEach(ForEachNode node, ExecutionContext context) throws EvaluationException {
         Object iterable = evaluate(node.getCollection(), context);
         
         context.getScopeManager().enterScope();
@@ -1645,7 +1832,7 @@ public class ASTEvaluator {
         return null;
     }
     
-    private static Object evaluateTernary(TernaryNode node, ExecutionContext context) throws EvaluationException {
+    public static Object evaluateTernary(TernaryNode node, ExecutionContext context) throws EvaluationException {
         Object condition = evaluate(node.getCondition(), context);
         
         if (toBoolean(condition)) {
@@ -1655,7 +1842,7 @@ public class ASTEvaluator {
         }
     }
     
-    private static Object evaluatePipeline(PipelineNode node, ExecutionContext context) throws EvaluationException {
+    public static Object evaluatePipeline(PipelineNode node, ExecutionContext context) throws EvaluationException {
         Object input = evaluate(node.getInput(), context);
         ASTNode functionNode = node.getFunction();
         
@@ -1757,7 +1944,7 @@ public class ASTEvaluator {
     
     private static final ExecutorService asyncExecutor = Executors.newCachedThreadPool();
     
-    private static Object evaluateAsync(AsyncNode node, ExecutionContext context) throws EvaluationException {
+    public static Object evaluateAsync(AsyncNode node, ExecutionContext context) throws EvaluationException {
 
         return CompletableFuture.supplyAsync(() -> {
             try {
@@ -1768,7 +1955,7 @@ public class ASTEvaluator {
         }, asyncExecutor);
     }
     
-    private static Object evaluateAwait(AwaitNode node, ExecutionContext context) throws EvaluationException {
+    public static Object evaluateAwait(AwaitNode node, ExecutionContext context) throws EvaluationException {
         Object value = evaluate(node.getExpression(), context);
         
         if (value instanceof CompletableFuture) {
@@ -1789,7 +1976,7 @@ public class ASTEvaluator {
         return value;
     }
     
-    private static Object evaluateInstanceof(InstanceofNode node, ExecutionContext context) throws EvaluationException {
+    public static Object evaluateInstanceof(InstanceofNode node, ExecutionContext context) throws EvaluationException {
         Object value = evaluate(node.getExpression(), context);
         
         if (value == null) {
@@ -1826,7 +2013,7 @@ public class ASTEvaluator {
         return primitiveType;
     }
     
-    private static Object evaluateCast(CastNode node, ExecutionContext context) throws EvaluationException {
+    public static Object evaluateCast(CastNode node, ExecutionContext context) throws EvaluationException {
         Object value = evaluate(node.getExpression(), context);
         
         Class<?> type = node.getTargetType();
@@ -1851,7 +2038,7 @@ public class ASTEvaluator {
         }
     }
     
-    private static Object evaluateLambda(LambdaNode node, ExecutionContext context) {
+    public static Object evaluateLambda(LambdaNode node, ExecutionContext context) {
         Lambda func = new Lambda(node, context);
         
         Class<?> targetInterface = node.getFunctionalInterfaceType();
@@ -1862,7 +2049,7 @@ public class ASTEvaluator {
         return func;
     }
     
-    private static Object evaluateMethodReference(MethodReferenceNode node, ExecutionContext context) throws EvaluationException {
+    public static Object evaluateMethodReference(MethodReferenceNode node, ExecutionContext context) throws EvaluationException {
         ASTNode targetNode = node.getTarget();
         String methodName = node.getMethodName();
         
@@ -1871,8 +2058,17 @@ public class ASTEvaluator {
         boolean isStatic = false;
         
         if (targetNode instanceof ClassReferenceNode classRef) {
-            targetClass = classRef.getType().getRawType();
-            isStatic = true;
+            try {
+                String className = classRef.getResolvedClass().getName();
+                targetClass = ClassResolver.findClassWithImportsOrFail(className, context.getClassLoader(), context.getImports());
+                isStatic = true;
+            } catch (ClassNotFoundException e) {
+                throw new EvaluationException(
+                    "Class not found: " + classRef.getTypeName(),
+                    node.getLocation(),
+                    ErrorCode.EVAL_CLASS_NOT_FOUND
+                );
+            }
         } else if (targetNode instanceof VariableNode) {
             String varName = ((VariableNode) targetNode).getName();
             
@@ -1915,7 +2111,7 @@ public class ASTEvaluator {
         return null;
     }
     
-    private static Object evaluateTry(TryNode node, ExecutionContext context) throws EvaluationException {
+    public static Object evaluateTry(TryNode node, ExecutionContext context) throws EvaluationException {
         List<Object> resources = new ArrayList<>();
         List<Throwable> suppressedExceptions = new ArrayList<>();
         
@@ -1977,7 +2173,7 @@ public class ASTEvaluator {
         }
     }
     
-    private static Object evaluateThrow(ThrowNode node, ExecutionContext context) throws EvaluationException {
+    public static Object evaluateThrow(ThrowNode node, ExecutionContext context) throws EvaluationException {
         Object exception = evaluate(node.getExpression(), context);
         
         if (exception instanceof Throwable t) {
@@ -1993,7 +2189,7 @@ public class ASTEvaluator {
         throw new EvaluationException("Cannot throw non-throwable: " + exception, node.getLocation(), ErrorCode.EVAL_INVALID_OPERATION);
     }
     
-    private static Object evaluateSwitch(SwitchNode node, ExecutionContext context) throws EvaluationException {
+    public static Object evaluateSwitch(SwitchNode node, ExecutionContext context) throws EvaluationException {
         Object value = evaluate(node.getExpression(), context);
         
         for (CaseNode caseNode : node.getCases()) {
@@ -2017,7 +2213,7 @@ public class ASTEvaluator {
         return null;
     }
     
-    private static Object evaluateDelete(DeleteNode node, ExecutionContext context) throws EvaluationException {
+    public static Object evaluateDelete(DeleteNode node, ExecutionContext context) throws EvaluationException {
         if (node.isDeleteAll()) {
             context.getScopeManager().clearCurrentScope();
         } else {
@@ -2033,7 +2229,7 @@ public class ASTEvaluator {
         return null;
     }
     
-    private static Object evaluateClassDeclaration(ClassDeclarationNode node, ExecutionContext context) throws EvaluationException {
+    public static Object evaluateClassDeclaration(ClassDeclarationNode node, ExecutionContext context) throws EvaluationException {
         DynamicClassGenerator generator = new DynamicClassGenerator(context);
         Class<?> generatedClass = generator.generateClass(node);
         
@@ -2044,7 +2240,7 @@ public class ASTEvaluator {
         return generatedClass;
     }
     
-    private static Method findMethod(Class<?> clazz, String name, Object[] args) {
+    public static Method findMethod(Class<?> clazz, String name, Object[] args) {
         List<Method> candidates = new ArrayList<>();
         
         for (Method method : clazz.getMethods()) {
@@ -2068,7 +2264,7 @@ public class ASTEvaluator {
             boolean isVarArgs = method.isVarArgs();
             
             if (isApplicableArgs(paramTypes, args, isVarArgs)) {
-                if (!isVarArgs && paramTypes.length == args.length) {
+                if (!isVarArgs && paramTypes.length == (args != null ? args.length : 0)) {
                     int matchScore = computeMatchScore(paramTypes, args);
                     
                     if (matchScore > bestScore) {
@@ -2093,6 +2289,9 @@ public class ASTEvaluator {
     private static int computeMatchScore(Class<?>[] paramTypes, Object[] args) {
         int score = 0;
         for (int i = 0; i < paramTypes.length; i++) {
+            if (args == null || i >= args.length) {
+                return 0;
+            }
             if (args[i] == null) {
                 if (paramTypes[i].isPrimitive()) {
                     return 0;
@@ -2131,7 +2330,7 @@ public class ASTEvaluator {
     
     private static boolean isApplicableArgs(Class<?>[] paramTypes, Object[] args, boolean isVarArgs) {
         int paramCount = paramTypes.length;
-        int argCount = args.length;
+        int argCount = args != null ? args.length : 0;
         
         if (isVarArgs) {
             if (argCount < paramCount - 1) {
@@ -2193,23 +2392,7 @@ public class ASTEvaluator {
         if (primitiveType == short.class) return wrapperType == Short.class || wrapperType == Byte.class;
         return false;
     }
-    
-    private static Constructor<?> findConstructor(Class<?> clazz, Object[] args) {
-        for (Constructor<?> constructor : clazz.getConstructors()) {
-            if (constructor.getParameterCount() == args.length) {
-                return constructor;
-            }
-        }
-        
-        for (Constructor<?> constructor : clazz.getDeclaredConstructors()) {
-            if (constructor.getParameterCount() == args.length) {
-                return constructor;
-            }
-        }
-        
-        return null;
-    }
-    
+
     private static Class<?> resolveType(String typeName, ExecutionContext context) throws ClassNotFoundException {
         if (typeName == null || typeName.isEmpty()) {
             return void.class;
@@ -2308,7 +2491,7 @@ public class ASTEvaluator {
         return 0;
     }
     
-    private static Object evaluateReturn(ReturnNode node, ExecutionContext context) throws EvaluationException {
+    public static Object evaluateReturn(ReturnNode node, ExecutionContext context) throws EvaluationException {
         Object value = null;
         if (node.getValue() != null) {
             value = evaluate(node.getValue(), context);

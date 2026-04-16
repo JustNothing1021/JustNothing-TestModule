@@ -7,20 +7,20 @@ import com.justnothing.javainterpreter.ast.visitor.ASTVisitor;
 public class ParameterNode extends ASTNode {
     
     private final String parameterName;
-    private final String typeName;
+    private final ClassReferenceNode type;
     
-    public ParameterNode(String parameterName, String typeName, SourceLocation location) {
+    public ParameterNode(String parameterName, ClassReferenceNode type, SourceLocation location) {
         super(location);
         this.parameterName = parameterName;
-        this.typeName = typeName;
+        this.type = type;
     }
     
     public String getParameterName() {
         return parameterName;
     }
     
-    public String getTypeName() {
-        return typeName;
+    public ClassReferenceNode getType() {
+        return type;
     }
     
     @Override
@@ -33,7 +33,7 @@ public class ParameterNode extends ASTNode {
         StringBuilder sb = new StringBuilder();
         sb.append(indent(indent)).append("ParameterNode\n");
         sb.append(indent(indent + 1)).append("parameterName: ").append(parameterName).append("\n");
-        sb.append(indent(indent + 1)).append("typeName: ").append(typeName).append("\n");
+        sb.append(indent(indent + 1)).append("type: ").append(type.getTypeName()).append("\n");
         return sb.toString().stripTrailing();
     }
 }

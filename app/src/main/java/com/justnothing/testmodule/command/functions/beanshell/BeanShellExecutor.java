@@ -4,7 +4,7 @@ import bsh.EvalError;
 import bsh.Interpreter;
 import bsh.NameSpace;
 import bsh.TargetError;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 
 import java.util.HashMap;
 import java.util.Map;

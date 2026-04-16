@@ -1,7 +1,7 @@
 package com.justnothing.testmodule.utils.hooks;
 
 import com.justnothing.testmodule.utils.data.DataBridge;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 
 import org.json.JSONObject;
 

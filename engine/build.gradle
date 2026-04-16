@@ -9,9 +9,9 @@ java {
 }
 
 dependencies {
-    implementation 'org.ow2.asm:asm:9.6'
-    implementation 'org.ow2.asm:asm-tree:9.6'
-    implementation 'org.jetbrains:annotations:24.0.1'
+    implementation libs.asm.v96
+    implementation libs.asm.tree
+    implementation libs.annotations
 }
 
 sourceSets {
@@ -31,4 +31,15 @@ publishing {
             version = '1.0.0'
         }
     }
+}
+
+task fatJar(type: Jar) {
+    archiveBaseName = 'engine-fat'
+    archiveExtension = 'jar'
+    manifest {
+        attributes 'Main-Class': 'com.justnothing.javainterpreter.REPL'
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+    with jar
 }

@@ -8,7 +8,7 @@ import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.output.ICommandOutputHandler;
 import com.justnothing.testmodule.command.output.StreamOutputWriter;
 import com.justnothing.testmodule.utils.data.DataDirectoryManager;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 import com.justnothing.testmodule.utils.io.IOManager;
 

@@ -301,9 +301,11 @@ public class REPL {
             System.out.println("解析错误: " + e.getMessage());
         } catch (EvaluationException e) {
             System.out.println("执行错误: " + e.getMessage());
+            e.printStackTrace();
         } catch (Exception e) {
             System.out.println("错误: " + e.getMessage());
             e.printStackTrace();
         }
+        
     }
 }

@@ -13,6 +13,7 @@ public class ConstructorDeclarationNode extends ASTNode {
     private final List<ParameterNode> parameters;
     private final ASTNode body;
     private final ClassModifiers modifiers;
+    private final List<AnnotationNode> annotations;
     
     public ConstructorDeclarationNode(String className, List<ParameterNode> parameters, 
                                        ASTNode body, ClassModifiers modifiers, SourceLocation location) {
@@ -21,6 +22,7 @@ public class ConstructorDeclarationNode extends ASTNode {
         this.parameters = parameters != null ? parameters : new ArrayList<>();
         this.body = body;
         this.modifiers = modifiers != null ? modifiers : new ClassModifiers();
+        this.annotations = new ArrayList<>();
     }
     
     public String getClassName() {
@@ -39,6 +41,14 @@ public class ConstructorDeclarationNode extends ASTNode {
         return modifiers;
     }
     
+    public List<AnnotationNode> getAnnotations() {
+        return annotations;
+    }
+    
+    public void addAnnotation(AnnotationNode annotation) {
+        annotations.add(annotation);
+    }
+    
     @Override
     public <T> T accept(ASTVisitor<T> visitor) {
         return visitor.visit(this);
@@ -48,6 +58,14 @@ public class ConstructorDeclarationNode extends ASTNode {
     public String formatString(int indent) {
         StringBuilder sb = new StringBuilder();
         sb.append(indent(indent)).append("ConstructorDeclarationNode\n");
+        
+        if (!annotations.isEmpty()) {
+            sb.append(indent(indent + 1)).append("annotations:\n");
+            for (AnnotationNode annotation : annotations) {
+                sb.append(annotation.formatString(indent + 2)).append("\n");
+            }
+        }
+        
         sb.append(indent(indent + 1)).append("className: ").append(className).append("\n");
         sb.append(indent(indent + 1)).append("modifiers: ").append(modifiers.toModifierString()).append("\n");
         sb.append(indent(indent + 1)).append("parameters: ").append(parameters.size()).append("\n");

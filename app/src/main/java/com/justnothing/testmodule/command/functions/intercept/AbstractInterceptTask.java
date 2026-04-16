@@ -2,7 +2,7 @@ package com.justnothing.testmodule.command.functions.intercept;
 
 import androidx.annotation.NonNull;
 
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
 import com.justnothing.testmodule.utils.reflect.ReflectionUtils;
 

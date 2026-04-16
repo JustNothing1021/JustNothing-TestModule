@@ -9,7 +9,7 @@ import com.justnothing.methodsclient.executor.AsyncChmodExecutor;
 import com.justnothing.testmodule.constants.AppEnvironment;
 import com.justnothing.testmodule.constants.FileDirectory;
 import com.justnothing.testmodule.ui.ErrorDialog;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.io.IOManager;
 import com.justnothing.testmodule.utils.io.RootProcessPool;
 
@@ -85,15 +85,6 @@ public class DataDirectoryManager {
     public static String getMethodsCmdlineDataDirectory() {
         return METHODS_DATA_DIR;
     }
-
-    public static File getScriptsDirectory() {
-        return new File(METHODS_DATA_DIR, FileDirectory.SCRIPTS_DIR_NAME);
-    }
-
-    public static File getCodebaseDirectory() {
-        return getScriptsDirectory();
-    }
-
 
     public static boolean ensureFileDirectoryExists(File file) {
         try {

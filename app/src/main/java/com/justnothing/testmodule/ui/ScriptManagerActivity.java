@@ -29,7 +29,7 @@ import com.justnothing.methodsclient.executor.SocketCommandExecutor;
 import com.justnothing.testmodule.R;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.constants.FileDirectory;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.io.IOManager;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 

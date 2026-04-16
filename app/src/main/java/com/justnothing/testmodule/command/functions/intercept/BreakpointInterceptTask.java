@@ -67,6 +67,24 @@ public class BreakpointInterceptTask extends AbstractInterceptTask {
         return lastHitAt;
     }
 
+    public String getBreakpointInfo() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("=== 断点信息 ===\n");
+        sb.append("ID: ").append(id).append("\n");
+        sb.append("类: ").append(className).append("\n");
+        sb.append("方法: ").append(methodName).append("\n");
+        if (signature != null) {
+            sb.append("签名: ").append(signature).append("\n");
+        }
+        sb.append("命中次数: ").append(hitCount.get()).append("\n");
+        sb.append("状态: ").append(running.get() ? (enabled ? "运行中" : "已暂停") : "已停止").append("\n");
+        if (lastHitAt > 0) {
+            sb.append("最后命中: ").append(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
+                    .format(new Date(lastHitAt))).append("\n");
+        }
+        return sb.toString();
+    }
+
 
     @NonNull
     @Override

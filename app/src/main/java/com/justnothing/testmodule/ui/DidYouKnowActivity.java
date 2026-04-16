@@ -9,7 +9,7 @@ import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.justnothing.testmodule.R;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.tips.TipCallback;
 import com.justnothing.testmodule.utils.tips.TipSystem;
 import com.justnothing.testmodule.utils.tips.TipType;

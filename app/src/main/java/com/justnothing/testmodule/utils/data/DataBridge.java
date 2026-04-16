@@ -6,7 +6,7 @@ import com.justnothing.methodsclient.StreamClient;
 import com.justnothing.testmodule.constants.AppEnvironment;
 import com.justnothing.testmodule.constants.FileDirectory;
 import com.justnothing.testmodule.hooks.HookEntry;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.hooks.ServerHookConfig;
 import com.justnothing.testmodule.utils.io.IOManager;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
@@ -69,6 +69,10 @@ public class DataBridge {
 
     private static String modulePath = null;
 
+    private DataBridge() {
+        throw new UnsupportedOperationException("不能实例化DataBridge...");
+    }
+
     public static File getDataDir() {
         if (cachedDataDir != null) {
             return cachedDataDir;
@@ -80,10 +84,6 @@ public class DataBridge {
 
     public static File getScriptsDirectory() {
         return new File(FileDirectory.METHODS_DATA_DIR, FileDirectory.SCRIPTS_DIR_NAME);
-    }
-
-    public static File getCodebaseDirectory() {
-        return getScriptsDirectory();
     }
 
     public static void setModulePath(String path) {
@@ -693,6 +693,11 @@ public class DataBridge {
         } finally {
             lock.readLock().unlock();
         }
+    }
+
+    public static File getScriptFile(String scriptName) {
+        File scriptsDir = DataBridge.getScriptsDirectory();
+        return new File(scriptsDir, scriptName + FileDirectory.SCRIPT_SUFFIX);
     }
 
 }

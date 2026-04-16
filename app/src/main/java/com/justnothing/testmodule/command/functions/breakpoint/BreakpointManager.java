@@ -1,27 +1,30 @@
 package com.justnothing.testmodule.command.functions.breakpoint;
 
+import com.justnothing.testmodule.command.functions.intercept.AbstractInterceptManager;
 import com.justnothing.testmodule.command.functions.intercept.BreakpointInterceptTask;
-import com.justnothing.testmodule.command.functions.intercept.InterceptTaskManager;
 import com.justnothing.testmodule.command.functions.intercept.TaskType;
-import com.justnothing.testmodule.utils.functions.Logger;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
-public class BreakpointManager {
+public class BreakpointManager extends AbstractInterceptManager<BreakpointInterceptTask> {
 
     private static final BreakpointManager instance = new BreakpointManager();
-    private static final Logger logger = Logger.getLoggerForName("BreakpointManager");
-
-    private final InterceptTaskManager taskManager;
 
     private BreakpointManager() {
-        this.taskManager = InterceptTaskManager.getInstance();
+        super();
     }
 
     public static BreakpointManager getInstance() {
         return instance;
+    }
+
+    @Override
+    public TaskType getTaskType() {
+        return TaskType.BREAKPOINT;
+    }
+
+    @Override
+    public String getManagerName() {
+        return "BreakpointManager";
     }
 
     public int addBreakpoint(String className, String methodName, String signature, ClassLoader classLoader) {
@@ -36,62 +39,15 @@ public class BreakpointManager {
             BreakpointInterceptTask task = new BreakpointInterceptTask(
                     0, className, methodName, signature, classLoader
             );
-            return taskManager.addAndStartTask(task);
+            return addTask(task);
         } catch (Exception e) {
             logger.error("添加断点失败", e);
             throw new RuntimeException("添加断点失败: " + e.getMessage(), e);
         }
     }
 
-    public boolean enableBreakpoint(int id) {
-        BreakpointInterceptTask task = taskManager.getTask(id, BreakpointInterceptTask.class);
-        if (task != null) {
-            task.setEnabled(true);
-            logger.info("启用断点: " + id);
-            return true;
-        }
-        return false;
-    }
-
-    public boolean disableBreakpoint(int id) {
-        BreakpointInterceptTask task = taskManager.getTask(id, BreakpointInterceptTask.class);
-        if (task != null) {
-            task.setEnabled(false);
-            logger.info("禁用断点: " + id);
-            return true;
-        }
-        return false;
-    }
-
-    public boolean removeBreakpoint(int id) {
-        return taskManager.stopTask(id);
-    }
-
-    public void clearAll() {
-        taskManager.clearByType(TaskType.BREAKPOINT);
-    }
-
-    public List<BreakpointInterceptTask> listBreakpoints() {
-        return taskManager.getTasksByType(TaskType.BREAKPOINT)
-                .stream()
-                .map(t -> (BreakpointInterceptTask) t)
-                .collect(Collectors.toList());
-    }
-
-    public BreakpointInterceptTask getBreakpoint(int id) {
-        return taskManager.getTask(id, BreakpointInterceptTask.class);
-    }
-
-    public int getBreakpointCount() {
-        return taskManager.getTaskCount(TaskType.BREAKPOINT);
-    }
-
-    public boolean hasBreakpoint(int id) {
-        return taskManager.getTask(id, BreakpointInterceptTask.class) != null;
-    }
-
-    public void shutdown() {
-        logger.info("关闭BreakpointManager");
-        clearAll();
+    @Override
+    protected String getTaskOutputInternal(BreakpointInterceptTask task, int limit) {
+        return task.getBreakpointInfo();
     }
 }

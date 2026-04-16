@@ -2,7 +2,7 @@ package com.justnothing.testmodule.utils.io;
 
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 import com.justnothing.testmodule.utils.data.BootMonitor;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 
 import java.io.*;
 import java.util.Iterator;

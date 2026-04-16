@@ -31,4 +31,5 @@ public class FileDirectory {
     public static final String RESULT_FILE_NAME = "result.txt";
 
     public static final String TEMP_FALLBACK_RECORD_FILE_DIR = SDCARD_PATH + "/fallback_dir";
+    public static final String SCRIPT_SUFFIX = ".java";
 }

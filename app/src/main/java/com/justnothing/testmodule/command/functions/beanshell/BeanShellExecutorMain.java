@@ -98,9 +98,9 @@ public class BeanShellExecutorMain extends CommandBase {
                       bsh 'println("Hello, World!");'
                       bsh 'for (i = 0; i < 5; i++) { println("i = " + i); }'
                     
-                    提示: BeanShell不需要也不能指定类型
+                    提示: BeanShell可以不指定类型
                         a = "114514";
-                        String a = "114514"; // 爆炸
+                        String b = "114514";
                     
                     (Submodule bsh %s)
                     """, CMD_BEAN_SHELL_VER);

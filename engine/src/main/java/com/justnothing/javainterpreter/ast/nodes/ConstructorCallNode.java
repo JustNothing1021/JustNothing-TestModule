@@ -14,6 +14,7 @@ public class ConstructorCallNode extends ASTNode {
     private final GenericType type;
     private final List<ASTNode> arguments;
     private final ASTNode arrayInitializer;
+    private final ClassDeclarationNode anonymousClass;
     
     public ConstructorCallNode(GenericType type, List<ASTNode> arguments, 
                              ASTNode arrayInitializer, SourceLocation location) {
@@ -23,6 +24,18 @@ public class ConstructorCallNode extends ASTNode {
             Collections.unmodifiableList(new ArrayList<>(arguments)) : 
             Collections.emptyList();
         this.arrayInitializer = arrayInitializer;
+        this.anonymousClass = null;
+    }
+    
+    public ConstructorCallNode(GenericType type, List<ASTNode> arguments, 
+                             ClassDeclarationNode anonymousClass, SourceLocation location) {
+        super(location);
+        this.type = type;
+        this.arguments = arguments != null ? 
+            Collections.unmodifiableList(new ArrayList<>(arguments)) : 
+            Collections.emptyList();
+        this.arrayInitializer = null;
+        this.anonymousClass = anonymousClass;
     }
     
     public GenericType getType() {
@@ -41,6 +54,14 @@ public class ConstructorCallNode extends ASTNode {
         return arrayInitializer;
     }
     
+    public ClassDeclarationNode getAnonymousClass() {
+        return anonymousClass;
+    }
+    
+    public boolean isAnonymousClass() {
+        return anonymousClass != null;
+    }
+    
     public boolean isArrayConstructor() {
         return type.isArray() || arrayInitializer != null;
     }
@@ -57,6 +78,10 @@ public class ConstructorCallNode extends ASTNode {
         if (arrayInitializer != null) {
             sb.append(indent(indent + 1)).append("arrayInitializer:\n");
             sb.append(arrayInitializer.formatString(indent + 2));
+        }
+        if (anonymousClass != null) {
+            sb.append(indent(indent + 1)).append("anonymousClass:\n");
+            sb.append(anonymousClass.formatString(indent + 2));
         }
         return sb.toString().stripTrailing();
     }

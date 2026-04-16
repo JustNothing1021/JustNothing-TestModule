@@ -17,7 +17,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.justnothing.testmodule.R;
 import com.justnothing.testmodule.constants.HookConfig;
 import com.justnothing.testmodule.utils.data.DataBridge;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.hooks.ClientHookConfig;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 

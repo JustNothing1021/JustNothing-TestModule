@@ -1,7 +1,7 @@
 package com.justnothing.testmodule.ui;
 
 import static com.justnothing.testmodule.constants.FileDirectory.DATA_PATH;
-import static com.justnothing.testmodule.utils.functions.Logger.MAIN_TAG;
+import static com.justnothing.testmodule.utils.logging.Logger.MAIN_TAG;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
@@ -17,8 +17,8 @@ import android.text.TextUtils;
 
 import com.justnothing.testmodule.R;
 import com.justnothing.testmodule.databinding.ActivityGetHttpconfBinding;
-import com.justnothing.testmodule.utils.functions.PermissionUtils;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.data.BootMonitor;
+import com.justnothing.testmodule.utils.logging.Logger;
 
 import android.util.Log;
 import android.widget.Toast;
@@ -157,10 +157,10 @@ public class HttpConfigActivity extends AppCompatActivity {
     }
 
     public void saveContent() {
-        if (!PermissionUtils.checkStoragePermission(this))
-            PermissionUtils.requestPermission(this);
+        if (!BootMonitor.PermissionUtils.checkStoragePermission(this))
+            BootMonitor.PermissionUtils.requestPermission(this);
         String text = (String) binding.textView5.getText();
-        if (!PermissionUtils.checkStoragePermission(this)) {
+        if (!BootMonitor.PermissionUtils.checkStoragePermission(this)) {
             logger.warn("保存文件时没有权限");
             showToast("没有保存文件的权限");
             return;

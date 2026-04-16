@@ -2,7 +2,7 @@ package com.justnothing.testmodule.command.functions.bytecode;
 
 import android.annotation.SuppressLint;
 
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.io.IOManager;
 
 import dalvik.system.DexFile;

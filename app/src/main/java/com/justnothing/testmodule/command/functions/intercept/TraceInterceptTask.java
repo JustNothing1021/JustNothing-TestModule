@@ -141,6 +141,29 @@ public class TraceInterceptTask extends AbstractInterceptTask {
         return hitCount.get();
     }
 
+    public String getTraceOutput(int limit) {
+        synchronized (callRecords) {
+            if (callRecords.isEmpty()) {
+                return "暂无调用记录";
+            }
+
+            StringBuilder sb = new StringBuilder();
+            sb.append("=== Trace 输出 ===\n");
+            sb.append("任务ID: ").append(id).append("\n");
+            sb.append("目标方法: ").append(className).append(".").append(methodName).append("\n");
+            sb.append("总调用次数: ").append(hitCount.get()).append("\n\n");
+
+            int count = 0;
+            for (CallRecord record : callRecords) {
+                if (limit > 0 && count >= limit) break;
+                sb.append(record.toString()).append("\n");
+                count++;
+            }
+
+            return sb.toString();
+        }
+    }
+
     public String getCallTree() {
         synchronized (callTree) {
             if (callTree.isEmpty()) return "暂无调用记录";

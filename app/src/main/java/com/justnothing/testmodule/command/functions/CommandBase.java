@@ -1,7 +1,7 @@
 package com.justnothing.testmodule.command.functions;
 
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 
 public abstract class CommandBase {
 

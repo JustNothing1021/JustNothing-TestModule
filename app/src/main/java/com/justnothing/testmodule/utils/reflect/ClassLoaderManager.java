@@ -2,7 +2,7 @@ package com.justnothing.testmodule.utils.reflect;
 
 import com.justnothing.testmodule.constants.HookConfig;
 import com.justnothing.testmodule.utils.data.DataBridge;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.io.IOManager;
 
 import dalvik.system.DexClassLoader;

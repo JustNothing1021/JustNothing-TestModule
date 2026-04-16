@@ -51,6 +51,7 @@ public enum ErrorCode {
     EVAL_STACK_OVERFLOW("EVAL_013", "Stack overflow"),
     EVAL_CLASS_NOT_FOUND("EVAL_014", "Class not found"),
     EVAL_EXCEPTION_THROWN("EVAL_015", "Exception thrown"),
+    EVAL_PERMISSION_DENIED("EVAL_016", "Permission denied"),
     
     // 作用域错误 (SCOPE_xxx)
     SCOPE_VARIABLE_ALREADY_DECLARED("SCOPE_001", "Variable already declared in current scope"),

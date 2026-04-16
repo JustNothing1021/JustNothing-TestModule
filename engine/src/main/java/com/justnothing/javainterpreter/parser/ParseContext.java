@@ -2,34 +2,29 @@ package com.justnothing.javainterpreter.parser;
 
 import com.justnothing.javainterpreter.api.DefaultClassFinder;
 import com.justnothing.javainterpreter.api.IClassFinder;
+import com.justnothing.javainterpreter.api.ClassResolver;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 public class ParseContext {
     
-    private int currentLine;
-    private int currentColumn;
-    private Class<?> expectedParamType;
-    private final Deque<NestingLevel> nestingStack;
     private final List<String> imports;
     private final Set<String> declaredClassNames;
     private ClassLoader classLoader;
     private IClassFinder classFinder;
+    
+    private String currentClassName;
+    private Set<String> currentClassFields;
+    private Set<String> currentMethodParams;
     
     public ParseContext() {
         this(Thread.currentThread().getContextClassLoader());
     }
     
     public ParseContext(ClassLoader classLoader) {
-        this.currentLine = 1;
-        this.currentColumn = 1;
-        this.expectedParamType = null;
-        this.nestingStack = new ArrayDeque<>();
         this.imports = new ArrayList<>();
         this.declaredClassNames = new HashSet<>();
         this.classLoader = classLoader != null ? classLoader : Thread.currentThread().getContextClassLoader();
@@ -61,51 +56,8 @@ public class ParseContext {
     public void setClassFinder(IClassFinder classFinder) {
         this.classFinder = classFinder;
     }
-    
-    public int getCurrentLine() {
-        return currentLine;
-    }
-    
-    public void setCurrentLine(int currentLine) {
-        this.currentLine = currentLine;
-    }
-    
-    public int getCurrentColumn() {
-        return currentColumn;
-    }
-    
-    public void setCurrentColumn(int currentColumn) {
-        this.currentColumn = currentColumn;
-    }
-    
-    public Class<?> getExpectedParamType() {
-        return expectedParamType;
-    }
-    
-    public void setExpectedParamType(Class<?> expectedParamType) {
-        this.expectedParamType = expectedParamType;
-    }
-    
-    public void clearExpectedParamType() {
-        this.expectedParamType = null;
-    }
-    
-    public void pushNestingLevel(NestingLevel level) {
-        nestingStack.push(level);
-    }
-    
-    public NestingLevel popNestingLevel() {
-        return nestingStack.pop();
-    }
-    
-    public NestingLevel peekNestingLevel() {
-        return nestingStack.peek();
-    }
-    
-    public boolean isNestingStackEmpty() {
-        return nestingStack.isEmpty();
-    }
-    
+
+
     public List<String> getImports() {
         return imports;
     }
@@ -124,15 +76,53 @@ public class ParseContext {
         return declaredClassNames.contains(className);
     }
     
-    public Set<String> getDeclaredClassNames() {
-        return declaredClassNames;
+    public void enterClass(String className) {
+        this.currentClassName = className;
+        this.currentClassFields = new HashSet<>();
     }
     
-    public enum NestingLevel {
-        PARENTHESIS,  // 圆括号 ()
-        BRACE,        // 花括号 {}
-        BRACKET,       // 方括号 []
-        LAMBDA,        // Lambda表达式
-        METHOD_CALL    // 方法调用
+    public void exitClass() {
+        this.currentClassName = null;
+        this.currentClassFields = null;
+    }
+    
+    public void addField(String fieldName) {
+        if (currentClassFields != null) {
+            currentClassFields.add(fieldName);
+        }
+    }
+    
+    public boolean isFieldOfCurrentClass(String name) {
+        return currentClassFields != null && currentClassFields.contains(name);
+    }
+    
+    public void enterMethod(Set<String> paramNames) {
+        this.currentMethodParams = paramNames;
+    }
+    
+    public void exitMethod() {
+        this.currentMethodParams = null;
+    }
+    
+    public boolean isLocalVariable(String name) {
+        return currentMethodParams != null && currentMethodParams.contains(name);
+    }
+    
+    public boolean shouldResolveAsField(String name) {
+        return (isFieldOfCurrentClass(name) || isFieldOfParentClass(name)) && !isLocalVariable(name);
+    }
+    
+    private boolean isFieldOfParentClass(String name) {
+        // 暂时简化处理，假设所有未在当前类中定义的字段都是父类的字段
+        // 后续可以根据实际的类继承关系来实现
+        return !isFieldOfCurrentClass(name) && !isLocalVariable(name);
+    }
+    
+    public Class<?> resolveClass(String className) {
+        return ClassResolver.findClassWithImports(className, classLoader, imports);
+    }
+    
+    public Class<?> resolveClassOrFail(String className) throws ClassNotFoundException {
+        return ClassResolver.findClassWithImportsOrFail(className, classLoader, imports);
     }
 }

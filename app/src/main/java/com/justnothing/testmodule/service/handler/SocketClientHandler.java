@@ -6,7 +6,8 @@ import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.output.ICommandOutputHandler;
 import com.justnothing.testmodule.command.output.InteractiveOutputHandler;
 import com.justnothing.testmodule.command.output.InteractiveProtocol;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.command.output.DisclaimerManager;
+import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
 import java.io.BufferedReader;
@@ -199,7 +200,10 @@ public class SocketClientHandler {
             logger.debug("向客户端发送SERVER_PING包");
 
         } catch (IOException e) {
-            logger.warn("发送SERVER_PING失败", e);
+            // Socket closed是正常的，因为客户端可能已经断开连接
+            if (!e.getMessage().contains("Socket closed")) {
+                logger.warn("发送SERVER_PING失败", e);
+            }
         }
     }
 
@@ -249,17 +253,27 @@ public class SocketClientHandler {
                 ));
 
                 ScheduledFuture<?> future = ThreadPoolManager.scheduleWithFixedDelay(
-                        () -> runInteractiveProtocolPing(output),
-                        PING_CLIENT_INTERVAL_MS, PING_CLIENT_INTERVAL_MS, TimeUnit.MILLISECONDS);
+                    () -> runInteractiveProtocolPing(output),
+                    PING_CLIENT_INTERVAL_MS, PING_CLIENT_INTERVAL_MS, TimeUnit.MILLISECONDS);
 
-                try {
-                    commandExecutor.execute(command, outputHandler);
-                } catch (Exception e) {
-                    logger.error("执行命令失败", e);
-                    try {
-                        outputHandler.println("执行命令失败: " + e.getMessage());
-                    } catch (Exception ignored) {}
+            try {
+                if (!DisclaimerManager.fullVerification(outputHandler)) {
+                    logger.warn("用户未通过验证，关闭连接");
+                    return;
                 }
+
+                commandExecutor.execute(command, outputHandler);
+            } catch (Exception e) {
+                logger.error("执行命令失败", e);
+                try {
+                    outputHandler.println("执行命令失败: " + e.getMessage());
+                } catch (Exception ignored) {}
+            } catch (Throwable t) {
+                logger.error("执行命令时发生严重错误", t);
+                try {
+                    outputHandler.println("执行命令时发生严重错误: " + t.getMessage());
+                } catch (Exception ignored) {}
+            } finally {
                 AtomicInteger waited = new AtomicInteger(0);
                 ThreadPoolManager.scheduleWithFixedDelayUntil(
                     () -> waited.getAndAdd(100),
@@ -270,9 +284,10 @@ public class SocketClientHandler {
 
                 logger.info("命令执行完成");
                 if (future != null) future.cancel(true);
+            }
 
-            } catch (Exception e) {
-                logger.error("处理交互协议客户端错误", e);
+            } catch (Throwable t) {
+                logger.error("处理交互协议客户端错误", t);
             }
         } catch (IOException ignored) {
         }

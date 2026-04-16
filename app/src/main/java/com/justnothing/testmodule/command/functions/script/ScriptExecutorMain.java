@@ -8,12 +8,15 @@ import com.justnothing.testmodule.command.functions.CommandBase;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.javainterpreter.ScriptRunner;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
+import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 import com.justnothing.testmodule.utils.data.DataBridge;
 import com.justnothing.testmodule.utils.io.IOManager;
 import com.justnothing.javainterpreter.exception.EvaluationException;
 import com.justnothing.javainterpreter.exception.ParseException;
+import com.justnothing.javainterpreter.security.PermissionType;
+import com.justnothing.javainterpreter.security.SandboxConfig;
 import com.justnothing.testmodule.utils.reflect.AppClassFinder;
-
+import com.justnothing.testmodule.utils.sandbox.BlockGuardSandbox;
 
 import java.io.File;
 import java.util.Map;
@@ -24,12 +27,17 @@ import java.util.Arrays;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class ScriptExecutorMain extends CommandBase {
 
     private static final ConcurrentHashMap<ClassLoader, ScriptRunner>
             scriptRunners = new ConcurrentHashMap<>();
     private static final ScriptRunner systemScriptRunner;
+    private static final ThreadLocal<SandboxConfig> currentPermissionConfig = new ThreadLocal<>();
     
     static {
         systemScriptRunner = new ScriptRunner(null);
@@ -119,13 +127,30 @@ public class ScriptExecutorMain extends CommandBase {
                                 delete <name>              - 删除脚本
                                 run <name>                 - 执行脚本
                                 run_code <code>            - 直接执行代码字符串（备用）
+                                interactive                - 启动交互REPL执行器
                                 import <file>              - 导入脚本文件
                                 export <name> <file>       - 导出脚本文件
                                 manage                     - 启动交互式脚本管理器
+                                permission [action] [args] - 查看/修改权限配置
+                                    grant <PERM1,PERM2>    - 授予权限
+                                    deny <PERM1,PERM2>     - 拒绝权限
+                                    preset <name>          - 应用预设
+                                    reset                  - 重置为无限制
+                                    list                   - 列出所有权限类型
                             
                             选项:
-                                name              - 脚本名称
-                                file              - 文件路径
+                                -p <preset>       - 权限预设 (放在子命令前)
+                            
+                            权限预设:
+                                sandbox     - 沙箱模式 (禁止文件/网络/线程/反射)
+                                expression  - 表达式模式 (仅允许计算)
+                                minimal     - 最小权限 (允许读文件)
+                                full        - 完全权限 (无限制)
+                            
+                            示例:
+                                script -p sandbox run myscript    - 以沙箱权限执行脚本
+                                script -p expression '1 + 2'      - 以表达式权限执行代码
+                                script permission list            - 列出所有权限类型
                             
                             
                             ═══════════════════════════════════════════════════════════════
@@ -381,12 +406,62 @@ public class ScriptExecutorMain extends CommandBase {
     }
 
     private void executeScriptCode(CommandExecutor.CmdExecContext context) {
+        String code = context.origCommand();
+        context.println("[脚本执行] 在独立线程中执行...", Colors.CYAN);
+        context.println("", Colors.WHITE);
+        
+        AtomicReference<Throwable> errorRef = new AtomicReference<>(null);
+        
+        Future<?> future = ThreadPoolManager.submitIOCallable(() -> {
+            try {
+                SandboxConfig config = currentPermissionConfig.get();
+                
+                if (config != null) {
+                    BlockGuardSandbox.execute(config, () -> {
+                        logger.info("执行脚本代码 (沙箱): " + code);
+                        ScriptRunner runner = getScriptExecutor(context.classLoader());
+                        if (config.getAstPermissionChecker() != null) {
+                            runner.getExecutionContext().setPermissionChecker(config.getAstPermissionChecker());
+                        }
+                        runner.execute(code, context.output(), context.output());
+                        return null;
+                    });
+                } else {
+                    logger.info("执行脚本代码: " + code);
+                    ScriptRunner runner = getScriptExecutor(context.classLoader());
+                    runner.execute(code, context.output(), context.output());
+                }
+            } catch (Throwable e) {
+                errorRef.set(e);
+            }
+            return null;
+        });
+
+
+        
         try {
-            logger.info("执行脚本代码: " + context.origCommand());
-            ScriptRunner runner = getScriptExecutor(context.classLoader());
-            runner.execute(context.origCommand(), context.output(), context.output());
+            assert future != null : "无法获取用于执行脚本代码的Future";
+            future.get(5, TimeUnit.MINUTES);
+            
+            if (errorRef.get() != null) {
+                Throwable e = errorRef.get();
+                Throwable cause = e;
+                while (cause instanceof RuntimeException && cause.getCause() != null) {
+                    cause = cause.getCause();
+                }
+                if (cause instanceof SecurityException) {
+                    context.print("权限拒绝: ", Colors.RED);
+                    context.println(Objects.requireNonNullElse(cause.getMessage(), "没有详细信息"), Colors.ORANGE);
+                } else {
+                    CommandExceptionHandler.handleException("script", e, context, "脚本执行失败");
+                }
+            }
+        } catch (TimeoutException e) {
+            future.cancel(true);
+            context.println("脚本执行超时（5分钟），已取消", Colors.RED);
         } catch (Exception e) {
-            CommandExceptionHandler.handleException("script", e, context, "脚本执行失败");
+            context.print("等待脚本执行结果时发生异常: ", Colors.RED);
+            context.println(Objects.requireNonNullElse(e.getMessage(), "没有错误信息"), Colors.ORANGE);
         }
     }
 
@@ -400,22 +475,62 @@ public class ScriptExecutorMain extends CommandBase {
             return;
         }
 
-        String subCommand = args[0];
-
-        switch (subCommand) {
-            case "create" -> handleCreate(args, context);
-            case "list" -> handleList(context);
-            case "show" -> handleShow(args, context);
-            case "delete" -> handleDelete(args, context);
-            case "run" -> handleRun(args, context);
-            case "run_code" -> handleRunCode(context);
-            case "import" -> handleImport(args, context);
-            case "export" -> handleExport(args, context);
-            case "manage" -> handleManage(context);
-            default -> {
-                context.print("未知子命令: ", Colors.RED);
-                context.println(subCommand, Colors.YELLOW);
+        SandboxConfig permissionConfig = null;
+        String[] effectiveArgs = args;
+        
+        if (args.length >= 2 && "-p".equals(args[0])) {
+            String preset = args[1];
+            permissionConfig = resolvePreset(preset, context);
+            if (permissionConfig == null && !"full".equalsIgnoreCase(preset)) {
+                return;
+            }
+            effectiveArgs = new String[args.length - 2];
+            System.arraycopy(args, 2, effectiveArgs, 0, args.length - 2);
+            
+            if (effectiveArgs.length < 1) {
+                context.println("错误: -p 参数后需要指定子命令", Colors.RED);
                 getHelpText();
+                return;
+            }
+            
+            context.print("[权限模式: ", Colors.YELLOW);
+            context.print(preset, Colors.ORANGE);
+            context.println("]", Colors.YELLOW);
+        }
+
+        String subCommand = effectiveArgs[0];
+        SandboxConfig previousConfig = currentPermissionConfig.get();
+        
+        if (permissionConfig != null) {
+            currentPermissionConfig.set(permissionConfig);
+        }
+
+        try {
+            switch (subCommand) {
+                case "create" -> handleCreate(effectiveArgs, context);
+                case "list" -> handleList(context);
+                case "show" -> handleShow(effectiveArgs, context);
+                case "delete" -> handleDelete(effectiveArgs, context);
+                case "run" -> handleRun(effectiveArgs, context);
+                case "run_code" -> handleRunCode(context);
+                case "import" -> handleImport(effectiveArgs, context);
+                case "export" -> handleExport(effectiveArgs, context);
+                case "manage" -> handleManage(context);
+                case "permission" -> handlePermission(effectiveArgs, context);
+                case "interactive" -> runInteractiveMode(context);
+                default -> {
+                    context.print("未知子命令: ", Colors.RED);
+                    context.println(subCommand, Colors.YELLOW);
+                    getHelpText();
+                }
+            }
+        } finally {
+            if (permissionConfig != null) {
+                if (previousConfig != null) {
+                    currentPermissionConfig.set(previousConfig);
+                } else {
+                    currentPermissionConfig.remove();
+                }
             }
         }
     }
@@ -470,7 +585,7 @@ public class ScriptExecutorMain extends CommandBase {
             return;
         }
 
-        File scriptFile = getScriptFile(scriptName);
+        File scriptFile = DataBridge.getScriptFile(scriptName);
         if (scriptFile.exists()) {
             context.print("错误: 脚本 '", Colors.RED);
             context.print(scriptName, Colors.YELLOW);
@@ -481,7 +596,9 @@ public class ScriptExecutorMain extends CommandBase {
         IOManager.createDirectory(Objects.requireNonNull(scriptFile.getParentFile()).getAbsolutePath());
 
         String content = "// Script: " + scriptName + "\n" +
-                         "// Created by: " + System.currentTimeMillis() + "\n" +
+                         "// Created by: " + 
+                         new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+                            .format(new Date()) +
                          "\n" +
                          "// 在这里编写你的脚本代码...\n";
         
@@ -590,11 +707,12 @@ public class ScriptExecutorMain extends CommandBase {
     private void handleRun(String[] args, CommandExecutor.CmdExecContext context) throws IOException {
         if (args.length < 2) {
             context.println("错误: 需要指定文件名称", Colors.RED);
-            context.println("用法: script run <name>", Colors.GRAY);
+            context.println("用法: script [-p preset] run <name>", Colors.GRAY);
             return;
         }
 
         String fileName = args[1];
+
         File scriptsDir = DataBridge.getScriptsDirectory();
         File targetFile = new File(scriptsDir, fileName);
 
@@ -610,17 +728,63 @@ public class ScriptExecutorMain extends CommandBase {
         context.print("===== 执行脚本: ", Colors.CYAN);
         context.print(fileName, Colors.YELLOW);
         context.println(" =====", Colors.CYAN);
+        context.println("[脚本执行] 在独立线程中执行...", Colors.CYAN);
         context.println("", Colors.WHITE);
         
+        SandboxConfig config = currentPermissionConfig.get();
+        AtomicReference<Throwable> errorRef = new AtomicReference<>(null);
+        
+        Future<?> future = ThreadPoolManager.submitIOCallable(() -> {
+            try {
+                ScriptRunner runner = new ScriptRunner(context.classLoader());
+                runner.setClassFinder(new AppClassFinder());
+                
+                if (config != null) {
+                    if (config.getAstPermissionChecker() != null) {
+                        runner.getExecutionContext().setPermissionChecker(config.getAstPermissionChecker());
+                    }
+                    BlockGuardSandbox.execute(config, () -> {
+                        try {
+                            runner.execute(content, context.output(), context.output());
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
+                } else {
+                    runner.execute(content, context.output(), context.output());
+                }
+            } catch (Throwable e) {
+                errorRef.set(e);
+            }
+            return null;
+        });
+        
         try {
-            ScriptRunner runner = new ScriptRunner(context.classLoader());
-            runner.setClassFinder(new AppClassFinder());
-            runner.execute(content, context.output(), context.output());
-            context.println("脚本执行成功", Colors.GREEN);
+            assert future != null : "无法获取用于执行代码的Future";
+            future.get(5, TimeUnit.MINUTES);
+            
+            if (errorRef.get() != null) {
+                Throwable e = errorRef.get();
+                Throwable cause = e;
+                while (cause instanceof RuntimeException && cause.getCause() != null) {
+                    cause = cause.getCause();
+                }
+                if (cause instanceof SecurityException) {
+                    context.print("权限拒绝: ", Colors.RED);
+                    context.println(Objects.requireNonNullElse(cause.getMessage(), "没有详细信息"), Colors.ORANGE);
+                } else {
+                    CommandExceptionHandler.handleException("script run", e, context, "脚本执行失败");
+                }
+            } else {
+                context.println("脚本执行成功", Colors.GREEN);
+            }
+        } catch (TimeoutException e) {
+            future.cancel(true);
+            context.println("脚本执行超时（5分钟），已取消", Colors.RED);
         } catch (Exception e) {
-            CommandExceptionHandler.handleException("script run", e, context, "脚本执行失败");
+            context.print("等待脚本执行结果时发生异常: ", Colors.RED);
+            context.println(Objects.requireNonNullElse(e.getMessage(), "没有详细信息"), Colors.ORANGE);
         }
-
     }
 
     private void handleRunCode(CommandExecutor.CmdExecContext context) {
@@ -643,10 +807,22 @@ public class ScriptExecutorMain extends CommandBase {
         context.println("===== 执行代码 =====", Colors.CYAN);
         context.println("", Colors.WHITE);
         
+        SandboxConfig config = currentPermissionConfig.get();
+        
         try {
             ScriptRunner runner = new ScriptRunner(context.classLoader());
             runner.setClassFinder(new AppClassFinder());
-            runner.execute(code, context.output(), context.output());
+            
+            if (config != null) {
+                if (config.getAstPermissionChecker() != null) {
+                    runner.getExecutionContext().setPermissionChecker(config.getAstPermissionChecker());
+                }
+                BlockGuardSandbox.execute(config, () -> {
+                    runner.execute(code, context.output(), context.output());
+                });
+            } else {
+                runner.execute(code, context.output(), context.output());
+            }
             context.println("代码执行成功", Colors.GREEN);
         } catch (Exception e) {
             CommandExceptionHandler.handleException("script run_code", e, context, "代码执行失败");
@@ -731,12 +907,12 @@ public class ScriptExecutorMain extends CommandBase {
         File sourceFile = null;
         String fileType = null;
         
-        File scriptFile = getScriptFile(fileName);
+        File scriptFile = DataBridge.getScriptFile(fileName);
         if (scriptFile.exists()) {
             sourceFile = scriptFile;
             fileType = "脚本";
         } else {
-            File codebaseDir = DataBridge.getCodebaseDirectory();
+            File codebaseDir = DataBridge.getScriptsDirectory();
             File codebaseFile = new File(codebaseDir, fileName);
             if (codebaseFile.exists()) {
                 sourceFile = codebaseFile;
@@ -897,7 +1073,7 @@ public class ScriptExecutorMain extends CommandBase {
     }
     
     private void handleEdit(String name, CommandExecutor.CmdExecContext context) throws IOException {
-        File scriptFile = getScriptFile(name);
+        File scriptFile = DataBridge.getScriptFile(name);
         
         if (!scriptFile.exists()) {
             context.print("错误: 脚本 '", Colors.RED);
@@ -934,8 +1110,206 @@ public class ScriptExecutorMain extends CommandBase {
         }
     }
     
+    private void handlePermission(String[] args, CommandExecutor.CmdExecContext context) {
+        if (args.length < 2) {
+            showPermissionStatus(context);
+            return;
+        }
+
+        String action = args[1];
+
+        switch (action) {
+            case "grant" -> {
+                if (args.length < 3) {
+                    context.println("用法: script permission grant <PERM1,PERM2,...>", Colors.GRAY);
+                    context.println("可用权限: " + getPermissionList(), Colors.GRAY);
+                    return;
+                }
+                modifyPermissions(args[2], true, context);
+            }
+            case "deny" -> {
+                if (args.length < 3) {
+                    context.println("用法: script permission deny <PERM1,PERM2,...>", Colors.GRAY);
+                    context.println("可用权限: " + getPermissionList(), Colors.GRAY);
+                    return;
+                }
+                modifyPermissions(args[2], false, context);
+            }
+            case "preset" -> {
+                if (args.length < 3) {
+                    context.println("用法: script permission preset <sandbox|expression|minimal|full>", Colors.GRAY);
+                    return;
+                }
+                applyPreset(args[2], context);
+            }
+            case "reset" -> {
+                currentPermissionConfig.remove();
+                context.println("权限配置已重置为默认 (无限制)", Colors.GREEN);
+            }
+            case "list" -> {
+                context.println("可用权限类型:", Colors.CYAN);
+                for (PermissionType pt : PermissionType.values()) {
+                    context.print("  " + pt.getId(), Colors.YELLOW);
+                    context.println(" - " + pt.getDescription(), Colors.GRAY);
+                }
+                context.println("", Colors.WHITE);
+                context.println("预设:", Colors.CYAN);
+                context.print("  sandbox    ", Colors.YELLOW);
+                context.println("- 沙箱模式 (禁止文件/网络/线程/反射)", Colors.GRAY);
+                context.print("  expression ", Colors.YELLOW);
+                context.println("- 表达式模式 (仅允许计算)", Colors.GRAY);
+                context.print("  minimal    ", Colors.YELLOW);
+                context.println("- 最小权限 (允许读文件)", Colors.GRAY);
+                context.print("  full       ", Colors.YELLOW);
+                context.println("- 完全权限 (无限制)", Colors.GRAY);
+            }
+            default -> {
+                context.print("未知权限操作: ", Colors.RED);
+                context.println(action, Colors.YELLOW);
+                context.println("可用操作: grant, deny, preset, reset, list", Colors.GRAY);
+            }
+        }
+    }
+
+    private void showPermissionStatus(CommandExecutor.CmdExecContext context) {
+        SandboxConfig config = currentPermissionConfig.get();
+        
+        context.println("===== 当前权限配置 =====", Colors.CYAN);
+        context.println("", Colors.WHITE);
+        
+        if (config == null) {
+            context.println("  未配置权限限制 (完全权限)", Colors.GREEN);
+            return;
+        }
+
+        context.print("  磁盘读取: ", Colors.CYAN);
+        context.println(config.isDiskReadAllowed() ? "允许" : "禁止", config.isDiskReadAllowed() ? Colors.GREEN : Colors.RED);
+        context.print("  磁盘写入: ", Colors.CYAN);
+        context.println(config.isDiskWriteAllowed() ? "允许" : "禁止", config.isDiskWriteAllowed() ? Colors.GREEN : Colors.RED);
+        context.print("  网络操作: ", Colors.CYAN);
+        context.println(config.isNetworkAllowed() ? "允许" : "禁止", config.isNetworkAllowed() ? Colors.GREEN : Colors.RED);
+        context.print("  创建线程: ", Colors.CYAN);
+        context.println(config.isThreadCreateAllowed() ? "允许" : "禁止", config.isThreadCreateAllowed() ? Colors.GREEN : Colors.RED);
+        context.print("  创建进程: ", Colors.CYAN);
+        context.println(config.isProcessCreateAllowed() ? "允许" : "禁止", config.isProcessCreateAllowed() ? Colors.GREEN : Colors.RED);
+        context.print("  反射操作: ", Colors.CYAN);
+        context.println(config.isReflectionAllowed() ? "允许" : "禁止", config.isReflectionAllowed() ? Colors.GREEN : Colors.RED);
+        context.print("  系统退出: ", Colors.CYAN);
+        context.println(config.isSystemExitAllowed() ? "允许" : "禁止", config.isSystemExitAllowed() ? Colors.GREEN : Colors.RED);
+        context.print("  系统属性: ", Colors.CYAN);
+        context.println(config.isSystemPropertyAllowed() ? "允许" : "禁止", config.isSystemPropertyAllowed() ? Colors.GREEN : Colors.RED);
+        context.print("  类加载器: ", Colors.CYAN);
+        context.println(config.isClassLoaderAllowed() ? "允许" : "禁止", config.isClassLoaderAllowed() ? Colors.GREEN : Colors.RED);
+        
+        context.println("", Colors.WHITE);
+        context.println("使用 'script permission grant/deny <PERM>' 修改", Colors.GRAY);
+        context.println("使用 'script permission preset <name>' 应用预设", Colors.GRAY);
+    }
+
+    private void modifyPermissions(String permList, boolean grant, CommandExecutor.CmdExecContext context) {
+        SandboxConfig current = currentPermissionConfig.get();
+        SandboxConfig.Builder builder = SandboxConfig.builder();
+
+        if (current != null) {
+            if (current.isDiskReadAllowed()) builder.allowDiskRead(); else builder.denyDiskRead();
+            if (current.isDiskWriteAllowed()) builder.allowDiskWrite(); else builder.denyDiskWrite();
+            if (current.isNetworkAllowed()) builder.allowNetwork(); else builder.denyNetwork();
+            if (current.isThreadCreateAllowed()) builder.allowThreadCreate(); else builder.denyThreadCreate();
+            if (current.isProcessCreateAllowed()) builder.allowProcessCreate(); else builder.denyProcessCreate();
+            if (current.isReflectionAllowed()) builder.allowReflection(); else builder.denyReflection();
+            if (current.isSystemExitAllowed()) builder.allowSystemExit(); else builder.denySystemExit();
+            if (current.isSystemPropertyAllowed()) builder.allowSystemProperty(); else builder.denySystemProperty();
+            if (current.isClassLoaderAllowed()) builder.allowClassLoader(); else builder.denyClassLoader();
+        } else {
+            builder.allowDiskRead().allowDiskWrite().allowNetwork()
+                .allowThreadCreate().allowProcessCreate().allowReflection()
+                .allowSystemExit().allowSystemProperty().allowClassLoader();
+        }
+
+        String[] perms = permList.split(",");
+        int count = 0;
+
+        for (String perm : perms) {
+            String p = perm.trim().toLowerCase();
+            switch (p) {
+                case "file.read", "disk.read" -> { if (grant) builder.allowDiskRead(); else builder.denyDiskRead(); count++; }
+                case "file.write", "disk.write" -> { if (grant) builder.allowDiskWrite(); else builder.denyDiskWrite(); count++; }
+                case "network" -> { if (grant) builder.allowNetwork(); else builder.denyNetwork(); count++; }
+                case "thread", "thread.create" -> { if (grant) builder.allowThreadCreate(); else builder.denyThreadCreate(); count++; }
+                case "exec", "process", "process.create" -> { if (grant) builder.allowProcessCreate(); else builder.denyProcessCreate(); count++; }
+                case "reflection" -> { if (grant) builder.allowReflection(); else builder.denyReflection(); count++; }
+                case "system.exit" -> { if (grant) builder.allowSystemExit(); else builder.denySystemExit(); count++; }
+                case "system.property" -> { if (grant) builder.allowSystemProperty(); else builder.denySystemProperty(); count++; }
+                case "classloader" -> { if (grant) builder.allowClassLoader(); else builder.denyClassLoader(); count++; }
+                default -> {
+                    context.print("  未知权限: ", Colors.RED);
+                    context.println(p, Colors.YELLOW);
+                }
+            }
+        }
+
+        currentPermissionConfig.set(builder.build());
+        context.print((grant ? "已授予" : "已拒绝") + " " + count + " 项权限", Colors.GREEN);
+        context.println(" (" + permList + ")", Colors.GRAY);
+    }
+
+    private void applyPreset(String preset, CommandExecutor.CmdExecContext context) {
+        SandboxConfig config;
+
+        switch (preset.toLowerCase()) {
+            case "sandbox" -> {
+                config = SandboxConfig.DEFAULT;
+                context.println("已应用预设: sandbox (沙箱模式)", Colors.GREEN);
+            }
+            case "expression" -> {
+                config = SandboxConfig.EXPRESSION_ONLY;
+                context.println("已应用预设: expression (表达式模式)", Colors.GREEN);
+            }
+            case "minimal" -> {
+                config = SandboxConfig.MINIMAL;
+                context.println("已应用预设: minimal (最小权限)", Colors.GREEN);
+            }
+            case "full" -> {
+                config = null;
+                context.println("已应用预设: full (完全权限)", Colors.GREEN);
+            }
+            default -> {
+                context.print("未知预设: ", Colors.RED);
+                context.println(preset, Colors.YELLOW);
+                context.println("可用预设: sandbox, expression, minimal, full", Colors.GRAY);
+                return;
+            }
+        }
+
+        currentPermissionConfig.set(config);
+    }
+
+    private String getPermissionList() {
+        StringBuilder sb = new StringBuilder();
+        for (PermissionType pt : PermissionType.values()) {
+            if (sb.length() > 0) sb.append(", ");
+            sb.append(pt.getId());
+        }
+        return sb.toString();
+    }
+
+    private SandboxConfig resolvePreset(String preset, CommandExecutor.CmdExecContext context) {
+        switch (preset.toLowerCase()) {
+            case "sandbox" -> { return SandboxConfig.SANDBOX; }
+            case "expression" -> { return SandboxConfig.EXPRESSION_ONLY; }
+            case "minimal" -> { return SandboxConfig.MINIMAL; }
+            case "full" -> { return null; }
+            default -> {
+                context.print("未知预设: ", Colors.RED);
+                context.println(preset, Colors.YELLOW);
+                context.println("可用预设: sandbox, expression, minimal, full", Colors.GRAY);
+                return null;
+            }
+        }
+    }
+
     private void handleCodebaseList(CommandExecutor.CmdExecContext context) {
-        File codebaseDir = DataBridge.getCodebaseDirectory();
+        File codebaseDir = DataBridge.getScriptsDirectory();
         
         if (!codebaseDir.exists()) {
             context.println("Codebase目录不存在", Colors.GRAY);
@@ -967,10 +1341,6 @@ public class ScriptExecutorMain extends CommandBase {
         context.println(" 个文件", Colors.CYAN);
     }
 
-    private File getScriptFile(String scriptName) {
-        File scriptsDir = DataBridge.getScriptsDirectory();
-        return new File(scriptsDir, scriptName + ".java");
-    }
 
     private boolean isValidScriptName(String name) {
         return name != null && name.matches("^[a-zA-Z0-9_]+$");
@@ -1091,35 +1461,57 @@ public class ScriptExecutorMain extends CommandBase {
     }
     
     private void executeCode(ScriptRunner runner, String code, CommandExecutor.CmdExecContext context) {
-        try {
-            Object result = runner.executeWithResult(code, context.output(), context.output());
-            if (result != null) {
-                context.println(String.valueOf(result), Colors.GRAY);
+        SandboxConfig config = currentPermissionConfig.get();
+        
+        if (config != null) {
+            if (config.getAstPermissionChecker() != null) {
+                runner.getExecutionContext().setPermissionChecker(config.getAstPermissionChecker());
             }
-        } catch (Exception e) {
-            Throwable cause = e.getCause();
-            String message = e.getMessage();
-            boolean isParseError = message != null && message.startsWith("Parse error:");
-            
-            byte errorColor = isParseError ? Colors.ORANGE : Colors.RED;
-            
-            if (cause instanceof EvaluationException evalEx) {
-                Throwable innerCause = evalEx.getCause();
-                context.print("错误: ", errorColor);
-                context.println(evalEx.getMessage(), errorColor);
-                if (innerCause != null) {
-                    context.output().printStackTrace(innerCause);
+            try {
+                BlockGuardSandbox.execute(config, () -> {
+                    Object result = runner.executeWithResult(code, context.output(), context.output());
+                    if (result != null) {
+                        context.println(String.valueOf(result), Colors.GRAY);
+                    }
+                });
+            } catch (Exception e) {
+                handleExecutionException(e, context);
+            }
+        } else {
+            try {
+                Object result = runner.executeWithResult(code, context.output(), context.output());
+                if (result != null) {
+                    context.println(String.valueOf(result), Colors.GRAY);
                 }
-            } else if (cause instanceof ParseException parseEx) {
-                context.print("语法错误: ", errorColor);
-                context.println(parseEx.getMessage(), errorColor);
-            } else if (cause != null) {
-                context.print((isParseError ? "语法错误: " : "错误: ") + cause.getMessage(), errorColor);
-                context.output().printStackTrace(cause);
-            } else {
-                context.print((isParseError ? "语法错误: " : "错误: ") + message, errorColor);
-                context.output().printStackTrace(e);
+            } catch (Exception e) {
+                handleExecutionException(e, context);
             }
+        }
+    }
+    
+    private void handleExecutionException(Exception e, CommandExecutor.CmdExecContext context) {
+        Throwable cause = e.getCause();
+        String message = e.getMessage();
+        boolean isParseError = message != null && message.startsWith("Parse error:");
+        
+        byte errorColor = isParseError ? Colors.ORANGE : Colors.RED;
+        
+        if (cause instanceof EvaluationException evalEx) {
+            Throwable innerCause = evalEx.getCause();
+            context.print("错误: ", errorColor);
+            context.println(evalEx.getMessage(), errorColor);
+            if (innerCause != null) {
+                context.output().printStackTrace(innerCause, Colors.GRAY);
+            }
+        } else if (cause instanceof ParseException parseEx) {
+            context.print("语法错误: ", errorColor);
+            context.println(parseEx.getMessage(), errorColor);
+        } else if (cause != null) {
+            context.println((isParseError ? "语法错误: " : "错误: ") + cause.getMessage(), errorColor);
+            context.output().printStackTrace(cause, Colors.GRAY);
+        } else {
+            context.println((isParseError ? "语法错误: " : "错误: ") + message, errorColor);
+            context.output().printStackTrace(e, Colors.GRAY);
         }
     }
     

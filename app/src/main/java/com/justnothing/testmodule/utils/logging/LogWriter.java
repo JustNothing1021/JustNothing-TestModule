@@ -1,8 +1,10 @@
-package com.justnothing.testmodule.utils.data;
+package com.justnothing.testmodule.utils.logging;
 
 import android.util.Log;
 
 import com.justnothing.testmodule.constants.FileDirectory;
+import com.justnothing.testmodule.utils.data.BootMonitor;
+import com.justnothing.testmodule.utils.data.DataBridge;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -180,7 +182,8 @@ public class LogWriter {
             cleanupOldLogs();
         }
     }
-    
+
+    @SuppressWarnings("SequencedCollectionMethodCanBeUsed")
     private static void appendToLogFile(String log) {
         if (BootMonitor.isZygotePhase()) {
             return;
@@ -206,7 +209,7 @@ public class LogWriter {
                                  (currentTime - lastFlushTime) >= LOG_FLUSH_INTERVAL;
             
             if (shouldFlush) {
-                Log.d("JustNothing[LogWriter]", "刷新日志文件，当前缓冲区大小：" + logBufferCount);
+//                Log.d("JustNothing[LogWriter]", "刷新日志文件，当前缓冲区大小：" + logBufferCount);
                 flushLogFile();
                 lastFlushTime = currentTime;
             }
@@ -237,10 +240,10 @@ public class LogWriter {
                 Log.d(TAG, "创建日志文件: " + logFile.getAbsolutePath());
                 if (!logFile.createNewFile()) Log.w(TAG, "创建日志文件失败，mkdirs返回false");
             }
-            
-            Log.d(TAG, "开始写入日志文件: " + logFile.getAbsolutePath() +
-                    ", 缓冲区数量: " + logBufferCount + 
-                    ", 总大小: " + totalBufferSize + " bytes");
+//
+//            Log.d(TAG, "开始写入日志文件: " + logFile.getAbsolutePath() +
+//                    ", 缓冲区数量: " + logBufferCount +
+//                    ", 总大小: " + totalBufferSize + " bytes");
             
             StringBuilder sb = new StringBuilder();
             while (!logWriteBuffer.isEmpty()) {

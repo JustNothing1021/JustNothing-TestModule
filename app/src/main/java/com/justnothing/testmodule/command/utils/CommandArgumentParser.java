@@ -1,6 +1,6 @@
 package com.justnothing.testmodule.command.utils;
 
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;

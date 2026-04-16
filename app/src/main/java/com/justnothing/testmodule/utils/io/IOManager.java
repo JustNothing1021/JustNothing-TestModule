@@ -4,7 +4,7 @@ import androidx.annotation.NonNull;
 
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 import com.justnothing.testmodule.utils.data.BootMonitor;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 
 import java.io.*;
 import java.nio.channels.FileChannel;
@@ -57,6 +57,10 @@ public class IOManager {
 
     public static Future<String> readFileAsync(String filePath, Charset charset) {
         return ThreadPoolManager.submitIOCallable(() -> readFile(filePath, charset));
+    }
+
+    public static String readFile(File file) throws IOException {
+        return readFile(file.getAbsolutePath());
     }
 
     public static String readFile(String filePath) throws IOException {
@@ -185,6 +189,10 @@ public class IOManager {
         });
     }
 
+    public static void writeFile(File file, String content) throws IOException {
+        writeFile(file.getAbsolutePath(), content);
+    }
+
     public static void writeFile(String filePath, String content) throws IOException {
         writeFile(filePath, content, StandardCharsets.UTF_8, false);
     }
@@ -255,6 +263,10 @@ public class IOManager {
 
     public static Future<Boolean> deleteFileAsync(String filePath) {
         return ThreadPoolManager.submitIOCallable(() -> deleteFile(filePath));
+    }
+
+    public static boolean deleteFile(File file) {
+        return deleteFile(file.getAbsolutePath());
     }
 
     public static boolean deleteFile(String filePath) {

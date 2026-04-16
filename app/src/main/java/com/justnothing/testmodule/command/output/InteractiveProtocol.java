@@ -1,6 +1,6 @@
 package com.justnothing.testmodule.command.output;
 
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 import java.io.*;
 import java.nio.ByteBuffer;
 
@@ -267,7 +267,10 @@ public class InteractiveProtocol {
             output.write(packet);
             output.flush();
         } catch (IOException e) {
-            logger.error("写入消息失败: 类型=" + getMessageTypeName(type), e);
+            // Socket closed 是正常的，因为客户端可能已经断开连接
+            if (!e.getMessage().contains("Socket closed")) {
+                logger.error("写入消息失败: 类型=" + getMessageTypeName(type), e);
+            }
             throw e;
         }
     }

@@ -4,7 +4,7 @@ package com.justnothing.testmodule.hooks;
 import androidx.annotation.Nullable;
 
 import com.justnothing.testmodule.utils.hooks.ClientHookConfig;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;

@@ -1,6 +1,6 @@
 package com.justnothing.testmodule.utils.reflect;
 
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
@@ -317,62 +317,55 @@ public class ReflectionUtils {
         if (Modifier.isStrict(modifiers)) sb.append("strictfp ");
         if (Modifier.isTransient(modifiers)) sb.append("transient ");
 
-        switch (member) {
-            case Method method -> {
-
-                TypeVariable<?>[] typeparms = method.getTypeParameters();
-                if (typeparms.length > 0) {
-                    sb.append(Arrays.stream(typeparms)
-                            .map(ReflectionUtils::typeVarBounds)
-                            .collect(Collectors.joining(",", "<", "> ")));
-                }
-
-                sb.append(simple ? method.getReturnType().getSimpleName() : method.getReturnType().getTypeName()).append(' ');
-                sb.append(simple ? method.getDeclaringClass().getSimpleName() : method.getDeclaringClass().getTypeName()).append('.');
-                sb.append(method.getName());
-
-
-                if (simple) {
-                    Class<?>[] params = method.getParameterTypes();
-                    sb.append(Arrays.stream(params)
-                            .map(Class::getSimpleName)
-                            .collect(Collectors.joining(", ", "(", ")")));
-
-                } else {
-                    sb.append('(');
-                    StringJoiner sj = new StringJoiner(", ");
-                    Type[] params = method.getGenericParameterTypes();
-                    for (int j = 0; j < params.length; j++) {
-                        String param = params[j].toString();
-                        if (method.isVarArgs() && (j == params.length - 1)) // replace T[] with T...
-                            param = param.replaceFirst("\\[]$", "...");
-                        sj.add(param);
-                    }
-                    sb.append(sj);
-                    sb.append(')');
-                }
-
-                Type[] exceptionTypes = method.getGenericExceptionTypes();
-                if (exceptionTypes.length > 0) {
-                    sb.append(Arrays.stream(exceptionTypes)
-                            .map(Type::toString)
-                            .collect(Collectors.joining(", ", " throws ", "")));
-                }
+        if (member instanceof Method method) {
+            TypeVariable<?>[] typeparms = method.getTypeParameters();
+            if (typeparms.length > 0) {
+                sb.append(Arrays.stream(typeparms)
+                        .map(ReflectionUtils::typeVarBounds)
+                        .collect(Collectors.joining(",", "<", "> ")));
             }
-            case Field field -> {
-                sb.append(simple ? field.getType().getSimpleName() : field.getType().getName()).append(' ');
-                sb.append(simple ? field.getName() : member.getDeclaringClass().getName() + "." + field.getName())
-                        .append(" ");
-            }
-            case Constructor<?> constructor -> {
-                sb.append(simple ? constructor.getDeclaringClass().getSimpleName() :
-                        constructor.getDeclaringClass().getName());
-                sb.append(Arrays.stream(constructor.getParameterTypes())
-                        .map(simple ? Class::getSimpleName : Class::getName)
+
+            sb.append(simple ? method.getReturnType().getSimpleName() : method.getReturnType().getTypeName()).append(' ');
+            sb.append(simple ? method.getDeclaringClass().getSimpleName() : method.getDeclaringClass().getTypeName()).append('.');
+            sb.append(method.getName());
+
+
+            if (simple) {
+                Class<?>[] params = method.getParameterTypes();
+                sb.append(Arrays.stream(params)
+                        .map(Class::getSimpleName)
                         .collect(Collectors.joining(", ", "(", ")")));
+
+            } else {
+                sb.append('(');
+                StringJoiner sj = new StringJoiner(", ");
+                Type[] params = method.getGenericParameterTypes();
+                for (int j = 0; j < params.length; j++) {
+                    String param = params[j].toString();
+                    if (method.isVarArgs() && (j == params.length - 1))
+                        param = param.replaceFirst("\\[]$", "...");
+                    sj.add(param);
+                }
+                sb.append(sj);
+                sb.append(')');
             }
-            default -> {
+
+            Type[] exceptionTypes = method.getGenericExceptionTypes();
+            if (exceptionTypes.length > 0) {
+                sb.append(Arrays.stream(exceptionTypes)
+                        .map(Type::toString)
+                        .collect(Collectors.joining(", ", " throws ", "")));
             }
+        } else if (member instanceof Field field) {
+            sb.append(simple ? field.getType().getSimpleName() : field.getType().getName()).append(' ');
+            sb.append(simple ? field.getName() : member.getDeclaringClass().getName() + "." + field.getName())
+                    .append(" ");
+        } else if (member instanceof Constructor<?> constructor) {
+            sb.append(simple ? constructor.getDeclaringClass().getSimpleName() :
+                    constructor.getDeclaringClass().getName());
+            sb.append(Arrays.stream(constructor.getParameterTypes())
+                    .map(simple ? Class::getSimpleName : Class::getName)
+                    .collect(Collectors.joining(", ", "(", ")")));
         }
 
         return sb.toString().stripTrailing();

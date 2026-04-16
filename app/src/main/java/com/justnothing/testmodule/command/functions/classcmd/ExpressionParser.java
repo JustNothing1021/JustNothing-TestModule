@@ -1,7 +1,7 @@
 package com.justnothing.testmodule.command.functions.classcmd;
 
 import com.justnothing.javainterpreter.ScriptRunner;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.reflect.AppClassFinder;
 
 import java.util.HashMap;

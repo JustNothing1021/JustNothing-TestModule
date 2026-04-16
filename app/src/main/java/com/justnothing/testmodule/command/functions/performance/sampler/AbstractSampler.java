@@ -1,7 +1,7 @@
 package com.justnothing.testmodule.command.functions.performance.sampler;
 
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;

@@ -2,7 +2,7 @@ package com.justnothing.testmodule.utils.tips;
 
 import com.justnothing.testmodule.utils.tips.lang.ChineseTips;
 import com.justnothing.testmodule.utils.tips.lang.EnglishTips;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 
 import java.util.*;
 

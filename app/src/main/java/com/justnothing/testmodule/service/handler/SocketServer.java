@@ -1,6 +1,6 @@
 package com.justnothing.testmodule.service.handler;
 
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 
 import java.io.IOException;
 import java.net.ServerSocket;

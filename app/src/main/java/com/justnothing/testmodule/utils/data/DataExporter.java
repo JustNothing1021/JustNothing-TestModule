@@ -4,7 +4,7 @@ import android.os.Environment;
 
 import com.justnothing.testmodule.constants.HookConfig;
 import com.justnothing.testmodule.constants.FileDirectory;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.hooks.ClientHookConfig;
 import com.justnothing.testmodule.utils.io.IOManager;
 

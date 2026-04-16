@@ -190,7 +190,7 @@ public class WatchMain extends CommandBase {
     }
 
     private void handleList(WatchManager manager, CommandExecutor.CmdExecContext context) {
-        String result = manager.listWatches();
+        String result = manager.getTaskListString();
         context.println(result, Colors.WHITE);
     }
 
@@ -203,7 +203,7 @@ public class WatchMain extends CommandBase {
 
         try {
             int id = Integer.parseInt(args[1]);
-            if (manager.stopWatch(id)) {
+            if (manager.removeTask(id)) {
                 context.println("已停止watch任务", Colors.GREEN);
                 context.print("ID: ", Colors.CYAN);
                 context.println(String.valueOf(id), Colors.YELLOW);
@@ -218,7 +218,7 @@ public class WatchMain extends CommandBase {
     }
 
     private void handleClear(WatchManager manager, CommandExecutor.CmdExecContext context) {
-        int count = manager.getWatchCount();
+        int count = manager.getTaskCount();
         manager.clearAll();
         context.println("已清除所有watch任务", Colors.GREEN);
         context.print("清除数量: ", Colors.CYAN);
@@ -250,7 +250,7 @@ public class WatchMain extends CommandBase {
         } else {
             try {
                 int id = Integer.parseInt(args[1]);
-                String result = manager.getWatchOutput(id, limit);
+                String result = manager.getTaskOutput(id, limit);
                 context.println(result, Colors.WHITE);
             } catch (NumberFormatException e) {
                 context.println("错误: ID必须是数字: " + args[1], Colors.RED);

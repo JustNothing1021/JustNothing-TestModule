@@ -29,7 +29,7 @@ import com.justnothing.testmodule.hooks.tests.ShellServiceHook;
 import com.justnothing.testmodule.service.ShellService;
 import com.justnothing.testmodule.utils.data.DataBridge;
 import com.justnothing.testmodule.utils.data.BootMonitor;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.data.PerformanceMonitor;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 

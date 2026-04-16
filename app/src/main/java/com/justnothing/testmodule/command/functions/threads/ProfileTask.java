@@ -1,7 +1,7 @@
 package com.justnothing.testmodule.command.functions.threads;
 
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 
 import android.annotation.SuppressLint;
 import android.app.ActivityManager;

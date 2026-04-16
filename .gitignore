@@ -42,5 +42,8 @@ testmodule-keystore.jks
 # 但是Readme还是要提交的
 !/README.MD
 
+# 还有一些神秘的日志文件
+/*.log
+
 
 

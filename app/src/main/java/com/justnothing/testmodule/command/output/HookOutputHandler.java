@@ -1,6 +1,6 @@
 package com.justnothing.testmodule.command.output;
 
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 
 public class HookOutputHandler extends StringBuilderCollector {
     private final Logger logger;

@@ -6,7 +6,7 @@ import com.justnothing.methodsclient.executor.FileCommandExecutor;
 import com.justnothing.methodsclient.executor.SocketCommandExecutor;
 import com.justnothing.methodsclient.monitor.ClientPortManager;
 import com.justnothing.methodsclient.monitor.PerformanceMonitor;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 
 import java.io.OutputStream;
 import java.io.PrintStream;

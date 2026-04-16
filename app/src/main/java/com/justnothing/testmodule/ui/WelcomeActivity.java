@@ -10,8 +10,8 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.justnothing.testmodule.R;
 import com.justnothing.testmodule.constants.FileDirectory;
-import com.justnothing.testmodule.utils.functions.PermissionUtils;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.data.BootMonitor;
+import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.tips.TipSystem;
 import com.justnothing.testmodule.utils.tips.TipCallback;
 import com.justnothing.testmodule.utils.ui.UISettings;
@@ -104,10 +104,10 @@ public class WelcomeActivity extends AppCompatActivity {
 
         Logger.setContext(this);
 
-        if (!PermissionUtils.checkStoragePermission(this))
-            PermissionUtils.requestPermission(this);
+        if (!BootMonitor.PermissionUtils.checkStoragePermission(this))
+            BootMonitor.PermissionUtils.requestPermission(this);
 
-        if (!PermissionUtils.checkStoragePermission(this)) {
+        if (!BootMonitor.PermissionUtils.checkStoragePermission(this)) {
             Toast.makeText(getApplicationContext(),
                     "没有授予读取文件的权限, \n有的功能可能无法正常运作...", Toast.LENGTH_LONG).show();
         }

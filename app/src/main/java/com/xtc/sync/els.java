@@ -2,7 +2,7 @@ package com.xtc.sync;
 
 import android.annotation.SuppressLint;
 
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.Objects;

@@ -14,7 +14,7 @@ import com.justnothing.testmodule.service.handler.SocketServer;
 import com.justnothing.testmodule.service.handler.TransactionHandler;
 import com.justnothing.testmodule.utils.data.DataBridge;
 import com.justnothing.testmodule.utils.data.DataDirectoryManager;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 import com.justnothing.testmodule.utils.io.IOManager;
 import com.justnothing.testmodule.utils.io.RootProcessPool;

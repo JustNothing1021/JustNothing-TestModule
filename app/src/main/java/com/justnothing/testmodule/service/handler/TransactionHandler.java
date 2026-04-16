@@ -9,7 +9,7 @@ import androidx.annotation.NonNull;
 
 import com.justnothing.testmodule.hooks.HookEntry;
 import com.justnothing.testmodule.utils.data.DataDirectoryManager;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.io.IOManager;
 import com.justnothing.testmodule.utils.io.RootProcessPool;
 

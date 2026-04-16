@@ -91,7 +91,7 @@ public class BytecodeMain extends CommandBase {
                     
                     (Submodule bytecode %s)
                     """, CMD_BYTECODE_VER);
-            case null, default -> String.format("""
+            default -> String.format("""
                     语法: bytecode <subcmd> [args...]
                     
                     查看和分析Java字节码，研究类和方法实现.

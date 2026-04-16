@@ -4,28 +4,33 @@ import com.justnothing.javainterpreter.ast.ASTNode;
 import com.justnothing.javainterpreter.ast.SourceLocation;
 import com.justnothing.javainterpreter.ast.visitor.ASTVisitor;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class FieldDeclarationNode extends ASTNode {
     
     private final String fieldName;
-    private final String typeName;
+    private final ClassReferenceNode type;
     private final ASTNode initialValue;
     private final ClassModifiers modifiers;
+    private final List<AnnotationNode> annotations;
     
-    public FieldDeclarationNode(String fieldName, String typeName, ASTNode initialValue, 
+    public FieldDeclarationNode(String fieldName, ClassReferenceNode type, ASTNode initialValue, 
                                  ClassModifiers modifiers, SourceLocation location) {
         super(location);
         this.fieldName = fieldName;
-        this.typeName = typeName;
+        this.type = type;
         this.initialValue = initialValue;
         this.modifiers = modifiers != null ? modifiers : new ClassModifiers();
+        this.annotations = new ArrayList<>();
     }
     
     public String getFieldName() {
         return fieldName;
     }
     
-    public String getTypeName() {
-        return typeName;
+    public ClassReferenceNode getType() {
+        return type;
     }
     
     public ASTNode getInitialValue() {
@@ -34,6 +39,14 @@ public class FieldDeclarationNode extends ASTNode {
     
     public ClassModifiers getModifiers() {
         return modifiers;
+    }
+    
+    public List<AnnotationNode> getAnnotations() {
+        return annotations;
+    }
+    
+    public void addAnnotation(AnnotationNode annotation) {
+        annotations.add(annotation);
     }
     
     @Override
@@ -45,9 +58,17 @@ public class FieldDeclarationNode extends ASTNode {
     public String formatString(int indent) {
         StringBuilder sb = new StringBuilder();
         sb.append(indent(indent)).append("FieldDeclarationNode\n");
-        sb.append(indent(indent + 1)).append("fieldName: ").append(fieldName).append("\n");
-        sb.append(indent(indent + 1)).append("typeName: ").append(typeName).append("\n");
-        sb.append(indent(indent + 1)).append("modifiers: ").append(modifiers.toModifierString()).append("\n");
+        
+        if (!annotations.isEmpty()) {
+            sb.append(indent(indent + 1)).append("annotations:\n");
+            for (AnnotationNode annotation : annotations) {
+                sb.append(annotation.formatString(indent + 2)).append("\n");
+            }
+        }
+        
+        sb.append(indent(indent + 1)).append("fieldName: " + fieldName + "\n");
+        sb.append(indent(indent + 1)).append("type: " + type.getTypeName() + "\n");
+        sb.append(indent(indent + 1)).append("modifiers: " + modifiers.toModifierString() + "\n");
         if (initialValue != null) {
             sb.append(indent(indent + 1)).append("initialValue:\n");
             sb.append(initialValue.formatString(indent + 2)).append("\n");

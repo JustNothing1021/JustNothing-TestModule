@@ -1,4 +1,4 @@
-package com.justnothing.testmodule.utils.functions;
+package com.justnothing.testmodule.utils.logging;
 
 import android.content.Context;
 import android.util.Log;
@@ -6,7 +6,6 @@ import android.widget.Toast;
 
 
 import com.justnothing.testmodule.constants.AppEnvironment;
-import com.justnothing.testmodule.utils.data.LogWriter;
 
 public abstract class Logger {
 

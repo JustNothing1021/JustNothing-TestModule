@@ -142,7 +142,7 @@ public class BreakpointMain extends CommandBase {
     }
 
     private void handleList(BreakpointManager manager, CommandExecutor.CmdExecContext context) {
-        List<BreakpointInterceptTask> breakpoints = manager.listBreakpoints();
+        List<BreakpointInterceptTask> breakpoints = manager.listTasks();
         if (breakpoints.isEmpty()) {
             context.println("没有设置任何断点", Colors.GRAY);
             return;
@@ -187,7 +187,7 @@ public class BreakpointMain extends CommandBase {
             return;
         }
 
-        if (manager.enableBreakpoint(id)) {
+        if (manager.enableTask(id)) {
             context.println("断点已启用", Colors.GREEN);
             context.print("ID: ", Colors.CYAN);
             context.println(String.valueOf(id), Colors.YELLOW);
@@ -211,7 +211,7 @@ public class BreakpointMain extends CommandBase {
             return;
         }
 
-        if (manager.disableBreakpoint(id)) {
+        if (manager.disableTask(id)) {
             context.println("断点已禁用", Colors.YELLOW);
             context.print("ID: ", Colors.CYAN);
             context.println(String.valueOf(id), Colors.YELLOW);
@@ -235,7 +235,7 @@ public class BreakpointMain extends CommandBase {
             return;
         }
 
-        if (manager.removeBreakpoint(id)) {
+        if (manager.removeTask(id)) {
             context.println("断点已移除", Colors.GREEN);
             context.print("ID: ", Colors.CYAN);
             context.println(String.valueOf(id), Colors.YELLOW);
@@ -245,7 +245,7 @@ public class BreakpointMain extends CommandBase {
     }
 
     private void handleClear(BreakpointManager manager, CommandExecutor.CmdExecContext context) {
-        int count = manager.getBreakpointCount();
+        int count = manager.getTaskCount();
         manager.clearAll();
         context.println("已清除所有断点", Colors.GREEN);
         context.print("清除数量: ", Colors.CYAN);
@@ -253,7 +253,7 @@ public class BreakpointMain extends CommandBase {
     }
 
     private void handleHits(BreakpointManager manager, CommandExecutor.CmdExecContext context) {
-        List<BreakpointInterceptTask> breakpoints = manager.listBreakpoints();
+        List<BreakpointInterceptTask> breakpoints = manager.listTasks();
         if (breakpoints.isEmpty()) {
             context.println("没有设置任何断点", Colors.GRAY);
             return;

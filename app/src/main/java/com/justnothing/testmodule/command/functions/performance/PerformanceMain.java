@@ -21,7 +21,7 @@ import com.justnothing.testmodule.command.functions.performance.systrace.Systrac
 import com.justnothing.testmodule.command.functions.performance.trace.TraceData;
 import com.justnothing.testmodule.command.functions.performance.trace.Tracer;
 import com.justnothing.testmodule.utils.io.IOManager;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.reflect.SignatureUtils;
 
 import org.json.JSONArray;

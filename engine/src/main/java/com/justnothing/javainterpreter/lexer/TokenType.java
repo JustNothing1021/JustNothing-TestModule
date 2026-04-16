@@ -52,6 +52,7 @@ public enum TokenType {
     KEYWORD_CATCH("catch"),
     KEYWORD_FINALLY("finally"),
     KEYWORD_THROW("throw"),
+    KEYWORD_THROWS("throws"),
     KEYWORD_IMPORT("import"),
     KEYWORD_DELETE("delete"),
     KEYWORD_CLASS("class"),
@@ -144,6 +145,7 @@ public enum TokenType {
     
     DELIMITER_ARROW("->"),
     OPERATOR_PIPELINE("|>"),
+    DELIMITER_AT("@"),
     
     LITERAL_INTEGER("integer literal"),
     LITERAL_LONG("long literal"),
@@ -190,7 +192,7 @@ public enum TokenType {
             "void", "auto", "if", "else", "for", "while", "do",
             "return", "break", "continue", "true", "false", "null", "final",
             "new", "instanceof", "switch", "case", "default",
-            "try", "catch", "finally", "throw", "import", "delete",
+            "try", "catch", "finally", "throw", "throws", "import", "delete",
             "class", "interface", "extends", "implements",
             "public", "private", "protected", "static", "abstract", "native", "synchronized",
             "super", "this", "async", "await"
@@ -233,6 +235,7 @@ public enum TokenType {
             case "catch": return KEYWORD_CATCH;
             case "finally": return KEYWORD_FINALLY;
             case "throw": return KEYWORD_THROW;
+            case "throws": return KEYWORD_THROWS;
             case "import": return KEYWORD_IMPORT;
             case "delete": return KEYWORD_DELETE;
             case "class": return KEYWORD_CLASS;

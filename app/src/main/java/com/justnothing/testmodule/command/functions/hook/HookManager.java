@@ -14,7 +14,7 @@ import com.justnothing.testmodule.hooks.HookEntry;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
 import com.justnothing.testmodule.utils.data.DataBridge;
 import com.justnothing.testmodule.utils.io.IOManager;
-import com.justnothing.testmodule.utils.functions.Logger;
+import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.reflect.SignatureUtils;
 import com.justnothing.testmodule.utils.reflect.AppClassFinder;
 
@@ -23,6 +23,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -153,10 +154,11 @@ public class HookManager {
         try {
             logger.info("验证Hook代码: " + hookInfo.getId());
             context.print("验证Hook代码...", Colors.CYAN);
-            context.println(" ✓", Colors.LIGHT_GREEN);
             validateHookCode(hookInfo, classLoader);
+            context.println(" 验证成功!", Colors.LIGHT_GREEN);
             logger.info("Hook 代码验证成功: " + hookInfo.getId());
         } catch (Exception e) {
+            context.println(" 验证失败!", Colors.RED);
             context.print("Hook代码验证失败: ", Colors.RED);
             context.println(Objects.requireNonNullElse(e.getMessage(), "没有详细信息"), Colors.YELLOW);
             CommandExceptionHandler.handleException(
@@ -169,6 +171,7 @@ public class HookManager {
         }
         
         hooks.put(hookInfo.getId(), hookInfo);
+        context.println("", Colors.DEFAULT);
         
         try {
             logger.info("开始应用Hook: " + hookInfo.getId() +
@@ -196,7 +199,9 @@ public class HookManager {
             hooks.remove(hookInfo.getId());
             context.print("Hook添加失败: ", Colors.RED);
             context.println(Objects.requireNonNullElse(e.getMessage(), "没有详细信息"), Colors.YELLOW);
-            Map<String, Object> errContext = new java.util.HashMap<>();
+            context.println("", Colors.DEFAULT);
+
+            Map<String, Object> errContext = new HashMap<>();
             errContext.put("类名", className);
             errContext.put("方法名", methodName);
             errContext.put("签名", signature != null ? signature : "默认");
@@ -369,10 +374,23 @@ public class HookManager {
             logger.info("开始应用替换Hook: " + hookInfo.getMethodName());
             XC_MethodHook.Unhook unhook;
             if (isConstructor) {
-                unhook = XposedHelpers.findAndHookConstructor(targetClass, paramTypes, replacementHook);
+                if (paramTypes.length == 0) {
+                    unhook = XposedHelpers.findAndHookConstructor(targetClass, replacementHook);
+                } else {
+                    Object[] args = new Object[paramTypes.length + 1];
+                    System.arraycopy(paramTypes, 0, args, 0, paramTypes.length);
+                    args[paramTypes.length] = replacementHook;
+                    unhook = XposedHelpers.findAndHookConstructor(targetClass, args);
+                }
             } else {
-                Object[] hookArgs = buildHookArgs(paramTypes, replacementHook);
-                unhook = XposedHelpers.findAndHookMethod(targetClass, hookInfo.getMethodName(), hookArgs);
+                if (paramTypes.length == 0) {
+                    unhook = XposedHelpers.findAndHookMethod(targetClass, hookInfo.getMethodName(), replacementHook);
+                } else {
+                    Object[] args = new Object[paramTypes.length + 1];
+                    System.arraycopy(paramTypes, 0, args, 0, paramTypes.length);
+                    args[paramTypes.length] = replacementHook;
+                    unhook = XposedHelpers.findAndHookMethod(targetClass, hookInfo.getMethodName(), args);
+                }
             }
             activeHooks.put(hookInfo.getId(), unhook);
             logger.info("替换Hook应用成功: " + hookInfo.getId());
@@ -428,10 +446,23 @@ public class HookManager {
             logger.info("开始应用普通Hook: " + hookInfo.getMethodName());
             XC_MethodHook.Unhook unhook;
             if (isConstructor) {
-                unhook = XposedHelpers.findAndHookConstructor(targetClass, paramTypes, methodHook);
+                if (paramTypes.length == 0) {
+                    unhook = XposedHelpers.findAndHookConstructor(targetClass, methodHook);
+                } else {
+                    Object[] args = new Object[paramTypes.length + 1];
+                    System.arraycopy(paramTypes, 0, args, 0, paramTypes.length);
+                    args[paramTypes.length] = methodHook;
+                    unhook = XposedHelpers.findAndHookConstructor(targetClass, args);
+                }
             } else {
-                Object[] hookArgs = buildHookArgs(paramTypes, methodHook);
-                unhook = XposedHelpers.findAndHookMethod(targetClass, hookInfo.getMethodName(), hookArgs);
+                if (paramTypes.length == 0) {
+                    unhook = XposedHelpers.findAndHookMethod(targetClass, hookInfo.getMethodName(), methodHook);
+                } else {
+                    Object[] args = new Object[paramTypes.length + 1];
+                    System.arraycopy(paramTypes, 0, args, 0, paramTypes.length);
+                    args[paramTypes.length] = methodHook;
+                    unhook = XposedHelpers.findAndHookMethod(targetClass, hookInfo.getMethodName(), args);
+                }
             }
             activeHooks.put(hookInfo.getId(), unhook);
             logger.info("普通Hook应用成功: " + hookInfo.getId());
@@ -439,13 +470,6 @@ public class HookManager {
         
         hookInfo.setActive(true);
         logger.info("Hook状态设置为活跃: " + hookInfo.getId());
-    }
-
-    private static Object[] buildHookArgs(Class<?>[] paramTypes, XC_MethodHook hook) {
-        Object[] args = new Object[paramTypes.length + 1];
-        System.arraycopy(paramTypes, 0, args, 0, paramTypes.length);
-        args[paramTypes.length] = hook;
-        return args;
     }
 
     private static void executeHookCode(HookInfo hookInfo, String code,
@@ -487,10 +511,9 @@ public class HookManager {
         try {
             File scriptFile;
             
-            File scriptsDir = DataBridge.getScriptsDirectory();
-            
+
             if (!codebase.contains("/") && !codebase.contains("\\")) {
-                scriptFile = new File(scriptsDir, codebase);
+                scriptFile = DataBridge.getScriptFile(codebase);
                 
                 if (scriptFile.exists()) {
                     logger.info("从codebase目录加载脚本: " + codebase);
@@ -500,7 +523,7 @@ public class HookManager {
                 }
             } else {
                 String fileName = new File(codebase).getName();
-                scriptFile = new File(scriptsDir, fileName);
+                scriptFile = new File(DataBridge.getScriptsDirectory(), fileName);
                 
                 if (scriptFile.exists()) {
                     logger.info("从codebase目录加载脚本（使用文件名）: " + fileName);
