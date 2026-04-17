@@ -13,8 +13,9 @@
 #include <pthread.h>
 #include <cstdlib>
 #include <vector>
+#include <csignal>
 
-#define LOG_TAG "SandboxTest"
+#define LOG_TAG "JustNothing[SandboxTest]"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
@@ -129,16 +130,20 @@ static int install_clone_blocking_filter(bool block_thread, bool block_process) 
     
     filter.push_back(BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, nr)));
     
-    filter.push_back(BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, SYS_CLONE, 0, 6));
+    // clone: check CLONE_VM flag in args[0]
+    // On 32-bit, args[0] low word is at offset args[0], high word at offset args[0]+4
+    filter.push_back(BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, SYS_CLONE, 0, 5));
     filter.push_back(BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, args[0])));
     filter.push_back(BPF_JUMP(BPF_JMP | BPF_JSET | BPF_K, CLONE_VM, 1, 0));
     
+    // No CLONE_VM = process creation (fork-like)
     if (block_process) {
         filter.push_back(BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ERRNO | EPERM));
     } else {
         filter.push_back(BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW));
     }
     
+    // CLONE_VM = thread creation
     if (block_thread) {
         filter.push_back(BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ERRNO | EPERM));
     } else {
@@ -214,19 +219,6 @@ Java_com_justnothing_testmodule_command_functions_tests_SandboxTestMain_testSecc
         return nullptr;
     }
 
-    int saved_errno = 0;
-
-    if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) == 0) {
-        env->SetBooleanField(result, prctlSuccessField, JNI_TRUE);
-        LOGI("prctl(PR_SET_NO_NEW_PRIVS) succeeded");
-    } else {
-        saved_errno = errno;
-        env->SetBooleanField(result, prctlSuccessField, JNI_FALSE);
-        env->SetIntField(result, prctlErrorField, saved_errno);
-        LOGE("prctl(PR_SET_NO_NEW_PRIVS) failed: %d", saved_errno);
-        return result;
-    }
-
     if (AUDIT_ARCH_CURRENT == 0 || SYS_EXECVE < 0) {
         env->SetBooleanField(result, seccompSuccessField, JNI_FALSE);
         env->SetIntField(result, seccompErrorField, ENOTSUP);
@@ -235,38 +227,63 @@ Java_com_justnothing_testmodule_command_functions_tests_SandboxTestMain_testSecc
         return result;
     }
 
-    struct sock_filter test_filter[] = {
-        BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, arch)),
-        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, AUDIT_ARCH_CURRENT, 1, 0),
-        BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
-        
-        BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, nr)),
-        BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
-    };
-
-    struct sock_fprog test_prog = {
-        .len = sizeof(test_filter) / sizeof(test_filter[0]),
-        .filter = test_filter,
-    };
-
-    if (prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &test_prog) == 0) {
-        env->SetBooleanField(result, seccompSuccessField, JNI_TRUE);
-        LOGI("prctl(PR_SET_SECCOMP) succeeded");
-    } else {
-        saved_errno = errno;
-        env->SetBooleanField(result, seccompSuccessField, JNI_FALSE);
-        env->SetIntField(result, seccompErrorField, saved_errno);
-        LOGE("prctl(PR_SET_SECCOMP) failed: %d", saved_errno);
+    int pipefd[2];
+    if (pipe(pipefd) == -1) {
+        LOGE("pipe() failed: %d", errno);
         return result;
     }
 
-    bool blocked = false;
     pid_t test_pid = fork();
     
     if (test_pid == -1) {
         LOGE("fork for seccomp test failed: %d", errno);
-        blocked = false;
+        close(pipefd[0]);
+        close(pipefd[1]);
+        return result;
     } else if (test_pid == 0) {
+        close(pipefd[0]);
+        
+        int result_data[3] = {0, 0, 0};
+        
+        if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) == 0) {
+            result_data[0] = 1;
+            LOGI("prctl(PR_SET_NO_NEW_PRIVS) succeeded");
+        } else {
+            result_data[1] = errno;
+            LOGE("prctl(PR_SET_NO_NEW_PRIVS) failed: %d", errno);
+            write(pipefd[1], result_data, sizeof(result_data));
+            close(pipefd[1]);
+            _exit(1);
+        }
+
+        struct sock_filter test_filter[] = {
+            BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, arch)),
+            BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, AUDIT_ARCH_CURRENT, 1, 0),
+            BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+            
+            BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, nr)),
+            BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+        };
+
+        struct sock_fprog test_prog = {
+            .len = sizeof(test_filter) / sizeof(test_filter[0]),
+            .filter = test_filter,
+        };
+
+        if (prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &test_prog) == 0) {
+            result_data[2] = 1;
+            LOGI("prctl(PR_SET_SECCOMP) succeeded");
+        } else {
+            result_data[1] = errno;
+            LOGE("prctl(PR_SET_SECCOMP) failed: %d", errno);
+            write(pipefd[1], result_data, sizeof(result_data));
+            close(pipefd[1]);
+            _exit(2);
+        }
+
+        write(pipefd[1], result_data, sizeof(result_data));
+        close(pipefd[1]);
+
         if (install_execve_blocking_filter() == 0) {
             char *argv[] = { (char*)"/system/bin/echo", (char*)"test", nullptr };
             char *envp[] = { nullptr };
@@ -279,9 +296,23 @@ Java_com_justnothing_testmodule_command_functions_tests_SandboxTestMain_testSecc
         }
         _exit(1);
     } else {
+        close(pipefd[1]);
+        
+        int result_data[3] = {0, 0, 0};
+        read(pipefd[0], result_data, sizeof(result_data));
+        close(pipefd[0]);
+        
+        env->SetBooleanField(result, prctlSuccessField, result_data[0] ? JNI_TRUE : JNI_FALSE);
+        env->SetIntField(result, prctlErrorField, result_data[1]);
+        env->SetBooleanField(result, seccompSuccessField, result_data[2] ? JNI_TRUE : JNI_FALSE);
+        if (!result_data[2]) {
+            env->SetIntField(result, seccompErrorField, result_data[1]);
+        }
+
         int status;
         waitpid(test_pid, &status, 0);
         
+        bool blocked = false;
         if (WIFEXITED(status)) {
             int exit_code = WEXITSTATUS(status);
             if (exit_code == 42) {
@@ -293,11 +324,29 @@ Java_com_justnothing_testmodule_command_functions_tests_SandboxTestMain_testSecc
         } else {
             LOGE("Child process did not exit normally");
         }
+
+        env->SetBooleanField(result, execveBlockedField, blocked ? JNI_TRUE : JNI_FALSE);
     }
 
-    env->SetBooleanField(result, execveBlockedField, blocked ? JNI_TRUE : JNI_FALSE);
-
     return result;
+}
+
+struct CloneForkChildResult {
+    int step;
+    int filter_error;
+    int fork_blocked;
+    int fork_errno;
+    int thread_blocked;
+    int thread_error;
+};
+
+static void reset_signal_handlers() {
+    signal(SIGSEGV, SIG_DFL);
+    signal(SIGBUS, SIG_DFL);
+    signal(SIGABRT, SIG_DFL);
+    signal(SIGFPE, SIG_DFL);
+    signal(SIGPIPE, SIG_DFL);
+    signal(SIGTRAP, SIG_DFL);
 }
 
 JNIEXPORT jobject JNICALL
@@ -335,67 +384,166 @@ Java_com_justnothing_testmodule_command_functions_tests_SandboxTestMain_testClon
         return result;
     }
 
-    pid_t test_pid = fork();
-    
-    if (test_pid == -1) {
+    int pipefd[2];
+    if (pipe(pipefd) == -1) {
         env->SetBooleanField(result, seccompSuccessField, JNI_FALSE);
         char buf[256];
-        snprintf(buf, sizeof(buf), "fork for test failed: %d", errno);
+        snprintf(buf, sizeof(buf), "pipe() failed: %d", errno);
         env->SetObjectField(result, errorMsgField, env->NewStringUTF(buf));
         return result;
     }
-    
+
+    pid_t test_pid = fork();
+
+    if (test_pid == -1) {
+        close(pipefd[0]);
+        close(pipefd[1]);
+        env->SetBooleanField(result, seccompSuccessField, JNI_FALSE);
+        char buf[256];
+        snprintf(buf, sizeof(buf), "fork() for test failed: %d", errno);
+        env->SetObjectField(result, errorMsgField, env->NewStringUTF(buf));
+        return result;
+    }
+
     if (test_pid == 0) {
-        if (install_clone_blocking_filter(blockThread, blockProcess) != 0) {
+        close(pipefd[0]);
+
+        reset_signal_handlers();
+
+        CloneForkChildResult child_result = {};
+        child_result.step = 0;
+        child_result.filter_error = 0;
+        child_result.fork_blocked = 0;
+        child_result.fork_errno = 0;
+        child_result.thread_blocked = 0;
+        child_result.thread_error = 0;
+
+        int filter_result = install_clone_blocking_filter(blockThread, blockProcess);
+        child_result.step = 1;
+        child_result.filter_error = filter_result;
+
+        if (filter_result != 0) {
+            write(pipefd[1], &child_result, sizeof(child_result));
+            close(pipefd[1]);
             _exit(1);
         }
-        
-        bool fork_blocked = false;
-        bool thread_blocked = false;
-        
+
+        write(pipefd[1], &child_result, sizeof(child_result));
+
         pid_t fork_result = fork();
         if (fork_result == -1) {
             if (errno == EPERM) {
-                fork_blocked = true;
+                child_result.fork_blocked = 1;
                 LOGI("fork was blocked by seccomp");
             } else {
+                child_result.fork_errno = errno;
                 LOGE("fork failed with errno: %d", errno);
             }
         } else if (fork_result == 0) {
+            close(pipefd[1]);
             _exit(0);
         } else {
             int status;
             waitpid(fork_result, &status, 0);
         }
-        
+
+        child_result.step = 2;
+        write(pipefd[1], &child_result, sizeof(child_result));
+
         pthread_t thread;
         int thread_result = pthread_create(&thread, nullptr, [](void*) -> void* { return nullptr; }, nullptr);
         if (thread_result == EPERM) {
-            thread_blocked = true;
+            child_result.thread_blocked = 1;
             LOGI("pthread_create was blocked by seccomp");
         } else if (thread_result == 0) {
             pthread_join(thread, nullptr);
         } else {
+            child_result.thread_error = thread_result;
             LOGE("pthread_create failed with error: %d", thread_result);
         }
-        
-        int exit_code = (fork_blocked ? 1 : 0) | (thread_blocked ? 2 : 0);
-        _exit(exit_code);
+
+        child_result.step = 3;
+        write(pipefd[1], &child_result, sizeof(child_result));
+
+        close(pipefd[1]);
+        _exit(0);
     }
-    
+
+    close(pipefd[1]);
+
+    CloneForkChildResult last_result = {};
+    CloneForkChildResult current_result = {};
+    ssize_t bytes_read;
+
+    while ((bytes_read = read(pipefd[0], &current_result, sizeof(current_result))) > 0) {
+        if (bytes_read == sizeof(current_result)) {
+            memcpy(&last_result, &current_result, sizeof(current_result));
+        }
+    }
+
+    close(pipefd[0]);
+
     int status;
     waitpid(test_pid, &status, 0);
-    
-    if (WIFEXITED(status)) {
-        int exit_code = WEXITSTATUS(status);
-        env->SetBooleanField(result, seccompSuccessField, JNI_TRUE);
-        env->SetBooleanField(result, forkBlockedField, (exit_code & 1) ? JNI_TRUE : JNI_FALSE);
-        env->SetBooleanField(result, threadBlockedField, (exit_code & 2) ? JNI_TRUE : JNI_FALSE);
-        LOGI("Test completed: fork_blocked=%d, thread_blocked=%d", exit_code & 1, (exit_code >> 1) & 1);
-    } else {
+
+    int step = last_result.step;
+
+    if (step == 0) {
         env->SetBooleanField(result, seccompSuccessField, JNI_FALSE);
-        env->SetObjectField(result, errorMsgField, env->NewStringUTF("Child process did not exit normally"));
+        if (WIFSIGNALED(status)) {
+            char buf[256];
+            snprintf(buf, sizeof(buf), "子进程在安装过滤器前崩溃 (signal %d)", WTERMSIG(status));
+            env->SetObjectField(result, errorMsgField, env->NewStringUTF(buf));
+        } else {
+            env->SetObjectField(result, errorMsgField, env->NewStringUTF("子进程在安装过滤器前退出"));
+        }
+        return result;
     }
+
+    if (step == 1 && last_result.filter_error != 0) {
+        env->SetBooleanField(result, seccompSuccessField, JNI_FALSE);
+        char buf[256];
+        snprintf(buf, sizeof(buf), "过滤器安装失败: error=%d", last_result.filter_error);
+        env->SetObjectField(result, errorMsgField, env->NewStringUTF(buf));
+        return result;
+    }
+
+    if (step < 2) {
+        env->SetBooleanField(result, seccompSuccessField, JNI_TRUE);
+        if (WIFSIGNALED(status)) {
+            char buf[256];
+            snprintf(buf, sizeof(buf), "子进程在 fork 测试期间崩溃 (signal %d)", WTERMSIG(status));
+            env->SetObjectField(result, errorMsgField, env->NewStringUTF(buf));
+        } else {
+            env->SetObjectField(result, errorMsgField, env->NewStringUTF("子进程在 fork 测试期间异常退出"));
+        }
+        return result;
+    }
+
+    if (step < 3) {
+        env->SetBooleanField(result, seccompSuccessField, JNI_TRUE);
+        env->SetBooleanField(result, forkBlockedField, last_result.fork_blocked ? JNI_TRUE : JNI_FALSE);
+        if (WIFSIGNALED(status)) {
+            char buf[256];
+            snprintf(buf, sizeof(buf), "子进程在 pthread_create 测试期间崩溃 (signal %d)", WTERMSIG(status));
+            env->SetObjectField(result, errorMsgField, env->NewStringUTF(buf));
+        } else {
+            env->SetObjectField(result, errorMsgField, env->NewStringUTF("子进程在 pthread_create 测试期间异常退出"));
+        }
+        return result;
+    }
+
+    env->SetBooleanField(result, seccompSuccessField, JNI_TRUE);
+    env->SetBooleanField(result, forkBlockedField, last_result.fork_blocked ? JNI_TRUE : JNI_FALSE);
+    env->SetBooleanField(result, threadBlockedField, last_result.thread_blocked ? JNI_TRUE : JNI_FALSE);
+
+    if (last_result.fork_errno != 0 || last_result.thread_error != 0) {
+        char buf[256];
+        snprintf(buf, sizeof(buf), "fork_errno=%d, thread_error=%d", last_result.fork_errno, last_result.thread_error);
+        env->SetObjectField(result, errorMsgField, env->NewStringUTF(buf));
+    }
+
+    LOGI("Test completed: fork_blocked=%d, thread_blocked=%d", last_result.fork_blocked, last_result.thread_blocked);
 
     return result;
 }

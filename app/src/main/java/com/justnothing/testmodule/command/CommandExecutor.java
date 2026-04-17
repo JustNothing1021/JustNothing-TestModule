@@ -23,6 +23,7 @@ import com.justnothing.testmodule.command.functions.threads.ThreadsMain;
 import com.justnothing.testmodule.command.functions.trace.TraceMain;
 import com.justnothing.testmodule.command.functions.watch.WatchMain;
 import com.justnothing.testmodule.command.functions.tests.SandboxTestMain;
+import com.justnothing.testmodule.command.functions.tests.AnonClassTestMain;
 import com.justnothing.testmodule.command.functions.CommandBase;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.output.StringBuilderCollector;
@@ -113,6 +114,7 @@ public class CommandExecutor {
         registerCommand("interactive_test", new InteractiveExampleMain());
         
         registerCommand("sandboxtest", new SandboxTestMain());
+        registerCommand("anonclasstest", new AnonClassTestMain());
     }
 
     private static void registerCommand(String name, CommandBase command) {
@@ -193,6 +195,7 @@ public class CommandExecutor {
             output.println("命令不能为空", Colors.RED);
             return;
         }
+        
         if (output == null) {
             logger.error("输出处理器为null");
             throw new IllegalArgumentException("输出处理器不能为null");
@@ -200,18 +203,11 @@ public class CommandExecutor {
 
         initializeIfNeeded();
         logger.info("开始执行命令: " + fullCommand);
-        
-        
+
+        SystemOutputRedirector redirector = new SystemOutputRedirector(output);
         try {
-            SystemOutputRedirector redirector = new SystemOutputRedirector(output);
             redirector.startRedirect();
-            try {
-                executeCommandInternal(fullCommand, output);
-            } finally {
-                redirector.stopRedirect();
-                logger.info("命令执行完毕");
-                output.close();
-            }
+            executeCommandInternal(fullCommand, output);
         } catch (Throwable t) {
             logger.error("执行命令异常", t);
             output.println("\n===============================================", Colors.RED);
@@ -227,6 +223,9 @@ public class CommandExecutor {
             output.println("===============================================", Colors.RED);
             output.close();
         } finally {
+            redirector.stopRedirect();
+            logger.info("命令执行完毕");
+            output.close();
             cleanup();
         }
         logger.info("命令执行完成");
@@ -314,6 +313,12 @@ public class CommandExecutor {
         }
         public void println(Object obj, byte color) {
             output.println(obj.toString(), color);
+        }
+        public void printStackTrace(Throwable t) {
+            output.printStackTrace(t);
+        }
+        public void printStackTrace(Throwable t, byte color) {
+            output.printStackTrace(t, color);
         }
         public void printf(String fmt, Object... args) {
             output.printf(fmt, args);

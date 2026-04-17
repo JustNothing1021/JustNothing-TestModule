@@ -2,15 +2,17 @@ package com.justnothing.testmodule.utils.sandbox;
 
 import android.os.StrictMode;
 
-import com.justnothing.javainterpreter.security.IPermissionChecker;
 import com.justnothing.javainterpreter.security.SandboxConfig;
 import com.justnothing.testmodule.utils.logging.Logger;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Pattern;
 
 @SuppressWarnings("unused")
 public final class BlockGuardSandbox {
@@ -19,6 +21,95 @@ public final class BlockGuardSandbox {
 
     private BlockGuardSandbox() {
     }
+
+    private static final class WhitelistPattern {
+        final String pattern;
+        final Pattern regex;
+
+        WhitelistPattern(String pattern) {
+            this.pattern = pattern;
+            this.regex = compilePattern(pattern);
+        }
+
+        private static Pattern compilePattern(String pattern) {
+            StringBuilder sb = new StringBuilder();
+            sb.append("^");
+            for (int i = 0; i < pattern.length(); i++) {
+                char c = pattern.charAt(i);
+                switch (c) {
+                    case '.' -> sb.append("\\.");
+                    case '*' -> sb.append(".*");
+                    case '$' -> sb.append("\\$");
+                    default -> sb.append(c);
+                }
+            }
+            sb.append("$");
+            return Pattern.compile(sb.toString());
+        }
+
+        boolean matches(String className) {
+            return regex.matcher(className).matches();
+        }
+
+        @Override
+        public String toString() {
+            return pattern;
+        }
+    }
+
+    private static final class WhitelistGroup {
+        final String name;
+        final List<WhitelistPattern> patterns;
+
+        WhitelistGroup(String name, String... patternStrings) {
+            this.name = name;
+            this.patterns = new ArrayList<>();
+            for (String p : patternStrings) {
+                patterns.add(new WhitelistPattern(p));
+            }
+        }
+
+        boolean matchesAny(String className) {
+            for (WhitelistPattern p : patterns) {
+                if (p.matches(className)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
+    private static final WhitelistGroup DISK_READ_WHITELIST = new WhitelistGroup("DiskRead",
+            "dalvik.system.*",
+            "java.lang.ClassLoader",
+            "java.lang.ClassLoader$*",
+            "java.lang.Class",
+            "java.lang.Class$*",
+            "java.io.UnixFileSystem",
+            "java.io.File",
+            "com.justnothing.testmodule.utils.logging.*"
+    );
+
+    private static final WhitelistGroup DISK_WRITE_WHITELIST = new WhitelistGroup("DiskWrite",
+            "com.justnothing.testmodule.utils.logging.*"
+    );
+
+    private static final WhitelistGroup NETWORK_WHITELIST = new WhitelistGroup("Network",
+            "com.justnothing.testmodule.command.output.*",
+            "com.justnothing.testmodule.service.handler.*"
+    );
+
+    private static final WhitelistGroup LOCAL_SOCKET_WHITELIST = new WhitelistGroup("LocalSocket",
+            "java.net.SocketOutputStream",
+            "java.net.SocketInputStream",
+            "libcore.io.IoBridge",
+            "java.net.PlainSocketImpl",
+            "android.net.LocalSocket",
+            "android.net.LocalSocketAddress",
+            "android.net.LocalSocketImpl",
+            "com.justnothing.testmodule.command.output.InteractiveProtocol",
+            "com.justnothing.testmodule.service.handler.SocketClientHandler"
+    );
 
     private static final Class<?> BLOCKGUARD_CLASS;
     private static final Class<?> POLICY_INTERFACE;
@@ -30,6 +121,7 @@ public final class BlockGuardSandbox {
     private static final Method GET_POLICY_MASK_METHOD;
 
     private static final boolean BLOCKGUARD_AVAILABLE;
+
 
     static {
         Class<?> bgClass = null;
@@ -80,20 +172,44 @@ public final class BlockGuardSandbox {
 
     public static SandboxContext enter(SandboxConfig config) {
         currentConfig.set(config);
-        bypassDepth.set(new AtomicInteger(0));
+        if (!isBypassing()) {
+            bypassDepth.set(new AtomicInteger(0));
+        }
         sandboxActive.set(true);
         logger.info("进入了沙箱环境, BLOCKGUARD_AVAILABLE=" + BLOCKGUARD_AVAILABLE);
 
-        boolean needSeccomp = !config.isProcessCreateAllowed() || !config.isThreadCreateAllowed();
-        if (needSeccomp && SeccompNotifHandler.isSupported()) {
-            if (!SeccompNotifHandler.isInitialized()) {
-                SeccompNotifHandler.init();
+        boolean needBlockProcess = !config.isProcessCreateAllowed();
+        boolean needBlockThread = !config.isThreadCreateAllowed();
+        boolean needSeccomp = needBlockProcess || needBlockThread;
+        
+        if (needSeccomp) {
+            boolean seccompInstalled = false;
+            
+            if (SeccompNotifHandler.isSupported()) {
+                if (!SeccompNotifHandler.isInitialized()) {
+                    SeccompNotifHandler.init();
+                }
+                if (SeccompNotifHandler.isInitialized()) {
+                    boolean allowed = config.isProcessCreateAllowed() && config.isThreadCreateAllowed();
+                    SeccompNotifHandler.registerCurrentThread(allowed);
+                    SeccompNotifHandler.installFilterForCurrentThread();
+                    seccompInstalled = true;
+                    logger.info("已安装 seccomp USER_NOTIF 过滤器");
+                }
             }
-            if (SeccompNotifHandler.isInitialized()) {
-                boolean allowed = config.isProcessCreateAllowed() && config.isThreadCreateAllowed();
-                SeccompNotifHandler.registerCurrentThread(allowed);
-                SeccompNotifHandler.installFilterForCurrentThread();
-                logger.info("已安装 seccomp USER_NOTIF 过滤器");
+            
+            if (!seccompInstalled && SeccompNotifHandler.isSeccompAvailable()) {
+                boolean result = SeccompNotifHandler.installErrnoFilter(needBlockProcess, needBlockThread);
+                if (result) {
+                    seccompInstalled = true;
+                    logger.info("已安装 seccomp ERRNO 过滤器 (blockProcess=" + needBlockProcess + ", blockThread=" + needBlockThread + ")");
+                } else {
+                    logger.warn("seccomp ERRNO 过滤器安装失败");
+                }
+            }
+            
+            if (!seccompInstalled) {
+                logger.warn("无法安装 seccomp 过滤器，进程/线程创建拦截不可用");
             }
         }
 
@@ -193,21 +309,26 @@ public final class BlockGuardSandbox {
         return currentConfig.get();
     }
 
+    public static Object proxyObjectMethods(Object proxy, Method method, Object[] args) {
+        String name = method.getName();
+        return switch (name) {
+            case "equals" -> proxy == args[0];
+            case "hashCode" -> System.identityHashCode(proxy);
+            case "toString" ->
+                    "BlockGuardSandbox$PolicyProxy@" + Integer.toHexString(System.identityHashCode(proxy));
+            default -> null;
+        };
+    }
+
     public static <T> T execute(SandboxConfig config, Callable<T> action) throws Exception {
-        SandboxContext ctx = enter(config);
-        try {
+        try (SandboxContext ctx = enter(config)) {
             return action.call();
-        } finally {
-            ctx.close();
         }
     }
 
     public static void execute(SandboxConfig config, Runnable action) {
-        SandboxContext ctx = enter(config);
-        try {
+        try (SandboxContext ctx = enter(config)) {
             action.run();
-        } finally {
-            ctx.close();
         }
     }
 
@@ -281,60 +402,54 @@ public final class BlockGuardSandbox {
     private record SandboxPolicyInvocationHandler(
             SandboxConfig config) implements InvocationHandler {
 
-        private static final String[] LOCAL_SOCKET_CLASSES = {
-                "java.net.SocketOutputStream",
-                "java.net.SocketInputStream",
-                "libcore.io.IoBridge",
-                "java.net.PlainSocketImpl",
-                "android.net.LocalSocket",
-                "android.net.LocalSocketAddress",
-                "android.net.LocalSocketImpl",
-                com.justnothing.testmodule.command.output.InteractiveProtocol.class.getName(),
-                com.justnothing.testmodule.service.handler.SocketClientHandler.class.getName()
-        };
-
-        private static boolean isLocalSocketOperation() {
+        private static boolean matchesWhitelist(WhitelistGroup whitelist) {
             StackTraceElement[] stack = Thread.currentThread().getStackTrace();
             for (StackTraceElement element : stack) {
-                String className = element.getClassName();
-                for (String socketClass : LOCAL_SOCKET_CLASSES) {
-                    if (className.equals(socketClass)) {
-                        return true;
-                    }
+                if (whitelist.matchesAny(element.getClassName())) {
+                    return true;
                 }
             }
             return false;
         }
 
+        private static boolean isLocalSocketOperation() {
+            return matchesWhitelist(LOCAL_SOCKET_WHITELIST);
+        }
+
+        private static boolean isWhitelistedDiskRead() {
+            return matchesWhitelist(DISK_READ_WHITELIST);
+        }
+
+        private static boolean isWhitelistedDiskWrite() {
+            return matchesWhitelist(DISK_WRITE_WHITELIST);
+        }
+
+        private static boolean isWhitelistedNetworkOperation() {
+            return matchesWhitelist(NETWORK_WHITELIST);
+        }
+
         @Override
         public Object invoke(Object proxy, Method method, Object[] args) {
             String methodName = method.getName();
-            logger.info("invoke() called: " + methodName + ", bypassing=" + isBypassing() +
-                      ", diskRead=" + config.isDiskReadAllowed() + 
-                      ", diskWrite=" + config.isDiskWriteAllowed());
 
             switch (methodName) {
                 case "onReadFromDisk" -> {
-                    if (!isBypassing() && !config.isDiskReadAllowed()) {
-                        logger.warn("不允许读取存储空间!");
+                    if (!isBypassing() && !config.isDiskReadAllowed() && !isWhitelistedDiskRead()) {
                         throw new SecurityException("BlockGuardSandbox: 磁盘读取操作被禁止");
                     }
                     return null;
                 }
                 case "onWriteToDisk" -> {
-                    if (!isBypassing() && !config.isDiskWriteAllowed()) {
-                        logger.warn("不允许写入存储空间!");
+                    if (!isBypassing() && !config.isDiskWriteAllowed() && !isWhitelistedDiskWrite()) {
                         throw new SecurityException("BlockGuardSandbox: 磁盘写入操作被禁止");
                     }
                     return null;
                 }
                 case "onNetwork" -> {
-                    if (!isBypassing() && !config.isNetworkAllowed()) {
+                    if (!isBypassing() && !config.isNetworkAllowed() && !isWhitelistedNetworkOperation()) {
                         if (config.isLocalSocketAllowed() && isLocalSocketOperation()) {
-                            logger.debug("Allowing local socket operation");
                             return null;
                         }
-                        logger.warn("不允许访问网络!");
                         throw new SecurityException("BlockGuardSandbox: 网络操作被禁止");
                     }
                     return null;
@@ -348,19 +463,19 @@ public final class BlockGuardSandbox {
                     if (!config.isNetworkAllowed())
                         mask |= 0x04;
                     return mask;
-                }
+                } 
             }
-            return null;
+            return proxyObjectMethods(proxy, method, args);
         }
     }
 
     private static final class EmptyPolicyInvocationHandler implements InvocationHandler {
         @Override
-        public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+        public Object invoke(Object proxy, Method method, Object[] args) {
             if ("getPolicyMask".equals(method.getName())) {
                 return 0;
             }
-            return null;
+            return proxyObjectMethods(proxy, method, args);
         }
     }
 

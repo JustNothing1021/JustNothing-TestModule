@@ -113,6 +113,19 @@ public class SeccompNotifHandler {
         return threadPermissions.get(tid);
     }
     
+    public static boolean installErrnoFilter(boolean blockProcess, boolean blockThread) {
+        return nativeInstallErrnoFilter(blockProcess, blockThread);
+    }
+    
+    public static boolean isSeccompAvailable() {
+        try {
+            return nativeIsSeccompAvailable();
+        } catch (Throwable e) {
+            Log.e(TAG, "Error checking seccomp availability: " + e.getMessage());
+            return false;
+        }
+    }
+    
     // Native methods
     private static native boolean nativeInit();
     private static native void nativeShutdown();
@@ -122,4 +135,6 @@ public class SeccompNotifHandler {
     private static native boolean nativeInstallFilter();
     private static native boolean nativeIsSupported();
     private static native String nativeStrerror(int errno);
+    private static native boolean nativeInstallErrnoFilter(boolean blockProcess, boolean blockThread);
+    private static native boolean nativeIsSeccompAvailable();
 }

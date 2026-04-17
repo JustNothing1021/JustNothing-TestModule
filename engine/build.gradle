@@ -12,6 +12,7 @@ dependencies {
     implementation libs.asm.v96
     implementation libs.asm.tree
     implementation libs.annotations
+    testImplementation 'junit:junit:4.13.2'
 }
 
 sourceSets {

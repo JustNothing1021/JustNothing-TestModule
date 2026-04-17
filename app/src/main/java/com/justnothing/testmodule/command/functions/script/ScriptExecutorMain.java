@@ -17,6 +17,8 @@ import com.justnothing.javainterpreter.security.PermissionType;
 import com.justnothing.javainterpreter.security.SandboxConfig;
 import com.justnothing.testmodule.utils.reflect.AppClassFinder;
 import com.justnothing.testmodule.utils.sandbox.BlockGuardSandbox;
+import com.justnothing.testmodule.utils.reflect.DexClassDefiner;
+import com.justnothing.javainterpreter.evaluator.DynamicClassGenerator;
 
 import java.io.File;
 import java.util.Map;
@@ -37,11 +39,12 @@ public class ScriptExecutorMain extends CommandBase {
     private static final ConcurrentHashMap<ClassLoader, ScriptRunner>
             scriptRunners = new ConcurrentHashMap<>();
     private static final ScriptRunner systemScriptRunner;
-    private static final ThreadLocal<SandboxConfig> currentPermissionConfig = new ThreadLocal<>();
+    private static final AtomicReference<SandboxConfig> currentPermissionConfig = new AtomicReference<>(null);
     
     static {
         systemScriptRunner = new ScriptRunner(null);
         systemScriptRunner.setClassFinder(new AppClassFinder());
+        DynamicClassGenerator.setDefaultClassDefiner(new DexClassDefiner());
     }
 
     private final String commandName;
@@ -529,7 +532,7 @@ public class ScriptExecutorMain extends CommandBase {
                 if (previousConfig != null) {
                     currentPermissionConfig.set(previousConfig);
                 } else {
-                    currentPermissionConfig.remove();
+                    currentPermissionConfig.set(null);
                 }
             }
         }
@@ -1143,7 +1146,7 @@ public class ScriptExecutorMain extends CommandBase {
                 applyPreset(args[2], context);
             }
             case "reset" -> {
-                currentPermissionConfig.remove();
+                currentPermissionConfig.set(null);
                 context.println("权限配置已重置为默认 (无限制)", Colors.GREEN);
             }
             case "list" -> {
@@ -1474,22 +1477,23 @@ public class ScriptExecutorMain extends CommandBase {
                         context.println(String.valueOf(result), Colors.GRAY);
                     }
                 });
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 handleExecutionException(e, context);
             }
         } else {
+            runner.getExecutionContext().setPermissionChecker(null);
             try {
                 Object result = runner.executeWithResult(code, context.output(), context.output());
                 if (result != null) {
                     context.println(String.valueOf(result), Colors.GRAY);
                 }
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 handleExecutionException(e, context);
             }
         }
     }
     
-    private void handleExecutionException(Exception e, CommandExecutor.CmdExecContext context) {
+    private void handleExecutionException(Throwable e, CommandExecutor.CmdExecContext context) {
         Throwable cause = e.getCause();
         String message = e.getMessage();
         boolean isParseError = message != null && message.startsWith("Parse error:");

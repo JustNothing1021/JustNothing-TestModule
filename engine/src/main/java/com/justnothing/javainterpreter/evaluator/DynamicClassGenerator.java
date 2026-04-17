@@ -8,50 +8,63 @@ import com.justnothing.javainterpreter.exception.EvaluationException;
 import org.objectweb.asm.*;
 import org.objectweb.asm.Type;
 
+import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import static org.objectweb.asm.Opcodes.*;
+import com.justnothing.javainterpreter.ast.SourceLocation;
 
-/**
- * ??????
- * <p>
- * ??ASM?ClassDeclarationNode????Java?
- * </p>
- * 
- * @author JustNothing1021
- * @since 1.0.0
- */
+
 public class DynamicClassGenerator {
     
+    private static volatile ClassDefiner defaultClassDefiner = new StandardClassDefiner();
+    
+    public static void setDefaultClassDefiner(ClassDefiner definer) {
+        if (definer != null) {
+            defaultClassDefiner = definer;
+        }
+    }
+
+    public static ClassDefiner getDefaultClassDefiner() {
+        return defaultClassDefiner;
+    }
+
     private final ExecutionContext context;
     private final Map<String, Class<?>> generatedClasses;
+    private final ClassDefiner classDefiner;
     private final DynamicClassLoader classLoader;
     
     public DynamicClassGenerator(ExecutionContext context) {
+        this(context, defaultClassDefiner);
+    }
+    
+    public DynamicClassGenerator(ExecutionContext context, ClassDefiner classDefiner) {
         this.context = context;
         this.generatedClasses = new HashMap<>();
+        this.classDefiner = classDefiner != null ? classDefiner : defaultClassDefiner;
         this.classLoader = new DynamicClassLoader(context.getClassLoader(), this);
     }
     
     public DynamicClassGenerator(ClassLoader parentClassLoader, ExecutionContext context) {
+        this(parentClassLoader, context, defaultClassDefiner);
+    }
+
+    public DynamicClassGenerator(ClassLoader parentClassLoader, ExecutionContext context, ClassDefiner classDefiner) {
         this.context = context;
         this.generatedClasses = new HashMap<>();
+        this.classDefiner = classDefiner != null ? classDefiner : defaultClassDefiner;
         this.classLoader = new DynamicClassLoader(parentClassLoader, this);
     }
     
-    /**
-     * ???
-     */
+
     public Class<?> generateClass(ClassDeclarationNode classDecl) throws EvaluationException {
         return generateClass(classDecl, null);
     }
     
-    /**
-     * ?????????????
-     */
+
     public Class<?> generateClass(ClassDeclarationNode classDecl, Class<?>[] constructorArgTypes) throws EvaluationException {
         String className = classDecl.getClassName();
         
@@ -61,7 +74,6 @@ public class DynamicClassGenerator {
         
         String superClassName = null;
         if (classDecl.getSuperClass() != null) {
-            
             superClassName = classDecl.getSuperClass().getOriginalTypeName();
         }
         
@@ -81,15 +93,12 @@ public class DynamicClassGenerator {
                         );
                     }
                     generatedClasses.put(superClassName, superClass);
-                } else {
-                    
-                    
                 }
             }
         }
         
         try {
-            ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+            ClassWriter cw = new FrameComputingClassWriter(classLoader);
             
             String superInternalName = "java/lang/Object"; 
             List<String> interfaceList = new ArrayList<>();
@@ -152,12 +161,13 @@ public class DynamicClassGenerator {
             
             
             if (classDecl.getSuperClass() != null) {
-                Class<?> superClass = null;
+                Class<?> superClass;
                 
                 
                 if (context.hasCustomClass(superClassName)) {
                     superClass = context.getCustomClass(superClassName);
                 } else {
+                    if (superClassName == null) superClassName = "java.lang.Object";
                     superClass = ClassResolver.findClassWithImports(
                         superClassName, classLoader, context.getImports());
                 }
@@ -170,12 +180,15 @@ public class DynamicClassGenerator {
                             
                             int modifiers = field.getModifiers();
                             String fieldName = field.getName();
+
+                            if (fieldName.startsWith("shadow$")) continue;
+
                             String descriptor = getFieldDescriptor(field.getType());
                             
                             FieldVisitor fv = cw.visitField(modifiers, fieldName, descriptor, null, null);
                             fv.visitEnd();
                         }
-                    } catch (Exception e) {
+                    } catch (Exception ignored) {
                         
                     }
                 }
@@ -200,88 +213,53 @@ public class DynamicClassGenerator {
             }
             
             cw.visitEnd();
-            
+
             byte[] bytecode = cw.toByteArray();
-            Class<?> generatedClass = classLoader.defineClass(className, bytecode);
+
+            Class<?> generatedClass = classDefiner.defineClass(className, bytecode, classLoader.getParent());
             
             generatedClasses.put(className, generatedClass);
             
             return generatedClass;
             
         } catch (Exception e) {
+            StringBuilder sb = new StringBuilder();
+            sb.append("Failed to generate class: ").append(className);
+            sb.append(" - ").append(e.getClass().getSimpleName()).append(": ").append(e.getMessage());
+            Throwable current = e.getCause();
+            int depth = 0;
+            while (current != null && depth < 5) {
+                sb.append("\n  Caused by: ").append(current.getClass().getSimpleName());
+                sb.append(": ").append(current.getMessage());
+                current = current.getCause();
+                depth++;
+            }
             throw new EvaluationException(
-                "Failed to generate class: " + className + " - " + e.getMessage(),
+                sb.toString(),
                 classDecl.getLocation(),
-                ErrorCode.EVAL_INVALID_OPERATION
+                ErrorCode.EVAL_INVALID_OPERATION,
+                e
             );
         }
     }
-    
-    /**
-     * ??????
-     */
-    private void addConstructor(ClassWriter cw, String className, String superInternalName, Class<?>[] paramTypes) {
-        addConstructor(cw, className, superInternalName, paramTypes, null);
-    }
-    
-    /**
-     * ?????????????
-     */
-    private void addConstructor(ClassWriter cw, String className, String superInternalName, Class<?>[] paramTypes, List<FieldDeclarationNode> fields) {
+
+    private void addConstructor(ClassWriter cw, String className, String superInternalName, Class<?>[] paramTypes, List<FieldDeclarationNode> fields) throws Exception {
         
         StringBuilder descriptor = new StringBuilder("(");
         for (Class<?> paramType : paramTypes) {
-            if (paramType == int.class) {
-                descriptor.append("I");
-            } else if (paramType == long.class) {
-                descriptor.append("J");
-            } else if (paramType == float.class) {
-                descriptor.append("F");
-            } else if (paramType == double.class) {
-                descriptor.append("D");
-            } else if (paramType == boolean.class) {
-                descriptor.append("Z");
-            } else if (paramType == byte.class) {
-                descriptor.append("B");
-            } else if (paramType == char.class) {
-                descriptor.append("C");
-            } else if (paramType == short.class) {
-                descriptor.append("S");
-            } else if (paramType == void.class) {
-                descriptor.append("V");
-            } else {
-                descriptor.append("L").append(paramType.getName().replace('.', '/')).append(";");
-            }
+            descriptor.append(org.objectweb.asm.Type.getDescriptor(paramType));
         }
         descriptor.append(")V");
         
         
         StringBuilder superDescriptor = new StringBuilder("(");
         for (Class<?> paramType : paramTypes) {
-            if (paramType == int.class) {
-                superDescriptor.append("I");
-            } else if (paramType == long.class) {
-                superDescriptor.append("J");
-            } else if (paramType == float.class) {
-                superDescriptor.append("F");
-            } else if (paramType == double.class) {
-                superDescriptor.append("D");
-            } else if (paramType == boolean.class) {
-                superDescriptor.append("Z");
-            } else if (paramType == byte.class) {
-                superDescriptor.append("B");
-            } else if (paramType == char.class) {
-                superDescriptor.append("C");
-            } else if (paramType == short.class) {
-                superDescriptor.append("S");
-            } else if (paramType == void.class) {
-                superDescriptor.append("V");
-            } else {
-                superDescriptor.append("L").append(paramType.getName().replace('.', '/')).append(";");
-            }
+            superDescriptor.append(org.objectweb.asm.Type.getDescriptor(paramType));
         }
         superDescriptor.append(")V");
         
+        
+        checkSuperConstructorAccessible(superInternalName, paramTypes);
         
         MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "<init>", descriptor.toString(), null, null);
         mv.visitCode();
@@ -291,8 +269,7 @@ public class DynamicClassGenerator {
         
         
         int paramIndex = 1;
-        for (int i = 0; i < paramTypes.length; i++) {
-            Class<?> paramType = paramTypes[i];
+        for (Class<?> paramType : paramTypes) {
             if (paramType == int.class) {
                 mv.visitVarInsn(ILOAD, paramIndex);
             } else if (paramType == long.class) {
@@ -329,8 +306,7 @@ public class DynamicClassGenerator {
                     mv.visitVarInsn(ALOAD, 0);
                     
                     
-                    if (initialValue instanceof LiteralNode) {
-                        LiteralNode literal = (LiteralNode) initialValue;
+                    if (initialValue instanceof LiteralNode literal) {
                         Object value = literal.getValue();
                         String descriptorField = fieldDecl.getType().getDescriptor();
                         
@@ -404,9 +380,6 @@ public class DynamicClassGenerator {
         mv.visitEnd();
     }
     
-    /**
-     * ????
-     */
     private void addField(ClassWriter cw, FieldDeclarationNode fieldDecl) {
         String fieldName = fieldDecl.getFieldName();
         String descriptor = fieldDecl.getType().getDescriptor();
@@ -420,8 +393,7 @@ public class DynamicClassGenerator {
         Object constantValue = null;
         
         
-        if (initialValue instanceof LiteralNode) {
-            LiteralNode literal = (LiteralNode) initialValue;
+        if (initialValue instanceof LiteralNode literal) {
             constantValue = literal.getValue();
         }
         
@@ -434,21 +406,44 @@ public class DynamicClassGenerator {
         fv.visitEnd();
     }
     
-    /**
-     * ????????
-     */
-    private void addDefaultConstructor(ClassWriter cw, String className, String superInternalName) {
-        addDefaultConstructor(cw, className, superInternalName, null);
+    private static void checkSuperConstructorAccessible(String superInternalName, Class<?>[] paramTypes) throws Exception {
+        Class<?> superClass = Class.forName(superInternalName.replace('/', '.'));
+        
+        java.lang.reflect.Constructor<?> targetCtor = null;
+        try {
+            if (paramTypes == null || paramTypes.length == 0) {
+                targetCtor = superClass.getDeclaredConstructor();
+            } else {
+                targetCtor = superClass.getDeclaredConstructor(paramTypes);
+            }
+        } catch (NoSuchMethodException e) {
+            for (java.lang.reflect.Constructor<?> ctor : superClass.getDeclaredConstructors()) {
+                if (ctor.getParameterTypes().length == (paramTypes != null ? paramTypes.length : 0)) {
+                    targetCtor = ctor;
+                    break;
+                }
+            }
+        }
+        
+        if (targetCtor != null) {
+            int mods = targetCtor.getModifiers();
+            if (java.lang.reflect.Modifier.isPrivate(mods)) {
+                throw new EvaluationException(
+                    "Cannot extend " + superClass.getSimpleName() + 
+                    ": its constructor is private",
+                    new SourceLocation(0, 0),
+                    ErrorCode.EVAL_INVALID_OPERATION,
+                    null);
+            }
+        }
     }
     
-    /**
-     * ???????????????
-     */
     private void addDefaultConstructor(ClassWriter cw, String className, String superInternalName, List<FieldDeclarationNode> fields) {
         try {
             
             Class<?> superClass = Class.forName(superInternalName.replace('/', '.'));
-            superClass.getDeclaredConstructor();
+
+            checkSuperConstructorAccessible(superInternalName, null);
             
             MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "<init>", "()V", null, null);
             mv.visitCode();
@@ -459,10 +454,9 @@ public class DynamicClassGenerator {
             if (fields != null) {
                 for (FieldDeclarationNode fieldDecl : fields) {
                     ASTNode initialValue = fieldDecl.getInitialValue();
-                    if (initialValue != null && initialValue instanceof LiteralNode) {
+                    if (initialValue instanceof LiteralNode literal) {
                         mv.visitVarInsn(ALOAD, 0);
-                        
-                        LiteralNode literal = (LiteralNode) initialValue;
+
                         Object value = literal.getValue();
                         String descriptorField = fieldDecl.getType().getDescriptor();
                         
@@ -610,8 +604,7 @@ public class DynamicClassGenerator {
                     
                     
                     int paramIndex = 1;
-                    for (int i = 0; i < paramTypes.length; i++) {
-                        Class<?> paramType = paramTypes[i];
+                    for (Class<?> paramType : paramTypes) {
                         if (paramType == int.class) {
                             mv.visitVarInsn(ILOAD, paramIndex);
                         } else if (paramType == long.class) {
@@ -648,8 +641,7 @@ public class DynamicClassGenerator {
                                 mv.visitVarInsn(ALOAD, 0);
                                 
                                 
-                                if (initialValue instanceof LiteralNode) {
-                                    LiteralNode literal = (LiteralNode) initialValue;
+                                if (initialValue instanceof LiteralNode literal) {
                                     Object value = literal.getValue();
                                     String descriptorField = fieldDecl.getType().getDescriptor();
                                     
@@ -739,8 +731,7 @@ public class DynamicClassGenerator {
                                 mv.visitVarInsn(ALOAD, 0);
                                 
                                 
-                                if (initialValue instanceof LiteralNode) {
-                                    LiteralNode literal = (LiteralNode) initialValue;
+                                if (initialValue instanceof LiteralNode literal) {
                                     Object value = literal.getValue();
                                     String descriptorField = fieldDecl.getType().getDescriptor();
                                     
@@ -814,8 +805,7 @@ public class DynamicClassGenerator {
                             mv.visitVarInsn(ALOAD, 0);
                             
                             
-                            if (initialValue instanceof LiteralNode) {
-                                LiteralNode literal = (LiteralNode) initialValue;
+                            if (initialValue instanceof LiteralNode literal) {
                                 Object value = literal.getValue();
                                 if (value instanceof Integer) {
                                     mv.visitLdcInsn(value);
@@ -854,10 +844,7 @@ public class DynamicClassGenerator {
             }
         }
     }
-    
-    /**
-     * ??????
-     */
+
     private void addConstructor(ClassWriter cw, ConstructorDeclarationNode constructorDecl, 
                                  String className, String superInternalName, List<FieldDeclarationNode> fields) {
         StringBuilder descriptor = new StringBuilder("(");
@@ -906,13 +893,11 @@ public class DynamicClassGenerator {
             
             try {
                 Class<?> superClass = Class.forName(superInternalName.replace('/', '.'));
-                java.lang.reflect.Field field = superClass.getDeclaredField(paramName);
-                if (field != null) {
-                    field.setAccessible(true);
-                    mv.visitFieldInsn(PUTFIELD, internalClassName, paramName, 
-                        param.getType().getDescriptor());
-                }
-            } catch (Exception e) {
+                Field field = superClass.getDeclaredField(paramName);
+                field.setAccessible(true);
+                mv.visitFieldInsn(PUTFIELD, internalClassName, paramName,
+                    param.getType().getDescriptor());
+            } catch (Exception ignored) {
                 
             }
             
@@ -962,9 +947,6 @@ public class DynamicClassGenerator {
         registerConstructorBody(className, constructorDecl, fields);
     }
     
-    /**
-     * ???????????
-     */
     private void generateConstructorBodyCall(MethodVisitor mv, ConstructorDeclarationNode constructorDecl, String className) {
         mv.visitLdcInsn(className);
         mv.visitLdcInsn("<init>");
@@ -1005,9 +987,6 @@ public class DynamicClassGenerator {
         mv.visitInsn(POP);
     }
     
-    /**
-     * ???????
-     */
     private void registerConstructorBody(String className, ConstructorDeclarationNode constructorDecl, List<FieldDeclarationNode> fields) {
         List<ASTNode> allStatements = new ArrayList<>();
         
@@ -1092,9 +1071,6 @@ public class DynamicClassGenerator {
         MethodBodyExecutor.registerMethod(className, "<init>", methodDecl, context);
     }
     
-    /**
-     * ????
-     */
     private void addMethod(ClassWriter cw, MethodDeclarationNode methodDecl, String className, boolean isInterface) {
         String methodName = methodDecl.getMethodName();
         String returnDescriptor = methodDecl.getReturnType().getDescriptor();
@@ -1137,9 +1113,6 @@ public class DynamicClassGenerator {
         MethodBodyExecutor.registerMethod(className, methodName, methodDecl, context);
     }
     
-    /**
-     * ?????????
-     */
     private void generateMethodBodyCall(MethodVisitor mv, MethodDeclarationNode methodDecl, String className) {
         mv.visitLdcInsn(className);
         mv.visitLdcInsn(methodDecl.getMethodName());
@@ -1189,10 +1162,10 @@ public class DynamicClassGenerator {
             try {
                 superClass = classLoader.loadClass(superInternalName.replace('/', '.'));
                 matchedConstructor = findBestMatchingConstructor(superClass, constructorParams);
-            } catch (Exception ex) {
+            } catch (Exception ignored) {
                 
             }
-        } catch (Exception e) {
+        } catch (Exception ignored) {
             
         }
         
@@ -1333,28 +1306,7 @@ public class DynamicClassGenerator {
          return false;
      }
      
-     private int inferSuperParamCount(List<ParameterNode> params, ClassDeclarationNode classDecl) {
-         if (classDecl.getSuperClass() == null) return 0;
-         int ownFieldCount = 0;
-         if (classDecl.getFields() != null) {
-             for (FieldDeclarationNode field : classDecl.getFields()) {
-                 boolean matchesParam = false;
-                 for (ParameterNode param : params) {
-                     if (field.getFieldName().equals(param.getParameterName())) {
-                         matchesParam = true;
-                         break;
-                     }
-                 }
-                 if (matchesParam) ownFieldCount++;
-             }
-         }
-         int superParamCount = params.size() - ownFieldCount;
-         return Math.max(0, superParamCount);
-     }
-    
-    /**
-     * ????????
-     */
+     
     private String getFieldDescriptor(Class<?> type) {
         if (type == int.class) {
             return "I";
@@ -1375,13 +1327,13 @@ public class DynamicClassGenerator {
         } else if (type == void.class) {
             return "V";
         } else {
+            if (type.isArray()) {
+                return type.getName().replace('.', '/');
+            }
             return "L" + type.getName().replace('.', '/') + ";";
         }
     }
     
-    /**
-     * ???????
-     */
     private void loadAndBoxParameter(MethodVisitor mv, com.justnothing.javainterpreter.ast.nodes.ClassReferenceNode type, int index) {
         if (type.isPrimitive()) {
             switch (type.getResolvedClass().getName()) {
@@ -1424,98 +1376,66 @@ public class DynamicClassGenerator {
         }
     }
     
-    /**
-     * ?????
-     */
     private void unboxAndReturn(MethodVisitor mv, com.justnothing.javainterpreter.ast.nodes.ClassReferenceNode returnType) {
         if (returnType.isPrimitive()) {
             String typeName = returnType.getResolvedClass().getName();
-            if (typeName.equals("void")) {
-                mv.visitInsn(POP);
-                mv.visitInsn(RETURN);
-            } else if (typeName.equals("int")) {
-                mv.visitTypeInsn(CHECKCAST, "java/lang/Integer");
-                mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Integer", "intValue", "()I", false);
-                mv.visitInsn(IRETURN);
-            } else if (typeName.equals("long")) {
-                mv.visitTypeInsn(CHECKCAST, "java/lang/Number");
-                mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Number", "longValue", "()J", false);
-                mv.visitInsn(LRETURN);
-            } else if (typeName.equals("float")) {
-                mv.visitTypeInsn(CHECKCAST, "java/lang/Number");
-                mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Number", "floatValue", "()F", false);
-                mv.visitInsn(FRETURN);
-            } else if (typeName.equals("double")) {
-                mv.visitTypeInsn(CHECKCAST, "java/lang/Number");
-                mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Number", "doubleValue", "()D", false);
-                mv.visitInsn(DRETURN);
-            } else if (typeName.equals("boolean")) {
-                mv.visitTypeInsn(CHECKCAST, "java/lang/Boolean");
-                mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Boolean", "booleanValue", "()Z", false);
-                mv.visitInsn(IRETURN);
-            } else if (typeName.equals("char")) {
-                mv.visitTypeInsn(CHECKCAST, "java/lang/Character");
-                mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Character", "charValue", "()C", false);
-                mv.visitInsn(IRETURN);
-            } else if (typeName.equals("byte")) {
-                mv.visitTypeInsn(CHECKCAST, "java/lang/Number");
-                mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Number", "byteValue", "()B", false);
-                mv.visitInsn(IRETURN);
-            } else if (typeName.equals("short")) {
-                mv.visitTypeInsn(CHECKCAST, "java/lang/Number");
-                mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Number", "shortValue", "()S", false);
-                mv.visitInsn(IRETURN);
-            } else {
-                mv.visitInsn(ARETURN);
+            switch (typeName) {
+                case "void" -> {
+                    mv.visitInsn(POP);
+                    mv.visitInsn(RETURN);
+                }
+                case "int" -> {
+                    mv.visitTypeInsn(CHECKCAST, "java/lang/Integer");
+                    mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Integer", "intValue", "()I", false);
+                    mv.visitInsn(IRETURN);
+                }
+                case "long" -> {
+                    mv.visitTypeInsn(CHECKCAST, "java/lang/Number");
+                    mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Number", "longValue", "()J", false);
+                    mv.visitInsn(LRETURN);
+                }
+                case "float" -> {
+                    mv.visitTypeInsn(CHECKCAST, "java/lang/Number");
+                    mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Number", "floatValue", "()F", false);
+                    mv.visitInsn(FRETURN);
+                }
+                case "double" -> {
+                    mv.visitTypeInsn(CHECKCAST, "java/lang/Number");
+                    mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Number", "doubleValue", "()D", false);
+                    mv.visitInsn(DRETURN);
+                }
+                case "boolean" -> {
+                    mv.visitTypeInsn(CHECKCAST, "java/lang/Boolean");
+                    mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Boolean", "booleanValue", "()Z", false);
+                    mv.visitInsn(IRETURN);
+                }
+                case "char" -> {
+                    mv.visitTypeInsn(CHECKCAST, "java/lang/Character");
+                    mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Character", "charValue", "()C", false);
+                    mv.visitInsn(IRETURN);
+                }
+                case "byte" -> {
+                    mv.visitTypeInsn(CHECKCAST, "java/lang/Number");
+                    mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Number", "byteValue", "()B", false);
+                    mv.visitInsn(IRETURN);
+                }
+                case "short" -> {
+                    mv.visitTypeInsn(CHECKCAST, "java/lang/Number");
+                    mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Number", "shortValue", "()S", false);
+                    mv.visitInsn(IRETURN);
+                }
+                default -> mv.visitInsn(ARETURN);
             }
         } else {
             mv.visitTypeInsn(CHECKCAST, returnType.getInternalName());
             mv.visitInsn(ARETURN);
         }
     }
-    
-    /**
-     * ??????
-     */
-    private void addDefaultReturn(MethodVisitor mv, com.justnothing.javainterpreter.ast.nodes.ClassReferenceNode returnType) {
-        if (returnType.isPrimitive()) {
-            String typeName = returnType.getResolvedClass().getName();
-            if (typeName.equals("void")) {
-                mv.visitInsn(RETURN);
-            } else if (typeName.equals("int") || typeName.equals("byte") || 
-                       typeName.equals("short") || typeName.equals("char") || 
-                       typeName.equals("boolean")) {
-                mv.visitInsn(ICONST_0);
-                mv.visitInsn(IRETURN);
-            } else if (typeName.equals("long")) {
-                mv.visitInsn(LCONST_0);
-                mv.visitInsn(LRETURN);
-            } else if (typeName.equals("float")) {
-                mv.visitInsn(FCONST_0);
-                mv.visitInsn(FRETURN);
-            } else if (typeName.equals("double")) {
-                mv.visitInsn(DCONST_0);
-                mv.visitInsn(DRETURN);
-            } else {
-                mv.visitInsn(ACONST_NULL);
-                mv.visitInsn(ARETURN);
-            }
-        } else {
-            mv.visitInsn(ACONST_NULL);
-            mv.visitInsn(ARETURN);
-        }
-    }
-    
-    /**
-     * ???????
-     */
+
     public Class<?> getGeneratedClass(String className) {
         return generatedClasses.get(className);
     }
-    
-    /**
-     * ????????
-     */
+
     public boolean hasGeneratedClass(String className) {
         return generatedClasses.containsKey(className);
     }
@@ -1593,14 +1513,11 @@ public class DynamicClassGenerator {
         }
         return generatedClasses.containsKey(className);
     }
-    
-    /**
-     * ??????
-     */
+
     private static class DynamicClassLoader extends ClassLoader {
         private final DynamicClassGenerator generator;
-        
-        public DynamicClassLoader(ClassLoader parent, DynamicClassGenerator generator) {
+
+        DynamicClassLoader(ClassLoader parent, DynamicClassGenerator generator) {
             super(parent);
             this.generator = generator;
         }
@@ -1616,24 +1533,32 @@ public class DynamicClassGenerator {
                 return generator.context.getCustomClass(name);
             }
             
-            
             return getParent().loadClass(name);
         }
-        
-        public Class<?> defineClass(String name, byte[] bytecode) {
-            try {
-                return defineClass(name, bytecode, 0, bytecode.length);
-            } catch (LinkageError e) {
-                Class<?> existing = findLoadedClass(name);
-                if (existing != null) {
-                    return existing;
-                }
-                throw e;
-            }
+    }
+
+    private static class FrameComputingClassWriter extends ClassWriter {
+        private final ClassLoader classLoader;
+
+        FrameComputingClassWriter(ClassLoader classLoader) {
+            super(COMPUTE_FRAMES);
+            this.classLoader = classLoader;
         }
-        
-        public Class<?> defineClass(String name, Class<?> clazz) {
-            return clazz;
+
+        @Override
+        protected String getCommonSuperClass(String type1, String type2) {
+            Class<?> c, d;
+            try {
+                c = Class.forName(type1.replace('/', '.'), false, classLoader);
+                d = Class.forName(type2.replace('/', '.'), false, classLoader);
+            } catch (Exception e) {
+                throw new RuntimeException(e.getMessage(), e);
+            }
+            if (c.isAssignableFrom(d)) return type1;
+            if (d.isAssignableFrom(c)) return type2;
+            if (c.isInterface() || d.isInterface()) return "java/lang/Object";
+            do { c = c.getSuperclass(); } while (!c.isAssignableFrom(d));
+            return c.getName().replace('.', '/');
         }
     }
 }

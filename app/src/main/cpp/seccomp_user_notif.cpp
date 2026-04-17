@@ -18,7 +18,7 @@
 #include <map>
 #include <thread>
 
-#define LOG_TAG "SeccompNotif"
+#define LOG_TAG "JustNothing[SeccompNotif]"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 #define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
@@ -221,6 +221,86 @@ static void notification_handler_loop() {
     LOGI("Notification handler thread stopped");
 }
 
+static bool install_errno_filter(bool block_process, bool block_thread) {
+    if (AUDIT_ARCH_CURRENT == 0) {
+        LOGE("Architecture not supported");
+        return false;
+    }
+
+    std::vector<struct sock_filter> filter;
+    
+    filter.push_back(BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, arch)));
+    filter.push_back(BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, AUDIT_ARCH_CURRENT, 1, 0));
+    filter.push_back(BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW));
+    
+    filter.push_back(BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, nr)));
+    
+    if (block_process || block_thread) {
+        filter.push_back(BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, SYS_CLONE, 0, 5));
+        filter.push_back(BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, args[0])));
+        filter.push_back(BPF_JUMP(BPF_JMP | BPF_JSET | BPF_K, CLONE_VM, 1, 0));
+        
+        if (block_process) {
+            filter.push_back(BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ERRNO | EPERM));
+        } else {
+            filter.push_back(BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW));
+        }
+        
+        if (block_thread) {
+            filter.push_back(BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ERRNO | EPERM));
+        } else {
+            filter.push_back(BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW));
+        }
+    } else {
+        filter.push_back(BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, SYS_CLONE, 0, 1));
+        filter.push_back(BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW));
+    }
+    
+    filter.push_back(BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW));
+
+    if (block_process) {
+        filter.push_back(BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, SYS_FORK, 0, 1));
+        filter.push_back(BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ERRNO | EPERM));
+
+        filter.push_back(BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, SYS_VFORK, 0, 1));
+        filter.push_back(BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ERRNO | EPERM));
+    } else {
+        filter.push_back(BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, SYS_FORK, 0, 1));
+        filter.push_back(BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW));
+
+        filter.push_back(BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, SYS_VFORK, 0, 1));
+        filter.push_back(BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW));
+    }
+
+    if (block_process) {
+        filter.push_back(BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, SYS_EXECVE, 0, 1));
+        filter.push_back(BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ERRNO | EPERM));
+    } else {
+        filter.push_back(BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, SYS_EXECVE, 0, 1));
+        filter.push_back(BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW));
+    }
+
+    filter.push_back(BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW));
+
+    struct sock_fprog prog = {
+        .len = static_cast<unsigned short>(filter.size()),
+        .filter = filter.data(),
+    };
+
+    if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) == -1) {
+        LOGE("prctl(PR_SET_NO_NEW_PRIVS) failed: %d", errno);
+        return false;
+    }
+
+    if (prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &prog) == -1) {
+        LOGE("prctl(PR_SET_SECCOMP, ERRNO mode) failed: %d", errno);
+        return false;
+    }
+
+    LOGI("seccomp ERRNO filter installed (block_process=%d, block_thread=%d)", block_process, block_thread);
+    return true;
+}
+
 extern "C" {
 
 JNIEXPORT jboolean JNICALL
@@ -331,6 +411,42 @@ Java_com_justnothing_testmodule_utils_sandbox_SeccompNotifHandler_nativeStrerror
     char buf[1024];
     const char* msg = strerror_r(errnum, buf, sizeof(buf));
     return env->NewStringUTF(msg);
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_justnothing_testmodule_utils_sandbox_SeccompNotifHandler_nativeInstallErrnoFilter(
+        JNIEnv *env, jclass clazz, jboolean blockProcess, jboolean blockThread) {
+    return install_errno_filter(blockProcess, blockThread) ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_justnothing_testmodule_utils_sandbox_SeccompNotifHandler_nativeIsSeccompAvailable(
+        JNIEnv *env, jclass clazz) {
+    if (AUDIT_ARCH_CURRENT == 0) {
+        return JNI_FALSE;
+    }
+
+    if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) == -1) {
+        LOGE("prctl(PR_SET_NO_NEW_PRIVS) not supported: %d", errno);
+        return JNI_FALSE;
+    }
+
+    struct sock_filter test_filter[] = {
+        BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+    };
+
+    struct sock_fprog test_prog = {
+        .len = 1,
+        .filter = test_filter,
+    };
+
+    if (prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &test_prog) == -1) {
+        LOGE("prctl(PR_SET_SECCOMP) not supported: %d", errno);
+        return JNI_FALSE;
+    }
+
+    LOGI("seccomp ERRNO mode is available");
+    return JNI_TRUE;
 }
 
 }

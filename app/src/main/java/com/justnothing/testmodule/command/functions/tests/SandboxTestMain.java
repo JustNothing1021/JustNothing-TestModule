@@ -1,5 +1,8 @@
 package com.justnothing.testmodule.command.functions.tests;
 
+import com.justnothing.javainterpreter.ScriptRunner;
+import com.justnothing.javainterpreter.api.DefaultOutputHandler;
+import com.justnothing.javainterpreter.evaluator.ExecutionContext;
 import com.justnothing.javainterpreter.security.SandboxConfig;
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
@@ -40,6 +43,7 @@ public class SandboxTestMain extends CommandBase {
                     blockguard       - 测试 BlockGuard I/O 拦截
                     seccomp          - 测试 seccomp-bpf 进程拦截
                     clonefork        - 测试 clone/fork 拦截
+                    penetration      - 安全渗透测试（尝试攻破沙箱）
                     all              - 运行所有测试
                     info             - 显示环境信息
                 
@@ -47,6 +51,10 @@ public class SandboxTestMain extends CommandBase {
                     此命令用于测试 Android 沙箱机制的可用性。
                     - BlockGuard: 拦截磁盘 I/O 和网络操作
                     - seccomp-bpf: 拦截进程创建和线程创建
+                    - penetration: 尝试各种方法绕过安全限制
+                    
+                相关命令:
+                    anonclasstest    - 匿名类生成诊断 (独立工具)
                 
                 """;
     }
@@ -67,6 +75,7 @@ public class SandboxTestMain extends CommandBase {
             case "blockguard" -> executeInIsolatedThread(context, "BlockGuard", () -> testBlockGuardInternal(context));
             case "seccomp" -> executeInIsolatedThread(context, "seccomp", () -> testSeccompInternal(context));
             case "clonefork" -> executeInIsolatedThread(context, "clone/fork", () -> testCloneForkInternal(context));
+            case "penetration" -> executeInIsolatedThread(context, "penetration", () -> testPenetrationInternal(context));
             case "all" -> runAllTests(context);
             case "info" -> showEnvironmentInfo(context);
             default -> {
@@ -269,6 +278,16 @@ public class SandboxTestMain extends CommandBase {
 
         File testFile = new File(DataBridge.getDataDir(), "sandbox_test_" + System.currentTimeMillis() + ".tmp");
         
+        BlockGuardSandbox.bypass(() -> {
+            try {
+                java.io.FileOutputStream fos = new java.io.FileOutputStream(testFile);
+                fos.write("test".getBytes());
+                fos.close();
+            } catch (Exception e) {
+                context.println("警告: 无法创建测试文件: " + e.getMessage(), Colors.ORANGE);
+            }
+        });
+        
         context.println("", Colors.WHITE);
         context.println("测试磁盘写入拦截...", Colors.CYAN);
         context.println("测试文件: " + testFile.getAbsolutePath(), Colors.GRAY);
@@ -277,7 +296,16 @@ public class SandboxTestMain extends CommandBase {
         String[] writeError = {null};
         
         try {
-            BlockGuardSandbox.execute(SandboxConfig.DEFAULT, () -> {
+            SandboxConfig writeConfig = SandboxConfig.builder()
+                    .allowDiskRead()
+                    .denyDiskWrite()
+                    .allowNetwork()
+                    .allowLocalSocket()
+                    .allowThreadCreate()
+                    .allowThreadModify()
+                    .allowProcessCreate()
+                    .build();
+            BlockGuardSandbox.execute(writeConfig, () -> {
                 try {
                     java.io.FileOutputStream fos = new java.io.FileOutputStream(testFile);
                     fos.write("test".getBytes());
@@ -309,7 +337,16 @@ public class SandboxTestMain extends CommandBase {
         String[] readError = {null};
         
         try {
-            BlockGuardSandbox.execute(SandboxConfig.DEFAULT, () -> {
+            SandboxConfig readConfig = SandboxConfig.builder()
+                    .denyDiskRead()
+                    .allowDiskWrite()
+                    .allowNetwork()
+                    .allowLocalSocket()
+                    .allowThreadCreate()
+                    .allowThreadModify()
+                    .allowProcessCreate()
+                    .build();
+            BlockGuardSandbox.execute(readConfig, () -> {
                 try {
                     java.io.FileInputStream fis = new java.io.FileInputStream(testFile);
                     fis.read();
@@ -334,9 +371,11 @@ public class SandboxTestMain extends CommandBase {
             context.println("  信息: " + readError[0], Colors.GRAY);
         }
 
-        if (testFile.exists()) {
-            testFile.delete();
-        }
+        BlockGuardSandbox.bypass(() -> {
+            if (testFile.exists()) {
+                testFile.delete();
+            }
+        });
 
         context.println("", Colors.WHITE);
         if (writeBlocked[0] && readBlocked[0]) {
@@ -411,6 +450,11 @@ public class SandboxTestMain extends CommandBase {
                 return;
             }
 
+            if (result.errorMsg != null) {
+                context.print("警告: ", Colors.ORANGE);
+                context.println(result.errorMsg, Colors.GRAY);
+            }
+
             context.println("", Colors.WHITE);
             
             context.print("fork() 拦截: ", Colors.CYAN);
@@ -423,6 +467,9 @@ public class SandboxTestMain extends CommandBase {
             
             if (result.forkBlocked && result.threadBlocked) {
                 context.println("结论: seccomp-bpf 可完全拦截线程和进程创建", Colors.GREEN);
+            } else if (result.errorMsg != null) {
+                context.println("结论: 测试未完成，子进程在测试期间崩溃", Colors.ORANGE);
+                context.println("提示: 可能是 BPF 过滤器配置问题或设备兼容性问题", Colors.GRAY);
             } else if (result.forkBlocked || result.threadBlocked) {
                 context.println("结论: seccomp-bpf 部分有效，需要进一步调试", Colors.ORANGE);
             } else {
@@ -483,6 +530,164 @@ public class SandboxTestMain extends CommandBase {
         public boolean forkBlocked;
         public boolean threadBlocked;
         public String errorMsg;
+    }
+
+    private void testPenetrationInternal(CommandExecutor.CmdExecContext context) {
+        context.println("===== 安全渗透测试 =====", Colors.CYAN);
+        context.println("", Colors.WHITE);
+        context.println("尝试各种方法获取 Process 对象...", Colors.GRAY);
+        context.println("", Colors.WHITE);
+
+        ScriptRunner runner = new ScriptRunner(context.classLoader());
+        SandboxConfig config = SandboxConfig.SANDBOX;
+        DefaultOutputHandler outputHandler = new DefaultOutputHandler(System.out, System.in);
+
+        int totalTests = 0;
+        int passed = 0;
+
+        String[][] attackScripts = {
+            {"1. 直接调用 Runtime.exec()", 
+                "Runtime.getRuntime().exec(\"echo pwned\");"},
+            
+            {"2. Runtime.exec() 数组参数", 
+                "Runtime.getRuntime().exec(new String[]{\"echo\", \"pwned\"});"},
+            
+            {"3. Runtime.exec() 带环境变量", 
+                "Runtime.getRuntime().exec(\"echo pwned\", null);"},
+            
+            {"4. Runtime.exec() 带工作目录", 
+                "Runtime.getRuntime().exec(\"echo pwned\", null, new java.io.File(\"/tmp\"));"},
+            
+            {"5. 变量存储后调用", 
+                "Runtime rt = Runtime.getRuntime(); Process p = rt.exec(\"echo pwned\"); p;"},
+            
+            {"6. ProcessBuilder 单命令", 
+                "new ProcessBuilder(\"echo\", \"pwned\").start();"},
+            
+            {"7. ProcessBuilder 命令列表", 
+                "java.util.List<String> cmd = new java.util.ArrayList<>(); cmd.add(\"echo\"); cmd.add(\"pwned\"); new ProcessBuilder(cmd).start();"},
+            
+            {"8. ProcessBuilder.directory()", 
+                "new ProcessBuilder(\"echo\", \"pwned\").directory(new java.io.File(\"/tmp\")).start();"},
+            
+            {"9. ProcessBuilder.redirectErrorStream()", 
+                "new ProcessBuilder(\"echo\", \"pwned\").redirectErrorStream(true).start();"},
+            
+            {"10. ProcessBuilder 数组命令", 
+                "new ProcessBuilder(new String[]{\"echo\", \"pwned\"}).start();"},
+            
+            {"11. 反射获取 Runtime 后 exec", 
+                "Class.forName(\"java.lang.Runtime\").getMethod(\"getRuntime\").invoke(null).getClass().getMethod(\"exec\", String.class).invoke(Class.forName(\"java.lang.Runtime\").getMethod(\"getRuntime\").invoke(null), \"echo pwned\");"},
+            
+            {"12. 反射获取 ProcessBuilder", 
+                "Class<?> pb = Class.forName(\"java.lang.ProcessBuilder\"); java.lang.reflect.Constructor<?> ctor = pb.getConstructor(java.util.List.class); java.util.List<String> cmd = new java.util.ArrayList<>(); cmd.add(\"echo\"); ctor.newInstance(cmd).getClass().getMethod(\"start\").invoke(ctor.newInstance(cmd));"},
+            
+            {"13. MethodHandle 调用 Runtime.exec", 
+                "java.lang.invoke.MethodHandle mh = java.lang.invoke.MethodHandles.publicLookup().findVirtual(Runtime.class, \"exec\", java.lang.invoke.MethodType.methodType(Process.class, String.class)); mh.invoke(Runtime.getRuntime(), \"echo pwned\");"},
+            
+            {"14. MethodHandle 调用 ProcessBuilder.start", 
+                "java.lang.invoke.MethodHandle mh = java.lang.invoke.MethodHandles.publicLookup().findVirtual(ProcessBuilder.class, \"start\", java.lang.invoke.MethodType.methodType(Process.class)); mh.invoke(new ProcessBuilder(\"echo\", \"pwned\"));"},
+            
+            {"15. 通过 getClass 获取 Runtime", 
+                "Object obj = Runtime.getRuntime(); obj.getClass().getMethod(\"exec\", String.class).invoke(obj, \"echo pwned\");"},
+            
+            {"16. 通过 Object 数组存储", 
+                "Object[] arr = new Object[]{Runtime.getRuntime()}; arr[0].getClass().getMethod(\"exec\", String.class).invoke(arr[0], \"echo pwned\");"},
+            
+            {"17. 尝试 /bin/sh -c", 
+                "Runtime.getRuntime().exec(\"/bin/sh -c 'echo pwned'\");"},
+            
+            {"18. 尝试 /system/bin/sh (Android)", 
+                "Runtime.getRuntime().exec(\"/system/bin/sh -c 'echo pwned'\");"},
+            
+            {"19. ProcessBuilder.command() 链式调用", 
+                "new ProcessBuilder().command(\"echo\", \"pwned\").start();"},
+            
+            {"20. ProcessBuilder 环境变量注入", 
+                "ProcessBuilder pb = new ProcessBuilder(\"echo\", \"pwned\"); pb.environment().put(\"EVIL\", \"1\"); pb.start();"},
+            
+            {"21. 反射 getMethod 链", 
+                "Runtime.class.getMethod(\"getRuntime\").invoke(null).getClass().getMethod(\"exec\", String.class).invoke(Runtime.class.getMethod(\"getRuntime\").invoke(null), \"echo pwned\");"},
+            
+            {"22. 通过 ClassLoader 加载后反射", 
+                "Class<?> rt = String.class.getClassLoader().loadClass(\"java.lang.Runtime\"); rt.getMethod(\"getRuntime\").invoke(null).getClass().getMethod(\"exec\", String.class).invoke(rt.getMethod(\"getRuntime\").invoke(null), \"echo pwned\");"},
+            
+            {"23. 尝试继承 ProcessBuilder", 
+                "new ProcessBuilder(\"echo\", \"pwned\") {}.start();"},
+            
+            {"24. 通过 java.lang.ProcessBuilder$Redirect", 
+                "new ProcessBuilder(\"echo\", \"pwned\").redirectOutput(ProcessBuilder.Redirect.INHERIT).start();"},
+            
+            {"25. 尝试 native exec (通过 JNI)", 
+                "Class.forName(\"java.lang.UNIXProcess\");"},
+        };
+
+        for (String[] attack : attackScripts) {
+            totalTests++;
+            String name = attack[0];
+            String code = attack[1];
+
+            context.print(name + ": ", Colors.CYAN);
+
+            try {
+                runner.getExecutionContext().setPermissionChecker(config.getAstPermissionChecker());
+                runner.getExecutionContext().clearVariables();
+                Object result = BlockGuardSandbox.execute(config, () -> 
+                    runner.executeWithResult(code, outputHandler, outputHandler)
+                );
+
+                if (result instanceof Process) {
+                    context.println("⚠ 攻击成功! 获得了 Process 对象", Colors.RED);
+                } else {
+                    context.println("✓ 被阻止 (返回: " + (result != null ? result.getClass().getSimpleName() : "null") + ")", Colors.GREEN);
+                    passed++;
+                }
+            } catch (SecurityException e) {
+                context.println("✓ 被阻止", Colors.GREEN);
+                passed++;
+            } catch (Exception e) {
+                Throwable cause = e.getCause();
+                if (cause instanceof SecurityException) {
+                    context.println("✓ 被阻止", Colors.GREEN);
+                    passed++;
+                } else if (cause != null && cause.getMessage() != null && 
+                           (cause.getMessage().contains("denied") || 
+                            cause.getMessage().contains("禁止") ||
+                            cause.getMessage().contains("not allowed") ||
+                            cause.getMessage().contains("access denied"))) {
+                    context.println("✓ 被阻止", Colors.GREEN);
+                    passed++;
+                } else {
+                    String msg = cause != null ? cause.getMessage() : e.getMessage();
+                    if (msg != null && (msg.contains("denied") || msg.contains("禁止") || 
+                        msg.contains("not allowed") || msg.contains("access denied") ||
+                        msg.contains("cannot access") || msg.contains("not found") ||
+                        msg.contains("cannot resolve") || msg.contains("Unknown class"))) {
+                        context.println("✓ 被阻止", Colors.GREEN);
+                        passed++;
+                    } else {
+                        context.println("⚠ 异常: " + (cause != null ? "[" + cause.getClass().getSimpleName() + "] "+ cause : e.getClass().getSimpleName()) , Colors.ORANGE);
+                    }
+                }
+            }
+        }
+
+        int failed = totalTests - passed;
+        context.println("", Colors.WHITE);
+        context.println("─────────────────────────────", Colors.GRAY);
+        context.println("", Colors.WHITE);
+        context.print("测试结果: ", Colors.CYAN);
+        context.print(passed + " 个攻击被阻止", passed == totalTests ? Colors.GREEN : Colors.YELLOW);
+        context.print(" / ", Colors.GRAY);
+        context.println(failed + " 个攻击成功", failed == 0 ? Colors.GREEN : Colors.RED);
+
+        if (failed == 0) {
+            context.println("结论: 沙箱安全机制有效，所有攻击都被阻止", Colors.GREEN);
+        } else if (passed > failed) {
+            context.println("结论: 沙箱存在部分漏洞，需要加固", Colors.ORANGE);
+        } else {
+            context.println("结论: 沙箱存在严重安全漏洞！", Colors.RED);
+        }
     }
 
     private native SeccompTestResult testSeccompNative();

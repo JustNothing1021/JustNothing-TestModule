@@ -115,6 +115,26 @@ public class BasicPermissionChecker implements IPermissionChecker {
                 .allowClass("java.lang.*")
                 .allowClass("java.util.*")
                 .allowClass("java.math.*")
+                .denyClass("java.lang.Runtime")
+                .denyClass("java.lang.ProcessBuilder")
+                .denyClass("java.lang.System")
+                .denyClass("java.lang.ClassLoader")
+                .denyClass("java.lang.Thread")
+                .denyClass("java.io.*")
+                .denyClass("java.net.*")
+                .denyClass("java.nio.*")
+                .denyClass("java.lang.reflect.*")
+                .denyClass("java.security.*")
+                .denyClass("sun.*")
+                .denyClass("com.android.*")
+                .denyClass("android.*")
+                .denyMethod("java.lang.Object.getClass")
+                .denyMethod("java.lang.Class.getClassLoader")
+                .denyMethod("java.lang.Class.forName")
+                .denyMethod("java.lang.Class.getConstructor")
+                .denyMethod("java.lang.Class.getMethod")
+                .denyMethod("java.lang.Class.getField")
+                .denyMethod("java.lang.Class.getDeclared*")
                 .build();
     }
     
@@ -129,6 +149,19 @@ public class BasicPermissionChecker implements IPermissionChecker {
                 .allowClass("java.lang.*")
                 .allowClass("java.util.*")
                 .allowClass("java.math.*")
+                .denyClass("java.lang.Runtime")
+                .denyClass("java.lang.ProcessBuilder")
+                .denyClass("java.lang.System")
+                .denyClass("java.lang.ClassLoader")
+                .denyClass("java.lang.Thread")
+                .denyClass("java.io.*")
+                .denyClass("java.net.*")
+                .denyClass("java.nio.*")
+                .denyClass("java.lang.reflect.*")
+                .denyClass("java.security.*")
+                .denyClass("sun.*")
+                .denyClass("com.android.*")
+                .denyClass("android.*")
                 .denyPermission(PermissionType.FILE_READ)
                 .denyPermission(PermissionType.FILE_WRITE)
                 .denyPermission(PermissionType.EXEC)
@@ -136,6 +169,13 @@ public class BasicPermissionChecker implements IPermissionChecker {
                 .denyPermission(PermissionType.THREAD_CREATE)
                 .denyPermission(PermissionType.SYSTEM_EXIT)
                 .denyPermission(PermissionType.REFLECTION)
+                .denyMethod("java.lang.Object.getClass")
+                .denyMethod("java.lang.Class.getClassLoader")
+                .denyMethod("java.lang.Class.forName")
+                .denyMethod("java.lang.Class.getConstructor")
+                .denyMethod("java.lang.Class.getMethod")
+                .denyMethod("java.lang.Class.getField")
+                .denyMethod("java.lang.Class.getDeclared*")
                 .build();
     }
     
@@ -173,7 +213,11 @@ public class BasicPermissionChecker implements IPermissionChecker {
                 .denyMethod("java.lang.Class.getDeclared*")
                 .build();
     }
-    
+
+    public static IPermissionChecker createNoRestrictions() {
+        return builder().defaultAllow().build();
+    }
+
     private boolean matchesPattern(String name, Set<String> patterns) {
         for (String pattern : patterns) {
             if (pattern.endsWith(".*")) {

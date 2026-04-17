@@ -739,7 +739,11 @@ public class ASTEvaluator {
         if (targetType.isAssignableFrom(sourceType)) {
             return value;
         }
-        
+
+        if (targetType.isArray() && sourceType.isArray()) {
+            return convertArray(value, targetType, location);
+        }
+
         if (targetType.isPrimitive() && sourceType.isAssignableFrom(getWrapperType(targetType))) {
             return value;
         }
@@ -787,7 +791,29 @@ public class ASTEvaluator {
             ErrorCode.EVAL_TYPE_MISMATCH
         );
     }
-    
+
+    private static Object convertArray(Object value, Class<?> targetType, SourceLocation location) throws EvaluationException {
+        int length = java.lang.reflect.Array.getLength(value);
+        Class<?> componentType = targetType.getComponentType();
+        Object result = java.lang.reflect.Array.newInstance(componentType, length);
+
+        for (int i = 0; i < length; i++) {
+            Object element = java.lang.reflect.Array.get(value, i);
+            try {
+                Object converted = convertValue(element, componentType, location);
+                java.lang.reflect.Array.set(result, i, converted);
+            } catch (EvaluationException e) {
+                throw new EvaluationException(
+                    "Cannot convert element at index " + i + ": " + e.getMessage(),
+                    location,
+                    ErrorCode.EVAL_TYPE_MISMATCH
+                );
+            }
+        }
+
+        return result;
+    }
+
     private static Object getDefaultValue(Class<?> type) {
         if (type == null) return null;
         
@@ -1412,7 +1438,21 @@ public class ASTEvaluator {
             if (node.isAnonymousClass()) {
                 ClassDeclarationNode anonymousClass = node.getAnonymousClass();
                 DynamicClassGenerator generator = new DynamicClassGenerator(context);
-                // 生成类时传递构造函数参数类型
+
+                Class<?> superRawType = type.getRawType();
+                if (superRawType != null && argTypes.length > 0) {
+                    Class<?>[] superArgTypes = resolveSuperConstructorArgTypes(superRawType, argTypes);
+                    if (superArgTypes != null) {
+                        for (int i = 0; i < args.length; i++) {
+                            if (args[i] instanceof com.justnothing.javainterpreter.evaluator.Lambda lambda &&
+                                superArgTypes[i].isInterface()) {
+                                args[i] = lambda.asInterface(superArgTypes[i]);
+                            }
+                        }
+                        argTypes = superArgTypes;
+                    }
+                }
+
                 clazz = generator.generateClass(anonymousClass, argTypes);
                 context.registerCustomClass(anonymousClass.getClassName(), clazz);
             } else {
@@ -1455,6 +1495,66 @@ public class ASTEvaluator {
         }
     }
     
+    private static Class<?>[] resolveSuperConstructorArgTypes(Class<?> superClass, Class<?>[] runtimeArgTypes) {
+        try {
+            Constructor<?> bestMatch = null;
+            int bestScore = -1;
+
+            for (Constructor<?> constructor : superClass.getDeclaredConstructors()) {
+                Class<?>[] paramTypes = constructor.getParameterTypes();
+                if (isApplicableArgs(paramTypes, runtimeArgTypes, constructor.isVarArgs())) {
+                    int score = computeMatchScore(paramTypes, runtimeArgTypes);
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMatch = constructor;
+                    }
+                } else if (isLambdaFunctionalInterfaceMatch(paramTypes, runtimeArgTypes)) {
+                    int score = computeMatchScore(paramTypes, runtimeArgTypes);
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMatch = constructor;
+                    }
+                }
+            }
+
+            if (bestMatch == null) {
+                for (Constructor<?> constructor : superClass.getConstructors()) {
+                    Class<?>[] paramTypes = constructor.getParameterTypes();
+                    if (isApplicableArgs(paramTypes, runtimeArgTypes, constructor.isVarArgs())) {
+                        int score = computeMatchScore(paramTypes, runtimeArgTypes);
+                        if (score > bestScore) {
+                            bestScore = score;
+                            bestMatch = constructor;
+                        }
+                    } else if (isLambdaFunctionalInterfaceMatch(paramTypes, runtimeArgTypes)) {
+                        int score = computeMatchScore(paramTypes, runtimeArgTypes);
+                        if (score > bestScore) {
+                            bestScore = score;
+                            bestMatch = constructor;
+                        }
+                    }
+                }
+            }
+
+            if (bestMatch != null) {
+                return bestMatch.getParameterTypes();
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
+
+    private static boolean isLambdaFunctionalInterfaceMatch(Class<?>[] paramTypes, Class<?>[] runtimeArgTypes) {
+        if (paramTypes.length != runtimeArgTypes.length) return false;
+        for (int i = 0; i < paramTypes.length; i++) {
+            if (runtimeArgTypes[i] == com.justnothing.javainterpreter.evaluator.Lambda.class) {
+                if (!paramTypes[i].isInterface()) return false;
+            } else if (!paramTypes[i].isAssignableFrom(runtimeArgTypes[i])) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private static Constructor<?> findConstructor(Class<?> clazz, Class<?>[] argTypes) throws NoSuchMethodException {
         // 首先尝试精确匹配
         try {
@@ -1666,13 +1766,71 @@ public class ASTEvaluator {
             return array;
         }
         
-        Object[] array = new Object[elements.size()];
-        
+        Object[] evaluated = new Object[elements.size()];
         for (int i = 0; i < elements.size(); i++) {
-            array[i] = evaluate(elements.get(i), context);
+            evaluated[i] = evaluate(elements.get(i), context);
         }
         
-        return array;
+        Class<?> inferredType = inferArrayType(evaluated);
+        if (inferredType != null && inferredType != Object.class) {
+            Class<?> componentType = inferredType.isPrimitive() ? inferredType : inferredType;
+            Object array = java.lang.reflect.Array.newInstance(componentType, evaluated.length);
+            for (int i = 0; i < evaluated.length; i++) {
+                Object converted = convertValue(evaluated[i], componentType, node.getLocation());
+                java.lang.reflect.Array.set(array, i, converted);
+            }
+            return array;
+        }
+        
+        return evaluated;
+    }
+
+    private static Class<?> inferArrayType(Object[] elements) {
+        if (elements.length == 0) return null;
+
+        Class<?> result = null;
+        boolean hasNull = false;
+        boolean allNumbers = true;
+
+        for (Object elem : elements) {
+            if (elem == null) {
+                hasNull = true;
+                continue;
+            }
+            Class<?> elemType = elem.getClass();
+            if (!(elem instanceof Number)) allNumbers = false;
+            if (result == null) {
+                result = elemType;
+            } else if (!result.isAssignableFrom(elemType)) {
+                if (elemType.isAssignableFrom(result)) {
+                    result = elemType;
+                } else {
+                    return Object.class;
+                }
+            }
+        }
+
+        if (result == null) return null;
+
+        if (allNumbers && result != Object.class) {
+            return inferPrimitiveNumberType(elements);
+        }
+
+        return hasNull && result.isPrimitive() ? getWrapperClass(result) : result;
+    }
+
+    private static Class<?> inferPrimitiveNumberType(Object[] elements) {
+        boolean hasDouble = false, hasFloat = false, hasLong = false;
+        for (Object elem : elements) {
+            if (elem == null) continue;
+            if (elem instanceof Double || elem instanceof Float) hasDouble = true;
+            else if (elem instanceof Float) hasFloat = true;
+            else if (elem instanceof Long) hasLong = true;
+        }
+        if (hasDouble) return double.class;
+        if (hasFloat) return float.class;
+        if (hasLong) return long.class;
+        return int.class;
     }
     
     private static Object convertToPrimitive(Object value, Class<?> targetType) throws EvaluationException {
@@ -2027,6 +2185,7 @@ public class ASTEvaluator {
             if (type == char.class) return toChar(value);
             if (type == byte.class) return toByte(value);
             if (type == short.class) return toShort(value);
+            if (type == String.class) return value == null ? "null" : value.toString();
             
             return type.cast(value);
         } catch (Exception e) {
