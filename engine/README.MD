@@ -161,6 +161,7 @@ class Point {
     Point(int x, int y) { this.x = x; this.y = y; }
     int sum() { return x + y; }
 }
+
 auto p = new Point(1, 2);
 p.sum();  // 3
 ```
@@ -173,6 +174,21 @@ p.sum();  // 3
 x := 10;           // int
 name := "hello";   // String
 arr := [1, 2, 3];  // Object[], 这个是例外
+```
+
+### [16] 匿名类
+
+也是动态生成，但是要注意一下final类不能继承
+
+```java
+obj := new Object() {
+    int x = 1;
+    public void setX(int x) { this.x = x; }
+    public int  getX()      { return this.x; }
+}
+
+obj.setX(114514);
+obj.getX();      // 114514
 ```
 
 ---

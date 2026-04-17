@@ -4,7 +4,7 @@ import android.annotation.SuppressLint;
 
 
 public class FileDirectory {
-    public static final String APPLICATION_VERSION = "0.4.6";
+    public static final String APPLICATION_VERSION = "0.4.7";
     @SuppressLint("SdCardPath") // hook端如果用Environment会出现未定义行为
     public static final String SDCARD = "/sdcard";
     public static final String EXTERNAL_PATH = "/data/user_de/0/com.justnothing.testmodule/JustNothing";
