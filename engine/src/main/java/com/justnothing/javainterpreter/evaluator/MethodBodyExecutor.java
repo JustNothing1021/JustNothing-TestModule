@@ -5,11 +5,14 @@ import com.justnothing.javainterpreter.ast.ASTNode;
 import com.justnothing.javainterpreter.ast.nodes.*;
 import com.justnothing.javainterpreter.exception.EvaluationException;
 import com.justnothing.javainterpreter.exception.ReturnException;
-import com.justnothing.javainterpreter.exception.ErrorCode;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class MethodBodyExecutor {
@@ -113,7 +116,7 @@ public class MethodBodyExecutor {
         context.getScopeManager().declareVariable("this", 
             instance != null ? instance.getClass() : Object.class, instance, false);
         
-        java.util.Set<String> paramNames = new java.util.HashSet<>();
+        Set<String> paramNames = new HashSet<>();
         List<ParameterNode> parameters = methodDecl.getParameters();
         if (parameters != null && args != null) {
             for (int i = 0; i < parameters.size() && i < args.length; i++) {
@@ -148,15 +151,15 @@ public class MethodBodyExecutor {
             try {
                 Class<?> clazz = fieldSourceClass;
                 while (clazz != null && clazz != Object.class) {
-                    java.lang.reflect.Field[] fields = clazz.getDeclaredFields();
-                    for (java.lang.reflect.Field field : fields) {
+                    Field[] fields = clazz.getDeclaredFields();
+                    for (Field field : fields) {
                         field.setAccessible(true);
                         String fieldName = field.getName();
                         if (paramNames.contains(fieldName)) continue;
                         Object fieldValue = null;
                         if (instance != null) {
                             fieldValue = field.get(instance);
-                        } else if (java.lang.reflect.Modifier.isStatic(field.getModifiers())) {
+                        } else if (Modifier.isStatic(field.getModifiers())) {
                             fieldValue = field.get(null);
                         }
                         context.getScopeManager().declareVariable(
@@ -219,7 +222,7 @@ public class MethodBodyExecutor {
                     if (targetClass != null) {
                         try {
                             Field field = findField(targetClass, varNode.getName());
-                            if (field != null && java.lang.reflect.Modifier.isStatic(field.getModifiers())) {
+                            if (field != null && Modifier.isStatic(field.getModifiers())) {
                                 field.setAccessible(true);
                                 fieldValue = field.get(null);
                             }
@@ -304,7 +307,7 @@ public class MethodBodyExecutor {
                         if (targetClass != null) {
                             try {
                                 Field field = findField(targetClass, fieldNode.getFieldName());
-                                if (field != null && java.lang.reflect.Modifier.isStatic(field.getModifiers())) {
+                                if (field != null && Modifier.isStatic(field.getModifiers())) {
                                     field.setAccessible(true);
                                     field.set(null, value);
                                     return value;
@@ -452,7 +455,7 @@ public class MethodBodyExecutor {
                 } catch (RuntimeException e) {
                     if (e.getMessage() != null && e.getMessage().startsWith("Method not found")) {
                         try {
-                            java.lang.reflect.Method method = ASTEvaluator.findMethod(instance.getClass(), funcName, argValues);
+                            Method method = ASTEvaluator.findMethod(instance.getClass(), funcName, argValues);
                             if (method != null) {
                                 method.setAccessible(true);
                                 return method.invoke(instance, argValues);

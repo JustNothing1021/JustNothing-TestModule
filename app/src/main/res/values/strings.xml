@@ -173,4 +173,127 @@
     <string name="performance_hook_total_time">总耗时: %dms</string>
     <string name="performance_hook_avg_time">平均耗时: %dms</string>
     <string name="script_execute_finished">脚本执行完成!</string>
+    
+    <string name="field_type_label">类型</string>
+    <string name="field_modifiers_label">修饰符</string>
+    <string name="field_no_modifiers">无</string>
+    
+    <string name="constructor_info_title">构造函数信息</string>
+    <string name="params_title">参数</string>
+    <string name="free_mode">自由模式</string>
+    <string name="no_params_hint">此构造函数无参数</string>
+    <string name="invoke_constructor">构造</string>
+    <string name="result_title">结果</string>
+    <string name="result_type_label">类型</string>
+    <string name="result_hash_label">Hash</string>
+    <string name="param_label_format">参数 %1$d (%2$s)</string>
+    <string name="type_hint_optional">类型（可选，留空自动推断）</string>
+    <string name="add_param">添加参数</string>
+    <string name="remove_param">删除参数</string>
+    
+    <string name="method_info_title">方法信息</string>
+    <string name="target_instance_title">目标实例</string>
+    <string name="target_instance_hint">输入目标实例表达式</string>
+    <string name="invoke_method">调用方法</string>
+    <string name="return_type_label">返回值类型</string>
+    <string name="no_params_method_hint">此方法无参数</string>
+    
+    <string name="field_info_title">字段信息</string>
+    <string name="get_field_value">获取字段值</string>
+    <string name="field_value_title">字段值</string>
+    <string name="value_type_label">值类型</string>
+    <string name="value_hash_label">值Hash</string>
+    
+    <string name="set_field_value_title">设置字段值</string>
+    <string name="set_field_value">设置字段值</string>
+    <string name="value_expression_hint">输入值表达式</string>
+    <string name="set_success">设置成功</string>
+    <string name="set_failed">设置失败</string>
+    
+    <string name="instance_after_invocation">调用后实例</string>
+    
+    <string name="select_overload">选择重载</string>
+    
+    <string name="class_analysis">类分析</string>
+    <string name="enter_class_name">输入类名</string>
+    <string name="query">查询</string>
+    <string name="class_info">类信息</string>
+    <string name="click_to_view_hierarchy">点击查看继承图</string>
+    <string name="class_name">类名</string>
+    <string name="access_modifiers">访问修饰符</string>
+    <string name="super_class">父类</string>
+    <string name="implemented_interfaces">实现接口</string>
+    <string name="constructors">构造函数</string>
+    <string name="methods">方法</string>
+    <string name="fields">字段</string>
+    <string name="loading">加载中…</string>
+    <string name="query_failed">查询失败</string>
+    <string name="class_hierarchy">类继承图</string>
+    <string name="current_class">当前类</string>
+    <string name="parent_class">父类</string>
+    <string name="implemented_interface">实现的接口</string>
+    <string name="class_not_found">类未找到: %s</string>
+    <string name="class_name_empty">类名不能为空</string>
+    <string name="inherited_from">继承自 %s</string>
+    <string name="implements_interface">实现接口 %s</string>
+    <string name="implements_interface_bracket">[实现接口 %s]</string>
+    <string name="none">无</string>
+    <string name="no_params">无参数</string>
+    <string name="overload_count">%d个重载</string>
+    <string name="expand_collapse">展开/收起</string>
+    
+    <string name="class_type_class">类</string>
+    <string name="class_type_interface">接口</string>
+    <string name="class_type_annotation">注解</string>
+    <string name="class_type_enum">枚举</string>
+    <string name="class_type_abstract">抽象类</string>
+    <string name="class_type_final">final类</string>
+    <string name="no_modifiers">默认访问权限</string>
+    <string name="no_super_class">无 (Object或基本类型)</string>
+    
+    <string name="query_info">查询信息</string>
+    <string name="field_value">字段值</string>
+    <string name="method_invoke">方法调用</string>
+    <string name="constructor">构造函数</string>
+    <string name="memory_analysis">内存分析</string>
+    <string name="hook_management">Hook管理</string>
+    <string name="system_analysis">系统分析</string>
+    <string name="view_fields">查看字段</string>
+    <string name="invoke_methods">调用方法</string>
+    <string name="network_analysis">网络分析</string>
+    <string name="thread_analysis">线程分析</string>
+    
+    <string name="server_connected">服务端已连接</string>
+    <string name="server_disconnected">服务端未连接</string>
+    
+    <string name="instance_field_requires_target">实例字段需要提供目标实例表达式</string>
+    <string name="please_enter_value_expression">请输入值表达式</string>
+    <string name="get_failed">获取失败</string>
+    <string name="response_type_error">响应类型错误: 期望 %s, 实际 %s</string>
+    <string name="get_exception">获取异常: %s</string>
+    <string name="set_failed_msg">设置失败</string>
+    <string name="set_exception">设置异常: %s</string>
+    
+    <string name="invoke_failed">调用失败</string>
+    <string name="invoke_exception">调用异常: %s</string>
+    <string name="instance_method_requires_target">实例方法需要提供目标实例表达式</string>
+    
+    <string name="free_mode_param">自由</string>
+    <string name="method_count_format">方法 (%1$d个, %2$d个重载)</string>
+    
+    <string name="enter_class_name_hint">请输入类名</string>
+    <string name="method_invoke_not_implemented">方法调用功能暂未实现</string>
+    
+    <string name="auto_scroll_on">自动滚动: 开</string>
+    <string name="auto_scroll_off">自动滚动: 关</string>
+    <string name="no_file_permission_warn">没有授予读取文件的权限, \n有的功能可能无法正常运作…</string>
+    <string name="hook_detail_not_found">找不到这个Hook的详细信息…</string>
+    
+    <string name="method_name_with_overloads">%1$s (%2$d个重载)</string>
+    <string name="index_format">#%d</string>
+    <string name="inherited_from_bracket">[继承自 %s]</string>
+    <string name="hook_name_with_internal">%1$s (%2$s)</string>
+    <string name="content_provider_permission_error">没有访问ContentProvider的权限\n\n%1$s</string>
+    <string name="uri_incorrect_error">URI可能不正确\n\n%1$s</string>
+    <string name="unknown_error_format">出现未知错误\n\n%1$s</string>
 </resources>

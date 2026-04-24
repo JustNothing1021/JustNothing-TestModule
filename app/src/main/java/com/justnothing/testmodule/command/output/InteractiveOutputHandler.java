@@ -2,6 +2,8 @@ package com.justnothing.testmodule.command.output;
 
 import androidx.annotation.NonNull;
 
+import com.justnothing.testmodule.protocol.interactive.InteractiveProtocol;
+import com.justnothing.testmodule.protocol.json.JsonProtocol;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
@@ -35,17 +37,40 @@ public class InteractiveOutputHandler implements ICommandOutputHandler {
     private final AtomicReference<ScheduledFuture<?>> pingFutureRef = new AtomicReference<>();
     private final Object writeLock = new Object();
     private volatile boolean supportsInput = true;
+    private volatile boolean isJsonMode = false;
+    private volatile String command;
 
     public InteractiveOutputHandler(OutputStream outputStream) {
         this.outputStream = outputStream;
     }
 
     public void setSupportsInput(boolean supportsInput) {
-        this.supportsInput = supportsInput;
+        if (!isJsonMode) {
+            this.supportsInput = supportsInput;
+        }
     }
 
     public boolean isSupportsInput() {
-        return supportsInput;
+        return supportsInput && !isJsonMode;
+    }
+    
+    public void setJsonMode(boolean jsonMode) {
+        this.isJsonMode = jsonMode;
+        if (jsonMode) {
+            this.supportsInput = false;
+        }
+    }
+    
+    public boolean isJsonMode() {
+        return isJsonMode;
+    }
+    
+    public void setCommand(String command) {
+        this.command = command;
+    }
+    
+    public String getCommand() {
+        return command;
     }
 
     @Override
@@ -154,6 +179,7 @@ public class InteractiveOutputHandler implements ICommandOutputHandler {
         if (!supportsInput) {
             throw new RuntimeException(getClass().getName() + " 并不支持readLineFromClient...");
         }
+        
         if (closed.get()) {
             return null;
         }
@@ -222,9 +248,16 @@ public class InteractiveOutputHandler implements ICommandOutputHandler {
                     logger.debug("发送命令结束标记");
                 }
             } catch (IOException e) {
-                logger.debug("发送命令结束标记失败: " + e.getMessage());
+                logger.debug("关闭输出处理器失败: " + e.getMessage());
             }
         }
+    }
+    
+
+    public void setStructuredResult(Object result) {
+        // 覆盖缓冲区内容
+        buffer.setLength(0);
+        buffer.append(JsonProtocol.toJson(result));
     }
 
     @Override

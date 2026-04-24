@@ -311,7 +311,7 @@ public class Parser {
                         consumeOptionalSemicolon();
                         return expr;
                     }
-                    if (check(TokenType.DELIMITER_COMMA) || check(TokenType.DELIMITER_RIGHT_BRACE)) {
+                    if (check(TokenType.DELIMITER_COMMA) || check(TokenType.DELIMITER_RIGHT_BRACE) || check(TokenType.DELIMITER_SEMICOLON)) {
                         position = savedPos;
                         ASTNode expr = parseExpression();
                         consumeOptionalSemicolon();

@@ -66,6 +66,8 @@ public abstract class XposedBasicHook<ParamType> extends Logger {
      */
     public static class ClassFinder {
 
+        public static final Logger logger = Logger.getLoggerForName("ClassFinder");
+
 
         private static final
             ConcurrentHashMap<ClassLoader,
@@ -124,8 +126,12 @@ public abstract class XposedBasicHook<ParamType> extends Logger {
                 systemClasses : classes.computeIfAbsent(classLoader, key -> new ConcurrentHashMap<>());
                 Class<?> clazz = mapping.get(className);
                 if (clazz == null) {
-                    clazz = XposedHelpers.findClassIfExists(className, classLoader);
-                    if (clazz != null) mapping.put(className, clazz);
+                    if (classLoader == null) {
+                        clazz = XposedHelpers.findClassIfExists(className, null);
+                    } else {
+                        clazz = XposedHelpers.findClassIfExists(className, classLoader);
+                        mapping.put(className, clazz);
+                    }
                 }
                 return clazz;
             }

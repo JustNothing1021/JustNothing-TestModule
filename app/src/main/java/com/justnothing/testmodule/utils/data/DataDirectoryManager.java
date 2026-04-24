@@ -8,7 +8,7 @@ import android.util.Log;
 import com.justnothing.methodsclient.executor.AsyncChmodExecutor;
 import com.justnothing.testmodule.constants.AppEnvironment;
 import com.justnothing.testmodule.constants.FileDirectory;
-import com.justnothing.testmodule.ui.ErrorDialog;
+import com.justnothing.testmodule.ui.viewmodel.ErrorDialog;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.io.IOManager;
 import com.justnothing.testmodule.utils.io.RootProcessPool;

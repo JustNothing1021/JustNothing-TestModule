@@ -135,10 +135,10 @@ public class ASTEvaluator {
         }
     }
     
-    private static java.lang.reflect.Field findField(Class<?> clazz, String fieldName) {
+    private static Field findField(Class<?> clazz, String fieldName) {
         try {
             // 首先尝试在当前类中查找字段
-            java.lang.reflect.Field field = clazz.getDeclaredField(fieldName);
+            Field field = clazz.getDeclaredField(fieldName);
             return field;
         } catch (NoSuchFieldException e) {
             // 如果当前类没有该字段，尝试在父类中查找
@@ -165,19 +165,15 @@ public class ASTEvaluator {
                     // 单纯的数字运算
                     return addNumbers((Number) left, (Number) right);
                 }
-                if (left instanceof Object[] leftArr && right instanceof Object[] rightArr) {
-                    // 合并数组
-                    Object[] result = new Object[leftArr.length + rightArr.length];
-                    System.arraycopy(leftArr, 0, result, 0, leftArr.length);
-                    System.arraycopy(rightArr, 0, result, leftArr.length, rightArr.length);
-                    return result;
+                if (left.getClass().isArray() && right.getClass().isArray()) {
+                    return arrayCombine((Object[]) left, (Object[]) right);
                 }
                 break;
             case SUBTRACT:
                 if (left instanceof Number && right instanceof Number) {
                     return subtractNumbers((Number) left, (Number) right);
                 }
-                if (left instanceof Object[] && right instanceof Object[]) {
+                if (left.getClass().isArray() && right.getClass().isArray()) {
                     return arrayDifference((Object[]) left, (Object[]) right);
                 }
                 break;
@@ -188,15 +184,9 @@ public class ASTEvaluator {
                 } else if (left instanceof String && right instanceof Number) {
                     // 字符串重复
                     return ((String) left).repeat((int) right);
-                } else if (left instanceof Object[] && right instanceof Number) {
+                } else if (left.getClass().isArray() && right instanceof Number) {
                     // 数组重复
-                    Object[] newArr = new Object[(int) (Array.getLength(left) * (int) right)];
-                    for (int i = 0; i < (int) right; i++) {
-                        for (int j = 0; j < Array.getLength(left); j++) {
-                            newArr[i * Array.getLength(left) + j] = Array.get(left, j);
-                        }
-                    }
-                    return newArr;
+                    return arrayRepeat((Object[]) left, (int) right);
                 }
                 break;
             case DIVIDE:
@@ -220,8 +210,8 @@ public class ASTEvaluator {
                     }
                     return result;
                 }
-                if (left instanceof Object[] && right instanceof Object[]) {
-                    return cartesianProduct((Object[]) left, (Object[]) right);
+                if (left.getClass().isArray() && right.getClass().isArray()) {
+                    return arrayCartesianProduct((Object[]) left, (Object[]) right);
                 }
                 break;
             case INT_DIVIDE:
@@ -282,7 +272,7 @@ public class ASTEvaluator {
                 if (left instanceof Number && right instanceof Number) {
                     return ((Number) left).longValue() & ((Number) right).longValue();
                 }
-                if (left instanceof Object[] && right instanceof Object[]) {
+                if (left.getClass().isArray() && right.getClass().isArray()) {
                     return arrayIntersection((Object[]) left, (Object[]) right);
                 }
                 break;
@@ -290,7 +280,7 @@ public class ASTEvaluator {
                 if (left instanceof Number && right instanceof Number) {
                     return ((Number) left).longValue() | ((Number) right).longValue();
                 }
-                if (left instanceof Object[] && right instanceof Object[]) {
+                if (left.getClass().isArray() && right.getClass().isArray()) {
                     return arrayUnion((Object[]) left, (Object[]) right);
                 }
                 break;
@@ -298,7 +288,7 @@ public class ASTEvaluator {
                 if (left instanceof Number && right instanceof Number) {
                     return ((Number) left).longValue() ^ ((Number) right).longValue();
                 }
-                if (left instanceof Object[] && right instanceof Object[]) {
+                if (left.getClass().isArray() && right.getClass().isArray()) {
                     return arraySymmetricDifference((Object[]) left, (Object[]) right);
                 }
                 break;
@@ -400,7 +390,7 @@ public class ASTEvaluator {
         );
     }
     
-    private static Object[] cartesianProduct(Object[] arr1, Object[] arr2) {
+    private static Object[] arrayCartesianProduct(Object[] arr1, Object[] arr2) {
         int len1 = arr1.length;
         int len2 = arr2.length;
         Object[] result = new Object[len1 * len2];
@@ -513,7 +503,7 @@ public class ASTEvaluator {
                     }
                     return ~n.intValue();
                 }
-                if (operand instanceof Object[]) {
+                if (operand.getClass().isArray()) {
                     return arrayReverse((Object[]) operand);
                 }
                 break;
@@ -784,6 +774,10 @@ public class ASTEvaluator {
                 return (char) ((Number) value).intValue();
             }
         }
+
+        if (value.getClass().isArray() && targetType.isArray()) {
+            return convertArray(value, targetType, location);
+        }
         
         throw new EvaluationException(
             "Cannot convert " + sourceType.getName() + " to " + targetType.getName(),
@@ -793,15 +787,15 @@ public class ASTEvaluator {
     }
 
     private static Object convertArray(Object value, Class<?> targetType, SourceLocation location) throws EvaluationException {
-        int length = java.lang.reflect.Array.getLength(value);
+        int length = Array.getLength(value);
         Class<?> componentType = targetType.getComponentType();
-        Object result = java.lang.reflect.Array.newInstance(componentType, length);
+        Object result = Array.newInstance(componentType, length);
 
         for (int i = 0; i < length; i++) {
-            Object element = java.lang.reflect.Array.get(value, i);
+            Object element = Array.get(value, i);
             try {
                 Object converted = convertValue(element, componentType, location);
-                java.lang.reflect.Array.set(result, i, converted);
+                Array.set(result, i, converted);
             } catch (EvaluationException e) {
                 throw new EvaluationException(
                     "Cannot convert element at index " + i + ": " + e.getMessage(),
@@ -1303,7 +1297,7 @@ public class ASTEvaluator {
             context.checkFieldAccess(targetClass.getName(), node.getFieldName());
             
             if (target instanceof Class) {
-                java.lang.reflect.Field field = MethodBodyExecutor.findField(targetClass, node.getFieldName());
+                Field field = MethodBodyExecutor.findField(targetClass, node.getFieldName());
                 if (field != null) {
                     field.setAccessible(true);
                     return field.get(null);
@@ -1311,12 +1305,12 @@ public class ASTEvaluator {
                 throw new NoSuchFieldException("Field " + node.getFieldName() + " not found in " + targetClass.getName());
             }
             
-            Object fieldValue = MethodBodyExecutor.resolveField(node.getFieldName(), target);
-            if (fieldValue != null) {
-                return fieldValue;
+            Field field = MethodBodyExecutor.findField(targetClass, node.getFieldName());
+            if (field != null) {
+                field.setAccessible(true);
+                return field.get(target);
             }
             
-            // 如果字段解析失败，抛出异常
             throw new NoSuchFieldException("Field " + node.getFieldName() + " not found in " + targetClass.getName());
         } catch (SecurityException e) {
             throw new EvaluationException(
@@ -2658,6 +2652,13 @@ public class ASTEvaluator {
         throw new ReturnException(value);
     }
 
+    private static Object[] arrayCombine(Object[] left, Object[] right) {
+        Object[] result = new Object[Array.getLength(left) + Array.getLength(right)];
+        System.arraycopy(left, 0, result, 0, Array.getLength(left));
+        System.arraycopy(right, 0, result, Array.getLength(left), Array.getLength(right));
+        return result;
+    }
+
     private static Object[] arrayDifference(Object[] left, Object[] right) {
         Set<Object> rightSet = new HashSet<>(Arrays.asList(right));
         List<Object> result = new ArrayList<>();
@@ -2667,6 +2668,16 @@ public class ASTEvaluator {
             }
         }
         return result.toArray();
+    }
+
+    private static Object[] arrayRepeat(Object[] arr, int count) {
+        Object[] newArr = new Object[(int) (Array.getLength(arr) * count)];
+        for (int i = 0; i < count; i++) {
+            for (int j = 0; j < Array.getLength(arr); j++) {
+                newArr[i * Array.getLength(arr) + j] = Array.get(arr, j);
+            }
+        }
+        return newArr;
     }
     
     private static Object[] arrayIntersection(Object[] left, Object[] right) {

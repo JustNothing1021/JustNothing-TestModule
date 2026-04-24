@@ -22,12 +22,17 @@ public class SystemExceptionManagerHook extends PackageHook {
             CLASSNAME,
             "messageDialog",
             String.class,
-            new XC_MethodReplacement() {
+            new XC_MethodHook() {
+                // @Override
+                // protected Object replaceHookedMethod(MethodHookParam param) {
+                //     String message = (String) param.args[0];
+                //     warn("已阻止system弹窗: " + message);
+                //     return null;
+                // }
                 @Override
-                protected Object replaceHookedMethod(MethodHookParam param) {
-                    String message = (String) param.args[0];
-                    warn("已阻止system弹窗: " + message);
-                    return null;
+                protected void beforeHookedMethod(MethodHookParam param) {
+                    warn("messageDialog被调用，信息: " + param.args[0]);
+                    warn("由于已经hook了BehaviorUtils，不会上报数据，将会继续执行该方法");
                 }
             }
         );

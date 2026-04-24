@@ -26,7 +26,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.JustNothing">
         <activity
-            android:name=".ui.WelcomeActivity"
+            android:name=".ui.menu.WelcomeActivity"
             android:exported="true"
             android:theme="@style/Theme.JustNothing">
             <intent-filter>
@@ -35,44 +35,104 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".ui.HttpConfigActivity"
+            android:name=".ui.menu.HttpConfigActivity"
             android:exported="false"
             android:taskAffinity=""
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.HookConfigActivity"
+            android:name=".ui.menu.HookConfigActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.LogViewerActivity"
+            android:name=".ui.menu.LogViewerActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.ScriptManagerActivity"
+            android:name=".ui.menu.ScriptManagerActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.ModuleStatusActivity"
+            android:name=".ui.menu.ModuleStatusActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.PerformanceActivity"
+            android:name=".ui.menu.PerformanceActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.DataExportActivity"
+            android:name=".ui.menu.DataExportActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.SettingsActivity"
+            android:name=".ui.menu.SettingsActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.AboutActivity"
+            android:name=".ui.menu.AboutActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.DidYouKnowActivity"
+            android:name=".ui.menu.DidYouKnowActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.analysis.SystemAnalysisActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.analysis.classanalysis.ClassAnalysisActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.analysis.classanalysis.ClassQueryActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.analysis.classanalysis.ClassBrowserActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.analysis.classanalysis.ConstructorDetailActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.analysis.classanalysis.MethodDetailActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.analysis.classanalysis.FieldDetailActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.analysis.classanalysis.ClassGraphActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.analysis.classanalysis.ClassDetailActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.analysis.classanalysis.FieldViewActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.analysis.classanalysis.MethodInvokeActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.analysis.memory.MemoryAnalysisActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.analysis.hook.HookManagerActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.analysis.thread.ThreadAnalysisActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.analysis.network.NetworkAnalysisActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <meta-data android:name="xposedmodule" android:value="true" />

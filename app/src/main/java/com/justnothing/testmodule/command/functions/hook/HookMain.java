@@ -2,14 +2,22 @@ package com.justnothing.testmodule.command.functions.hook;
 
 import static com.justnothing.testmodule.constants.CommandServer.CMD_HOOK_VER;
 
+import com.justnothing.javainterpreter.ScriptRunner;
+import com.justnothing.javainterpreter.evaluator.DynamicClassGenerator;
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.data.DataBridge;
+import com.justnothing.testmodule.utils.reflect.AppClassFinder;
+import com.justnothing.testmodule.utils.reflect.DexClassDefiner;
 
 
 public class HookMain extends CommandBase {
+
+    static {
+        DynamicClassGenerator.setDefaultClassDefiner(DexClassDefiner.getInstance());
+    }
 
     public HookMain() {
         super("HookMain");

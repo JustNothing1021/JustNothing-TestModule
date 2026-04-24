@@ -5,6 +5,8 @@ import android.os.StrictMode;
 import com.justnothing.javainterpreter.security.SandboxConfig;
 import com.justnothing.testmodule.utils.logging.Logger;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
@@ -52,7 +54,7 @@ public final class BlockGuardSandbox {
         }
 
         @Override
-        public String toString() {
+        public @NotNull String toString() {
             return pattern;
         }
     }
@@ -107,8 +109,8 @@ public final class BlockGuardSandbox {
             "android.net.LocalSocket",
             "android.net.LocalSocketAddress",
             "android.net.LocalSocketImpl",
-            "com.justnothing.testmodule.command.output.InteractiveProtocol",
-            "com.justnothing.testmodule.service.handler.SocketClientHandler"
+            com.justnothing.testmodule.protocol.interactive.InteractiveProtocol.class.getName(),
+            com.justnothing.testmodule.service.handler.SocketClientHandler.class.getName()
     );
 
     private static final Class<?> BLOCKGUARD_CLASS;

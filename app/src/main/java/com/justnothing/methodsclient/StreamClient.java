@@ -55,17 +55,23 @@ public class StreamClient {
     }
 
 
-    public boolean executeInteractiveSocketCommand(String command) {
+    public boolean executeInteractiveMode(String command) {
         SocketCommandExecutor executor = new SocketCommandExecutor();
         return executor.executeInteractiveSocket(command);
     }
+
+    public boolean executeColoredInteractiveMode(String command) {
+        SocketCommandExecutor executor = new SocketCommandExecutor();
+        return executor.executeInteractiveWithColoredOutput(command, true).success();
+    }
+
 
     public boolean executeTextSocketCommand(String command) {
         SocketCommandExecutor executor = new SocketCommandExecutor();
         return executor.executeTextSocket(command);
     }
 
-    public static boolean executeFile(String command) {
+    public static boolean executeFileMode(String command) {
         return FileCommandExecutor.executeFile(command);
     }
 
@@ -81,15 +87,15 @@ public class StreamClient {
 
     public boolean executeAutoCommand(String command) {
         if (checkSocketServer()) {
-            logger.info("使用交互Socket模式");
-            boolean result = executeInteractiveSocketCommand(command);
+            logger.info("使用交互Socket模式（带颜色）");
+            boolean result = executeColoredInteractiveMode(command);
             if (!result) {
                 logger.warn("Socket模式失败，回退到文件模式");
-                executeFile(command);
+                executeFileMode(command);
             }
         } else {
             logger.warn("Socket服务不可用，使用文件模式");
-            executeFile(command);
+            executeFileMode(command);
         }
         return true;
     }
@@ -98,7 +104,7 @@ public class StreamClient {
 
     // 静态方法
 
-    public static void executeTextSocket(String command) {
+    public static void executeTextMode(String command) {
         StreamClient client = new StreamClient();
         boolean success = client.executeTextSocketCommand(command);
 
@@ -157,17 +163,18 @@ public class StreamClient {
                 通过Java访问服务端来执行methods代码。
                 
                 可选项:
-                    -s, --socket            通过Socket文本协议执行命令
-                    -t, --text              通过Socket文本交互式协议执行命令
-                    -i, --interactive       通过Socket二进制交互式协议执行命令
-                    -f, --file              通过文件中转命令(原始模式)
-                    --update-port <port>    更新Socket服务器端口
-                    --auto                  自动选择最佳模式(默认)
-                    --check-socket          检查Socket服务器状态
-                    --quick-test            快速连接测试
-                    --perf-stats            打印性能统计信息
-                    --clear-perf-data       清除性能统计数据
-                    --help                  显示此帮助信息
+                    -s, --socket             通过Socket文本协议执行命令
+                    -t, --text               通过Socket文本交互式协议执行命令
+                    -i, --interactive        通过Socket二进制交互式协议执行命令
+                    -ip, --interactive-plain 通过Socket二进制交互式协议执行命令, 不带颜色
+                    -f, --file               通过文件中转命令(原始模式)
+                    --update-port <port>     更新Socket服务器端口
+                    --auto                   自动选择最佳模式(默认)
+                    --check-socket           检查Socket服务器状态
+                    --quick-test             快速连接测试
+                    --perf-stats             打印性能统计信息
+                    --clear-perf-data        清除性能统计数据
+                    --help                   显示此帮助信息
                 
                 示例:
                     StreamClient "invoke java.lang.System currentTimeMillis"
@@ -255,7 +262,7 @@ public class StreamClient {
                     System.exit(1);
                 }
                 String command = joinArgs(args, 1);
-                executeTextSocket(command);
+                executeTextMode(command);
             }
             case "--interactive", "-i" -> {
                 if (args.length < 2) {
@@ -263,7 +270,16 @@ public class StreamClient {
                     System.exit(1);
                 }
                 String command = joinArgs(args, 1);
-                boolean success = new StreamClient().executeInteractiveSocketCommand(command);
+                boolean success = new StreamClient().executeColoredInteractiveMode(command);
+                System.exit(success ? 0 : 1);
+            }
+            case "--interactive-plain", "-ip" -> {
+                if (args.length < 2) {
+                    System.err.println("错误: 需要提供命令");
+                    System.exit(1);
+                }
+                String command = joinArgs(args, 1);
+                boolean success = new StreamClient().executeInteractiveMode(command);
                 System.exit(success ? 0 : 1);
             }
             case "--auto" -> {
@@ -280,7 +296,7 @@ public class StreamClient {
                     System.exit(1);
                 }
                 String command = joinArgs(args, 1);
-                boolean success = executeFile(command);
+                boolean success = executeFileMode(command);
                 if (!success) {
                     System.exit(1);
                 }

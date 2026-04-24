@@ -75,7 +75,7 @@ public class AnonClassTestMain extends CommandBase {
     private void testAnonymousClassInternal(CommandExecutor.CmdExecContext context, 
                                           boolean quickMode) {
         ScriptRunner runner = new ScriptRunner();
-        DynamicClassGenerator.setDefaultClassDefiner(new DexClassDefiner());
+        DynamicClassGenerator.setDefaultClassDefiner(DexClassDefiner.getInstance());
 
         var outputHandler = new DefaultOutputHandler() {
             @Override

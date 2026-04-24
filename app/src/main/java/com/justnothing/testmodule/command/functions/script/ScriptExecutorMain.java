@@ -44,7 +44,7 @@ public class ScriptExecutorMain extends CommandBase {
     static {
         systemScriptRunner = new ScriptRunner(null);
         systemScriptRunner.setClassFinder(new AppClassFinder());
-        DynamicClassGenerator.setDefaultClassDefiner(new DexClassDefiner());
+        DynamicClassGenerator.setDefaultClassDefiner(DexClassDefiner.getInstance());
     }
 
     private final String commandName;
@@ -820,9 +820,7 @@ public class ScriptExecutorMain extends CommandBase {
                 if (config.getAstPermissionChecker() != null) {
                     runner.getExecutionContext().setPermissionChecker(config.getAstPermissionChecker());
                 }
-                BlockGuardSandbox.execute(config, () -> {
-                    runner.execute(code, context.output(), context.output());
-                });
+                BlockGuardSandbox.execute(config, () -> runner.execute(code, context.output(), context.output()));
             } else {
                 runner.execute(code, context.output(), context.output());
             }

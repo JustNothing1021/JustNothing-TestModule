@@ -190,6 +190,10 @@ public class CommandExecutor {
 
 
     public void execute(String fullCommand, ICommandOutputHandler output) {
+        execute(fullCommand, output, null);
+    }
+    
+    public void execute(String fullCommand, ICommandOutputHandler output, com.justnothing.testmodule.command.output.ClientRequirements requirements) {
         if (fullCommand == null || fullCommand.trim().isEmpty()) {
             logger.warn("命令为空");
             output.println("命令不能为空", Colors.RED);
@@ -207,14 +211,14 @@ public class CommandExecutor {
         SystemOutputRedirector redirector = new SystemOutputRedirector(output);
         try {
             redirector.startRedirect();
-            executeCommandInternal(fullCommand, output);
+            executeCommandInternal(fullCommand, output, requirements);
         } catch (Throwable t) {
             logger.error("执行命令异常", t);
             output.println("\n===============================================", Colors.RED);
             output.println("执行命令出现严重错误...", Colors.RED);
-            output.print("（你现在看到的是命令执行基类的错误报告, 大概率是命令执行爆掉了或者命令内部", Colors.AQUA);
-            output.print("出现了Error而不是Exception!", Colors.YELLOW);
-            output.println("）", Colors.YELLOW);
+            output.print("（你现在看到的是命令执行基类的错误报告, 大概率是命令执行爆掉了或者命令内部", Colors.GRAY);
+            output.print("出现了Error而不是Exception", Colors.YELLOW);
+            output.println("!）", Colors.GRAY);
             output.print("错误信息: ", Colors.ORANGE);
             output.printf(Colors.YELLOW, "[%s] ", t.getClass().getSimpleName());
             output.println(t.getMessage(), Colors.GRAY);
@@ -232,7 +236,7 @@ public class CommandExecutor {
     }
 
 
-    private void executeCommandInternal(String fullCommand, ICommandOutputHandler output) {
+    private void executeCommandInternal(String fullCommand, ICommandOutputHandler output, com.justnothing.testmodule.command.output.ClientRequirements requirements) {
         fullCommand = fullCommand.trim();
         if (fullCommand.isEmpty()) {
             output.println("没有指定命令 (可以用help来获取帮助)", Colors.RED);
@@ -272,7 +276,8 @@ public class CommandExecutor {
             getTargetPackage(),
             getClassLoader(),
             output,
-            argGroup
+            argGroup,
+            requirements
         );
 
         // 使用命令注册表分发命令
@@ -299,7 +304,8 @@ public class CommandExecutor {
             String targetPackage, // 请求的目标包名
             ClassLoader classLoader, // 指定的类加载器
             ICommandOutputHandler output, // 输出流
-            ArgumentGroup argGroup // 多格式参数组
+            ArgumentGroup argGroup, // 多格式参数组
+            com.justnothing.testmodule.command.output.ClientRequirements requirements // 客户端需求
     ) {
 
         public void print(Object obj) {

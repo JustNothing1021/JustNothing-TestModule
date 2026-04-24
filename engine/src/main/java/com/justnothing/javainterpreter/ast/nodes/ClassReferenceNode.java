@@ -9,6 +9,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * 类引用节点。
+ **/
 public class ClassReferenceNode extends ASTNode {
     
     private final String originalTypeName;

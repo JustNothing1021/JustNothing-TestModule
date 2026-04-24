@@ -102,8 +102,6 @@ public class ScriptRunner {
             ASTEvaluator.evaluate(ast, context);
         } catch (ParseException e) {
             throw new RuntimeException("Parse error: " + e.getMessage(), e);
-        } catch (EvaluationException e) {
-            throw simplifyException(e);
         } catch (Exception e) {
             throw simplifyException(e);
         }

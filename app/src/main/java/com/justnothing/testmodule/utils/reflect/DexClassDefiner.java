@@ -10,12 +10,21 @@ import com.android.tools.r8.OutputMode;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class DexClassDefiner implements ClassDefiner {
+    static DexClassDefiner instance;
+
+    public static void setInstance(DexClassDefiner instance) {
+        DexClassDefiner.instance = instance;
+    }
+
+    public static DexClassDefiner getInstance() {
+        if (instance == null) setInstance(new DexClassDefiner());
+        return instance;
+    }
 
     private static final AtomicLong COUNTER = new AtomicLong(0);
     private static final ConcurrentHashMap<String, ClassLoader> LOADER_CACHE = new ConcurrentHashMap<>();
@@ -90,7 +99,6 @@ public class DexClassDefiner implements ClassDefiner {
             FileDirectory.METHODS_DATA_DIR + "/opt",
             FileDirectory.SDCARD_PATH + "/dcg_opt",
             System.getProperty("java.io.tmpdir"),
-            "/data/data/com.justnothing.testmodule/cache",
             "/data/local/tmp"
         };
 
@@ -117,15 +125,14 @@ public class DexClassDefiner implements ClassDefiner {
     private static File createTempDir(String prefix) throws IOException {
         String[] candidateDirs = {
             FileDirectory.METHODS_DATA_DIR,
-            FileDirectory.SDCARD_PATH + "/dcg_temp",
+            FileDirectory.SDCARD_PATH + "/dcg_tmp",
             System.getProperty("java.io.tmpdir"),
-            "/data/data/com.justnothing.testmodule/cache",
             "/data/local/tmp"
         };
 
         for (String dir : candidateDirs) {
             if (dir == null || dir.isEmpty()) continue;
-            File f = new File(dir, prefix + "_" + System.nanoTime());
+            File f = new File(new File(dir, "dex_gen"), prefix + "_" + System.nanoTime());
             if (!f.exists()) {
                 try {
                     if (f.mkdirs() || f.isDirectory()) {

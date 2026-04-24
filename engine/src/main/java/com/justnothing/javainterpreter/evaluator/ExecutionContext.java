@@ -7,6 +7,8 @@ import com.justnothing.javainterpreter.api.IOutputHandler;
 import com.justnothing.javainterpreter.security.IPermissionChecker;
 import com.justnothing.javainterpreter.security.PermissionType;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -14,19 +16,11 @@ import java.util.List;
 import java.util.Map;
 
 public class ExecutionContext {
-    
-    public static class CallFrame {
-        public final String functionName;
-        public final int line;
-        public final int column;
-        
-        public CallFrame(String functionName, int line, int column) {
-            this.functionName = functionName;
-            this.line = line;
-            this.column = column;
-        }
-        
+
+    public record CallFrame(String functionName, int line, int column) {
+
         @Override
+        @NotNull
         public String toString() {
             if (line > 0) {
                 return functionName + " (Line " + line + ")";
@@ -133,6 +127,8 @@ public class ExecutionContext {
         this.outputBuffer = parent.outputBuffer;
         this.warnMsgBuffer = parent.warnMsgBuffer;
         this.classFinder = parent.classFinder;
+        this.printAST = parent.printAST;
+        this.permissionChecker = parent.permissionChecker;
     }
     
     public ExecutionContext createChildContext() {

@@ -140,6 +140,12 @@ public class DescriptorColorizer {
             return typeName;
         }
         
+        if (typeName.startsWith("class ")) {
+            typeName = typeName.substring(6);
+        } else if (typeName.startsWith("interface ")) {
+            typeName = typeName.substring(10);
+        }
+        
         StringBuilder result = new StringBuilder();
         int arrayDepth = 0;
         int i = 0;
@@ -149,7 +155,7 @@ public class DescriptorColorizer {
             i++;
         }
         
-        if (arrayDepth > 0) {
+        if (arrayDepth > 0 && i < typeName.length()) {
             String baseType = getReadableTypeNameFromJVMTypeName(typeName, i);
 
             result.append(baseType);

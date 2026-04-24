@@ -43,7 +43,7 @@ testmodule-keystore.jks
 !/README.MD
 
 # 还有一些神秘的日志文件
-/*.log
+*.log
 
 
 

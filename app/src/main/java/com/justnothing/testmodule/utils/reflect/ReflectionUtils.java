@@ -649,4 +649,53 @@ public class ReflectionUtils {
     public Object callStaticMethod(Class<?> clazz, String methodName, List<Object> args) throws Exception {
         return callStaticMethod(clazz.getName(), methodName, args);
     }
+
+    public static Field findField(Class<?> clazz, String fieldName) {
+        Class<?> current = clazz;
+        while (current != null) {
+            try {
+                return current.getDeclaredField(fieldName);
+            } catch (NoSuchFieldException e) {
+                current = current.getSuperclass();
+            }
+        }
+        return null;
+    }
+
+    public static void setField(Object target, String fieldName, Object value) throws Exception {
+        if (target == null) {
+            throw new NullPointerException("目标对象不能为 null");
+        }
+        
+        Field field = findField(target.getClass(), fieldName);
+        if (field == null) {
+            throw new NoSuchFieldException("未找到字段: " + fieldName);
+        }
+        
+        field.setAccessible(true);
+        field.set(target, value);
+    }
+
+    public static void setStaticField(Class<?> clazz, String fieldName, Object value) throws Exception {
+        Field field = findField(clazz, fieldName);
+        if (field == null) {
+            throw new NoSuchFieldException("未找到字段: " + fieldName);
+        }
+        
+        if (!Modifier.isStatic(field.getModifiers())) {
+            throw new IllegalArgumentException("字段 " + fieldName + " 不是静态字段");
+        }
+        
+        field.setAccessible(true);
+        field.set(null, value);
+    }
+
+    public static void setField(Field field, Object target, Object value) throws Exception {
+        if (field == null) {
+            throw new NullPointerException("Field 不能为 null");
+        }
+        
+        field.setAccessible(true);
+        field.set(target, value);
+    }
 }

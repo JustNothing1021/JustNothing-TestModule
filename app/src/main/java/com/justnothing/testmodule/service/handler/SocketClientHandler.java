@@ -3,10 +3,14 @@ package com.justnothing.testmodule.service.handler;
 import android.util.Log;
 
 import com.justnothing.testmodule.command.CommandExecutor;
+import com.justnothing.testmodule.command.output.ClientRequirements;
 import com.justnothing.testmodule.command.output.ICommandOutputHandler;
 import com.justnothing.testmodule.command.output.InteractiveOutputHandler;
-import com.justnothing.testmodule.command.output.InteractiveProtocol;
-import com.justnothing.testmodule.command.output.DisclaimerManager;
+import com.justnothing.testmodule.protocol.interactive.InteractiveProtocol;
+import com.justnothing.testmodule.protocol.json.JsonProtocol;
+import com.justnothing.testmodule.protocol.json.handler.CommandRequestHandler;
+import com.justnothing.testmodule.protocol.json.request.CommandRequest;
+import com.justnothing.testmodule.protocol.json.response.CommandResult;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
@@ -42,6 +46,75 @@ public class SocketClientHandler {
 
     public SocketClientHandler(CommandExecutor commandExecutor) {
         this.commandExecutor = commandExecutor;
+    }
+
+    /**
+     * 初始包读取结果
+     */
+    private static class InitialPacketResult {
+        ClientRequirements requirements = new ClientRequirements();
+        Object[] commandPacket = null;
+    }
+
+    /**
+     * 读取初始包（CAPABILITY 和 COMMAND/COMMAND_REQUEST），不强制顺序。
+     * 
+     * <p>循环读取包直到：
+     * <ul>
+     *   <li>同时收到 CAPABILITY 和 COMMAND（或 COMMAND_REQUEST）</li>
+     *   <li>连接关闭</li>
+     *   <li>遇到非 CAPABILITY/COMMAND 类型的包（停止读取，但不丢弃）</li>
+     * </ul>
+     * </p>
+     * 
+     * @param input 输入流
+     * @return 初始包读取结果
+     */
+    private InitialPacketResult readInitialPackets(InputStream input) throws IOException {
+        InitialPacketResult result = new InitialPacketResult();
+        boolean hasCapability = false;
+        boolean hasCommand = false;
+        
+        while (!hasCommand) {
+            Object[] packet = InteractiveProtocol.readMessage(input);
+            if (packet == null) {
+                logger.warn("客户端连接已关闭");
+                break;
+            }
+            
+            byte packetType = (byte) packet[0];
+            byte[] packetData = (byte[]) packet[1];
+            
+            switch (packetType) {
+                case InteractiveProtocol.TYPE_CLIENT_CAPABILITY:
+                    if (!hasCapability) {
+                        result.requirements = InteractiveProtocol.decodeCapability(packetData);
+                        hasCapability = true;
+                        logger.info("客户端能力: " + result.requirements);
+                    } else {
+                        logger.warn("收到重复的CAPABILITY包，忽略");
+                    }
+                    break;
+                    
+                case InteractiveProtocol.TYPE_CLIENT_COMMAND:
+                case InteractiveProtocol.TYPE_JSON_COMMAND_REQUEST:
+                    if (!hasCommand) {
+                        result.commandPacket = packet;
+                        hasCommand = true;
+                        logger.debug("收到命令包: " + InteractiveProtocol.getMessageTypeName(packetType));
+                    } else {
+                        logger.warn("收到重复的COMMAND包，忽略");
+                    }
+                    break;
+                    
+                default:
+                    logger.warn("收到非预期的初始包类型: " + InteractiveProtocol.getMessageTypeName(packetType) + 
+                               "，停止读取初始包");
+                    return result;
+            }
+        }
+        
+        return result;
     }
 
     public void handleClient(Socket clientSocket) {
@@ -103,6 +176,7 @@ public class SocketClientHandler {
                 }
 
                 logger.debug("Socket客户端命令: " + command);
+
 
                 executeCommandForTextProtocolSocket(command, writer);
             } catch (Exception e) {
@@ -201,7 +275,7 @@ public class SocketClientHandler {
 
         } catch (IOException e) {
             // Socket closed是正常的，因为客户端可能已经断开连接
-            if (!e.getMessage().contains("Socket closed")) {
+            if (!Objects.requireNonNullElse(e.getMessage(), "").contains("Socket closed")) {
                 logger.warn("发送SERVER_PING失败", e);
             }
         }
@@ -210,19 +284,9 @@ public class SocketClientHandler {
     private void handleInteractiveProtocolClient(Socket clientSocket, InputStream input, OutputStream output) {
         try (clientSocket) {
             try {
-                Object[] capabilityPacket = InteractiveProtocol.readMessage(input);
-                boolean supportsInput = true;
-                
-                if (capabilityPacket != null && (byte) capabilityPacket[0] == InteractiveProtocol.TYPE_CLIENT_CAPABILITY) {
-                    supportsInput = InteractiveProtocol.decodeCapability((byte[]) capabilityPacket[1]);
-                    logger.info("客户端能力: supportsInput=" + supportsInput);
-                } else if (capabilityPacket != null) {
-                    logger.warn("第一个包不是CAPABILITY，使用默认能力");
-                }
-
-                Object[] commandPacket = capabilityPacket != null && (byte) capabilityPacket[0] != InteractiveProtocol.TYPE_CLIENT_CAPABILITY 
-                    ? capabilityPacket 
-                    : InteractiveProtocol.readMessage(input);
+                InitialPacketResult initialResult = readInitialPackets(input);
+                ClientRequirements requirements = initialResult.requirements;
+                Object[] commandPacket = initialResult.commandPacket;
                     
                 if (commandPacket == null) {
                     logger.warn("客户端连接已关闭或无效, 没有收到需要执行的命令");
@@ -232,48 +296,53 @@ public class SocketClientHandler {
                 byte type = (byte) commandPacket[0];
                 byte[] data = (byte[]) commandPacket[1];
 
-                if (type != InteractiveProtocol.TYPE_CLIENT_COMMAND || data == null) {
-                    logger.warn("第一个包不是有效的命令");
+                if (data == null) {
+                    logger.warn("命令包数据为空");
                     return;
                 }
-
-                String command = new String(data, StandardCharsets.UTF_8);
-                logger.debug("接收到的客户端命令: " + command);
 
                 InteractiveOutputHandler outputHandler = new InteractiveOutputHandler(output);
-                outputHandler.setSupportsInput(supportsInput);
+                outputHandler.setSupportsInput(requirements.isSupportsInput());
+                outputHandler.setJsonMode(requirements.isJsonMode());
 
                 final AtomicBoolean readerRunning = new AtomicBoolean(true);
-                final InteractiveOutputHandler finalOutputHandler = outputHandler;
                 final AtomicLong lastResponseTime = new AtomicLong(System.currentTimeMillis());
+                ScheduledFuture<?> future = null;
+                
+                if (!requirements.isJsonMode()) {
+                    ThreadPoolManager.submitSocketRunnable(() -> runInteractiveProtocolServer(
+                            input, output, readerRunning, clientSocket, lastResponseTime, outputHandler
+                    ));
 
-
-                ThreadPoolManager.submitSocketRunnable(() -> runInteractiveProtocolServer(
-                        input, output, readerRunning, clientSocket, lastResponseTime, finalOutputHandler
-                ));
-
-                ScheduledFuture<?> future = ThreadPoolManager.scheduleWithFixedDelay(
-                    () -> runInteractiveProtocolPing(output),
-                    PING_CLIENT_INTERVAL_MS, PING_CLIENT_INTERVAL_MS, TimeUnit.MILLISECONDS);
-
-            try {
-                if (!DisclaimerManager.fullVerification(outputHandler)) {
-                    logger.warn("用户未通过验证，关闭连接");
-                    return;
+                    future = ThreadPoolManager.scheduleWithFixedDelay(
+                        () -> runInteractiveProtocolPing(output),
+                        PING_CLIENT_INTERVAL_MS, PING_CLIENT_INTERVAL_MS, TimeUnit.MILLISECONDS);
                 }
 
-                commandExecutor.execute(command, outputHandler);
-            } catch (Exception e) {
-                logger.error("执行命令失败", e);
-                try {
-                    outputHandler.println("执行命令失败: " + e.getMessage());
-                } catch (Exception ignored) {}
-            } catch (Throwable t) {
-                logger.error("执行命令时发生严重错误", t);
-                try {
-                    outputHandler.println("执行命令时发生严重错误: " + t.getMessage());
-                } catch (Exception ignored) {}
-            } finally {
+                if (type == InteractiveProtocol.TYPE_CLIENT_COMMAND) {
+                    String command = new String(data, StandardCharsets.UTF_8);
+                    logger.debug("接收到的客户端命令: " + command);
+                    outputHandler.setCommand(command);
+                    
+                    try {
+                        commandExecutor.execute(command, outputHandler, requirements);
+                    } catch (Exception e) {
+                        logger.error("执行命令失败", e);
+                        try {
+                            outputHandler.println("执行命令失败: " + e.getMessage());
+                        } catch (Exception ignored) {}
+                    } finally {
+                        outputHandler.close();
+                    }
+                } else if (type == InteractiveProtocol.TYPE_JSON_COMMAND_REQUEST) {
+                    logger.debug("接收到的为JSON命令请求");
+                    handleCommandRequest(data, output);
+                }
+                
+                if (requirements.isJsonMode()) {
+                    logger.info("使用JSON输出模式");
+                }
+
                 AtomicInteger waited = new AtomicInteger(0);
                 ThreadPoolManager.scheduleWithFixedDelayUntil(
                     () -> waited.getAndAdd(100),
@@ -284,7 +353,6 @@ public class SocketClientHandler {
 
                 logger.info("命令执行完成");
                 if (future != null) future.cancel(true);
-            }
 
             } catch (Throwable t) {
                 logger.error("处理交互协议客户端错误", t);
@@ -392,12 +460,59 @@ public class SocketClientHandler {
         };
 
         try {
-            commandExecutor.execute(command, socketOutput);
+            commandExecutor.execute(command, socketOutput, null);
         } catch (Exception e) {
             socketOutput.println("执行命令失败: " + e.getMessage());
             logger.error("执行Socket命令失败", e);
         } finally {
             socketOutput.close();
         }
+    }
+    
+    private void handleCommandRequest(byte[] data, OutputStream output) {
+        try {
+            String jsonRequest = new String(data, StandardCharsets.UTF_8);
+            logger.info("命令请求: " + jsonRequest);
+            
+            // 解析请求
+            CommandRequest request = JsonProtocol.parseRequest(jsonRequest);
+            
+            if (request == null) {
+                CommandResult errorResult = new CommandResult();
+                errorResult.setError(new CommandResult.ErrorInfo(
+                    "INVALID_REQUEST", "无法解析请求"
+                ));
+                sendCommandResponse(output, errorResult);
+                return;
+            }
+            CommandResult result = CommandRequestHandler.handleRequest(request);
+            sendCommandResponse(output, result);
+            
+        } catch (Exception e) {
+            logger.error("处理命令请求失败", e);
+            CommandResult errorResult = new CommandResult();
+            errorResult.setError(new CommandResult.ErrorInfo(
+                "INTERNAL_ERROR", "处理请求失败: " + e.getMessage()
+            ));
+            try {
+                sendCommandResponse(output, errorResult);
+            } catch (Exception ignored) {}
+        }
+    }
+    
+    private void sendCommandResponse(OutputStream output, 
+                                   CommandResult result) throws Exception {
+        String jsonResponse = JsonProtocol.toJson(result);
+        logger.info("命令响应: resultType=" + result.getResultType() + ", class=" + result.getClass().getSimpleName() + ", json=" + jsonResponse);
+        
+        byte[] data = InteractiveProtocol.encodeColoredOutput((byte) 0, jsonResponse);
+        InteractiveProtocol.writeMessage(output, 
+                InteractiveProtocol.TYPE_COLORED_OUTPUT, 
+                data);
+        
+        InteractiveProtocol.writeMessage(output, 
+                InteractiveProtocol.TYPE_COMMAND_END, 
+                null);
+        logger.debug("已发送COMMAND_END标记");
     }
 }

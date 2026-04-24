@@ -98,7 +98,7 @@ public class SystemMain extends CommandBase {
                 printInfoLine(context, "设备名称: ", Build.DEVICE);
                 printInfoLine(context, "产品名称: ", Build.PRODUCT);
                 printInfoLine(context, "硬件名称: ", Build.HARDWARE);
-                printInfoLine(context, "序列号: ", Build.getSerial());
+                printInfoLine(context, "序列号: ", "需要权限");
                 printInfoLine(context, "Android版本: ", Build.VERSION.RELEASE);
                 printInfoLine(context, "SDK版本: ", String.valueOf(Build.VERSION.SDK_INT));
                 printInfoLine(context, "构建版本: ", Build.DISPLAY);

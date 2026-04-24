@@ -3,7 +3,8 @@ package com.justnothing.methodsclient.executor;
 import com.justnothing.methodsclient.monitor.ClientPortManager;
 import com.justnothing.methodsclient.StreamClient;
 import com.justnothing.methodsclient.monitor.PerformanceMonitor;
-import com.justnothing.testmodule.command.output.InteractiveProtocol;
+import com.justnothing.testmodule.protocol.interactive.InteractiveProtocol;
+import com.justnothing.testmodule.command.output.ClientRequirements;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
 import java.io.IOException;
@@ -46,7 +47,6 @@ public class SocketCommandExecutor {
                                          String error) {
 
     }
-
 
 
     /**
@@ -126,6 +126,7 @@ public class SocketCommandExecutor {
             System.err.println("未知错误: " + e.getMessage());
             logger.error("未知错误", e);
         }
+        System.err.flush();
     }
 
     // ==================== 公共 API ====================
@@ -153,7 +154,7 @@ public class SocketCommandExecutor {
 
             Socket finalSocket = socket;
             Future<Boolean> future = ThreadPoolManager.submitSocketCallable(() ->
-                    SocketStreamReader.readTextProtocolSocketStream(finalSocket.getInputStream(), reading, bytesRead, charsRead));
+                    SocketStreamReader.readTextProtocolStream(finalSocket.getInputStream(), reading, bytesRead, charsRead));
             boolean success = waitForReadFuture(future, reading);
             recordMetrics(startTime, bytesRead.get(), charsRead.get(), success);
             return success;
@@ -188,7 +189,7 @@ public class SocketCommandExecutor {
 
             Socket finalSocket = socket;
             Future<Boolean> future = ThreadPoolManager.submitSocketCallable(() ->
-                    SocketStreamReader.readSocketStreamToString(finalSocket.getInputStream(), reading, bytesRead, charsRead, outputBuilder));
+                    SocketStreamReader.readTextStreamToString(finalSocket.getInputStream(), reading, bytesRead, charsRead, outputBuilder));
             boolean success = waitForReadFuture(future, reading);
             recordMetrics(startTime, bytesRead.get(), charsRead.get(), success);
             return new ExecutionResult(success, outputBuilder.toString(), "");
@@ -214,6 +215,10 @@ public class SocketCommandExecutor {
 
         try {
             socket = createSocket();
+            // 发送能力协商
+            ClientRequirements requirements = new ClientRequirements(true, false);
+            InteractiveProtocol.writeMessage(socket.getOutputStream(), InteractiveProtocol.TYPE_CLIENT_CAPABILITY,
+                    InteractiveProtocol.encodeCapability(requirements));
             // 发送交互式命令
             InteractiveProtocol.writeMessage(socket.getOutputStream(), InteractiveProtocol.TYPE_CLIENT_COMMAND,
                     command.getBytes(StandardCharsets.UTF_8));
@@ -221,7 +226,7 @@ public class SocketCommandExecutor {
 
             Socket finalSocket = socket;
             Future<Boolean> future = ThreadPoolManager.submitSocketCallable(() ->
-                    SocketStreamReader.readInteractiveSocketStream(finalSocket.getInputStream(), finalSocket.getOutputStream(), reading, bytesRead, finalSocket));
+                    SocketStreamReader.readInteractiveStream(finalSocket.getInputStream(), finalSocket.getOutputStream(), reading, bytesRead, finalSocket));
             boolean success = waitForReadFuture(future, reading);
             recordMetrics(startTime, bytesRead.get(), bytesRead.get(), success);
             return success;
@@ -250,16 +255,19 @@ public class SocketCommandExecutor {
         try {
             socket = createSocket();
             // 发送能力协商
+            ClientRequirements requirements = new ClientRequirements(supportsInput, false);
             InteractiveProtocol.writeMessage(socket.getOutputStream(), InteractiveProtocol.TYPE_CLIENT_CAPABILITY,
-                    InteractiveProtocol.encodeCapability(supportsInput));
+                    InteractiveProtocol.encodeCapability(requirements));
             // 发送命令
             InteractiveProtocol.writeMessage(socket.getOutputStream(), InteractiveProtocol.TYPE_CLIENT_COMMAND,
                     command.getBytes(StandardCharsets.UTF_8));
+
+
             logger.info("命令已发送，开始读取响应...");
 
             Socket finalSocket = socket;
             Future<Boolean> future = ThreadPoolManager.submitSocketCallable(() ->
-                    SocketStreamReader.readInteractiveWithColoredOutput(finalSocket.getInputStream(), finalSocket.getOutputStream(), reading, bytesRead, finalSocket, segments));
+                    SocketStreamReader.readColoredInteractiveStream(finalSocket.getInputStream(), finalSocket.getOutputStream(), reading, bytesRead, finalSocket, segments));
             boolean success = waitForReadFuture(future, reading);
             recordMetrics(startTime, bytesRead.get(), bytesRead.get(), success);
             return new ColoredExecutionResult(success, segments, "");
@@ -270,6 +278,53 @@ public class SocketCommandExecutor {
             closeSocketQuietly(socket);
         }
     }
+
+    /**
+     * 执行命令请求并返回结果，从segments[0].text中提取内容。
+     * 
+     * @param requestJson 请求JSON字符串
+     * @return 从segments[0].text中提取的内容
+     */
+    public String executeCommandRequest(String requestJson) {
+        long startTime = System.currentTimeMillis();
+        AtomicBoolean reading = new AtomicBoolean(true);
+        AtomicLong bytesRead = new AtomicLong(0);
+        List<ColoredSegment> segments = new ArrayList<>();
+        Socket socket = null;
+
+        try {
+            socket = createSocket();
+            // 发送能力协商
+            ClientRequirements requirements = new ClientRequirements(false, false);
+            InteractiveProtocol.writeMessage(socket.getOutputStream(), InteractiveProtocol.TYPE_CLIENT_CAPABILITY,
+                    InteractiveProtocol.encodeCapability(requirements));
+            // 发送命令请求
+            InteractiveProtocol.writeMessage(socket.getOutputStream(), InteractiveProtocol.TYPE_JSON_COMMAND_REQUEST,
+                    requestJson.getBytes(StandardCharsets.UTF_8));
+
+
+            logger.info("命令请求已发送，开始读取响应...");
+
+            Socket finalSocket = socket;
+            Future<Boolean> future = ThreadPoolManager.submitSocketCallable(() ->
+                    SocketStreamReader.readColoredInteractiveStream(finalSocket.getInputStream(), finalSocket.getOutputStream(), reading, bytesRead, finalSocket, segments));
+            boolean success = waitForReadFuture(future, reading);
+            recordMetrics(startTime, bytesRead.get(), bytesRead.get(), success);
+            
+            // 从segments[0].text中提取内容
+            if (success && !segments.isEmpty()) {
+                return segments.get(0).text();
+            } else {
+                return "";
+            }
+        } catch (Exception e) {
+            handleException(e, startTime, bytesRead.get(), bytesRead.get());
+            return "";
+        } finally {
+            closeSocketQuietly(socket);
+        }
+    }
+
 
 
 }

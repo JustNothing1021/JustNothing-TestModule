@@ -285,6 +285,15 @@ public class ClassResolver {
             }
         }
 
+        ClassLoader contextLoader = Thread.currentThread().getContextClassLoader();
+        if (contextLoader != null && contextLoader != preferredLoader) {
+            Class<?> clazz = findInLoader(className, contextLoader);
+            if (clazz != null) {
+                logger.debug("在线程ContextClassLoader中找到类: " + className);
+                return clazz;
+            }
+        }
+
         ClassLoader apkLoader = ClassLoaderManager.getApkClassLoader();
         if (apkLoader != null && apkLoader != apkClassLoader) {
             apkClassLoader = apkLoader;
@@ -299,7 +308,7 @@ public class ClassResolver {
         }
 
         ClassLoader moduleLoader = ClassResolver.class.getClassLoader();
-        if (moduleLoader != null && moduleLoader != preferredLoader && moduleLoader != apkClassLoader) {
+        if (moduleLoader != null && moduleLoader != preferredLoader && moduleLoader != apkClassLoader && moduleLoader != contextLoader) {
             Class<?> clazz = findInLoader(className, moduleLoader);
             if (clazz != null) {
                 logger.debug("在模块ClassLoader中找到类: " + className);
@@ -308,7 +317,7 @@ public class ClassResolver {
         }
 
         for (ClassLoader loader : registeredLoaders) {
-            if (loader == preferredLoader || loader == apkClassLoader || loader == moduleLoader) {
+            if (loader == preferredLoader || loader == apkClassLoader || loader == moduleLoader || loader == contextLoader) {
                 continue;
             }
 
@@ -325,19 +334,31 @@ public class ClassResolver {
             return clazz;
         }
 
-        logger.debug("未找到类: " + className);
+        logger.debug("未找到类: " + className + " (isHookEnv: " + AppEnvironment.isHookEnv() + ", preferredLoader: " + preferredLoader + ")");
         return null;
     }
 
     private static Class<?> findInLoader(String className, ClassLoader loader) {
         try {
-            if (AppEnvironment.isHookEnv()) {
-                return XposedBasicHook.ClassFinder.withCl(loader).find(className);
+            if (loader != null) {
+                if (AppEnvironment.isHookEnv()) {
+                    Class<?> clazz = XposedBasicHook.ClassFinder.withCl(loader).find(className);
+                    if (clazz != null) return clazz;
+                }
+                return Class.forName(className, false, loader);
             } else {
-                if (loader != null) {
-                    return Class.forName(className, false, loader);
-                } else {
+                if (AppEnvironment.isHookEnv()) {
+                    Class<?> clazz = XposedBasicHook.ClassFinder.withCl(null).find(className);
+                    if (clazz != null) return clazz;
+                }
+                try {
                     return Class.forName(className);
+                } catch (ClassNotFoundException e) {
+                    ClassLoader contextLoader = Thread.currentThread().getContextClassLoader();
+                    if (contextLoader != null) {
+                        return Class.forName(className, false, contextLoader);
+                    }
+                    throw e;
                 }
             }
         } catch (Throwable e) {
