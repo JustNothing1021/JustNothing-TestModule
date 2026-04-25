@@ -117,7 +117,7 @@ public class MethodDetailActivity extends AppCompatActivity {
         
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setTitle(R.string.method_invoke);
+            getSupportActionBar().setTitle(R.string.analysis_method_invoke);
         }
     }
     
@@ -134,9 +134,9 @@ public class MethodDetailActivity extends AppCompatActivity {
                 cardResult.setVisibility(View.VISIBLE);
                 tvResult.setText(result.getResultString() != null ? result.getResultString() : "null");
                 tvResult.setTextColor(getColor(R.color.green));
-                tvResultType.setText(getString(R.string.result_type_label) + ": " + 
-                    (result.getResultTypeName() != null ? result.getResultTypeName() : "unknown"));
-                tvResultHash.setText(getString(R.string.result_hash_label) + ": " + result.getResultHash());
+                tvResultType.setText(getString(R.string.analysis_invoke_result_type_label,
+                    (result.getResultTypeName() != null ? result.getResultTypeName() : "unknown")));
+                tvResultHash.setText(getString(R.string.analysis_invoke_result_hash_label, result.getResultHash()));
                 
                 String instanceAfter = result.getInstanceAfterInvocation();
                 if (instanceAfter != null && !instanceAfter.isEmpty()) {
@@ -145,7 +145,7 @@ public class MethodDetailActivity extends AppCompatActivity {
                     tvInstanceAfter.setText(instanceAfter);
                     tvInstanceAfter.setTextColor(getColor(R.color.blue));
                     tvInstanceHash.setVisibility(View.VISIBLE);
-                    tvInstanceHash.setText(getString(R.string.result_hash_label) + ": " + result.getInstanceHash());
+                    tvInstanceHash.setText(getString(R.string.analysis_invoke_result_hash_label, result.getInstanceHash()));
                 } else {
                     tvInstanceAfterLabel.setVisibility(View.GONE);
                     tvInstanceAfter.setVisibility(View.GONE);
@@ -171,9 +171,7 @@ public class MethodDetailActivity extends AppCompatActivity {
     private void setupListeners() {
         findViewById(R.id.btn_invoke).setOnClickListener(v -> invokeMethod());
         
-        switchFreeMode.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            updateParamInputsForMode(isChecked);
-        });
+        switchFreeMode.setOnCheckedChangeListener((buttonView, isChecked) -> updateParamInputsForMode(isChecked));
         
         btnAddParam.setOnClickListener(v -> addFreeParamInput());
     }
@@ -189,12 +187,11 @@ public class MethodDetailActivity extends AppCompatActivity {
             tvModifiers.setVisibility(View.GONE);
         }
         
-        tvReturnType.setText(getString(R.string.return_type_label) + ": " + 
-            DescriptorColorizer.formatTypeName(returnType));
+        tvReturnType.setText(getString(R.string.analysis_method_return_type_label, DescriptorColorizer.formatTypeName(returnType)));
         
         StringBuilder signatureBuilder = new StringBuilder();
         if (genericParamTypes.isEmpty()) {
-            signatureBuilder.append(getString(R.string.no_params));
+            signatureBuilder.append(getString(R.string.analysis_no_params));
         } else {
             for (int i = 0; i < genericParamTypes.size(); i++) {
                 if (i > 0) signatureBuilder.append(", ");
@@ -208,9 +205,9 @@ public class MethodDetailActivity extends AppCompatActivity {
         if (declaringClass != null && !declaringClass.equals(className)) {
             tvDeclaringClass.setVisibility(View.VISIBLE);
             if (declaringClassIsInterface) {
-                tvDeclaringClass.setText(getString(R.string.implements_interface, DescriptorColorizer.formatTypeName(declaringClass)));
+                tvDeclaringClass.setText(getString(R.string.analysis_implements, DescriptorColorizer.formatTypeName(declaringClass)));
             } else {
-                tvDeclaringClass.setText(getString(R.string.inherited_from, DescriptorColorizer.formatTypeName(declaringClass)));
+                tvDeclaringClass.setText(getString(R.string.analysis_extends, DescriptorColorizer.formatTypeName(declaringClass)));
             }
         } else {
             tvDeclaringClass.setVisibility(View.GONE);
@@ -260,7 +257,7 @@ public class MethodDetailActivity extends AppCompatActivity {
         ImageButton btnRemove = paramView.findViewById(R.id.btn_remove_param);
         
         String paramType = DescriptorColorizer.formatTypeName(genericParamTypes.get(index));
-        tvLabel.setText(getString(R.string.param_label_format, index, paramType));
+        tvLabel.setText(getString(R.string.analysis_param_label_format, index, paramType));
         tilType.setVisibility(View.GONE);
         btnRemove.setVisibility(View.GONE);
         
@@ -288,7 +285,7 @@ public class MethodDetailActivity extends AppCompatActivity {
         EditText etValue = paramView.findViewById(R.id.et_param_value);
         ImageButton btnRemove = paramView.findViewById(R.id.btn_remove_param);
         
-        tvLabel.setText(getString(R.string.param_label_format, index, getString(R.string.free_mode_param)));
+        tvLabel.setText(getString(R.string.analysis_param_label_format, index, getString(R.string.analyze_invoke_free_mode_param)));
         tilType.setVisibility(View.VISIBLE);
         btnRemove.setVisibility(View.VISIBLE);
         
@@ -312,7 +309,7 @@ public class MethodDetailActivity extends AppCompatActivity {
         for (int i = 0; i < paramInputs.size(); i++) {
             ParamInputHolder holder = paramInputs.get(i);
             TextView tvLabel = holder.rootView.findViewById(R.id.tv_param_label);
-            tvLabel.setText(getString(R.string.param_label_format, i, getString(R.string.free_mode_param)));
+            tvLabel.setText(getString(R.string.analysis_param_label_format, i, getString(R.string.analyze_invoke_free_mode_param)));
         }
     }
     
@@ -329,7 +326,7 @@ public class MethodDetailActivity extends AppCompatActivity {
                 etTargetInstance.getText().toString().trim() : "";
             if (targetInstance.isEmpty()) {
                 cardResult.setVisibility(View.VISIBLE);
-                tvResult.setText(getString(R.string.instance_method_requires_target));
+                tvResult.setText(getString(R.string.analysis_instance_method_requires_target));
                 tvResult.setTextColor(getColor(R.color.red));
                 return;
             }

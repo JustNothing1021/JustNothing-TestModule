@@ -6,7 +6,6 @@ import java.util.Locale;
 
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.IXposedHookZygoteInit;
-import de.robv.android.xposed.XposedHelpers;
 
 public abstract class ZygoteHook extends XposedBasicHook<IXposedHookZygoteInit.StartupParam> {
 
@@ -18,7 +17,7 @@ public abstract class ZygoteHook extends XposedBasicHook<IXposedHookZygoteInit.S
     public class ZygoteMethodHook extends BaseMethodHook {
 
         public ZygoteMethodHook(String className, String methodName,
-                                Object[] signature, XC_MethodHook hook,
+                                 Class<?>[] signature, XC_MethodHook hook,
                                 HookCondition<IXposedHookZygoteInit.StartupParam> shouldLoad) {
             super(className, methodName, signature, hook, shouldLoad);
         }
@@ -28,12 +27,12 @@ public abstract class ZygoteHook extends XposedBasicHook<IXposedHookZygoteInit.S
         public Boolean loads(IXposedHookZygoteInit.StartupParam param) {
             try {
                 if (!shouldLoad(param)) return false;
-                Class<?> clazz = ClassFinder.find(className);
+                Class<?> clazz = HookClassFinder.find(className);
                 if (clazz == null) {
                     warn("未找到类" + className);
                     return false;
                 }
-                Method method = MethodFinder.find(className, methodName);
+                Method method = HookMethodFinder.find(className, methodName);
                 if (method == null) {
                     warn("未找到类方法" + className + "." + methodName);
                     return false;
@@ -41,7 +40,7 @@ public abstract class ZygoteHook extends XposedBasicHook<IXposedHookZygoteInit.S
                 Object[] sigWithHook = new Object[signature.length + 1];
                 System.arraycopy(signature, 0, sigWithHook, 0, signature.length);
                 sigWithHook[signature.length] = hook;
-                XposedHelpers.findAndHookMethod(clazz, methodName, sigWithHook);
+                HookAPI.findAndHookMethod(clazz, methodName, sigWithHook);
                 info("已hook " + className + "." + methodName);
                 return true;
             } catch (Throwable e) {
@@ -61,17 +60,17 @@ public abstract class ZygoteHook extends XposedBasicHook<IXposedHookZygoteInit.S
         @Override
         public Boolean loads(IXposedHookZygoteInit.StartupParam param) {
             try {
-                Class<?> clazz = ClassFinder.find(className);
+                Class<?> clazz = HookClassFinder.find(className);
                 if (clazz == null) {
                     warn("没有找到类 " + className);
                     return false;
                 }
-                Field field = XposedHelpers.findFieldIfExists(clazz, fieldName);
+                Field field = HookAPI.findFieldIfExists(clazz, fieldName);
                 if (field == null) {
                     warn("没有找到" + className + "的静态量" + fieldName);
                     return false;
                 }
-                XposedHelpers.setStaticObjectField(clazz, fieldName, value);
+                HookAPI.setStaticObjectField(clazz, fieldName, value);
                 info("已hook静态成员 " + className + "." + fieldName);
                 return true;
             } catch (Throwable e) {
@@ -103,7 +102,7 @@ public abstract class ZygoteHook extends XposedBasicHook<IXposedHookZygoteInit.S
 
     @Override
     protected BaseMethodHook createMethodHook(
-            String className, String methodName, Object[] signature,
+            String className, String methodName, Class<?>[] signature,
             XC_MethodHook hook, HookCondition<IXposedHookZygoteInit.StartupParam> shouldLoad) {
         return new ZygoteMethodHook(className, methodName, signature, hook, shouldLoad);
     }
@@ -125,13 +124,13 @@ public abstract class ZygoteHook extends XposedBasicHook<IXposedHookZygoteInit.S
 
 
     protected BaseMethodHook createHookConstructor(String className, XC_MethodHook hook,
-                                                   Object... paramTypes) {
+                                                   Class<?>... paramTypes) {
         // 构造函数的方法名是固定的 "<init>"
         return createMethodHook(className, "<init>", paramTypes, hook);
     }
 
     @SuppressWarnings("unused")
-    protected void hookConstructor(String className, XC_MethodHook hook, Object... paramTypes) {
+    protected void hookConstructor(String className, XC_MethodHook hook, Class<?>... paramTypes) {
         addHook(createHookConstructor(className, hook, paramTypes));
     }
 

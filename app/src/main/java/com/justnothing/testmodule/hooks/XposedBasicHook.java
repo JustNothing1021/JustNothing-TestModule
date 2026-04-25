@@ -15,7 +15,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XC_MethodReplacement;
-import de.robv.android.xposed.XposedHelpers;
 
 public abstract class XposedBasicHook<ParamType> extends Logger {
 
@@ -64,9 +63,9 @@ public abstract class XposedBasicHook<ParamType> extends Logger {
     /**
      * 用于寻找类的类。
      */
-    public static class ClassFinder {
+    public static class HookClassFinder {
 
-        public static final Logger logger = Logger.getLoggerForName("ClassFinder");
+        public static final Logger logger = Logger.getLoggerForName("HookClassFinder");
 
 
         private static final
@@ -109,7 +108,7 @@ public abstract class XposedBasicHook<ParamType> extends Logger {
          * 处理真正寻找类的逻辑的类。
          */
         public static class ClassFinderImpl {
-            ClassLoader classLoader; // Implementor的classLoader
+            ClassLoader classLoader;
             private ClassFinderImpl(ClassLoader cl) {
                 classLoader = cl;
             }
@@ -127,9 +126,9 @@ public abstract class XposedBasicHook<ParamType> extends Logger {
                 Class<?> clazz = mapping.get(className);
                 if (clazz == null) {
                     if (classLoader == null) {
-                        clazz = XposedHelpers.findClassIfExists(className, null);
+                        clazz = HookAPI.findClassIfExists(className, null);
                     } else {
-                        clazz = XposedHelpers.findClassIfExists(className, classLoader);
+                        clazz = HookAPI.findClassIfExists(className, classLoader);
                         mapping.put(className, clazz);
                     }
                 }
@@ -138,11 +137,11 @@ public abstract class XposedBasicHook<ParamType> extends Logger {
         }
     }
 
-    public static class MethodFinder {
+    public static class HookMethodFinder {
         public static class MethodSignature {
-            Object[] sign;
+            Class<?>[] sign;
             String name;
-            MethodSignature(String methodName, Object[] signature) {
+            MethodSignature(String methodName, Class<?>[] signature) {
                 name = methodName;
                 sign = signature;
             }
@@ -151,12 +150,12 @@ public abstract class XposedBasicHook<ParamType> extends Logger {
             public boolean equals(Object o) {
                 if (o == null || getClass() != o.getClass()) return false;
                 MethodSignature that = (MethodSignature) o;
-                return Objects.deepEquals(sign, that.sign) && Objects.equals(name, that.name);
+                return Objects.deepEquals(this.sign, that.sign) && Objects.equals(this.name, that.name);
             }
 
             @Override
             public int hashCode() {
-                return Objects.hash(Arrays.hashCode(sign), name);
+                return Objects.hash(Arrays.hashCode(this.sign), this.name);
             }
         }
         private static final
@@ -169,7 +168,7 @@ public abstract class XposedBasicHook<ParamType> extends Logger {
                 ConcurrentHashMap<MethodSignature, Method>>
                     systemMethods = new ConcurrentHashMap<>();
 
-        public static Method find(String className, String methodName, Object... signature) {
+        public static Method find(String className, String methodName, Class<?>... signature) {
             return new MethodFinderImpl(null).find(className, new MethodSignature(methodName, signature));
         }
 
@@ -208,7 +207,7 @@ public abstract class XposedBasicHook<ParamType> extends Logger {
              * @return 类
              */
             @Nullable
-            public Method find(String className, String methodName, Object... methodSignature) {
+            public Method find(String className, String methodName, Class<?>... methodSignature) {
                 return find(className, new MethodSignature(methodName, methodSignature));
             }
 
@@ -217,7 +216,7 @@ public abstract class XposedBasicHook<ParamType> extends Logger {
              * 带有缓存机制，虽然不知道到底起没起作用。
              * @param className 类名
              * @param signature 签名
-             * @see #find(String, String, Object...)
+             * @see #find(String, String, Class...)
              * @return 类
              */
             @Nullable
@@ -239,9 +238,9 @@ public abstract class XposedBasicHook<ParamType> extends Logger {
                         }
                     }
                 }
-                Class<?> clazz = ClassFinder.withCl(classLoader).find(className);
+                Class<?> clazz = HookClassFinder.withCl(classLoader).find(className);
                 if (clazz == null) return null;
-                Method method = XposedHelpers.findMethodExactIfExists(clazz, signature.name, signature.sign);
+                Method method = HookAPI.findMethodExactIfExists(clazz, signature.name, signature.sign);
                 if (method != null)
                     (classLoader == null ?
                         systemMethods: methods.computeIfAbsent(classLoader, key -> new ConcurrentHashMap<>()))
@@ -258,7 +257,7 @@ public abstract class XposedBasicHook<ParamType> extends Logger {
              */
             @Nullable
             public List<Method> findAll(String className, String methodName) {
-                Class<?> clazz = ClassFinder.withCl(classLoader).find(className);
+                Class<?> clazz = HookClassFinder.withCl(classLoader).find(className);
                 if (clazz == null) return null;
                 List<Method> methodArrayList = Arrays.asList(clazz.getDeclaredMethods());
                 methodArrayList.removeIf(m -> !m.getName().equals(methodName));
@@ -282,10 +281,10 @@ public abstract class XposedBasicHook<ParamType> extends Logger {
     public abstract class BaseMethodHook extends BaseHook {
         protected final String className;
         protected final String methodName;
-        protected final Object[] signature;
+        protected final Class<?>[] signature;
         protected final XC_MethodHook hook;
 
-        public BaseMethodHook(String className, String methodName, Object[] signature,
+        public BaseMethodHook(String className, String methodName, Class<?>[] signature,
                               XC_MethodHook hook, HookCondition<ParamType> shouldHook) {
             super(shouldHook);
             this.className = className;
@@ -294,7 +293,7 @@ public abstract class XposedBasicHook<ParamType> extends Logger {
             this.hook = hook;
         }
 
-        public BaseMethodHook(String className, String methodName, Object[] signature,
+        public BaseMethodHook(String className, String methodName, Class<?>[] signature,
                               XC_MethodHook hook) {
             this(className, methodName, signature, hook, null);
         }
@@ -329,7 +328,7 @@ public abstract class XposedBasicHook<ParamType> extends Logger {
     }
 
     protected BaseMethodHook createMethodHook(
-            String className, String methodName, Object[] signature, XC_MethodHook hook) {
+            String className, String methodName, Class<?>[] signature, XC_MethodHook hook) {
         return createMethodHook(className, methodName, signature, hook, null);
     }
 
@@ -344,7 +343,7 @@ public abstract class XposedBasicHook<ParamType> extends Logger {
 
     @SuppressWarnings("SameParameterValue")
     protected abstract BaseMethodHook createMethodHook(
-            String className, String methodName, Object[] signature, XC_MethodHook hook,
+            String className, String methodName, Class<?>[] signature, XC_MethodHook hook,
             HookCondition<ParamType> shouldLoad
     );
 
@@ -369,8 +368,11 @@ public abstract class XposedBasicHook<ParamType> extends Logger {
             return;
         }
 
-        Object[] sig = new Object[sigAndHook.length - 1];
-        System.arraycopy(sigAndHook, 0, sig, 0, sig.length);
+        Class<?>[] sig = new Class<?>[sigAndHook.length - 1];
+        for (int i = 0; i < sig.length; i++) {
+            assert sigAndHook[i] instanceof Class<?> : "hookMethod参数错误，第" + (i + 1) + "个参数不是Class<?>类型";
+            sig[i] = (Class<?>) sigAndHook[i];
+        }
         XC_MethodHook hook = (XC_MethodHook) sigAndHook[sigAndHook.length - 1];
         addHook(createMethodHook(className, methodName, sig, hook));
     }
@@ -385,7 +387,7 @@ public abstract class XposedBasicHook<ParamType> extends Logger {
     }
 
     protected BaseMethodHook createAlwaysTrueHook(
-            String className, String methodName, Object... sig) {
+            String className, String methodName, Class<?>... sig) {
         XC_MethodHook hook = new XC_MethodReplacement() {
             @Override
             protected Object replaceHookedMethod(MethodHookParam methodHookParam) {
@@ -398,7 +400,7 @@ public abstract class XposedBasicHook<ParamType> extends Logger {
     }
 
     protected BaseMethodHook createAlwaysFalseHook(
-            String className, String methodName, Object... sig) {
+            String className, String methodName, Class<?>... sig) {
         XC_MethodHook hook = new XC_MethodReplacement() {
             @Override
             protected Object replaceHookedMethod(MethodHookParam methodHookParam) {
@@ -411,7 +413,7 @@ public abstract class XposedBasicHook<ParamType> extends Logger {
     }
 
     protected BaseMethodHook createDoNothingHook(
-            String className, String methodName, Object... sig) {
+            String className, String methodName, Class<?>... sig) {
         XC_MethodHook hook = new XC_MethodReplacement() {
             @Override
             protected Object replaceHookedMethod(MethodHookParam methodHookParam) {
@@ -426,15 +428,15 @@ public abstract class XposedBasicHook<ParamType> extends Logger {
     }
 
     @SuppressWarnings("SameParameterValue")
-    protected void hookAlwaysTrue(String className, String methodName, Object... sig) {
+    protected void hookAlwaysTrue(String className, String methodName, Class<?>... sig) {
         addHook(createAlwaysTrueHook(className, methodName, sig));
     }
 
-    protected void hookAlwaysFalse(String className, String methodName, Object... sig) {
+    protected void hookAlwaysFalse(String className, String methodName, Class<?>... sig) {
         addHook(createAlwaysFalseHook(className, methodName, sig));
     }
 
-    protected void hookDoNothing(String className, String methodName, Object... sig) {
+    protected void hookDoNothing(String className, String methodName, Class<?>... sig) {
         addHook(createDoNothingHook(className, methodName, sig));
     }
 

@@ -46,7 +46,7 @@ public class MethodsAdapter extends RecyclerView.Adapter<MethodsAdapter.ViewHold
         return methods.size();
     }
     
-    static class ViewHolder extends RecyclerView.ViewHolder {
+    public static class ViewHolder extends RecyclerView.ViewHolder {
         private final TextView tvMethodName;
         private final TextView tvReturnType;
         private final TextView tvParameters;

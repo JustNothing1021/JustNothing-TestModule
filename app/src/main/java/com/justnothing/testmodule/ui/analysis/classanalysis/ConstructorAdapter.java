@@ -56,7 +56,7 @@ public class ConstructorAdapter extends RecyclerView.Adapter<ConstructorAdapter.
         return constructors.size();
     }
 
-    class ViewHolder extends RecyclerView.ViewHolder {
+    public class ViewHolder extends RecyclerView.ViewHolder {
         private final TextView tvSignature;
 
         public ViewHolder(@NonNull View itemView) {
@@ -91,7 +91,7 @@ public class ConstructorAdapter extends RecyclerView.Adapter<ConstructorAdapter.
 
             List<String> genericParamTypes = constructor.getGenericParameterTypes();
             if (genericParamTypes.isEmpty()) {
-                sb.append(itemView.getContext().getString(R.string.no_params));
+                sb.append(itemView.getContext().getString(R.string.analysis_no_params));
             } else {
                 for (int i = 0; i < genericParamTypes.size(); i++) {
                     if (i > 0) sb.append(", ");

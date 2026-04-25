@@ -67,6 +67,10 @@ public class ParseContext {
             imports.add(importStmt);
         }
     }
+
+    public void addImports(List<String> imports) {
+        imports.forEach(this::addImport);
+    }
     
     public void declareClass(String className) {
         declaredClassNames.add(className);
@@ -125,4 +129,14 @@ public class ParseContext {
     public Class<?> resolveClassOrFail(String className) throws ClassNotFoundException {
         return ClassResolver.findClassWithImportsOrFail(className, classLoader, imports);
     }
+
+    public void clearImports() {
+        imports.clear();
+         addDefaultImports();
+    }
+
+    public void clearImportsAndDefault() {
+        imports.clear();
+    }
+
 }

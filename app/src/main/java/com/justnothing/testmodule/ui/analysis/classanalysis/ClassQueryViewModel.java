@@ -49,7 +49,7 @@ public class ClassQueryViewModel extends AndroidViewModel {
     
     public void queryClassInfo(String className) {
         if (className == null || className.trim().isEmpty()) {
-            error.setValue(getApplication().getString(R.string.enter_class_name_hint));
+            error.setValue(getApplication().getString(R.string.analysis_enter_class_name_hint));
             return;
         }
         
@@ -82,19 +82,19 @@ public class ClassQueryViewModel extends AndroidViewModel {
                     } else {
                         String errorMsg = result.getError() != null 
                             ? result.getError().getMessage() 
-                            : getApplication().getString(R.string.query_failed);
+                            : getApplication().getString(R.string.analysis_class_query_failed_format);
                         logger.error("查询失败: " + errorMsg);
                         error.postValue(errorMsg);
                     }
                 } else {
-                    String errorMsg = getApplication().getString(R.string.response_type_error,
+                    String errorMsg = getApplication().getString(R.string.analysis_response_type_error,
                         "ClassInfoResult", parsedResult.getClass().getName());
                     logger.error(errorMsg);
                     error.postValue(errorMsg);
                 }
             } catch (Exception e) {
                 logger.error("查询异常", e);
-                error.postValue(getApplication().getString(R.string.query_failed) + ": " + e.getMessage());
+                error.postValue(getApplication().getString(R.string.analysis_class_query_failed_format) + ": " + e.getMessage());
             } finally {
                 isLoading.postValue(false);
             }

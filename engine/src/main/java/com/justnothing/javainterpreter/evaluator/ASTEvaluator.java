@@ -138,8 +138,7 @@ public class ASTEvaluator {
     private static Field findField(Class<?> clazz, String fieldName) {
         try {
             // 首先尝试在当前类中查找字段
-            Field field = clazz.getDeclaredField(fieldName);
-            return field;
+            return clazz.getDeclaredField(fieldName);
         } catch (NoSuchFieldException e) {
             // 如果当前类没有该字段，尝试在父类中查找
             Class<?> superClass = clazz.getSuperclass();
@@ -154,7 +153,7 @@ public class ASTEvaluator {
         Object left = evaluate(node.getLeft(), context);
         Object right = evaluate(node.getRight(), context);
         BinaryOpNode.Operator op = node.getOperator();
-        
+
         switch (op) {
             case ADD:
                 if (left instanceof String || right instanceof String) {
@@ -965,12 +964,12 @@ public class ASTEvaluator {
                     Class<?> currentClassObj = ClassResolver.findClassWithImports(
                         currentClass, context.getClassLoader(), context.getImports());
                     if (currentClassObj != null) {
-                        java.lang.reflect.Method method = findMethod(currentClassObj, functionName, args);
+                        Method method = findMethod(currentClassObj, functionName, args);
                         if (method != null && Modifier.isStatic(method.getModifiers())) {
                             try {
                                 method.setAccessible(true);
                                 return method.invoke(null, args);
-                            } catch (Exception ex) {
+                            } catch (Exception ignored) {
                             }
                         }
                     }
@@ -2255,8 +2254,8 @@ public class ASTEvaluator {
         return new MethodReference(targetClass, targetInstance, methodName, isStatic, node.getLocation());
     }
     
-    private static java.lang.reflect.Method findMethodInClass(Class<?> clazz, String methodName) {
-        for (java.lang.reflect.Method method : clazz.getMethods()) {
+    private static Method findMethodInClass(Class<?> clazz, String methodName) {
+        for (Method method : clazz.getMethods()) {
             if (method.getName().equals(methodName)) {
                 return method;
             }

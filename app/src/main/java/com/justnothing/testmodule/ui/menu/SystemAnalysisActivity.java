@@ -1,8 +1,9 @@
-package com.justnothing.testmodule.ui.analysis;
+package com.justnothing.testmodule.ui.menu;
 
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
@@ -14,6 +15,9 @@ import com.justnothing.testmodule.ui.analysis.memory.MemoryAnalysisActivity;
 import com.justnothing.testmodule.ui.analysis.hook.HookManagerActivity;
 import com.justnothing.testmodule.ui.analysis.thread.ThreadAnalysisActivity;
 import com.justnothing.testmodule.ui.analysis.network.NetworkAnalysisActivity;
+import com.justnothing.testmodule.ui.analysis.packages.PackagesAnalysisActivity;
+import com.justnothing.testmodule.ui.analysis.exportcontext.ExportContextAnalysisActivity;
+import com.justnothing.testmodule.ui.analysis.systeminfo.SystemInfoAnalysisActivity;
 
 /**
  * 系统分析菜单Activity（第二层）。
@@ -35,6 +39,9 @@ public class SystemAnalysisActivity extends AppCompatActivity {
     private CardView cardHookManager;
     private CardView cardThreadAnalysis;
     private CardView cardNetworkAnalysis;
+    private CardView cardPackages;
+    private CardView cardExportContext;
+    private CardView cardSystemInfo;
     private View tvServerStatus;
     
     @Override
@@ -53,6 +60,9 @@ public class SystemAnalysisActivity extends AppCompatActivity {
         cardHookManager = findViewById(R.id.card_hook_manager);
         cardThreadAnalysis = findViewById(R.id.card_thread_analysis);
         cardNetworkAnalysis = findViewById(R.id.card_network_analysis);
+        cardPackages = findViewById(R.id.card_packages);
+        cardExportContext = findViewById(R.id.card_export_context);
+        cardSystemInfo = findViewById(R.id.card_system_info);
         tvServerStatus = findViewById(R.id.tv_server_status);
         
         if (getSupportActionBar() != null) {
@@ -81,25 +91,34 @@ public class SystemAnalysisActivity extends AppCompatActivity {
         cardNetworkAnalysis.setOnClickListener(v -> {
             startActivity(new Intent(this, NetworkAnalysisActivity.class));
         });
+
+        cardPackages.setOnClickListener(v -> {
+            startActivity(new Intent(this, PackagesAnalysisActivity.class));
+        });
+
+        cardExportContext.setOnClickListener(v -> {
+            startActivity(new Intent(this, ExportContextAnalysisActivity.class));
+        });
+
+        cardSystemInfo.setOnClickListener(v -> {
+            startActivity(new Intent(this, SystemInfoAnalysisActivity.class));
+        });
     }
     
     private void checkServerStatus() {
         new Thread(() -> {
             boolean available = UiClient.getInstance().isServerAvailable();
-            runOnUiThread(() -> {
-                updateServerStatus(available);
-            });
+            runOnUiThread(() -> updateServerStatus(available));
         }).start();
     }
     
     private void updateServerStatus(boolean available) {
-        if (tvServerStatus instanceof android.widget.TextView) {
-            android.widget.TextView statusView = (android.widget.TextView) tvServerStatus;
+        if (tvServerStatus instanceof TextView statusView) {
             if (available) {
-                statusView.setText("● 服务端已连接");
+                statusView.setText(getString(R.string.analysis_server_connected));
                 statusView.setTextColor(getColor(R.color.green));
             } else {
-                statusView.setText("● 服务端未连接");
+                statusView.setText(getString(R.string.analysis_server_disconnected));
                 statusView.setTextColor(getColor(R.color.red));
             }
         }

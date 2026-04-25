@@ -86,7 +86,7 @@ public class ClassDetailActivity extends AppCompatActivity {
         
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setTitle(R.string.class_info);
+            getSupportActionBar().setTitle(R.string.analysis_class_info);
         }
     }
     
@@ -125,7 +125,7 @@ public class ClassDetailActivity extends AppCompatActivity {
             tvModifiers.setText(modifiers);
             tvModifiers.setVisibility(View.VISIBLE);
         } else {
-            tvModifiers.setText(getString(R.string.no_modifiers));
+            tvModifiers.setText(getString(R.string.analysis_no_modifiers));
             tvModifiers.setVisibility(View.VISIBLE);
         }
         
@@ -133,7 +133,7 @@ public class ClassDetailActivity extends AppCompatActivity {
         if (superClass != null && !superClass.isEmpty()) {
             tvSuperClass.setText(superClass);
         } else {
-            tvSuperClass.setText(getString(R.string.no_super_class));
+            tvSuperClass.setText(getString(R.string.analysis_no_super_class));
         }
         
         List<String> interfaces = info.getInterfaces();
@@ -149,9 +149,7 @@ public class ClassDetailActivity extends AppCompatActivity {
         List<MethodInfo> constructors = info.getConstructors();
         if (constructors != null && !constructors.isEmpty()) {
             ConstructorAdapter constructorAdapter = new ConstructorAdapter(constructors);
-            constructorAdapter.setOnItemClickListener((position, constructor) -> {
-                openConstructorDetail(constructor);
-            });
+            constructorAdapter.setOnItemClickListener((position, constructor) -> openConstructorDetail(constructor));
             rvConstructors.setAdapter(constructorAdapter);
             findViewById(R.id.label_constructors).setVisibility(View.VISIBLE);
             rvConstructors.setVisibility(View.VISIBLE);
@@ -168,12 +166,10 @@ public class ClassDetailActivity extends AppCompatActivity {
             }
             
             TextView tvMethodCount = findViewById(R.id.tv_method_count);
-            tvMethodCount.setText(getString(R.string.method_count_format, uniqueNames.size(), methods.size()));
+            tvMethodCount.setText(getString(R.string.analysis_methods_count_format, uniqueNames.size(), methods.size()));
             
             MethodAdapter methodAdapter = new MethodAdapter(methods, info.getName());
-            methodAdapter.setOnItemClickListener(method -> {
-                openMethodDetail(method, info.getName());
-            });
+            methodAdapter.setOnItemClickListener(method -> openMethodDetail(method, info.getName()));
             rvMethods.setAdapter(methodAdapter);
             findViewById(R.id.label_methods).setVisibility(View.VISIBLE);
             rvMethods.setVisibility(View.VISIBLE);
@@ -185,9 +181,7 @@ public class ClassDetailActivity extends AppCompatActivity {
         List<FieldInfo> fields = info.getFields();
         if (fields != null && !fields.isEmpty()) {
             FieldAdapter fieldAdapter = new FieldAdapter(fields, info.getName());
-            fieldAdapter.setOnItemClickListener(field -> {
-                openFieldDetail(field, info.getName());
-            });
+            fieldAdapter.setOnItemClickListener(field -> openFieldDetail(field, info.getName()));
             rvFields.setAdapter(fieldAdapter);
             findViewById(R.id.label_fields).setVisibility(View.VISIBLE);
             rvFields.setVisibility(View.VISIBLE);
@@ -205,18 +199,18 @@ public class ClassDetailActivity extends AppCompatActivity {
         StringBuilder sb = new StringBuilder();
         
         if (info.isAnnotation()) {
-            sb.append(getString(R.string.class_type_annotation));
+            sb.append(getString(R.string.analysis_class_type_annotation));
         } else if (info.isInterface()) {
-            sb.append(getString(R.string.class_type_interface));
+            sb.append(getString(R.string.analysis_class_type_interface));
         } else if (info.isEnum()) {
-            sb.append(getString(R.string.class_type_enum));
+            sb.append(getString(R.string.analysis_class_type_enum));
         } else {
             if (info.isAbstract()) {
-                sb.append(getString(R.string.class_type_abstract));
+                sb.append(getString(R.string.analysis_class_type_abstract));
             } else if (info.isFinal()) {
-                sb.append(getString(R.string.class_type_final));
+                sb.append(getString(R.string.analysis_class_type_final));
             } else {
-                sb.append(getString(R.string.class_type_class));
+                sb.append(getString(R.string.analysis_class_type_class));
             }
         }
         

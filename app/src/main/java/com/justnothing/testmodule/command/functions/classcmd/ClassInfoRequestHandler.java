@@ -58,7 +58,7 @@ public class ClassInfoRequestHandler implements RequestHandler<ClassInfoRequest,
             
             if (request.isShowMethods()) {
                 List<MethodInfo> methods = new ArrayList<>();
-                for (Method method : clazz.getMethods()) {
+                for (Method method : clazz.getDeclaredMethods()) {
                     methods.add(MethodInfo.fromMethod(method));
                 }
                 classInfo.setMethods(methods);
@@ -76,7 +76,7 @@ public class ClassInfoRequestHandler implements RequestHandler<ClassInfoRequest,
             
             if (request.isShowFields()) {
                 List<FieldInfo> fields = new ArrayList<>();
-                for (Field field : clazz.getFields()) {
+                for (Field field : clazz.getDeclaredFields()) {
                     fields.add(FieldInfo.fromField(field));
                 }
                 classInfo.setFields(fields);

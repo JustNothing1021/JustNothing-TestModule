@@ -103,7 +103,7 @@
                         android:id="@+id/tv_interface_label"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/implemented_interface"
+                        android:text="@string/analysis_implemented_interface"
                         android:textAppearance="?attr/textAppearanceLabelSmall"
                         android:textColor="@color/orange"
                         android:textAllCaps="true"

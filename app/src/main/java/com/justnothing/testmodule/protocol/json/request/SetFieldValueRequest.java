@@ -1,5 +1,6 @@
 package com.justnothing.testmodule.protocol.json.request;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 public class SetFieldValueRequest extends CommandRequest {
@@ -29,10 +30,8 @@ public class SetFieldValueRequest extends CommandRequest {
     public void setStatic(boolean aStatic) { isStatic = aStatic; }
     
     @Override
-    public JSONObject toJson() throws org.json.JSONException {
-        JSONObject obj = new JSONObject();
-        obj.put("requestId", getRequestId());
-        obj.put("commandType", getCommandType());
+    public JSONObject toJson() throws JSONException {
+        JSONObject obj = super.toJson();
         obj.put("className", className);
         obj.put("fieldName", fieldName);
         obj.put("targetInstance", targetInstance);
@@ -43,7 +42,7 @@ public class SetFieldValueRequest extends CommandRequest {
     }
     
     @Override
-    public SetFieldValueRequest fromJson(JSONObject obj) throws org.json.JSONException {
+    public SetFieldValueRequest fromJson(JSONObject obj) throws JSONException {
         setRequestId(obj.optString("requestId"));
         setClassName(obj.optString("className"));
         setFieldName(obj.optString("fieldName"));

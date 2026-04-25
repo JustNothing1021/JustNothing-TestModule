@@ -13,7 +13,7 @@ public class MethodInvokeActivity extends AppCompatActivity {
         setContentView(R.layout.activity_placeholder);
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setTitle(getString(R.string.invoke_methods));
+            getSupportActionBar().setTitle(getString(R.string.analysis_invoke_methods));
         }
     }
     @Override

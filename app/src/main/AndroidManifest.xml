@@ -76,7 +76,7 @@
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.analysis.SystemAnalysisActivity"
+            android:name=".ui.menu.SystemAnalysisActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
@@ -124,11 +124,39 @@
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
+            android:name=".ui.analysis.memory.MemoryTrendActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
             android:name=".ui.analysis.hook.HookManagerActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
+            android:name=".ui.analysis.hook.HookEditorActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.analysis.hook.HookDetailActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
             android:name=".ui.analysis.thread.ThreadAnalysisActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.analysis.thread.ThreadDetailActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.analysis.packages.PackagesAnalysisActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.analysis.exportcontext.ExportContextAnalysisActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.analysis.systeminfo.SystemInfoAnalysisActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
@@ -138,7 +166,7 @@
         <meta-data android:name="xposedmodule" android:value="true" />
         <meta-data android:name="xposedminversion" android:value="24" />
         <meta-data android:name="xposeddescription"
-                android:value="这个模块是我写的第一个Xposed模块, 现在感觉更像性能分析工具了 (雾)" />
+                android:value="@string/xposeddescription" />
         <meta-data
             android:name="com.google.android.wearable.standalone"
             android:value="true" />

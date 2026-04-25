@@ -44,7 +44,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/constructor_info_title"
+                        android:text="@string/analysis_constructor_info_title"
                         android:textAppearance="?attr/textAppearanceTitleMedium"
                         android:textStyle="bold" />
 
@@ -99,7 +99,7 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="@string/params_title"
+                            android:text="@string/analysis_invoke_params_title"
                             android:textAppearance="?attr/textAppearanceTitleMedium"
                             android:textStyle="bold" />
 
@@ -107,7 +107,7 @@
                             android:id="@+id/switch_free_mode"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="@string/free_mode" />
+                            android:text="@string/analysis_invoke_free_mode" />
 
                     </LinearLayout>
 
@@ -116,7 +116,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
-                        android:text="@string/no_params_hint"
+                        android:text="@string/analysis_constructor_no_params_hint"
                         android:textColor="@android:color/darker_gray"
                         android:visibility="gone" />
 
@@ -135,7 +135,7 @@
                         android:layout_gravity="center"
                         android:src="@android:drawable/ic_input_add"
                         android:background="?attr/selectableItemBackgroundBorderless"
-                        android:contentDescription="@string/add_param"
+                        android:contentDescription="@string/analysis_add_param"
                         android:visibility="gone" />
 
                 </LinearLayout>
@@ -147,7 +147,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:text="@string/invoke_constructor" />
+                android:text="@string/analysis_construct" />
 
             <androidx.cardview.widget.CardView
                 android:id="@+id/card_result"
@@ -167,7 +167,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/result_title"
+                        android:text="@string/analysis_invoke_result_title"
                         android:textAppearance="?attr/textAppearanceTitleMedium"
                         android:textStyle="bold" />
 

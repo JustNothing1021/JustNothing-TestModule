@@ -3,6 +3,8 @@ package com.justnothing.testmodule.hooks.tests;
 import de.robv.android.xposed.*;
 
 import android.os.IBinder;
+
+import com.justnothing.testmodule.hooks.HookAPI;
 import com.justnothing.testmodule.service.ShellService;
 import com.justnothing.testmodule.hooks.HookEntry;
 import com.justnothing.testmodule.hooks.PackageHook;
@@ -131,7 +133,7 @@ public class ShellServiceHook extends PackageHook {
                 if (!registered) {
                     try {
                         Class<?> serviceManagerClass = ClassResolver.findClass("android.os.ServiceManager");
-                        Object serviceManagerInstance = XposedHelpers.getStaticObjectField(
+                        Object serviceManagerInstance = HookAPI.getStaticObjectField(
                                 serviceManagerClass, "sServiceManager");
 
                         if (serviceManagerInstance != null) {

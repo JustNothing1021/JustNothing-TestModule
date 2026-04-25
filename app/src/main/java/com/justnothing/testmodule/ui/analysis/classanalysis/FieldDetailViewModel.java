@@ -62,14 +62,14 @@ public class FieldDetailViewModel extends AndroidViewModel {
                         result.postValue(fieldResult);
                     } else {
                         CommandResult.ErrorInfo err = fieldResult.getError();
-                        error.postValue(err != null ? err.getMessage() : getApplication().getString(R.string.get_failed));
+                        error.postValue(err != null ? err.getMessage() : getApplication().getString(R.string.analysis_field_get_failed));
                     }
                 } else {
-                    error.postValue(getApplication().getString(R.string.response_type_error, 
+                    error.postValue(getApplication().getString(R.string.analysis_response_type_error,
                         "GetFieldValueResult", parsedResult.getClass().getSimpleName()));
                 }
             } catch (Exception e) {
-                error.postValue(getApplication().getString(R.string.get_exception, e.getMessage()));
+                error.postValue(getApplication().getString(R.string.analysis_get_exception, e.getMessage()));
             } finally {
                 isLoading.postValue(false);
             }
@@ -101,16 +101,16 @@ public class FieldDetailViewModel extends AndroidViewModel {
                         setSuccess.postValue(true);
                     } else {
                         CommandResult.ErrorInfo err = setResult.getError();
-                        setError.postValue(err != null ? err.getMessage() : getApplication().getString(R.string.set_failed_msg));
+                        setError.postValue(err != null ? err.getMessage() : getApplication().getString(R.string.analysis_set_field_unknown_error));
                     }
                 } else {
-                    setError.postValue(getApplication().getString(R.string.response_type_error,
+                    setError.postValue(getApplication().getString(R.string.analysis_response_type_error,
                         "SetFieldValueResult", parsedResult.getClass().getSimpleName()));
                 }
             } catch (Exception e) {
                 Throwable cause = e.getCause();
                 String errorMsg = cause != null ? cause.getClass().getName() + ": " + cause.getMessage() : e.getMessage();
-                setError.postValue(getApplication().getString(R.string.set_exception, errorMsg));
+                setError.postValue(getApplication().getString(R.string.analysis_set_exception, errorMsg));
             } finally {
                 isLoading.postValue(false);
             }

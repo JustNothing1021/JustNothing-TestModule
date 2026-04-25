@@ -11,7 +11,6 @@ import com.justnothing.testmodule.utils.reflect.ClassResolver;
 import org.json.JSONObject;
 
 import java.lang.reflect.Array;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
@@ -104,7 +103,8 @@ public class InvokeMethodRequestHandler implements RequestHandler<InvokeMethodRe
             
             List<Object> params = new ArrayList<>();
             List<Class<?>> paramTypes = new ArrayList<>();
-            
+            List<String> imports = new ArrayList<>();
+            imports.add(className);
             for (int i = 0; i < paramExpressions.size(); i++) {
                 String expr = paramExpressions.get(i);
                 String typeHint = (paramTypeHints != null && i < paramTypeHints.size()) ? paramTypeHints.get(i) : null;
@@ -118,11 +118,11 @@ public class InvokeMethodRequestHandler implements RequestHandler<InvokeMethodRe
                     ExpressionParser.ParseResult parseResult;
                     
                     if (typeHint != null && !typeHint.isEmpty()) {
-                        Class<?> hintClass = resolveType(typeHint, classLoader);
-                        parseResult = ExpressionParser.parse(expr, classLoader, hintClass);
+                        Class<?> hintClass = ClassResolver.findClassOrFail(typeHint, classLoader);
+                        parseResult = ExpressionParser.parse(expr, classLoader, hintClass, imports);
                         logger.debug("参数" + i + " (类型提示=" + typeHint + "): " + parseResult.value());
                     } else if (expectedType != null) {
-                        parseResult = ExpressionParser.parse(expr, classLoader, expectedType);
+                        parseResult = ExpressionParser.parse(expr, classLoader, expectedType, imports);
                         logger.debug("参数" + i + " (期望类型=" + expectedType.getName() + "): " + parseResult.value() + " (" + parseResult.type().getName() + ")");
                     } else {
                         parseResult = ExpressionParser.parse(expr, classLoader);
@@ -209,11 +209,6 @@ public class InvokeMethodRequestHandler implements RequestHandler<InvokeMethodRe
         } catch (ClassNotFoundException e) {
             logger.error("类未找到: " + className, e);
             result.setError(new CommandResult.ErrorInfo("CLASS_NOT_FOUND", "类未找到: " + className));
-        } catch (InvocationTargetException e) {
-            logger.error("方法调用失败: " + className + "." + methodName, e);
-            Throwable cause = e.getCause();
-            String errorMsg = cause != null ? cause.getClass().getName() + ": " + cause.getMessage() : e.getMessage();
-            result.setError(new CommandResult.ErrorInfo("INVOCATION_ERROR", "调用失败: " + errorMsg));
         } catch (Exception e) {
             logger.error("方法调用失败: " + className + "." + methodName, e);
             Throwable cause = e.getCause();
@@ -288,7 +283,8 @@ public class InvokeMethodRequestHandler implements RequestHandler<InvokeMethodRe
         }
         
         int varArgCount = args.size() - fixedParamCount;
-        
+
+        assert varArgsComponentType != null;
         if (varArgCount == 1) {
             Object lastArg = args.get(fixedParamCount);
             
@@ -313,24 +309,4 @@ public class InvokeMethodRequestHandler implements RequestHandler<InvokeMethodRe
         return invokeArgs;
     }
     
-    private Class<?> resolveType(String typeName, ClassLoader classLoader) throws ClassNotFoundException {
-        switch (typeName) {
-            case "int": return int.class;
-            case "long": return long.class;
-            case "double": return double.class;
-            case "float": return float.class;
-            case "boolean": return boolean.class;
-            case "short": return short.class;
-            case "byte": return byte.class;
-            case "char": return char.class;
-            case "void": return void.class;
-            default:
-                if (typeName.endsWith("[]")) {
-                    String componentType = typeName.substring(0, typeName.length() - 2);
-                    Class<?> componentClass = resolveType(componentType, classLoader);
-                    return Array.newInstance(componentClass, 0).getClass();
-                }
-                return Class.forName(typeName, true, classLoader);
-        }
-    }
 }

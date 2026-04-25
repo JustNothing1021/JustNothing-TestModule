@@ -7,7 +7,7 @@
     android:background="#87CEEB"
     tools:context=".ui.SplashActivity">
 
-    <com.justnothing.testmodule.ui.viewmodel.SVGView
+    <com.justnothing.testmodule.ui.general.SVGView
         android:id="@+id/svg_container"
         android:layout_width="match_parent"
         android:layout_height="0dp"

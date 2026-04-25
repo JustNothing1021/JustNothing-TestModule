@@ -6,7 +6,9 @@ import com.justnothing.testmodule.utils.reflect.AppClassFinder;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class ExpressionParser {
@@ -18,11 +20,19 @@ public class ExpressionParser {
     }
     
     public static ParseResult parse(String expression, ClassLoader classLoader) {
-        return parse(expression, classLoader, null);
+        return parse(expression, classLoader, null, new ArrayList<>());
+    }
+
+    public static ParseResult parse(String expression, ClassLoader classLoader, List<String> imports) {
+        return parse(expression, classLoader, null, imports);
+    }
+
+    public static ParseResult parse(String expression, ClassLoader classLoader, Class<?> expectedType) {
+        return parse(expression, classLoader, expectedType, new ArrayList<>());
     }
 
     @SuppressWarnings("unused")
-    public static ParseResult parse(String expression, ClassLoader classLoader, Class<?> expectedType) {
+    public static ParseResult parse(String expression, ClassLoader classLoader, Class<?> expectedType, List<String> imports) {
         if (expression == null || expression.trim().isEmpty()) {
             return new ParseResult(null, Void.class, false);
         }
@@ -36,7 +46,7 @@ public class ExpressionParser {
             String valueExpr = expression.substring(colonIndex + 1);
             
             try {
-                Object value = evaluateExpression(valueExpr, classLoader);
+                Object value = evaluateExpression(valueExpr, classLoader, imports);
                 Class<?> actualType = value != null ? value.getClass() : Void.class;
                 
                 if (!isTypeCompatible(typeHint, actualType, classLoader)) {
@@ -51,7 +61,7 @@ public class ExpressionParser {
         }
         
         try {
-            Object value = evaluateExpression(expression, classLoader);
+            Object value = evaluateExpression(expression, classLoader, imports);
             Class<?> actualType = value != null ? value.getClass() : Void.class;
             
             if (expectedType != null && value != null) {
@@ -227,8 +237,14 @@ public class ExpressionParser {
         };
     }
     
-    private static Object evaluateExpression(String expression, ClassLoader classLoader) {
+    private static Object evaluateExpression(String expression, ClassLoader classLoader, List<String> imports) {
         ScriptRunner runner = getRunner(classLoader);
+
+        runner.clearVariables();
+        runner.clearImports();
+        for (String importStmt : imports) {
+            runner.addImport(importStmt);
+        }
         
         String code = expression.trim();
         if (!code.endsWith(";") && !code.endsWith("}")) {

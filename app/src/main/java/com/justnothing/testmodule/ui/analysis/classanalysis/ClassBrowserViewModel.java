@@ -1,4 +1,4 @@
-package com.justnothing.testmodule.ui.viewmodel;
+package com.justnothing.testmodule.ui.analysis.classanalysis;
 
 import android.app.Application;
 
@@ -59,7 +59,7 @@ public class ClassBrowserViewModel extends AndroidViewModel {
      */
     public void queryClassInfo(String className) {
         if (className == null || className.trim().isEmpty()) {
-            error.setValue(getApplication().getString(R.string.enter_class_name_hint));
+            error.setValue(getApplication().getString(R.string.analysis_enter_class_name_hint));
             return;
         }
         
@@ -86,35 +86,21 @@ public class ClassBrowserViewModel extends AndroidViewModel {
                     } else {
                         String errorMsg = result.getError() != null 
                             ? result.getError().getMessage() 
-                            : getApplication().getString(R.string.query_failed);
+                            : getApplication().getString(R.string.analysis_class_query_failed_format);
                         error.postValue(errorMsg);
                     }
                 } else {
-                    error.postValue(getApplication().getString(R.string.response_type_error,
+                    error.postValue(getApplication().getString(R.string.analysis_response_type_error,
                         "ClassInfoResult", parsedResult.getClass().getSimpleName()));
                 }
             } catch (Exception e) {
-                error.postValue(getApplication().getString(R.string.query_failed) + ": " + e.getMessage());
+                error.postValue(getApplication().getString(R.string.analysis_class_query_failed_format) + ": " + e.getMessage());
             } finally {
                 isLoading.postValue(false);
             }
         });
     }
-    
-    /**
-     * 执行方法调用。
-     * 
-     * @param className 类名
-     * @param methodName 方法名
-     * @param args 参数
-     */
-    public void invokeMethod(String className, String methodName, String... args) {
-        isLoading.setValue(true);
-        
-        error.postValue(getApplication().getString(R.string.method_invoke_not_implemented));
-        isLoading.postValue(false);
-    }
-    
+
     @Override
     protected void onCleared() {
         super.onCleared();

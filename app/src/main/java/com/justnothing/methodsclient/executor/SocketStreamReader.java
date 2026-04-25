@@ -316,6 +316,7 @@ public class SocketStreamReader {
                 if (segments == null) {
                     System.out.println();
                 }
+                reading.set(false);
                 return true;
 
             default:

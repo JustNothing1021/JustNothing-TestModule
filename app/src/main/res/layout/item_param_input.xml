@@ -27,7 +27,7 @@
             android:layout_height="32dp"
             android:src="@android:drawable/ic_delete"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/remove_param"
+            android:contentDescription="@string/analysis_remove_param"
             android:visibility="gone" />
 
     </LinearLayout>
@@ -47,7 +47,7 @@
             android:layout_height="wrap_content"
             android:inputType="text"
             android:imeOptions="actionNext"
-            android:hint="@string/type_hint_optional" />
+            android:hint="@string/analysis_type_hint_optional" />
 
     </com.google.android.material.textfield.TextInputLayout>
 

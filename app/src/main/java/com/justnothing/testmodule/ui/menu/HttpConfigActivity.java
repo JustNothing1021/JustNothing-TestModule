@@ -138,13 +138,13 @@ public class HttpConfigActivity extends AppCompatActivity {
 
         } catch (SecurityException e) {
             logger.error("没有访问ContentProvider的权限", e);
-            binding.textView5.setText(getString(R.string.content_provider_permission_error, String.valueOf(e)));
+            binding.textView5.setText(getString(R.string.http_config_content_provider_permission_error, String.valueOf(e)));
         } catch (IllegalArgumentException e) {
             logger.error("refreshContent函数参数错误: URI可能不正确", e);
-            binding.textView5.setText(getString(R.string.uri_incorrect_error, String.valueOf(e)));
+            binding.textView5.setText(getString(R.string.http_config_uri_incorrect_error, String.valueOf(e)));
         } catch (Throwable e) {
             logger.error("refreshContent函数出现未知错误", e);
-            binding.textView5.setText(getString(R.string.unknown_error_format, String.valueOf(e)));
+            binding.textView5.setText(getString(R.string.http_config_unknown_error_format, String.valueOf(e)));
         } finally {
             if (cursor != null) {
                 cursor.close();

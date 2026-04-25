@@ -25,6 +25,7 @@ import com.justnothing.testmodule.command.functions.watch.WatchMain;
 import com.justnothing.testmodule.command.functions.tests.SandboxTestMain;
 import com.justnothing.testmodule.command.functions.tests.AnonClassTestMain;
 import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.output.ClientRequirements;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.output.StringBuilderCollector;
 import com.justnothing.testmodule.command.output.ICommandOutputHandler;
@@ -193,7 +194,7 @@ public class CommandExecutor {
         execute(fullCommand, output, null);
     }
     
-    public void execute(String fullCommand, ICommandOutputHandler output, com.justnothing.testmodule.command.output.ClientRequirements requirements) {
+    public void execute(String fullCommand, ICommandOutputHandler output, ClientRequirements requirements) {
         if (fullCommand == null || fullCommand.trim().isEmpty()) {
             logger.warn("命令为空");
             output.println("命令不能为空", Colors.RED);
@@ -236,7 +237,7 @@ public class CommandExecutor {
     }
 
 
-    private void executeCommandInternal(String fullCommand, ICommandOutputHandler output, com.justnothing.testmodule.command.output.ClientRequirements requirements) {
+    private void executeCommandInternal(String fullCommand, ICommandOutputHandler output, ClientRequirements requirements) {
         fullCommand = fullCommand.trim();
         if (fullCommand.isEmpty()) {
             output.println("没有指定命令 (可以用help来获取帮助)", Colors.RED);

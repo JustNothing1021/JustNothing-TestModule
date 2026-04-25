@@ -20,7 +20,7 @@ import com.justnothing.testmodule.protocol.json.model.FieldInfo;
 import com.justnothing.testmodule.protocol.json.model.MethodInfo;
 
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -44,7 +44,6 @@ public class ClassQueryActivity extends AppCompatActivity {
     
     private TextInputEditText etClassName;
     private Button btnQuery;
-    private ProgressBar progressBar;
     private View layoutResult;
     private View layoutLoading;
     private View layoutEmpty;
@@ -78,7 +77,7 @@ public class ClassQueryActivity extends AppCompatActivity {
     private void initViews() {
         etClassName = findViewById(R.id.et_class_name);
         btnQuery = findViewById(R.id.btn_query);
-        progressBar = findViewById(R.id.progress_bar);
+        ProgressBar progressBar = findViewById(R.id.progress_bar);
         layoutResult = findViewById(R.id.layout_result);
         layoutLoading = findViewById(R.id.layout_loading);
         layoutEmpty = findViewById(R.id.layout_empty);
@@ -102,7 +101,7 @@ public class ClassQueryActivity extends AppCompatActivity {
         
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setTitle(R.string.query_info);
+            getSupportActionBar().setTitle(R.string.analysis_query_info);
         }
     }
     
@@ -164,7 +163,7 @@ public class ClassQueryActivity extends AppCompatActivity {
         
         List<MethodInfo> constructors = info.getConstructors();
         ((TextView) findViewById(R.id.tv_constructors_title)).setText(
-            getString(R.string.constructors) + " (" + constructors.size() + ")");
+            getString(R.string.analysis_constructors_format, constructors.size()));
         
         List<MethodInfo> methods = sortMethodsByName(info.getMethods());
         Set<String> uniqueNames = new HashSet<>();
@@ -172,11 +171,11 @@ public class ClassQueryActivity extends AppCompatActivity {
             uniqueNames.add(m.getName());
         }
         ((TextView) findViewById(R.id.tv_methods_title)).setText(
-            getString(R.string.method_count_format, uniqueNames.size(), methods.size()));
+            getString(R.string.analysis_methods_count_format, uniqueNames.size(), methods.size()));
         
         List<FieldInfo> fields = info.getFields();
         ((TextView) findViewById(R.id.tv_fields_title)).setText(
-            getString(R.string.fields) + " (" + fields.size() + ")");
+            getString(R.string.analysis_fields_format, fields.size()));
         
         ConstructorAdapter constructorAdapter = new ConstructorAdapter(constructors);
         constructorAdapter.setOnItemClickListener(this::openConstructorDetail);
@@ -277,7 +276,7 @@ public class ClassQueryActivity extends AppCompatActivity {
     private List<MethodInfo> sortMethodsByName(List<MethodInfo> methods) {
         if (methods == null) return new ArrayList<>();
         List<MethodInfo> sorted = new ArrayList<>(methods);
-        Collections.sort(sorted, (a, b) -> a.getName().compareTo(b.getName()));
+        sorted.sort(Comparator.comparing(MethodInfo::getName));
         return sorted;
     }
     

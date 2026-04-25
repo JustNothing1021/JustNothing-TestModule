@@ -16,15 +16,12 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.justnothing.testmodule.R;
 import com.justnothing.testmodule.protocol.json.model.ClassInfo;
 import com.justnothing.testmodule.ui.adapter.MethodsAdapter;
-import com.justnothing.testmodule.ui.viewmodel.ClassBrowserViewModel;
+import com.justnothing.testmodule.ui.analysis.classanalysis.ClassBrowserViewModel;
+import com.justnothing.testmodule.utils.logging.Logger;
 
-/**
- * 类浏览器Activity。
- * 
- * <p>展示如何使用JSON协议进行类信息查询的UI示例。</p>
- */
+
 public class ClassBrowserActivity extends AppCompatActivity {
-    
+    private static final Logger logger = Logger.getLoggerForName("ClassBrowserActivity");
     private ClassBrowserViewModel viewModel;
     
     private EditText etClassName;
@@ -75,7 +72,7 @@ public class ClassBrowserActivity extends AppCompatActivity {
         });
         
         viewModel.getServerStatus().observe(this, available -> {
-            tvServerStatus.setText(available ? getString(R.string.server_connected) : getString(R.string.server_disconnected));
+            tvServerStatus.setText(available ? getString(R.string.analysis_server_connected) : getString(R.string.analysis_server_disconnected));
             tvServerStatus.setTextColor(getColor(available ? R.color.green : R.color.red));
         });
         
@@ -102,7 +99,8 @@ public class ClassBrowserActivity extends AppCompatActivity {
     
     private void displayClassInfo(ClassInfo info) {
         if (info == null) return;
-        
+        logger.info("显示类信息: " + info.getName());
+
         tvClassName.setText(info.getName());
         tvSuperClass.setText(info.getSuperClass() != null ? info.getSuperClass() : getString(R.string.none));
         tvInterfaces.setText(String.join(", ", info.getInterfaces()));

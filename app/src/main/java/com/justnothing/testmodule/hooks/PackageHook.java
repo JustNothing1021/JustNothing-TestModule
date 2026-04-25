@@ -6,7 +6,6 @@ import java.lang.reflect.Method;
 import java.util.Locale;
 
 import de.robv.android.xposed.XC_MethodHook;
-import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
 public abstract class PackageHook extends XposedBasicHook<XC_LoadPackage.LoadPackageParam> {
@@ -21,7 +20,7 @@ public abstract class PackageHook extends XposedBasicHook<XC_LoadPackage.LoadPac
 
     public class PackageMethodHook extends BaseMethodHook {
         public PackageMethodHook(String className, String methodName,
-                                 Object[] signature, XC_MethodHook hook,
+                                 Class<?>[] signature, XC_MethodHook hook,
                                  HookCondition<XC_LoadPackage.LoadPackageParam> shouldLoad) {
             super(className, methodName, signature, hook, shouldLoad);
         }
@@ -30,12 +29,12 @@ public abstract class PackageHook extends XposedBasicHook<XC_LoadPackage.LoadPac
         public Boolean loads(XC_LoadPackage.LoadPackageParam param) {
             try {
                 if (!shouldLoad(param)) return false;
-                Class<?> clazz = ClassFinder.withCl(param.classLoader).find(className);
+                Class<?> clazz = HookClassFinder.withCl(param.classLoader).find(className);
                 if (clazz == null) {
                     warn("未找到类" + className);
                     return false;
                 }
-                Method method = MethodFinder.withCl(param.classLoader).find(className, methodName, signature);
+                Method method = HookMethodFinder.withCl(param.classLoader).find(className, methodName, signature);
                 if (method == null) {
                     warn("未找到类方法" + className + "." + methodName);
                     return false;
@@ -43,7 +42,7 @@ public abstract class PackageHook extends XposedBasicHook<XC_LoadPackage.LoadPac
                 Object[] sigWithHook = new Object[signature.length + 1];
                 System.arraycopy(signature, 0, sigWithHook, 0, signature.length);
                 sigWithHook[signature.length] = hook;
-                XposedHelpers.findAndHookMethod(clazz, methodName, sigWithHook);
+                HookAPI.findAndHookMethod(clazz, methodName, sigWithHook);
                 info("已hook " + className + "." + methodName);
                 return true;
             } catch (Throwable e) {
@@ -64,17 +63,17 @@ public abstract class PackageHook extends XposedBasicHook<XC_LoadPackage.LoadPac
         @Override
         public Boolean loads(XC_LoadPackage.LoadPackageParam param) {
             try {
-                Class<?> clazz = ClassFinder.withCl(param.classLoader).find(className);
+                Class<?> clazz = HookClassFinder.withCl(param.classLoader).find(className);
                 if (clazz == null) {
                     warn( "没有找到类 " + className);
                     return false;
                 }
-                Field field = XposedHelpers.findFieldIfExists(clazz, fieldName);
+                Field field = HookAPI.findFieldIfExists(clazz, fieldName);
                 if (field == null) {
                     warn("没有找到" + className + "的静态量" + fieldName);
                     return false;
                 }
-                XposedHelpers.setStaticObjectField(clazz, fieldName, value);
+                HookAPI.setStaticObjectField(clazz, fieldName, value);
                 info("已hook静态成员 " + className + "." + fieldName);
                 return true;
             } catch (Throwable e) {
@@ -108,7 +107,7 @@ public abstract class PackageHook extends XposedBasicHook<XC_LoadPackage.LoadPac
     }
     @Override
     protected PackageMethodHook createMethodHook(
-            String className, String methodName, Object[] signature,
+            String className, String methodName, Class<?>[] signature,
             XC_MethodHook hook, HookCondition<XC_LoadPackage.LoadPackageParam> shouldLoad) {
         return new PackageMethodHook(className, methodName, signature, hook, shouldLoad);
     }

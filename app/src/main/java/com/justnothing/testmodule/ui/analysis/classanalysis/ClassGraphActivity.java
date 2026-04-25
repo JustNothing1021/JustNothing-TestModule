@@ -8,6 +8,7 @@ import android.view.ViewGroup;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -69,7 +70,7 @@ public class ClassGraphActivity extends AppCompatActivity {
         
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setTitle(R.string.class_hierarchy);
+            getSupportActionBar().setTitle(R.string.analysis_class_hierarchy);
         }
     }
     
@@ -121,13 +122,13 @@ public class ClassGraphActivity extends AppCompatActivity {
             
             if (i == totalLevels - 1) {
                 type = ItemType.CURRENT_CLASS;
-                relation = getString(R.string.current_class);
+                relation = getString(R.string.analysis_current_class);
             } else if (currentClass.isInterface()) {
                 type = ItemType.INTERFACE;
-                relation = getString(R.string.implemented_interface);
+                relation = getString(R.string.analysis_implemented_interface);
             } else {
                 type = ItemType.PARENT_CLASS;
-                relation = getString(R.string.parent_class);
+                relation = getString(R.string.analysis_super_class);
             }
             
             String classType = getClassTypeString(currentClass);
@@ -135,10 +136,10 @@ public class ClassGraphActivity extends AppCompatActivity {
             boolean hasNextClass = (i < totalLevels - 1);
             
             List<InterfaceInfo> interfaceInfos = new ArrayList<>();
-            for (String iface : interfaces) {
+            for (String _interface : interfaces) {
                 interfaceInfos.add(new InterfaceInfo(
-                    DescriptorColorizer.formatTypeName(iface),
-                    iface
+                    DescriptorColorizer.formatTypeName(_interface),
+                    _interface
                 ));
             }
             
@@ -158,18 +159,18 @@ public class ClassGraphActivity extends AppCompatActivity {
     
     private String getClassTypeString(ClassHierarchyResult.HierarchyClassInfo info) {
         if (info.isAnnotation()) {
-            return getString(R.string.class_type_annotation);
+            return getString(R.string.analysis_class_type_annotation);
         } else if (info.isInterface()) {
-            return getString(R.string.class_type_interface);
+            return getString(R.string.analysis_class_type_interface);
         } else if (info.isEnum()) {
-            return getString(R.string.class_type_enum);
+            return getString(R.string.analysis_class_type_enum);
         } else {
             if (info.isAbstract()) {
-                return getString(R.string.class_type_abstract);
+                return getString(R.string.analysis_class_type_abstract);
             } else if (info.isFinal()) {
-                return getString(R.string.class_type_final);
+                return getString(R.string.analysis_class_type_final);
             } else {
-                return getString(R.string.class_type_class);
+                return getString(R.string.analysis_class_type_class);
             }
         }
     }
@@ -224,6 +225,7 @@ public class ClassGraphActivity extends AppCompatActivity {
             this.items = items;
         }
         
+        @NonNull
         @Override
         public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
             View view = LayoutInflater.from(parent.getContext())
@@ -337,7 +339,7 @@ public class ClassGraphActivity extends AppCompatActivity {
             .inflate(R.layout.dialog_select_overload, null);
         
         TextView tvTitle = dialogView.findViewById(R.id.tv_title);
-        tvTitle.setText(R.string.implemented_interface);
+        tvTitle.setText(R.string.analysis_implemented_interface);
         
         androidx.core.widget.NestedScrollView scrollView = dialogView.findViewById(R.id.nested_scroll);
         
@@ -411,7 +413,7 @@ public class ClassGraphActivity extends AppCompatActivity {
             return interfaces.size();
         }
         
-        class ViewHolder extends RecyclerView.ViewHolder {
+        static class ViewHolder extends RecyclerView.ViewHolder {
             TextView tvIndex;
             TextView tvName;
             

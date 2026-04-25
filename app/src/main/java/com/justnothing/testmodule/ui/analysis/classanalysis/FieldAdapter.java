@@ -58,7 +58,7 @@ public class FieldAdapter extends RecyclerView.Adapter<FieldAdapter.ViewHolder> 
         return fields.size();
     }
 
-    class ViewHolder extends RecyclerView.ViewHolder {
+    public class ViewHolder extends RecyclerView.ViewHolder {
         private final TextView tvFieldName;
         private final TextView tvFieldType;
         private final TextView tvModifiers;
@@ -94,22 +94,22 @@ public class FieldAdapter extends RecyclerView.Adapter<FieldAdapter.ViewHolder> 
                 typeName = DescriptorColorizer.formatTypeName(field.getType());
             }
 
-            String typeLabel = itemView.getContext().getString(R.string.field_type_label);
+            String typeLabel = itemView.getContext().getString(R.string.analysis_field_type_label, "");
             SpannableStringBuilder typeBuilder = new SpannableStringBuilder();
-            typeBuilder.append(typeLabel).append(": ");
+            typeBuilder.append(typeLabel);
             int typeStart = typeBuilder.length();
             typeBuilder.append(typeName);
             typeBuilder.setSpan(new ForegroundColorSpan(colorGreen), typeStart, typeBuilder.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             tvFieldType.setText(typeBuilder);
 
             String modifier = field.getModifiersString();
-            String modifierLabel = itemView.getContext().getString(R.string.field_modifiers_label);
+            String modifierLabel = itemView.getContext().getString(R.string.analysis_field_modifiers_label);
             StringBuilder modifierBuilder = new StringBuilder();
             modifierBuilder.append(modifierLabel).append(": ");
             if (modifier != null && !modifier.isEmpty()) {
                 modifierBuilder.append(modifier);
             } else {
-                modifierBuilder.append(itemView.getContext().getString(R.string.field_no_modifiers));
+                modifierBuilder.append(itemView.getContext().getString(R.string.analysis_field_no_modifiers));
             }
             tvModifiers.setText(modifierBuilder.toString());
             
@@ -117,9 +117,9 @@ public class FieldAdapter extends RecyclerView.Adapter<FieldAdapter.ViewHolder> 
             if (declaringClass != null && !declaringClass.equals(currentClassName)) {
                 tvInheritedFrom.setVisibility(View.VISIBLE);
                 if (field.isDeclaringClassIsInterface()) {
-                    tvInheritedFrom.setText(String.format(itemView.getContext().getString(R.string.implements_interface_bracket), DescriptorColorizer.formatTypeName(declaringClass)));
+                    tvInheritedFrom.setText(String.format(itemView.getContext().getString(R.string.implements_implements_bracket), DescriptorColorizer.formatTypeName(declaringClass)));
                 } else {
-                    tvInheritedFrom.setText(String.format(itemView.getContext().getString(R.string.inherited_from_bracket), DescriptorColorizer.formatTypeName(declaringClass)));
+                    tvInheritedFrom.setText(String.format(itemView.getContext().getString(R.string.analysis_invoke_extends_bracket), DescriptorColorizer.formatTypeName(declaringClass)));
                 }
             } else {
                 tvInheritedFrom.setVisibility(View.GONE);

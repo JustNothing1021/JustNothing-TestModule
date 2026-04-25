@@ -1,6 +1,5 @@
 <resources>
     <string name="app_name">JustNothing</string>
-
     <string name="module_name">JustNothing</string>
     <string name="welcome_app_title">JustNothing\'s Module</string>
     <string name="welcome_app_subtitle">一个啥也不是的Xposed模块</string>
@@ -164,6 +163,8 @@
     <string name="data_export_file_cleared">已删除文件 %s</string>
     <string name="data_export_file_clear_failed">删除文件 %s 失败</string>
     <string name="general_exit_app">退出应用</string>
+    <string name="general_enter">进入</string>
+    <string name="xposeddescription">这个模块是我写的第一个Xposed模块, 现在感觉更像性能分析工具了 (雾)</string>
     <string name="performance_monitor_stat_desc">监控状态: %s</string>
     <string name="performance_monitor_stat_enabled">启用</string>
     <string name="performance_monitor_stat_disabled">禁用</string>
@@ -173,127 +174,347 @@
     <string name="performance_hook_total_time">总耗时: %dms</string>
     <string name="performance_hook_avg_time">平均耗时: %dms</string>
     <string name="script_execute_finished">脚本执行完成!</string>
-    
-    <string name="field_type_label">类型</string>
-    <string name="field_modifiers_label">修饰符</string>
-    <string name="field_no_modifiers">无</string>
-    
-    <string name="constructor_info_title">构造函数信息</string>
-    <string name="params_title">参数</string>
-    <string name="free_mode">自由模式</string>
-    <string name="no_params_hint">此构造函数无参数</string>
-    <string name="invoke_constructor">构造</string>
-    <string name="result_title">结果</string>
-    <string name="result_type_label">类型</string>
-    <string name="result_hash_label">Hash</string>
-    <string name="param_label_format">参数 %1$d (%2$s)</string>
-    <string name="type_hint_optional">类型（可选，留空自动推断）</string>
-    <string name="add_param">添加参数</string>
-    <string name="remove_param">删除参数</string>
-    
-    <string name="method_info_title">方法信息</string>
-    <string name="target_instance_title">目标实例</string>
-    <string name="target_instance_hint">输入目标实例表达式</string>
-    <string name="invoke_method">调用方法</string>
-    <string name="return_type_label">返回值类型</string>
-    <string name="no_params_method_hint">此方法无参数</string>
-    
-    <string name="field_info_title">字段信息</string>
-    <string name="get_field_value">获取字段值</string>
-    <string name="field_value_title">字段值</string>
-    <string name="value_type_label">值类型</string>
-    <string name="value_hash_label">值Hash</string>
-    
-    <string name="set_field_value_title">设置字段值</string>
-    <string name="set_field_value">设置字段值</string>
-    <string name="value_expression_hint">输入值表达式</string>
-    <string name="set_success">设置成功</string>
-    <string name="set_failed">设置失败</string>
-    
-    <string name="instance_after_invocation">调用后实例</string>
-    
-    <string name="select_overload">选择重载</string>
-    
+    <string name="analysis_field_type_label">类型: %s</string>
+    <string name="analysis_field_modifiers_label">修饰符</string>
+    <string name="analysis_field_no_modifiers">无</string>
+    <string name="analysis_constructor_info_title">构造函数信息</string>
+    <string name="analysis_invoke_params_title">参数</string>
+    <string name="analysis_invoke_free_mode">自由模式</string>
+    <string name="analysis_constructor_no_params_hint">此构造函数无参数</string>
+    <string name="analysis_construct">构造</string>
+    <string name="analysis_invoke_result_title">结果</string>
+    <string name="analysis_invoke_result_type_label">类型: %s</string>
+    <string name="analysis_invoke_result_hash_label">Hash: %d</string>
+    <string name="analysis_param_label_format">参数 %1$d (%2$s)</string>
+    <string name="analysis_type_hint_optional">类型（可选，留空自动推断）</string>
+    <string name="analysis_add_param">添加参数</string>
+    <string name="analysis_remove_param">删除参数</string>
+    <string name="analysis_method_info_title">方法信息</string>
+    <string name="analysis_invoke_target_instance_title">目标实例</string>
+    <string name="analysis_invoke_target_instance_hint">输入目标实例表达式…</string>
+    <string name="analysis_invoke_method">调用方法</string>
+    <string name="analysis_method_return_type_label">返回值类型: %s</string>
+    <string name="analysis_method_no_params_hint">此方法无参数</string>
+    <string name="analysis_field_info_title">字段信息</string>
+    <string name="analysis_get_field_value">获取字段值</string>
+    <string name="analysis_field_value_title">字段值</string>
+    <string name="analysis_field_value_type_label">值类型: %s</string>
+    <string name="analysis_field_value_hash_label">值Hash: %d</string>
+    <string name="analysis_set_field_value_title">设置字段值</string>
+    <string name="analysis_set_field_value">设置字段值</string>
+    <string name="analysis_value_expression_hint">输入值表达式…</string>
+    <string name="analysis_field_set_success">设置成功</string>
+    <string name="analysis_set_field_failed">设置失败: %s</string>
+    <string name="analysis_instance_after_invocation">调用后实例</string>
+    <string name="analysis_method_select_overload">选择重载</string>
     <string name="class_analysis">类分析</string>
-    <string name="enter_class_name">输入类名</string>
-    <string name="query">查询</string>
-    <string name="class_info">类信息</string>
-    <string name="click_to_view_hierarchy">点击查看继承图</string>
-    <string name="class_name">类名</string>
-    <string name="access_modifiers">访问修饰符</string>
-    <string name="super_class">父类</string>
-    <string name="implemented_interfaces">实现接口</string>
-    <string name="constructors">构造函数</string>
-    <string name="methods">方法</string>
-    <string name="fields">字段</string>
-    <string name="loading">加载中…</string>
-    <string name="query_failed">查询失败</string>
-    <string name="class_hierarchy">类继承图</string>
-    <string name="current_class">当前类</string>
-    <string name="parent_class">父类</string>
-    <string name="implemented_interface">实现的接口</string>
-    <string name="class_not_found">类未找到: %s</string>
-    <string name="class_name_empty">类名不能为空</string>
-    <string name="inherited_from">继承自 %s</string>
-    <string name="implements_interface">实现接口 %s</string>
-    <string name="implements_interface_bracket">[实现接口 %s]</string>
+    <string name="analysis_enter_class_name">输入类名…</string>
+    <string name="analysis_query_class">查询</string>
+    <string name="analysis_class_info">类信息</string>
+    <string name="analysis_click_to_view_hierarchy">点击查看继承图</string>
+    <string name="analysis_class_name">类名</string>
+    <string name="analysis_access_modifiers">访问修饰符</string>
+    <string name="analysis_super_class">父类</string>
+    <string name="analysis_implemented_interfaces">实现接口</string>
+    <string name="analysis_constructors_format">构造函数 (%d)</string>
+    <string name="analysis_methods">方法</string>
+    <string name="analysis_fields_format">字段 (%d)</string>
+    <string name="analysis_loading">加载中…</string>
+    <string name="analysis_class_query_failed_format">查询失败: %s</string>
+    <string name="analysis_class_hierarchy">类继承图</string>
+    <string name="analysis_current_class">当前类</string>
+    <string name="analysis_parent_class">父类</string>
+    <string name="analysis_implemented_interface">实现的接口</string>
+    <string name="analysis_class_not_found">类未找到: %s</string>
+    <string name="analysis_class_name_empty">类名不能为空</string>
+    <string name="analysis_extends">继承自 %s</string>
+    <string name="analysis_implements">实现接口 %s</string>
+    <string name="implements_implements_bracket">[实现接口 %s]</string>
     <string name="none">无</string>
-    <string name="no_params">无参数</string>
-    <string name="overload_count">%d个重载</string>
-    <string name="expand_collapse">展开/收起</string>
-    
-    <string name="class_type_class">类</string>
-    <string name="class_type_interface">接口</string>
-    <string name="class_type_annotation">注解</string>
-    <string name="class_type_enum">枚举</string>
-    <string name="class_type_abstract">抽象类</string>
-    <string name="class_type_final">final类</string>
-    <string name="no_modifiers">默认访问权限</string>
-    <string name="no_super_class">无 (Object或基本类型)</string>
-    
-    <string name="query_info">查询信息</string>
-    <string name="field_value">字段值</string>
-    <string name="method_invoke">方法调用</string>
-    <string name="constructor">构造函数</string>
-    <string name="memory_analysis">内存分析</string>
-    <string name="hook_management">Hook管理</string>
+    <string name="analysis_no_params">无参数</string>
+    <string name="analysis_overload_count">%d个重载</string>
+    <string name="analysis_expand_collapse">展开/收起</string>
+    <string name="analysis_class_type_class">类</string>
+    <string name="analysis_class_type_interface">接口</string>
+    <string name="analysis_class_type_annotation">注解</string>
+    <string name="analysis_class_type_enum">枚举</string>
+    <string name="analysis_class_type_abstract">抽象类</string>
+    <string name="analysis_class_type_final">final类</string>
+    <string name="analysis_no_modifiers">默认访问权限 (package-private?)</string>
+    <string name="analysis_no_super_class">无 (Object或基本类型)</string>
+    <string name="analysis_query_info">查询信息</string>
+    <string name="analysis_field_value">字段值</string>
+    <string name="analysis_method_invoke">方法调用</string>
+    <string name="analysis_constructor">构造函数</string>
+    <string name="analysis_memory_analysis">内存分析</string>
+    <string name="analysis_dymanic_hook_management">动态Hook管理</string>
     <string name="system_analysis">系统分析</string>
-    <string name="view_fields">查看字段</string>
-    <string name="invoke_methods">调用方法</string>
-    <string name="network_analysis">网络分析</string>
+    <string name="analysis_view_fields">查看字段</string>
+    <string name="analysis_invoke_methods">调用方法</string>
+    <string name="analysis_network_analysis">网络分析</string>
     <string name="thread_analysis">线程分析</string>
-    
-    <string name="server_connected">服务端已连接</string>
-    <string name="server_disconnected">服务端未连接</string>
-    
-    <string name="instance_field_requires_target">实例字段需要提供目标实例表达式</string>
-    <string name="please_enter_value_expression">请输入值表达式</string>
-    <string name="get_failed">获取失败</string>
-    <string name="response_type_error">响应类型错误: 期望 %s, 实际 %s</string>
-    <string name="get_exception">获取异常: %s</string>
-    <string name="set_failed_msg">设置失败</string>
-    <string name="set_exception">设置异常: %s</string>
-    
-    <string name="invoke_failed">调用失败</string>
-    <string name="invoke_exception">调用异常: %s</string>
-    <string name="instance_method_requires_target">实例方法需要提供目标实例表达式</string>
-    
-    <string name="free_mode_param">自由</string>
-    <string name="method_count_format">方法 (%1$d个, %2$d个重载)</string>
-    
-    <string name="enter_class_name_hint">请输入类名</string>
-    <string name="method_invoke_not_implemented">方法调用功能暂未实现</string>
-    
+    <string name="analysis_instance_field_requires_target">实例字段需要提供目标实例表达式</string>
+    <string name="analysis_please_enter_value_expression">请输入值表达式</string>
+    <string name="analysis_field_get_failed">获取失败</string>
+    <string name="analysis_response_type_error">响应类型错误: 期望 %1$s, 实际 %2$s</string>
+    <string name="analysis_get_exception">获取异常: %s</string>
+    <string name="analysis_set_field_unknown_error">未知错误</string>
+    <string name="analysis_set_exception">设置异常: %s</string>
+    <string name="analysis_invoke_unknown_error">未知错误</string>
+    <string name="analysis_invoke_exception">调用异常: %s</string>
+    <string name="analysis_instance_method_requires_target">实例方法需要提供目标实例表达式</string>
+    <string name="analyze_invoke_free_mode_param">自由模式</string>
+    <string name="analysis_methods_count_format">(%1$d个, %2$d个重载)</string>
+    <string name="analysis_enter_class_name_hint">请输入类名…</string>
     <string name="auto_scroll_on">自动滚动: 开</string>
     <string name="auto_scroll_off">自动滚动: 关</string>
     <string name="no_file_permission_warn">没有授予读取文件的权限, \n有的功能可能无法正常运作…</string>
     <string name="hook_detail_not_found">找不到这个Hook的详细信息…</string>
-    
     <string name="method_name_with_overloads">%1$s (%2$d个重载)</string>
-    <string name="index_format">#%d</string>
-    <string name="inherited_from_bracket">[继承自 %s]</string>
-    <string name="hook_name_with_internal">%1$s (%2$s)</string>
-    <string name="content_provider_permission_error">没有访问ContentProvider的权限\n\n%1$s</string>
-    <string name="uri_incorrect_error">URI可能不正确\n\n%1$s</string>
-    <string name="unknown_error_format">出现未知错误\n\n%1$s</string>
+    <string name="index_format" translatable="false">#%d</string>
+    <string name="analysis_invoke_extends_bracket">[继承自 %s]</string>
+    <string name="hook_name_with_internal" translatable="false">%1$s (%2$s)</string>
+    <string name="http_config_content_provider_permission_error">没有访问ContentProvider的权限  %1$s</string>
+    <string name="http_config_uri_incorrect_error">URI可能不正确\n\n%1$s</string>
+    <string name="http_config_unknown_error_format">出现未知错误\n\n%1$s</string>
+    <string name="analysis_class_query_failed">查询失败</string>
+    <string name="analysis_memory_auto_refresh">自动刷新</string>
+    <string name="analysis_memory_last_update">最后更新</string>
+    <string name="analysis_memory_java_runtime">Java 运行时内存</string>
+    <string name="analysis_memory_native_heap">原生堆内存</string>
+    <string name="analysis_memory_process_memory">进程内存</string>
+    <string name="analysis_memory_system_status">系统状态</string>
+    <string name="analysis_memory_pss">PSS</string>
+    <string name="analysis_memory_uss">USS</string>
+    <string name="analysis_memory_rss">RSS</string>
+    <string name="analysis_memory_gc_button">执行GC</string>
+    <string name="analysis_memory_export_dump">导出信息</string>
+    <string name="analysis_memory_heap_detail">空闲: %1$s | 总计: %2$s | 最大: %3$s</string>
+    <string name="analysis_memory_native_detail">空闲: %1$s | 已分配: %2$s</string>
+    <string name="analysis_memory_system_total">系统总内存: %s</string>
+    <string name="analysis_memory_low_memory_yes">内存不足</string>
+    <string name="analysis_memory_low_memory_no">正常</string>
+    <string name="analysis_memory_gc_confirm_title">确认执行GC</string>
+    <string name="analysis_memory_gc_confirm_message">执行垃圾回收可能导致短暂卡顿，确认继续吗？\n\n• 完整GC：执行两次GC + Finalization，释放更彻底但耗时更长\n• 标准GC：仅执行一次GC</string>
+    <string name="analysis_memory_gc_full">完整GC</string>
+    <string name="analysis_memory_gc_standard">标准GC</string>
+    <string name="analysis_memory_gc_complete_title">GC 执行完成</string>
+    <string name="analysis_memory_gc_result_format" formatted="false">GC前已用: %s (%.1f%%)\nGC后已用: %s (%.1f%%)\n\n%s</string>
+    <string name="analysis_memory_freed">已释放</string>
+    <string name="analysis_memory_no_change">无明显变化</string>
+    <string name="analysis_memory_export_success_title">导出成功</string>
+    <string name="analysis_memory_export_success_msg">内存转储已保存到:\n%s</string>
+    <string name="analysis_memory_export_failed_title">导出失败</string>
+    <string name="analysis_memory_dump_title">=== 内存转储 ===</string>
+    <string name="analysis_memory_dump_time">时间: %s</string>
+    <string name="analysis_memory_dump_section_java">--- Java运行时内存 ---</string>
+    <string name="analysis_memory_dump_max">  最大: %s</string>
+    <string name="analysis_memory_dump_allocated">  已分配: %s</string>
+    <string name="analysis_memory_dump_free">  空闲: %s</string>
+    <string name="analysis_memory_dump_used" formatted="false">  已用: %s (%s)</string>
+    <string name="analysis_memory_dump_section_native">--- 原生堆内存 ---</string>
+    <string name="analysis_memory_dump_section_process">--- 进程内存 ---</string>
+    <string name="analysis_memory_dump_section_system">--- 系统内存 ---</string>
+    <string name="analysis_memory_dump_avail">  可用: %s</string>
+    <string name="analysis_memory_dump_total">  总计: %s</string>
+    <string name="analysis_memory_dump_low_memory_yes">  低内存: 是</string>
+    <string name="analysis_memory_dump_low_memory_no">  低内存: 否</string>
+    <string name="analysis_memory_error_query_failed">查询失败</string>
+    <string name="analysis_memory_error_query_format">查询失败: %s</string>
+    <string name="analysis_memory_error_response_type">响应类型错误: %s</string>
+    <string name="analysis_memory_error_gc_failed">GC失败</string>
+    <string name="analysis_memory_error_gc_response_type">GC响应类型错误</string>
+    <string name="analysis_memory_error_gc_execute_failed">GC执行失败: %s</string>
+    <string name="analysis_memory_vm_details">VM 详情</string>
+    <string name="analysis_memory_thread_count">线程数</string>
+    <string name="analysis_memory_class_loaded">已加载类数</string>
+    <string name="analysis_memory_class_total">总加载类数</string>
+    <string name="analysis_memory_bitmap_info">Bitmap 占用</string>
+    <string name="analysis_memory_database_size">数据库大小</string>
+    <string name="analysis_memory_trend_hint">点击查看趋势</string>
+    <string name="analysis_memory_trend_title">内存使用趋势</string>
+    <string name="analysis_memory_trend_label">使用率 (%)</string>
+    <string name="analysis_memory_trend_current" formatted="false">当前: %.1f%% (%s)</string>
+    <string name="analysis_memory_usage_good">正常</string>
+    <string name="analysis_memory_usage_warning">偏高</string>
+    <string name="analysis_memory_usage_critical">危险</string>
+    <string name="analysis_memory_trend_empty">暂无数据，请返回仪表盘开启自动刷新并等待数据采集</string>
+    <string name="analysis_memory_dump_section_vm">--- VM 详情 ---</string>
+    <string name="analysis_thread_title">线程分析</string>
+    <string name="analysis_thread_last_update">上次更新:</string>
+    <string name="analysis_thread_auto_refresh">自动刷新</string>
+    <string name="analysis_thread_overview">线程概览</string>
+    <string name="analysis_thread_total_format" formatted="false">共 %d 个线程</string>
+    <string name="analysis_thread_state_stats">状态统计</string>
+    <string name="analysis_thread_state_runnable">RUNNABLE</string>
+    <string name="analysis_thread_state_blocked">BLOCKED</string>
+    <string name="analysis_thread_state_waiting">WAITING</string>
+    <string name="analysis_thread_state_timed_waiting">TIMED_WAITING</string>
+    <string name="analysis_thread_state_other">TERMINATED / NEW</string>
+    <string name="analysis_thread_list">线程列表</string>
+    <string name="analysis_thread_list_count" formatted="false">%d 个线程</string>
+    <string name="analysis_thread_empty">暂无线程数据</string>
+    <string name="analysis_thread_deadlock_detect">死锁检测</string>
+    <string name="analysis_thread_btn_detect">检测死锁</string>
+    <string name="analysis_thread_btn_refresh">刷新</string>
+    <string name="analysis_thread_btn_export">导出</string>
+    <string name="analysis_thread_deadlock_confirm_title">确认死锁检测</string>
+    <string name="analysis_thread_deadlock_confirm_msg">将扫描所有线程状态，检测是否存在BLOCKED（阻塞）状态的线程。是否继续？</string>
+    <string name="analysis_thread_deadlock_found" formatted="false">检测到 %d 个可能存在死锁的线程!</string>
+    <string name="analysis_thread_deadlock_none">未检测到明显的死锁迹象</string>
+    <string name="analysis_thread_blocked_threads">以下为BLOCKED状态的可能死锁线程:</string>
+    <string name="analysis_thread_export_success">导出成功</string>
+    <string name="analysis_thread_export_path" formatted="false">文件已保存至:\n%s</string>
+    <string name="analysis_thread_error_query_failed">查询线程信息失败</string>
+    <string name="analysis_thread_error_response_type" formatted="false">响应类型错误: %s</string>
+    <string name="analysis_thread_error_query_format" formatted="false">线程信息查询异常: %s</string>
+    <string name="analysis_thread_error_deadlock_failed">死锁检测结果获取失败</string>
+    <string name="analysis_thread_error_deadlock_response_type">死锁检测响应类型错误</string>
+    <string name="analysis_thread_error_deadlock_execute_failed" formatted="false">死锁检测执行异常: %s</string>
+    <string name="analysis_thread_error_export_failed" formatted="false">导出失败: %s</string>
+    <string name="analysis_thread_dump_name" formatted="false">  线程: %s</string>
+    <string name="analysis_thread_dump_id" formatted="false">  ID: %s</string>
+    <string name="analysis_thread_dump_state" formatted="false">  状态: %s</string>
+    <string name="analysis_thread_search_hint">搜索线程名…</string>
+    <string name="analysis_thread_filter_all">全部</string>
+    <string name="analysis_thread_filter_waiting">等待中</string>
+    <string name="analysis_thread_filter_other">其他</string>
+    <string name="analysis_thread_group_format" formatted="false">%s (%d)</string>
+    <string name="analysis_thread_search_empty">未找到匹配的线程</string>
+    <string name="analysis_thread_detail_id">ID</string>
+    <string name="analysis_thread_detail_state">状态</string>
+    <string name="analysis_thread_detail_priority">优先级</string>
+    <string name="analysis_thread_detail_daemon">守护线程</string>
+    <string name="analysis_thread_detail_interrupted">中断</string>
+    <string name="analysis_thread_detail_alive">存活</string>
+    <string name="analysis_thread_detail_stack">堆栈跟踪</string>
+    <string name="analysis_thread_stack_click_hint">点击查看类详情</string>
+    <string name="analysis_thread_sort_title">排序方式</string>
+    <string name="analysis_thread_sort_name">按名称</string>
+    <string name="analysis_thread_sort_priority">按优先级</string>
+    <string name="analysis_thread_sort_id">按ID</string>
+    <string name="analysis_thread_sort_asc">升序</string>
+    <string name="analysis_thread_sort_desc">降序</string>
+    <string name="analysis_thread_copy_success">已复制线程信息到剪贴板</string>
+    <string name="analysis_hook_title">Hook 管理器</string>
+    <string name="analysis_hook_overview">Hook 概览</string>
+    <string name="analysis_hook_overview_format" formatted="false">Hook 概览: %d (活跃数 %d)</string>
+    <string name="analysis_hook_total_format" formatted="false">共 %d 个 Hook</string>
+    <string name="analysis_hook_active_format" formatted="false">活跃: %d</string>
+    <string name="analysis_hook_search_hint">搜索类名或方法名…</string>
+    <string name="analysis_hook_empty">暂无 Hook 数据</string>
+    <string name="analysis_hook_search_empty">未找到匹配的 Hook</string>
+    <string name="analysis_hook_group_enabled" formatted="false">已启用 (%d)</string>
+    <string name="analysis_hook_group_disabled" formatted="false">已禁用 (%d)</string>
+    <string name="analysis_hook_group_inactive" formatted="false">非活跃 (%d)</string>
+    <string name="analysis_hook_btn_add">添加 Hook</string>
+    <string name="analysis_hook_btn_clear_all">清空全部</string>
+    <string name="analysis_hook_btn_refresh">刷新</string>
+    <string name="analysis_hook_last_update">上次更新:</string>
+    <string name="analysis_hook_phases" formatted="false">%s阶段</string>
+    <string name="analysis_hook_calls_format" formatted="false">调用 %d 次</string>
+    <string name="analysis_hook_confirm_clear_title">确认清空所有Hook</string>
+    <string name="analysis_hook_confirm_clear_msg">确定要移除所有 Hook 吗？此操作不可撤销。</string>
+    <string name="analysis_hook_confirm_remove_title">确认移除Hook</string>
+    <string name="analysis_hook_confirm_remove_msg" formatted="false">确定要移除 Hook [%s] 吗?</string>
+    <string name="analysis_hook_cleared_success" formatted="false">已清除 %d 个 Hook</string>
+    <string name="analysis_hook_removed_success">Hook 已移除</string>
+    <string name="analysis_hook_add_title">添加 Hook</string>
+    <string name="analysis_hook_add_class_name">类名 *</string>
+    <string name="analysis_hook_add_class_hint">如 com.example.MainActivity</string>
+    <string name="analysis_hook_add_method_name">方法名 *</string>
+    <string name="analysis_hook_add_method_hint">如 onCreate</string>
+    <string name="analysis_hook_add_signature">方法签名 (可选)</string>
+    <string name="analysis_hook_add_signature_hint">如 String, int 或留空自动匹配</string>
+    <string name="analysis_hook_add_phase_before">Before 阶段 (方法调用前执行)</string>
+    <string name="analysis_hook_add_phase_after">After 阶段 (方法调用后执行)</string>
+    <string name="analysis_hook_add_phase_replace">Replace 阶段 (替换原方法)</string>
+    <string name="analysis_hook_add_code_hint">// 输入脚本代码…</string>
+    <string name="analysis_hook_add_submit">提交 Hook</string>
+    <string name="analysis_hook_add_param">添加参数</string>
+    <string name="analysis_hook_no_params_hint">点击下方按钮添加参数类型</string>
+    <string name="analysis_hook_add_need_one_phase">请至少选择一个 Hook 阶段</string>
+    <string name="analysis_hook_add_success">Hook 添加成功!</string>
+    <string name="analysis_hook_detail_title">Hook 详情</string>
+    <string name="analysis_hook_detail_id">ID</string>
+    <string name="analysis_hook_detail_class">目标类</string>
+    <string name="analysis_hook_detail_method">目标方法</string>
+    <string name="analysis_hook_detail_signature">签名</string>
+    <string name="analysis_hook_detail_status">状态</string>
+    <string name="analysis_hook_detail_call_count">调用次数</string>
+    <string name="analysis_hook_detail_create_time">创建时间</string>
+    <string name="analysis_hook_detail_code_before">Before 代码</string>
+    <string name="analysis_hook_detail_code_after">After 代码</string>
+    <string name="analysis_hook_detail_code_replace">Replace 代码</string>
+    <string name="analysis_hook_detail_output_log">输出日志</string>
+    <string name="analysis_hook_detail_error_log">错误日志</string>
+    <string name="analysis_hook_detail_no_output">暂无输出记录</string>
+    <string name="analysis_hook_detail_btn_remove">移除</string>
+    <string name="analysis_hook_detail_btn_enable">启用</string>
+    <string name="analysis_hook_detail_btn_disable">禁用</string>
+    <string name="analysis_hook_detail_btn_output">刷新输出</string>
+    <string name="analysis_hook_status_active">活跃</string>
+    <string name="analysis_hook_status_inactive">非活跃</string>
+    <string name="analysis_hook_status_enabled">已启用</string>
+    <string name="analysis_hook_status_disabled">已禁用</string>
+    <string name="analysis_hook_error_query_failed">查询Hook列表失败</string>
+    <string name="analysis_hook_error_response_type" formatted="false">响应类型错误: %s</string>
+    <string name="analysis_hook_error_query_format" formatted="false">Hook列表查询异常: %s</string>
+    <string name="analysis_hook_error_add_format" formatted="false">添加Hook异常: %s</string>
+    <string name="analysis_hook_error_action_format" formatted="false">Hook操作[%s]异常: %s</string>
+    <string name="analysis_constructors_label">构造函数</string>
+    <string name="analysis_fields_label">字段</string>
+    <string name="analysis_methods_and_count_format">方法 (%1$d个, %2$d个重载)</string>
+    <string name="packages_analysis">包列表</string>
+    <string name="analysis_packages_desc">查看已加载的包列表</string>
+    <string name="analysis_class_desc">查询类信息、调用方法、查看字段</string>
+    <string name="analysis_memory_desc">内存使用、GC管理、堆转储</string>
+    <string name="analysis_hook_desc">动态Hook、方法监控、调用追踪</string>
+    <string name="analysis_thread_desc">线程状态、死锁检测、性能分析</string>
+    <string name="analysis_network_desc">网络请求监控、Mock响应</string>
+    <string name="analysis_server_checking">● 检查服务端状态…</string>
+    <string name="analysis_server_connected">● 服务端已连接</string>
+    <string name="analysis_server_disconnected">● 服务端未连接</string>
+    <string name="analysis_export_context">设备上下文</string>
+    <string name="analysis_export_context_desc">查看设备信息、系统属性、HTTP配置等</string>
+    <string name="analysis_export_context_failed">查询设备上下文失败</string>
+    <string name="analysis_export_context_loading">正在采集设备上下文…</string>
+    <string name="analysis_export_context_empty">暂无数据</string>
+    <string name="analysis_export_context_refresh">刷新</string>
+    <string name="analysis_export_context_copy_success">已复制到剪贴板</string>
+    <string name="analysis_export_context_tip">点击字段可复制内容</string>
+    <string name="analysis_export_context_field_label">字段名</string>
+    <string name="analysis_export_context_field_value">值</string>
+    <string name="analysis_export_context_total_format">共 %d 个字段</string>
+    <string name="ctx_category_http_config">HTTP配置</string>
+    <string name="ctx_category_device_identity">设备标识</string>
+    <string name="ctx_category_device_info">设备信息</string>
+    <string name="ctx_category_system_info">系统信息</string>
+    <string name="ctx_category_locale_info">区域语言</string>
+    <string name="ctx_category_network_service">网络服务</string>
+    <string name="packages_query_failed">查询包列表失败</string>
+    <string name="packages_response_type_error">响应类型错误: 期望 %1$s, 实际 %2$s</string>
+    <string name="packages_loading">正在查询包列表…</string>
+    <string name="packages_empty">暂无包数据</string>
+    <string name="packages_total_format">共 %d 个包</string>
+    <string name="packages_refresh">刷新</string>
+    <string name="packages_error_query">查询失败: %s</string>
+    <string name="packages_copy_success">已复制到剪贴板</string>
+
+    <!-- System Info Analysis -->
+    <string name="analysis_system_info">系统信息</string>
+    <string name="analysis_system_info_desc">查看操作系统、CPU、内存等系统信息</string>
+    <string name="analysis_system_info_failed">查询系统信息失败</string>
+    <string name="analysis_system_info_loading">正在收集系统信息…</string>
+    <string name="analysis_system_info_empty">暂无数据</string>
+    <string name="analysis_system_info_refresh">刷新</string>
+    <string name="analysis_system_info_copy_success">已复制到剪贴板</string>
+    <string name="analysis_system_info_tip">点击字段可复制内容</string>
+    <string name="analysis_system_info_field_label">字段</string>
+    <string name="analysis_system_info_field_value">值</string>
+    <string name="analysis_system_info_total_format">共 %1$d 个字段</string>
+    <string name="sys_category_os_info">操作系统信息</string>
+    <string name="sys_category_cpu_info">CPU 信息</string>
+    <string name="sys_category_memory_info">内存信息</string>
+    <string name="sys_category_system_props">系统属性</string>
 </resources>

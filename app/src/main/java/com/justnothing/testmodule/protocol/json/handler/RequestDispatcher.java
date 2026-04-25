@@ -1,7 +1,21 @@
 package com.justnothing.testmodule.protocol.json.handler;
 
 import com.justnothing.testmodule.protocol.json.request.CommandRequest;
+import com.justnothing.testmodule.protocol.json.response.ClassHierarchyResult;
+import com.justnothing.testmodule.protocol.json.response.ClassInfoResult;
 import com.justnothing.testmodule.protocol.json.response.CommandResult;
+import com.justnothing.testmodule.protocol.json.response.DeadlockDetectResult;
+import com.justnothing.testmodule.protocol.json.response.ExportContextResult;
+import com.justnothing.testmodule.protocol.json.response.GcResult;
+import com.justnothing.testmodule.protocol.json.response.GetFieldValueResult;
+import com.justnothing.testmodule.protocol.json.response.HookAddResult;
+import com.justnothing.testmodule.protocol.json.response.HookListResult;
+import com.justnothing.testmodule.protocol.json.response.InvokeConstructorResult;
+import com.justnothing.testmodule.protocol.json.response.InvokeMethodResult;
+import com.justnothing.testmodule.protocol.json.response.MemoryInfoResult;
+import com.justnothing.testmodule.protocol.json.response.SetFieldValueResult;
+import com.justnothing.testmodule.protocol.json.response.SystemInfoResult;
+import com.justnothing.testmodule.protocol.json.response.ThreadInfoResult;
 import com.justnothing.testmodule.utils.logging.Logger;
 
 import org.json.JSONObject;
@@ -10,10 +24,36 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 public class RequestDispatcher {
+
+    private static boolean initialized = false;
     
     private static final Logger logger = Logger.getLoggerForName("RequestDispatcher");
     private static final ConcurrentHashMap<String, RequestHandler<?, ?>> handlers = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, Supplier<CommandResult>> resultTypes = new ConcurrentHashMap<>();
+
+    public static void ensureInitialized() {
+        if (!initialized) {
+            registerResultType(ClassInfoResult.class);
+            registerResultType(ClassHierarchyResult.class);
+            registerResultType(InvokeConstructorResult.class);
+            registerResultType(InvokeMethodResult.class);
+            registerResultType(GetFieldValueResult.class);
+            registerResultType(SetFieldValueResult.class);
+            registerResultType(MemoryInfoResult.class);
+            registerResultType(GcResult.class);
+            registerResultType(ThreadInfoResult.class);
+            registerResultType(DeadlockDetectResult.class);
+            registerResultType(HookListResult.class);
+            registerResultType(HookAddResult.class);
+            registerResultType(SystemInfoResult.class);
+            registerResultType(ExportContextResult.class);
+            initialized = true;
+        }
+    }
+
+    static {
+        ensureInitialized();
+    }
     
     public static void registerHandler(RequestHandler<?, ?> handler) {
         String commandType = handler.getCommandType();
@@ -30,7 +70,25 @@ public class RequestDispatcher {
         resultTypes.put(resultType, supplier);
         logger.info("注册响应类型: " + resultType);
     }
-    
+
+    public static void registerResultType(Class<? extends CommandResult> resultClass) {
+        String resultType;
+        try {
+            resultType = resultClass.newInstance().getResultType();
+        } catch (IllegalAccessException | InstantiationException e) {
+            logger.error("获取resultType失败", e);
+            throw new RuntimeException("注册响应类型" + resultClass.getSimpleName() + "失败", e);
+        }
+        registerResultType(resultType, () -> {
+            try {
+                return resultClass.newInstance();
+            } catch (ReflectiveOperationException e) {
+                logger.error("创建响应实例失败", e);
+                throw new RuntimeException("创建响应实例" + resultClass.getSimpleName() + "失败", e);
+            }
+        });
+    }
+
     @SuppressWarnings("unchecked")
     public static CommandResult handleRequest(CommandRequest request) {
         if (request == null) {

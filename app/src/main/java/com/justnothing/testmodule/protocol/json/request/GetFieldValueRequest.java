@@ -25,9 +25,7 @@ public class GetFieldValueRequest extends CommandRequest {
     
     @Override
     public JSONObject toJson() throws JSONException {
-        JSONObject obj = new JSONObject();
-        obj.put("requestId", getRequestId());
-        obj.put("commandType", getCommandType());
+        JSONObject obj = super.toJson();
         obj.put("className", className);
         obj.put("fieldName", fieldName);
         obj.put("targetInstance", targetInstance);

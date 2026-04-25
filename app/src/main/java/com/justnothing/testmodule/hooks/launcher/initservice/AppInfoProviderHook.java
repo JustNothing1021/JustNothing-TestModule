@@ -3,10 +3,11 @@ package com.justnothing.testmodule.hooks.launcher.initservice;
 import android.content.Context;
 import android.net.Uri;
 
+import com.justnothing.testmodule.hooks.HookAPI;
 import com.justnothing.testmodule.hooks.PackageHook;
+import com.justnothing.testmodule.utils.reflect.ReflectionUtils;
 
 import de.robv.android.xposed.XC_MethodHook;
-import de.robv.android.xposed.XposedHelpers;
 
 public class AppInfoProviderHook extends PackageHook {
 
@@ -29,17 +30,17 @@ public class AppInfoProviderHook extends PackageHook {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) {
                     try {
-                        String callingPackage = (String) XposedHelpers.callMethod(param.thisObject,
+                        String callingPackage = (String) ReflectionUtils.callMethod(param.thisObject,
                                 "getCallingPackage");
                         info(callingPackage + "尝试访问" + param.args[0].toString());
                         if (ADB_PKG_NAME.equals(callingPackage)) {
                             info("此次为shell访问，准备绕过...");
 
-                            Context context = (Context) XposedHelpers.callMethod(param.thisObject,
+                            Context context = (Context) ReflectionUtils.callMethod(param.thisObject,
                                     "getContext");
                             if (context != null) {
                                 String targetPackageName = context.getPackageName();
-                                XposedHelpers.setObjectField(param.thisObject,
+                                HookAPI.setObjectField(param.thisObject,
                                         "callingPackage", targetPackageName);
                                 info("已将包名从" + ADB_PKG_NAME + "修改为" + targetPackageName);
                             }

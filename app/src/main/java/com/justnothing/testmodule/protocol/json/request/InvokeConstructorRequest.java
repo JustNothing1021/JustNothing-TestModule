@@ -34,9 +34,7 @@ public class InvokeConstructorRequest extends CommandRequest {
     
     @Override
     public JSONObject toJson() throws JSONException {
-        JSONObject obj = new JSONObject();
-        obj.put("requestId", getRequestId());
-        obj.put("commandType", getCommandType());
+        JSONObject obj = super.toJson();
         obj.put("className", className);
         obj.put("signature", signature);
         obj.put("freeMode", freeMode);

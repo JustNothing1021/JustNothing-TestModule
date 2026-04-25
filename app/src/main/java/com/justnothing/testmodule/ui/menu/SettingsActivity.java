@@ -20,13 +20,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class SettingsActivity extends AppCompatActivity {
 
-    private final Logger logger = new Logger() {
-        @Override
-        public String getTag() {
-            return "SettingsActivity";
-        }
-    };
-
+    private final Logger logger = Logger.getLoggerForName("SettingsActivity");
     private UISettings uiSettings;
     private ThemeSettings themeSettings;
     private SeekBar scaleSeekBar;

@@ -79,7 +79,7 @@ public class FieldDetailActivity extends AppCompatActivity {
         
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setTitle(R.string.field_value);
+            getSupportActionBar().setTitle(R.string.analysis_field_value);
         }
     }
     
@@ -97,9 +97,9 @@ public class FieldDetailActivity extends AppCompatActivity {
                 cardResult.setVisibility(View.VISIBLE);
                 tvValue.setText(result.getValueString() != null ? result.getValueString() : "null");
                 tvValue.setTextColor(getColor(R.color.green));
-                tvValueType.setText(getString(R.string.value_type_label) + ": " + 
-                    (result.getValueTypeName() != null ? result.getValueTypeName() : "unknown"));
-                tvValueHash.setText(getString(R.string.value_hash_label) + ": " + result.getValueHash());
+                tvValueType.setText(getString(R.string.analysis_field_value_type_label,
+                        result.getValueTypeName() != null ? result.getValueTypeName() : "unknown"));
+                tvValueHash.setText(getString(R.string.analysis_field_value_hash_label, result.getValueHash()));
             }
         });
         
@@ -115,13 +115,13 @@ public class FieldDetailActivity extends AppCompatActivity {
         
         viewModel.getSetSuccess().observe(this, success -> {
             if (success != null && success) {
-                Toast.makeText(this, R.string.set_success, Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, R.string.analysis_field_set_success, Toast.LENGTH_SHORT).show();
             }
         });
         
         viewModel.getSetError().observe(this, error -> {
             if (error != null && !error.isEmpty()) {
-                Toast.makeText(this, getString(R.string.set_failed) + ": " + error, Toast.LENGTH_LONG).show();
+                Toast.makeText(this, getString(R.string.analysis_set_field_failed, error), Toast.LENGTH_LONG).show();
             }
         });
     }
@@ -142,17 +142,16 @@ public class FieldDetailActivity extends AppCompatActivity {
             tvModifiers.setVisibility(View.GONE);
         }
         
-        tvFieldType.setText(getString(R.string.field_type_label) + ": " + 
-            DescriptorColorizer.formatTypeName(fieldType));
+        tvFieldType.setText(getString(R.string.analysis_field_type_label, DescriptorColorizer.formatTypeName(fieldType)));
         
         String declaringClass = getIntent().getStringExtra(EXTRA_DECLARING_CLASS);
         boolean declaringClassIsInterface = getIntent().getBooleanExtra(EXTRA_DECLARING_CLASS_IS_INTERFACE, false);
         if (declaringClass != null && !declaringClass.equals(className)) {
             tvDeclaringClass.setVisibility(View.VISIBLE);
             if (declaringClassIsInterface) {
-                tvDeclaringClass.setText(getString(R.string.implements_interface, DescriptorColorizer.formatTypeName(declaringClass)));
+                tvDeclaringClass.setText(getString(R.string.analysis_implements, DescriptorColorizer.formatTypeName(declaringClass)));
             } else {
-                tvDeclaringClass.setText(getString(R.string.inherited_from, DescriptorColorizer.formatTypeName(declaringClass)));
+                tvDeclaringClass.setText(getString(R.string.analysis_extends, DescriptorColorizer.formatTypeName(declaringClass)));
             }
         } else {
             tvDeclaringClass.setVisibility(View.GONE);
@@ -173,7 +172,7 @@ public class FieldDetailActivity extends AppCompatActivity {
                 etTargetInstance.getText().toString().trim() : "";
             if (targetInstance.isEmpty()) {
                 cardResult.setVisibility(View.VISIBLE);
-                tvValue.setText(R.string.instance_field_requires_target);
+                tvValue.setText(R.string.analysis_instance_field_requires_target);
                 tvValue.setTextColor(getColor(R.color.red));
                 return;
             }
@@ -190,7 +189,7 @@ public class FieldDetailActivity extends AppCompatActivity {
             targetInstance = etTargetInstance.getText() != null ? 
                 etTargetInstance.getText().toString().trim() : "";
             if (targetInstance.isEmpty()) {
-                Toast.makeText(this, R.string.instance_field_requires_target, Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, R.string.analysis_instance_field_requires_target, Toast.LENGTH_SHORT).show();
                 return;
             }
         }
@@ -198,7 +197,7 @@ public class FieldDetailActivity extends AppCompatActivity {
         String valueExpression = etValueExpression.getText() != null ? 
             etValueExpression.getText().toString().trim() : "";
         if (valueExpression.isEmpty()) {
-            Toast.makeText(this, R.string.please_enter_value_expression, Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.analysis_please_enter_value_expression, Toast.LENGTH_SHORT).show();
             return;
         }
         

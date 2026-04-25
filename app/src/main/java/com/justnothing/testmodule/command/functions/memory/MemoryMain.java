@@ -13,6 +13,7 @@ import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.io.IOManager;
 
+import java.util.Arrays;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -162,7 +163,7 @@ public class MemoryMain extends CommandBase {
             }
             default -> {
                 subCommand = args[0];
-                subArgs = java.util.Arrays.copyOfRange(args, 1, args.length);
+                subArgs = Arrays.copyOfRange(args, 1, args.length);
             }
         }
 

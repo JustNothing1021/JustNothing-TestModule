@@ -44,20 +44,11 @@ import java.util.List;
 
 public class ScriptManagerActivity extends AppCompatActivity {
 
+    private static final Logger logger = Logger.getLoggerForName("ScriptManagerActivity");
     private static final String NAME = "name";
     private static final String DESCRIPTION = "description";
     private static final String COMMAND = "commands";
     private static final String CATEGORY = "category";
-
-    private static class ScriptLogger extends Logger {
-        @Override
-        public String getTag() {
-            return "ScriptManagerActivity";
-        }
-    }
-
-    private final ScriptLogger logger = new ScriptLogger();
-
     private List<Script> scripts;
     private ScriptAdapter adapter;
     private File scriptsFile;

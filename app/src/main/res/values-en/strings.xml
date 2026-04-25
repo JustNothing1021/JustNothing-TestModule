@@ -14,7 +14,7 @@
     <string name="performance_monitor">Performance Monitor</string>
     <string name="data_export">Data Export</string>
     <string name="interface_settings">Interface Settings</string>
-    <string name="did_you_know">Did You Know That...</string>
+    <string name="did_you_know">Did You Know That…</string>
     <string name="about">About</string>
     <string name="about_author">Author</string>
     <string name="about_author_info">JustNothing1021 (Backend and minimal frontend)\nNoneColdWind (\"Did You Know?\" and extension packs)\nNAN (\"Did You Know?\" and ADB tutorials)</string>
@@ -148,7 +148,7 @@
     <string name="did_you_know_unknown_index">Tip ? / Total ?</string>
     <string name="did_you_know_author_format">-- %s</string>
     <string name="did_you_know_no_tip_available">No tips available for now…</string>
-    <string name="did_you_known_index_format">Tip %d / Total %d</string>
+    <string name="did_you_known_index_format" formatted="false">Tip %d / Total %d</string>
     <string name="did_you_know_title">Did You Know?</string>
     <string name="welcome_subtitle_description">An Xposed module that is just nothing</string>
     <string name="data_export_permission_warn">File write permission not obtained, may not be able to save files</string>
@@ -162,6 +162,8 @@
     <string name="data_export_file_cleared">Deleted file %s</string>
     <string name="data_export_file_clear_failed">Failed to delete file %s</string>
     <string name="general_exit_app">Exit App</string>
+    <string name="general_enter">Enter</string>
+    <string name="xposeddescription">My first Xposed module, now feels more like a performance analysis tool (not actually)</string>
     <string name="performance_monitor_stat_desc">Performance Monitor: %s</string>
     <string name="performance_monitor_stat_enabled">enabled</string>
     <string name="performance_monitor_stat_disabled">disabled</string>
@@ -170,4 +172,371 @@
     <string name="performance_hook_total_time">Total time cost: %dms</string>
     <string name="performance_hook_avg_time">Average time cost: %dms</string>
     <string name="script_execute_finished">Script execution finished!</string>
+    <string name="analysis_dymanic_hook_management">Dymanic Hook Management</string>
+    <string name="system_analysis">System analysis</string>
+    <string name="analysis_view_fields">View fields</string>
+    <string name="analysis_field_value_title">Field Value</string>
+    <string name="analysis_field_value_type_label">Value Type: %s</string>
+    <string name="analysis_field_value_hash_label">Value Hash: %d</string>
+    <string name="analysis_set_field_value">Set Field Value</string>
+    <string name="analysis_value_expression_hint">Enter value expression…</string>
+    <string name="http_config_content_provider_permission_error">No permission accessing ContentProvider  %1$s</string>
+    <string name="http_config_uri_incorrect_error">URI may incorrect     %1$s</string>
+    <string name="http_config_unknown_error_format">Unknown error occurred      %1$s</string>
+    <string name="analysis_param_label_format">Param #%1$d (%2$s)</string>
+    <string name="analysis_type_hint_optional">Type (Infers automatically if empty)</string>
+    <string name="analysis_method_info_title">Method Information</string>
+    <string name="analysis_invoke_target_instance_title">Target Instance</string>
+    <string name="analysis_invoke_target_instance_hint">Enter target instance expression…</string>
+    <string name="analysis_network_analysis">Network Analysis</string>
+    <string name="thread_analysis">Thread analysis</string>
+    <string name="analysis_access_modifiers">Access Modifiers</string>
+    <string name="analysis_super_class">Super Class</string>
+    <string name="analysis_instance_after_invocation">Instance after Invocation</string>
+    <string name="analysis_method_select_overload">Select an overload</string>
+    <string name="analysis_set_field_unknown_error">Unknown Error</string>
+    <string name="analysis_set_exception">Error while setting: %s</string>
+    <string name="analysis_field_set_success">Success</string>
+    <string name="analysis_set_field_failed">Setting failed: %s</string>
+    <string name="analysis_field_type_label">Type: %s</string>
+    <string name="analysis_field_modifiers_label">Modifiers</string>
+    <string name="analysis_field_no_modifiers">None</string>
+    <string name="analysis_constructor_info_title">Constructor Information</string>
+    <string name="analysis_invoke_params_title">Parameters</string>
+    <string name="analysis_invoke_free_mode">Free Mode</string>
+    <string name="analysis_constructor_no_params_hint">This constructor doesn\'t accept parameters</string>
+    <string name="analysis_construct">Invoke Constructor</string>
+    <string name="analysis_invoke_result_title">Result</string>
+    <string name="analysis_invoke_result_type_label">Type: %s</string>
+    <string name="analysis_invoke_result_hash_label">Hash: %d</string>
+    <string name="analysis_add_param">Add Parameter</string>
+    <string name="analysis_remove_param">Remove Parameter</string>
+    <string name="analysis_invoke_method">Invoke Method</string>
+    <string name="analysis_method_return_type_label">Return Type: %s</string>
+    <string name="analysis_method_no_params_hint">This method doesn\'t accept parameters</string>
+    <string name="analysis_field_info_title">Field Information</string>
+    <string name="analysis_get_field_value">Get Field Value</string>
+    <string name="analysis_set_field_value_title">Set Field Value</string>
+    <string name="class_analysis">Class analysis</string>
+    <string name="analysis_enter_class_name">Enter class name…</string>
+    <string name="analysis_query_class">Query</string>
+    <string name="analysis_class_info">Class Information</string>
+    <string name="analysis_click_to_view_hierarchy">Click to view hierarchy</string>
+    <string name="analysis_class_name">Class Name</string>
+    <string name="analysis_implemented_interfaces">Implmented Interfaces</string>
+    <string name="analysis_constructors_format">Constructors (%d)</string>
+    <string name="analysis_methods">Methods</string>
+    <string name="analysis_fields_format">Fields (%d)</string>
+    <string name="analysis_loading">Loading…</string>
+    <string name="analysis_class_query_failed_format">Query failed: %s</string>
+    <string name="analysis_class_hierarchy">Class Hierarchy</string>
+    <string name="analysis_current_class">Current Class</string>
+    <string name="analysis_class_query_failed">Query Failed</string>
+    <string name="analysis_parent_class">Super Class</string>
+    <string name="analysis_no_modifiers">Default Access (package-private?)</string>
+    <string name="analysis_no_super_class">None (Object or Primitive)</string>
+    <string name="analysis_implemented_interface">Implemented Interface(s)</string>
+    <string name="analysis_class_not_found">Class not found</string>
+    <string name="analysis_class_name_empty">Class name can\'t be empty</string>
+    <string name="analysis_extends">Extends %s</string>
+    <string name="analysis_implements">Implements %s</string>
+    <string name="implements_implements_bracket">[Implements %s]</string>
+    <string name="none">None</string>
+    <string name="analysis_no_params">No parameters</string>
+    <string name="analysis_overload_count">%d overloads</string>
+    <string name="analysis_expand_collapse">Expand/Collapse</string>
+    <string name="analysis_class_type_class">Class</string>
+    <string name="analysis_class_type_interface">Interface</string>
+    <string name="analysis_class_type_annotation">Annotation</string>
+    <string name="analysis_class_type_enum">Enumeration</string>
+    <string name="analysis_class_type_abstract">Abstract Class</string>
+    <string name="analysis_class_type_final">Final Class</string>
+    <string name="analysis_query_info">Query Information</string>
+    <string name="analysis_field_value">Field Value</string>
+    <string name="analysis_method_invoke">Method Invocation</string>
+    <string name="analysis_constructor">Constructor</string>
+    <string name="analysis_memory_analysis">Memoty Analysis</string>
+    <string name="analysis_invoke_methods">Invoke Methods</string>
+    <string name="analysis_instance_field_requires_target">Instance field requires target instance expression</string>
+    <string name="analysis_please_enter_value_expression">Please enter value expression</string>
+    <string name="analysis_field_get_failed">Failed to get</string>
+    <string name="analysis_response_type_error">Response type error: expected %1$s, actual %2$s</string>
+    <string name="analysis_get_exception">Exception occurred: %s</string>
+    <string name="analysis_invoke_unknown_error">Unknown Error</string>
+    <string name="analysis_invoke_exception">Exception occurred: %s</string>
+    <string name="analysis_instance_method_requires_target">Instance method requires a target</string>
+    <string name="analyze_invoke_free_mode_param">Free Mode</string>
+    <string name="analysis_methods_count_format">" (count: %1$d, %2$d overloads)"</string>
+    <string name="analysis_enter_class_name_hint">Enter class name…</string>
+    <string name="auto_scroll_on">Auto scroll: On</string>
+    <string name="auto_scroll_off">Auto scroll: Off</string>
+    <string name="no_file_permission_warn">Some features may not functioning…</string>
+    <string name="hook_detail_not_found">Can\'t find the detail of this Hook…</string>
+    <string name="method_name_with_overloads">%1$s (%2$d overloads)</string>
+    <string name="analysis_invoke_extends_bracket">[extends %s]</string>
+
+    <!-- Memory Analysis -->
+    <string name="analysis_memory_auto_refresh">Auto Refresh</string>
+    <string name="analysis_memory_last_update">Last Update</string>
+    <string name="analysis_memory_java_runtime">Java Runtime Heap</string>
+    <string name="analysis_memory_native_heap">Native Heap</string>
+    <string name="analysis_memory_process_memory">Process Memory</string>
+    <string name="analysis_memory_system_status">System Status</string>
+    <string name="analysis_memory_pss">PSS</string>
+    <string name="analysis_memory_uss">USS</string>
+    <string name="analysis_memory_rss">RSS</string>
+    <string name="analysis_memory_gc_button">Run GC</string>
+    <string name="analysis_memory_export_dump">Export Info</string>
+    <string name="analysis_memory_heap_detail">Free: %1$s | Total: %2$s | Max: %3$s</string>
+    <string name="analysis_memory_native_detail">Free: %1$s | Allocated: %2$s</string>
+    <string name="analysis_memory_system_total">System Total: %s</string>
+    <string name="analysis_memory_low_memory_yes">Low Memory</string>
+    <string name="analysis_memory_low_memory_no">Normal</string>
+    <string name="analysis_memory_gc_confirm_title">Confirm GC</string>
+    <string name="analysis_memory_gc_confirm_message">Garbage collection may cause brief lag. Continue?\n\n• Full GC: Runs GC twice + Finalization, more thorough but slower\n• Standard GC: Runs GC once only</string>
+    <string name="analysis_memory_gc_full">Full GC</string>
+    <string name="analysis_memory_gc_standard">Standard GC</string>
+    <string name="analysis_memory_gc_complete_title">GC Complete</string>
+    <string name="analysis_memory_gc_result_format" formatted="false">Before: %s (%.1f%%)\nAfter: %s (%.1f%%)\n\n%s</string>
+    <string name="analysis_memory_freed">Freed</string>
+    <string name="analysis_memory_no_change">No significant change</string>
+    <string name="analysis_memory_export_success_title">Export Successful</string>
+    <string name="analysis_memory_export_success_msg">Memory dump saved to:\n%s</string>
+    <string name="analysis_memory_export_failed_title">Export Failed</string>
+
+    <!-- Memory Analysis Dump Content -->
+    <string name="analysis_memory_dump_title">=== Memory Dump ===</string>
+    <string name="analysis_memory_dump_time">Time: %s</string>
+    <string name="analysis_memory_dump_section_java">--- Java Runtime Heap ---</string>
+    <string name="analysis_memory_dump_max">  Max: %s</string>
+    <string name="analysis_memory_dump_allocated">  Allocated: %s</string>
+    <string name="analysis_memory_dump_free">  Free: %s</string>
+    <string name="analysis_memory_dump_used" formatted="false">  Used: %s (%s)</string>
+    <string name="analysis_memory_dump_section_native">--- Native Heap ---</string>
+    <string name="analysis_memory_dump_section_process">--- Process Memory ---</string>
+    <string name="analysis_memory_dump_section_system">--- System Memory ---</string>
+    <string name="analysis_memory_dump_avail">  Available: %s</string>
+    <string name="analysis_memory_dump_total">  Total: %s</string>
+    <string name="analysis_memory_dump_low_memory_yes">  Low Memory: Yes</string>
+    <string name="analysis_memory_dump_low_memory_no">  Low Memory: No</string>
+
+    <!-- Memory Analysis ViewModel Error Messages -->
+    <string name="analysis_memory_error_query_failed">Query failed</string>
+    <string name="analysis_memory_error_query_format">Query failed: %s</string>
+    <string name="analysis_memory_error_response_type">Response type error: %s</string>
+    <string name="analysis_memory_error_gc_failed">GC failed</string>
+    <string name="analysis_memory_error_gc_response_type">GC response type error</string>
+    <string name="analysis_memory_error_gc_execute_failed">GC execution failed: %s</string>
+
+    <!-- Memory Analysis - VM Details -->
+    <string name="analysis_memory_vm_details">VM Details</string>
+    <string name="analysis_memory_thread_count">Threads</string>
+    <string name="analysis_memory_class_loaded">Loaded Classes</string>
+    <string name="analysis_memory_class_total">Total Classes</string>
+    <string name="analysis_memory_bitmap_info">Bitmap Memory</string>
+    <string name="analysis_memory_database_size">Database Size</string>
+
+    <!-- Memory Analysis - Trend Chart -->
+    <string name="analysis_memory_trend_hint">Tap for trend</string>
+    <string name="analysis_memory_trend_title">Memory Usage Trend</string>
+    <string name="analysis_memory_trend_label">Usage (%)</string>
+    <string name="analysis_memory_trend_current" formatted="false">Current: %.1f%% (%s)</string>
+    <string name="analysis_memory_usage_good">Normal</string>
+    <string name="analysis_memory_usage_warning">High</string>
+    <string name="analysis_memory_usage_critical">Critical</string>
+    <string name="analysis_memory_trend_empty">No data yet. Go back to dashboard, enable auto-refresh, and wait for data collection.</string>
+
+    <!-- Memory Analysis Dump Content - VM Section -->
+    <string name="analysis_memory_dump_section_vm">--- VM Details ---</string>
+
+    <!-- ========== Thread Analysis ========== -->
+    <string name="analysis_thread_title">Thread Analysis</string>
+    <string name="analysis_thread_last_update">Last update:</string>
+    <string name="analysis_thread_auto_refresh">Auto refresh</string>
+
+    <string name="analysis_thread_overview">Thread Overview</string>
+    <string name="analysis_thread_total_format" formatted="false">%d threads total</string>
+
+    <string name="analysis_thread_state_stats">State Statistics</string>
+    <string name="analysis_thread_state_runnable">RUNNABLE</string>
+    <string name="analysis_thread_state_blocked">BLOCKED</string>
+    <string name="analysis_thread_state_waiting">WAITING</string>
+    <string name="analysis_thread_state_timed_waiting">TIMED_WAITING</string>
+    <string name="analysis_thread_state_other">TERMINATED / NEW</string>
+
+    <string name="analysis_thread_list">Thread List</string>
+    <string name="analysis_thread_list_count" formatted="false">%d threads</string>
+    <string name="analysis_thread_empty">No thread data available</string>
+
+    <string name="analysis_thread_deadlock_detect">Deadlock Detection</string>
+    <string name="analysis_thread_btn_detect">Detect Deadlock</string>
+    <string name="analysis_thread_btn_refresh">Refresh</string>
+    <string name="analysis_thread_btn_export">Export</string>
+
+    <string name="analysis_thread_deadlock_confirm_title">Confirm Deadlock Detection</string>
+    <string name="analysis_thread_deadlock_confirm_msg">Will scan all thread states for BLOCKED threads. Continue?</string>
+    <string name="analysis_thread_deadlock_found" formatted="false">Found %d potentially deadlocked threads!</string>
+    <string name="analysis_thread_deadlock_none">No obvious deadlock detected</string>
+    <string name="analysis_thread_blocked_threads">Potentially deadlocked (BLOCKED) threads:</string>
+
+    <string name="analysis_thread_export_success">Export Successful</string>
+    <string name="analysis_thread_export_path" formatted="false">File saved to:\n%s</string>
+
+    <string name="analysis_thread_error_query_failed">Failed to query thread info</string>
+    <string name="analysis_thread_error_response_type" formatted="false">Unexpected response type: %s</string>
+    <string name="analysis_thread_error_query_format" formatted="false">Thread query exception: %s</string>
+    <string name="analysis_thread_error_deadlock_failed">Failed to get deadlock result</string>
+    <string name="analysis_thread_error_deadlock_response_type">Deadlock response type error</string>
+    <string name="analysis_thread_error_deadlock_execute_failed" formatted="false">Deadlock detection error: %s</string>
+    <string name="analysis_thread_error_export_failed" formatted="false">Export failed: %s</string>
+
+    <string name="analysis_thread_dump_name" formatted="false">  Thread: %s</string>
+    <string name="analysis_thread_dump_id" formatted="false">  ID: %s</string>
+    <string name="analysis_thread_dump_state" formatted="false">  State: %s</string>
+
+    <!-- Search & Filter -->
+    <string name="analysis_thread_search_hint">Search thread name...</string>
+    <string name="analysis_thread_filter_all">All</string>
+    <string name="analysis_thread_filter_waiting">Waiting</string>
+    <string name="analysis_thread_filter_other">Other</string>
+    <string name="analysis_thread_group_format" formatted="false">%s (%d)</string>
+    <string name="analysis_thread_search_empty">No matching threads found</string>
+
+    <!-- Thread Detail -->
+    <string name="analysis_thread_detail_id">ID</string>
+    <string name="analysis_thread_detail_state">State</string>
+    <string name="analysis_thread_detail_priority">Priority</string>
+    <string name="analysis_thread_detail_daemon">Daemon</string>
+    <string name="analysis_thread_detail_interrupted">Interrupted</string>
+    <string name="analysis_thread_detail_alive">Alive</string>
+    <string name="analysis_thread_detail_stack">Stack Trace</string>
+    <string name="analysis_thread_stack_click_hint">Tap to view class →</string>
+    <string name="analysis_thread_sort_title">Sort by</string>
+    <string name="analysis_thread_sort_name">Name</string>
+    <string name="analysis_thread_sort_priority">Priority</string>
+    <string name="analysis_thread_sort_id">ID</string>
+    <string name="analysis_thread_sort_asc">Ascending ↑</string>
+    <string name="analysis_thread_sort_desc">Descending ↓</string>
+    <string name="analysis_thread_copy_success">Thread info copied to clipboard</string>
+    <string name="analysis_hook_title">Hook Manager</string>
+    <string name="analysis_hook_overview">Hook Overview</string>
+    <string name="analysis_hook_overview_format" formatted="false">Hook Overview: %d (Active: %d)</string>
+    <string name="analysis_hook_total_format" formatted="false">%d hooks total</string>
+    <string name="analysis_hook_active_format" formatted="false">Active: %d</string>
+    <string name="analysis_hook_search_hint">Search class or method name...</string>
+    <string name="analysis_hook_empty">No hook data available</string>
+    <string name="analysis_hook_search_empty">No matching hooks found</string>
+    <string name="analysis_hook_group_enabled" formatted="false">Enabled (%d)</string>
+    <string name="analysis_hook_group_disabled" formatted="false">Disabled (%d)</string>
+    <string name="analysis_hook_group_inactive" formatted="false">Inactive (%d)</string>
+    <string name="analysis_hook_btn_add">Add Hook</string>
+    <string name="analysis_hook_btn_clear_all">Clear All</string>
+    <string name="analysis_hook_btn_refresh">Refresh</string>
+    <string name="analysis_hook_last_update">Last update:</string>
+    <string name="analysis_hook_phases" formatted="false">%s phase</string>
+    <string name="analysis_hook_calls_format" formatted="false">%d calls</string>
+    <string name="analysis_hook_confirm_clear_title">Confirm Clear All Hooks</string>
+    <string name="analysis_hook_confirm_clear_msg">Are you sure you want to remove all hooks? This cannot be undone.</string>
+    <string name="analysis_hook_confirm_remove_title">Confirm Remove Hook</string>
+    <string name="analysis_hook_confirm_remove_msg" formatted="false">Are you sure you want to remove hook [%s]?</string>
+    <string name="analysis_hook_cleared_success" formatted="false">Cleared %d hooks</string>
+    <string name="analysis_hook_removed_success">Hook removed</string>
+    <string name="analysis_hook_add_title">Add Hook</string>
+    <string name="analysis_hook_add_class_name">Class Name *</string>
+    <string name="analysis_hook_add_class_hint">e.g. com.example.MainActivity</string>
+    <string name="analysis_hook_add_method_name">Method Name *</string>
+    <string name="analysis_hook_add_method_hint">e.g. onCreate</string>
+    <string name="analysis_hook_add_signature">Signature (optional)</string>
+    <string name="analysis_hook_add_signature_hint">e.g. String, int or leave empty for auto-match</string>
+    <string name="analysis_hook_add_phase_before">Before phase (execute before method call)</string>
+    <string name="analysis_hook_add_phase_after">After phase (execute after method call)</string>
+    <string name="analysis_hook_add_phase_replace">Replace phase (replace original method)</string>
+    <string name="analysis_hook_add_code_hint">// Enter script code...</string>
+    <string name="analysis_hook_add_submit">Submit Hook</string>
+    <string name="analysis_hook_add_param">Add Parameter</string>
+    <string name="analysis_hook_no_params_hint">Tap button below to add parameter types</string>
+    <string name="analysis_hook_add_need_one_phase">Please select at least one hook phase</string>
+    <string name="analysis_hook_add_success">Hook added successfully!</string>
+    <string name="analysis_hook_detail_title">Hook Details</string>
+    <string name="analysis_hook_detail_id">ID</string>
+    <string name="analysis_hook_detail_class">Target Class</string>
+    <string name="analysis_hook_detail_method">Target Method</string>
+    <string name="analysis_hook_detail_signature">Signature</string>
+    <string name="analysis_hook_detail_status">Status</string>
+    <string name="analysis_hook_detail_call_count">Call Count</string>
+    <string name="analysis_hook_detail_create_time">Created</string>
+    <string name="analysis_hook_detail_code_before">Before Code</string>
+    <string name="analysis_hook_detail_code_after">After Code</string>
+    <string name="analysis_hook_detail_code_replace">Replace Code</string>
+    <string name="analysis_hook_detail_output_log">Output Log</string>
+    <string name="analysis_hook_detail_error_log">Error Log</string>
+    <string name="analysis_hook_detail_no_output">No output yet</string>
+    <string name="analysis_hook_detail_btn_remove">Remove</string>
+    <string name="analysis_hook_detail_btn_enable">Enable</string>
+    <string name="analysis_hook_detail_btn_disable">Disable</string>
+    <string name="analysis_hook_detail_btn_output">Refresh Output</string>
+    <string name="analysis_hook_status_active">Active</string>
+    <string name="analysis_hook_status_inactive">Inactive</string>
+    <string name="analysis_hook_status_enabled">Enabled</string>
+    <string name="analysis_hook_status_disabled">Disabled</string>
+    <string name="analysis_hook_error_query_failed">Failed to query hook list</string>
+    <string name="analysis_hook_error_response_type" formatted="false">Unexpected response type: %s</string>
+    <string name="analysis_hook_error_query_format" formatted="false">Hook query exception: %s</string>
+    <string name="analysis_hook_error_add_format" formatted="false">Hook add exception: %s</string>
+    <string name="analysis_hook_error_action_format" formatted="false">Hook action[%s] exception: %s</string>
+    <string name="analysis_constructors_label">Constructors</string>
+    <string name="analysis_fields_label">Fields</string>
+    <string name="analysis_methods_and_count_format">Methods (%1$d count, %2$d overloads)</string>
+    <string name="packages_analysis">Packages</string>
+    <string name="analysis_packages_desc">View loaded package list</string>
+    <string name="analysis_class_desc">Query class info, invoke methods, view fields</string>
+    <string name="analysis_memory_desc">Memory usage, GC management, heap dump</string>
+    <string name="analysis_hook_desc">Dynamic hooks, method monitoring, call tracing</string>
+    <string name="analysis_thread_desc">Thread status, deadlock detection, performance</string>
+    <string name="analysis_network_desc">Network request monitoring, mock responses</string>
+    <string name="analysis_server_checking">● Checking server status…</string>
+    <string name="analysis_server_connected">● Server connected</string>
+    <string name="analysis_server_disconnected">● Server disconnected</string>
+    <string name="analysis_export_context">Device Context</string>
+    <string name="analysis_export_context_desc">View device info, system properties, HTTP config, etc.</string>
+    <string name="analysis_export_context_failed">Failed to query device context</string>
+    <string name="analysis_export_context_loading">Collecting device context…</string>
+    <string name="analysis_export_context_empty">No data available</string>
+    <string name="analysis_export_context_refresh">Refresh</string>
+    <string name="analysis_export_context_copy_success">Copied to clipboard</string>
+    <string name="analysis_export_context_tip">Tap a field to copy its value</string>
+    <string name="analysis_export_context_field_label">Field</string>
+    <string name="analysis_export_context_field_value">Value</string>
+    <string name="analysis_export_context_total_format">%d fields total</string>
+    <string name="ctx_category_http_config">HTTP Config</string>
+    <string name="ctx_category_device_identity">Device Identity</string>
+    <string name="ctx_category_device_info">Device Info</string>
+    <string name="ctx_category_system_info">System Info</string>
+    <string name="ctx_category_locale_info">Locale &amp; Language</string>
+    <string name="ctx_category_network_service">Network Service</string>
+    <string name="packages_query_failed">Failed to query package list</string>
+    <string name="packages_response_type_error">Response type error: expected %1$s, actual %2$s</string>
+    <string name="packages_loading">Querying packages…</string>
+    <string name="packages_empty">No package data available</string>
+    <string name="packages_total_format">%d packages total</string>
+    <string name="packages_refresh">Refresh</string>
+    <string name="packages_error_query">Query failed: %s</string>
+    <string name="packages_copy_success">Copied to clipboard</string>
+
+    <!-- System Info Analysis -->
+    <string name="analysis_system_info">System Information</string>
+    <string name="analysis_system_info_desc">View OS, CPU, memory and other system information</string>
+    <string name="analysis_system_info_failed">Failed to query system information</string>
+    <string name="analysis_system_info_loading">Collecting system information…</string>
+    <string name="analysis_system_info_empty">No data available</string>
+    <string name="analysis_system_info_refresh">Refresh</string>
+    <string name="analysis_system_info_copy_success">Copied to clipboard</string>
+    <string name="analysis_system_info_tip">Tap a field to copy its value</string>
+    <string name="analysis_system_info_field_label">Field</string>
+    <string name="analysis_system_info_field_value">Value</string>
+    <string name="analysis_system_info_total_format">%1$d fields total</string>
+    <string name="sys_category_os_info">Operating System</string>
+    <string name="sys_category_cpu_info">CPU Information</string>
+    <string name="sys_category_memory_info">Memory Information</string>
+    <string name="sys_category_system_props">System Properties</string>
 </resources>

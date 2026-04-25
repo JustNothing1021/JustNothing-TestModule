@@ -4,6 +4,7 @@ import com.justnothing.testmodule.constants.AppEnvironment;
 import com.justnothing.testmodule.hooks.XposedBasicHook;
 import com.justnothing.testmodule.utils.logging.Logger;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -167,7 +168,34 @@ public class ClassResolver {
                 logger.debug("基本类型: void");
                 return void.class;
         }
-        return findClassInternal(className, classLoader);
+        
+        Class<?> clazz = findClassInternal(className, classLoader);
+        if (clazz != null) {
+            return clazz;
+        }
+        
+        if (className.contains(".")) {
+            String[] parts = className.split("\\.");
+            if (parts.length >= 2) {
+                for (int i = parts.length - 1; i >= 1; i--) {
+                    StringBuilder nestedClassName = new StringBuilder(parts[0]);
+                    for (int j = 1; j < parts.length; j++) {
+                        if (j < i) {
+                            nestedClassName.append('.').append(parts[j]);
+                        } else {
+                            nestedClassName.append('$').append(parts[j]);
+                        }
+                    }
+                    clazz = findClassInternal(nestedClassName.toString(), classLoader);
+                    if (clazz != null) {
+                        logger.debug("通过嵌套类名找到类: " + clazz.getName());
+                        return clazz;
+                    }
+                }
+            }
+        }
+        
+        return null;
     }
     
 
@@ -277,6 +305,31 @@ public class ClassResolver {
     }
 
     protected static Class<?> findClassInternal(String className, ClassLoader preferredLoader) {
+        int arrayDepth = 0;
+
+        while (className.endsWith("[]")) {
+            className = className.substring(0, className.length() - 2);
+            arrayDepth++;
+        }
+
+        if (className.contains("<")) {
+            className = className.substring(0, className.indexOf('<'));
+        }
+
+        Class<?> clazz = findClassInAllLoaders(className, preferredLoader);
+
+        if (clazz == null) return null;
+
+        while (arrayDepth-- > 0) {
+            clazz = Array.newInstance(clazz, 0).getClass();
+        }
+        return clazz;
+
+    }
+
+    protected static Class<?> findClassInAllLoaders(String className, ClassLoader preferredLoader) {
+
+
         if (preferredLoader != null) {
             Class<?> clazz = findInLoader(className, preferredLoader);
             if (clazz != null) {
@@ -342,13 +395,13 @@ public class ClassResolver {
         try {
             if (loader != null) {
                 if (AppEnvironment.isHookEnv()) {
-                    Class<?> clazz = XposedBasicHook.ClassFinder.withCl(loader).find(className);
+                    Class<?> clazz = XposedBasicHook.HookClassFinder.withCl(loader).find(className);
                     if (clazz != null) return clazz;
                 }
                 return Class.forName(className, false, loader);
             } else {
                 if (AppEnvironment.isHookEnv()) {
-                    Class<?> clazz = XposedBasicHook.ClassFinder.withCl(null).find(className);
+                    Class<?> clazz = XposedBasicHook.HookClassFinder.withCl(null).find(className);
                     if (clazz != null) return clazz;
                 }
                 try {
@@ -367,11 +420,11 @@ public class ClassResolver {
         }
     }
 
-    public static Method findMethod(String className, String methodName, Object... paramTypes) {
+    public static Method findMethod(String className, String methodName, Class<?>... paramTypes) {
         return findMethod(className, methodName, null, paramTypes);
     }
 
-    public static Method findMethod(String className, String methodName, ClassLoader preferredLoader, Object... paramTypes) {
+    public static Method findMethod(String className, String methodName, ClassLoader preferredLoader, Class<?>... paramTypes) {
         Class<?> clazz = findClassInternal(className, preferredLoader);
         if (clazz == null) {
             logger.debug("未找到类，无法查找方法: " + className + "." + methodName);
@@ -380,7 +433,7 @@ public class ClassResolver {
 
         if (AppEnvironment.isHookEnv()) {
             try {
-                return XposedBasicHook.MethodFinder.withCl(preferredLoader)
+                return XposedBasicHook.HookMethodFinder.withCl(preferredLoader)
                     .find(className, methodName, paramTypes);
             } catch (Exception e) {
                 logger.debug("查找方法失败: " + className + "." + methodName + ", " + e.getMessage() + ", 尝试使用反射");
@@ -409,7 +462,7 @@ public class ClassResolver {
 
         if (AppEnvironment.isHookEnv()) {
             try {
-                return XposedBasicHook.MethodFinder.withCl(preferredLoader)
+                return XposedBasicHook.HookMethodFinder.withCl(preferredLoader)
                     .findAll(className, methodName);
             } catch (Exception e) {
                 logger.debug("查找所有方法失败: " + className + "." + methodName + ", " + e.getMessage());

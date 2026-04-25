@@ -1,4 +1,4 @@
-package com.justnothing.testmodule.ui.viewmodel;
+package com.justnothing.testmodule.ui.general;
 
 import android.content.Context;
 import android.content.DialogInterface;

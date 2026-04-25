@@ -15,17 +15,10 @@ import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.tips.TipSystem;
 import com.justnothing.testmodule.utils.tips.TipCallback;
 import com.justnothing.testmodule.utils.ui.UISettings;
-import com.justnothing.testmodule.ui.analysis.SystemAnalysisActivity;
 
 public class WelcomeActivity extends AppCompatActivity {
-    private static final String TAG = "WelcomeActivity";
-    
-    private final Logger logger = new Logger() {
-        @Override
-        public String getTag() {
-            return TAG;
-        }
-    };
+
+    private static final Logger logger = Logger.getLoggerForName("WelcomeActivity");
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

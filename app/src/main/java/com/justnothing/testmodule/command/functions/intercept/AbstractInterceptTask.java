@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.intercept;
 
 import androidx.annotation.NonNull;
 
+import com.justnothing.testmodule.hooks.HookAPI;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
 import com.justnothing.testmodule.utils.reflect.ReflectionUtils;
@@ -15,7 +16,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import de.robv.android.xposed.XC_MethodHook;
-import de.robv.android.xposed.XposedHelpers;
 
 public abstract class AbstractInterceptTask implements InterceptTask {
 
@@ -91,7 +91,7 @@ public abstract class AbstractInterceptTask implements InterceptTask {
         onInstall();
         for (Method method : targetMethods) {
             XC_MethodHook hook = createMethodHook();
-            XC_MethodHook.Unhook unhook = XposedHelpers.findAndHookMethod(
+            XC_MethodHook.Unhook unhook = HookAPI.findAndHookMethod(
                     targetClass,
                     methodName,
                     method.getParameterTypes(),

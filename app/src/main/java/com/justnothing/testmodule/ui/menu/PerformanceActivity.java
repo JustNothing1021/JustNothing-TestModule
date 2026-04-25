@@ -1,5 +1,6 @@
 package com.justnothing.testmodule.ui.menu;
 
+import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -23,7 +24,7 @@ import java.util.List;
 import java.util.Map;
 
 public class PerformanceActivity extends AppCompatActivity {
-    private Logger logger;
+    private static final Logger logger = Logger.getLoggerForName("PerformanceActivity");
     private PerformanceMonitor monitor;
     private StatsAdapter adapter;
     private List<PerformanceMonitor.HookStats> statsList;
@@ -36,7 +37,6 @@ public class PerformanceActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_performance);
 
-        logger = Logger.getLoggerForName("PerformanceActivity");
         monitor = new PerformanceMonitor();
         handler = new Handler(Looper.getMainLooper());
 
@@ -84,6 +84,7 @@ public class PerformanceActivity extends AppCompatActivity {
         }
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     private void refreshStats() {
         Map<String, PerformanceMonitor.HookStats> stats = monitor.getAllStats();
         statsList.clear();

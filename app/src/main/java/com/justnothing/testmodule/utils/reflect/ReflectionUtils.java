@@ -2,6 +2,8 @@ package com.justnothing.testmodule.utils.reflect;
 
 import com.justnothing.testmodule.utils.logging.Logger;
 
+import org.jetbrains.annotations.Contract;
+
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.GenericArrayType;
@@ -381,7 +383,9 @@ public class ReflectionUtils {
         return Modifier.toString(modifiers);
     }
 
-
+    public static Object callMethod(Object obj, String methodName, Object... args) throws Exception {
+        return callMethod(obj, methodName, Arrays.asList(args));
+    }
     public static Object callMethod(Object object, String methodName, List<Object> args) throws Exception {
         if (methodName == null)
             methodName = "call";
@@ -401,7 +405,7 @@ public class ReflectionUtils {
 
         logger.debug("查找实例方法: " + clazz.getName() + "." + methodName + ", 参数类型: " + paramTypes);
 
-        Method method = ClassResolver.findMethod(clazz.getName(), methodName, paramTypes.toArray());
+        Method method = ClassResolver.findMethod(clazz.getName(), methodName, paramTypes.toArray(new Class[0]));
 
         if (method == null) {
             Method[] methods = clazz.getDeclaredMethods();
@@ -441,36 +445,9 @@ public class ReflectionUtils {
         }
     }
 
-    /**
-     * 直接调用 Method 对象的方法
-     * @param method Method 对象
-     * @param target 目标对象（对于静态方法为 null）
-     * @param args 参数列表
-     * @return 方法调用结果
-     * @throws Exception 调用失败时抛出异常
-     */
-    public static Object callMethod(Method method, Object target, List<Object> args) throws Exception {
-        if (method == null) {
-            throw new NullPointerException("Method cannot be null");
-        }
 
-        Object[] invokeArgs = prepareInvokeArguments(method, args);
-        try {
-            method.setAccessible(true);
-        } catch (SecurityException ignored) {
-        }
-        try {
-            return method.invoke(target, invokeArgs);
-        } catch (InvocationTargetException e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof Exception) {
-                throw (Exception) cause;
-            } else if (cause instanceof Error) {
-                throw (Error) cause;
-            } else {
-                throw new Exception(cause);
-            }
-        }
+    public static Object callMethod(Object object, String methodName) throws Exception {
+        return callMethod(object, methodName, new ArrayList<>());
     }
 
     public static Object callStaticMethod(String className, String methodName, List<Object> args) throws Exception {
@@ -485,7 +462,7 @@ public class ReflectionUtils {
 
         logger.debug("查找静态方法: " + className + "." + methodName + ", 参数类型: " + paramTypes);
 
-        Method method = ClassResolver.findMethod(clazz.getName(), methodName, paramTypes.toArray());
+        Method method = ClassResolver.findMethod(clazz.getName(), methodName, paramTypes.toArray(new Class[0]));
 
         if (method == null) {
             Method[] methods = clazz.getDeclaredMethods();
@@ -520,6 +497,15 @@ public class ReflectionUtils {
             }
         }
     }
+
+    public static Object callStaticMethod(String className, String methodName) throws Exception {
+        return callStaticMethod(className, methodName, new ArrayList<>());
+    }
+
+    public static Object callStaticMethod(String className, String methodName, Object... args) throws Exception {
+        return callStaticMethod(className, methodName, Arrays.asList(args));
+    }
+
 
     private static Object[] prepareInvokeArguments(Method method, List<Object> args) {
         Class<?>[] paramTypes = method.getParameterTypes();
@@ -648,6 +634,15 @@ public class ReflectionUtils {
 
     public Object callStaticMethod(Class<?> clazz, String methodName, List<Object> args) throws Exception {
         return callStaticMethod(clazz.getName(), methodName, args);
+    }
+
+    public static Object callStaticMethod(Class<?> clazz, String methodName) throws Exception {
+        return callStaticMethod(clazz.getName(), methodName, new ArrayList<>());
+    }
+
+    @Contract("null, _, _ -> fail")
+    public static Object callStaticMethod(Class<?> clazz, String methodName, Object... args) throws Exception {
+        return callStaticMethod(clazz.getName(), methodName, Arrays.asList(args));
     }
 
     public static Field findField(Class<?> clazz, String fieldName) {

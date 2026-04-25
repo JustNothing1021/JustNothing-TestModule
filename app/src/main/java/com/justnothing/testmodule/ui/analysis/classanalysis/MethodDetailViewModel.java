@@ -62,14 +62,14 @@ public class MethodDetailViewModel extends AndroidViewModel {
                         result.postValue(invokeResult);
                     } else {
                         CommandResult.ErrorInfo err = invokeResult.getError();
-                        error.postValue(err != null ? err.getMessage() : getApplication().getString(R.string.invoke_failed));
+                        error.postValue(err != null ? err.getMessage() : getApplication().getString(R.string.analysis_invoke_unknown_error));
                     }
                 } else {
-                    error.postValue(getApplication().getString(R.string.response_type_error,
+                    error.postValue(getApplication().getString(R.string.analysis_response_type_error,
                         "InvokeMethodResult", parsedResult.getClass().getSimpleName()));
                 }
             } catch (Exception e) {
-                error.postValue(getApplication().getString(R.string.invoke_exception, e.getMessage()));
+                error.postValue(getApplication().getString(R.string.analysis_invoke_exception, e.getMessage()));
             } finally {
                 isLoading.postValue(false);
             }

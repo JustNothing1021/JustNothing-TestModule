@@ -20,7 +20,7 @@ public class UiClient {
     
     private static volatile UiClient instance;
     
-    private static final int DEFAULT_PORT = 12345;
+    private static final int DEFAULT_PORT = 11451;
     private static final int CONNECT_TIMEOUT_MS = 5000;
     
     private final ExecutorService executor = Executors.newCachedThreadPool();
@@ -55,6 +55,7 @@ public class UiClient {
      * @return 如果服务端可用返回true
      */
     public boolean checkServer() {
+        port = StreamClient.getSocketPort();
         try (Socket socket = new Socket()) {
             socket.connect(new InetSocketAddress("localhost", port), CONNECT_TIMEOUT_MS);
             serverAvailable = true;

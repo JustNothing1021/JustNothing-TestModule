@@ -1,5 +1,6 @@
 package com.justnothing.testmodule.protocol.json.request;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 public class ClassInfoRequest extends CommandRequest {
@@ -78,10 +79,8 @@ public class ClassInfoRequest extends CommandRequest {
     }
     
     @Override
-    public JSONObject toJson() throws org.json.JSONException {
-        JSONObject obj = new JSONObject();
-        obj.put("requestId", getRequestId());
-        obj.put("commandType", getCommandType());
+    public JSONObject toJson() throws JSONException {
+        JSONObject obj = super.toJson();
         obj.put("className", className);
         obj.put("showInterfaces", showInterfaces);
         obj.put("showConstructors", showConstructors);

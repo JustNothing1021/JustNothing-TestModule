@@ -125,7 +125,11 @@ public class ScriptRunner {
     public void clearVariables() {
         context.clearVariables();
     }
-    
+
+    public void clearImports() {
+        parseContext.clearImports();
+    }
+
     public List<ASTNode> tryParse(String code) {
         context.clearOutput();
         context.clearWarnMessages();

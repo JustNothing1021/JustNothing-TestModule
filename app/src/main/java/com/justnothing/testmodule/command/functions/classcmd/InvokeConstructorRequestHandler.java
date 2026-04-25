@@ -74,7 +74,9 @@ public class InvokeConstructorRequestHandler implements RequestHandler<InvokeCon
             
             List<Object> params = new ArrayList<>();
             List<Class<?>> paramTypes = new ArrayList<>();
-            
+            List<String> imports = new ArrayList<>();
+            imports.add(className);
+
             for (int i = 0; i < paramExpressions.size(); i++) {
                 String expr = paramExpressions.get(i);
                 String typeHint = (paramTypeHints != null && i < paramTypeHints.size()) ? paramTypeHints.get(i) : null;
@@ -88,11 +90,11 @@ public class InvokeConstructorRequestHandler implements RequestHandler<InvokeCon
                     ExpressionParser.ParseResult parseResult;
                     
                     if (typeHint != null && !typeHint.isEmpty()) {
-                        Class<?> hintClass = resolveType(typeHint, classLoader);
-                        parseResult = ExpressionParser.parse(expr, classLoader, hintClass);
+                        Class<?> hintClass = ClassResolver.findClassOrFail(typeHint, classLoader);
+                        parseResult = ExpressionParser.parse(expr, classLoader, hintClass, imports);
                         logger.debug("参数" + i + " (类型提示=" + typeHint + "): " + parseResult.value());
                     } else if (expectedType != null) {
-                        parseResult = ExpressionParser.parse(expr, classLoader, expectedType);
+                        parseResult = ExpressionParser.parse(expr, classLoader, expectedType, imports);
                         logger.debug("参数" + i + " (期望类型=" + expectedType.getName() + "): " + parseResult.value() + " (" + parseResult.type().getName() + ")");
                     } else {
                         parseResult = ExpressionParser.parse(expr, classLoader);
@@ -197,7 +199,8 @@ public class InvokeConstructorRequestHandler implements RequestHandler<InvokeCon
         }
         
         int varArgCount = args.size() - fixedParamCount;
-        
+
+        assert varArgsComponentType != null;
         if (varArgCount == 1) {
             Object lastArg = args.get(fixedParamCount);
             
@@ -222,24 +225,4 @@ public class InvokeConstructorRequestHandler implements RequestHandler<InvokeCon
         return invokeArgs;
     }
     
-    private Class<?> resolveType(String typeName, ClassLoader classLoader) throws ClassNotFoundException {
-        switch (typeName) {
-            case "int": return int.class;
-            case "long": return long.class;
-            case "double": return double.class;
-            case "float": return float.class;
-            case "boolean": return boolean.class;
-            case "short": return short.class;
-            case "byte": return byte.class;
-            case "char": return char.class;
-            case "void": return void.class;
-            default:
-                if (typeName.endsWith("[]")) {
-                    String componentType = typeName.substring(0, typeName.length() - 2);
-                    Class<?> componentClass = resolveType(componentType, classLoader);
-                    return Array.newInstance(componentClass, 0).getClass();
-                }
-                return Class.forName(typeName, true, classLoader);
-        }
-    }
 }

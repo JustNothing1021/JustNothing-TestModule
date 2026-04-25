@@ -39,7 +39,7 @@
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="@string/enter_class_name"
+                    android:hint="@string/analysis_enter_class_name"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
                     <com.google.android.material.textfield.TextInputEditText
@@ -57,7 +57,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:text="@string/query" />
+                    android:text="@string/analysis_query_class" />
 
                 <LinearLayout
                     android:id="@+id/layout_result"
@@ -93,14 +93,14 @@
                                     android:layout_width="0dp"
                                     android:layout_height="wrap_content"
                                     android:layout_weight="1"
-                                    android:text="@string/class_info"
+                                    android:text="@string/analysis_class_info"
                                     android:textAppearance="?attr/textAppearanceTitleMedium"
                                     android:textStyle="bold" />
 
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="@string/click_to_view_hierarchy"
+                                    android:text="@string/analysis_click_to_view_hierarchy"
                                     android:textAppearance="?attr/textAppearanceLabelSmall"
                                     android:textColor="@android:color/darker_gray" />
 
@@ -109,7 +109,7 @@
                                     android:layout_height="20dp"
                                     android:layout_marginStart="4dp"
                                     android:src="@drawable/ic_graph"
-                                    android:contentDescription="@string/class_hierarchy" />
+                                    android:contentDescription="@string/analysis_class_hierarchy" />
 
                             </LinearLayout>
 
@@ -117,7 +117,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="12dp"
-                                android:text="@string/class_name"
+                                android:text="@string/analysis_class_name"
                                 android:textAppearance="?attr/textAppearanceLabelSmall"
                                 android:textColor="@android:color/darker_gray" />
 
@@ -133,7 +133,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="12dp"
-                                android:text="@string/access_modifiers"
+                                android:text="@string/analysis_access_modifiers"
                                 android:textAppearance="?attr/textAppearanceLabelSmall"
                                 android:textColor="@android:color/darker_gray" />
 
@@ -147,7 +147,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="12dp"
-                                android:text="@string/super_class"
+                                android:text="@string/analysis_super_class"
                                 android:textAppearance="?attr/textAppearanceLabelSmall"
                                 android:textColor="@android:color/darker_gray" />
 
@@ -161,7 +161,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="12dp"
-                                android:text="@string/implemented_interfaces"
+                                android:text="@string/analysis_implemented_interfaces"
                                 android:textAppearance="?attr/textAppearanceLabelSmall"
                                 android:textColor="@android:color/darker_gray" />
 
@@ -192,7 +192,7 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="@string/constructors"
+                            android:text="@string/analysis_constructors_label"
                             android:textAppearance="?attr/textAppearanceTitleMedium"
                             android:textStyle="bold" />
 
@@ -201,7 +201,7 @@
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             android:src="@drawable/ic_expand_more"
-                            android:contentDescription="@string/expand_collapse" />
+                            android:contentDescription="@string/analysis_expand_collapse" />
 
                     </LinearLayout>
 
@@ -229,7 +229,7 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="@string/methods"
+                            android:text="@string/analysis_methods"
                             android:textAppearance="?attr/textAppearanceTitleMedium"
                             android:textStyle="bold" />
 
@@ -238,7 +238,7 @@
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             android:src="@drawable/ic_expand_more"
-                            android:contentDescription="@string/expand_collapse" />
+                            android:contentDescription="@string/analysis_expand_collapse" />
 
                     </LinearLayout>
 
@@ -266,7 +266,7 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="@string/fields"
+                            android:text="@string/analysis_fields_label"
                             android:textAppearance="?attr/textAppearanceTitleMedium"
                             android:textStyle="bold" />
 
@@ -275,7 +275,7 @@
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             android:src="@drawable/ic_expand_more"
-                            android:contentDescription="@string/expand_collapse" />
+                            android:contentDescription="@string/analysis_expand_collapse" />
 
                     </LinearLayout>
 
@@ -309,7 +309,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:text="@string/loading"
+                android:text="@string/analysis_loading"
                 android:textAppearance="?attr/textAppearanceBodyMedium" />
 
         </LinearLayout>
@@ -326,7 +326,7 @@
                 android:id="@+id/tv_error_message"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/query_failed"
+                android:text="@string/analysis_class_query_failed"
                 android:textAppearance="?attr/textAppearanceBodyMedium"
                 android:textColor="@color/red" />
 

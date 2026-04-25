@@ -1,6 +1,7 @@
 package com.justnothing.testmodule.ui.menu;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -151,6 +152,7 @@ public class DataExportActivity extends AppCompatActivity {
         }
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     private void refreshFileList() {
         exportedFiles.clear();
         exportedFiles.addAll(exporter.getExportedFiles());

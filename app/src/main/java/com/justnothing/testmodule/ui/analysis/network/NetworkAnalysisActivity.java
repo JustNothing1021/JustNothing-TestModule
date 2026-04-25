@@ -13,7 +13,7 @@ public class NetworkAnalysisActivity extends AppCompatActivity {
         setContentView(R.layout.activity_placeholder);
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setTitle(getString(R.string.network_analysis));
+            getSupportActionBar().setTitle(getString(R.string.analysis_network_analysis));
         }
     }
     @Override

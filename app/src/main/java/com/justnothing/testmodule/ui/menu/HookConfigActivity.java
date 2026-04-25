@@ -1,5 +1,6 @@
 package com.justnothing.testmodule.ui.menu;
 
+import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -29,6 +30,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+
+
+@SuppressLint({"UseSwitchCompatOrMaterialCode", "NotifyDataSetChanged"})  // 懒
 public class HookConfigActivity extends AppCompatActivity {
 
     private static final Logger logger = Logger.getLoggerForName("HookConfigActivity");
@@ -64,6 +68,7 @@ public class HookConfigActivity extends AppCompatActivity {
             emptyHint.setVisibility(View.GONE);
         }
     }
+
 
     private void loadHooks() {
         ThreadPoolManager.submitFastRunnable(() -> {
@@ -124,9 +129,7 @@ public class HookConfigActivity extends AppCompatActivity {
         logger.info((enabled ? "启用" : "禁用") + "所有Hook");
         
         // 延迟重新加载Hook列表，显示服务端状态差异
-        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
-            loadHooks();
-        }, 300);
+        new android.os.Handler(Looper.getMainLooper()).postDelayed(this::loadHooks, 300);
     }
 
     private static class HookItem {

@@ -21,23 +21,18 @@ import java.util.concurrent.Executors;
 public class ClassGraphViewModel extends AndroidViewModel {
     
     private static final String TAG = "ClassGraphViewModel";
-    private final Logger logger = new Logger() {
-        @Override
-        public String getTag() {
-            return TAG;
-        }
-    };
+    private final Logger logger = Logger.getLoggerForName(TAG);
     
     private final UiClient client = UiClient.getInstance();
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     
-    private final MutableLiveData<Boolean> _isLoading = new MutableLiveData<>(false);
-    private final MutableLiveData<ClassHierarchyResult> _hierarchyResult = new MutableLiveData<>();
-    private final MutableLiveData<String> _error = new MutableLiveData<>();
+    private final MutableLiveData<Boolean> isLoading = new MutableLiveData<>(false);
+    private final MutableLiveData<ClassHierarchyResult> hierarchyResult = new MutableLiveData<>();
+    private final MutableLiveData<String> error = new MutableLiveData<>();
     
-    public LiveData<Boolean> isLoading() { return _isLoading; }
-    public LiveData<ClassHierarchyResult> getHierarchyResult() { return _hierarchyResult; }
-    public LiveData<String> getError() { return _error; }
+    public LiveData<Boolean> isLoading() { return isLoading; }
+    public LiveData<ClassHierarchyResult> getHierarchyResult() { return hierarchyResult; }
+    public LiveData<String> getError() { return error; }
     
     public ClassGraphViewModel(@NonNull Application application) {
         super(application);
@@ -45,13 +40,13 @@ public class ClassGraphViewModel extends AndroidViewModel {
     
     public void queryClassHierarchy(String className) {
         if (className == null || className.trim().isEmpty()) {
-            _error.setValue(getApplication().getString(R.string.enter_class_name_hint));
+            error.setValue(getApplication().getString(R.string.analysis_enter_class_name_hint));
             return;
         }
         
         logger.info("开始查询类继承图: " + className);
-        _isLoading.setValue(true);
-        _error.setValue(null);
+        isLoading.setValue(true);
+        error.setValue(null);
         
         executor.execute(() -> {
             try {
@@ -68,25 +63,25 @@ public class ClassGraphViewModel extends AndroidViewModel {
                 if (parsedResult instanceof ClassHierarchyResult result) {
                     if (result.isSuccess() && result.getClassChain() != null) {
                         logger.info("查询成功: " + className);
-                        _hierarchyResult.postValue(result);
+                        hierarchyResult.postValue(result);
                     } else {
                         String errorMsg = result.getError() != null 
                             ? result.getError().getMessage() 
-                            : getApplication().getString(R.string.query_failed);
+                            : getApplication().getString(R.string.analysis_class_query_failed_format);
                         logger.error("查询失败: " + errorMsg);
-                        _error.postValue(errorMsg);
+                        error.postValue(errorMsg);
                     }
                 } else {
-                    String errorMsg = getApplication().getString(R.string.response_type_error,
+                    String errorMsg = getApplication().getString(R.string.analysis_response_type_error,
                         "ClassHierarchyResult", parsedResult.getClass().getName());
                     logger.error(errorMsg);
-                    _error.postValue(errorMsg);
+                    error.postValue(errorMsg);
                 }
             } catch (Exception e) {
                 logger.error("查询异常", e);
-                _error.postValue(getApplication().getString(R.string.query_failed) + ": " + e.getMessage());
+                error.postValue(getApplication().getString(R.string.analysis_class_query_failed_format, e.getMessage()));
             } finally {
-                _isLoading.postValue(false);
+                isLoading.postValue(false);
             }
         });
     }

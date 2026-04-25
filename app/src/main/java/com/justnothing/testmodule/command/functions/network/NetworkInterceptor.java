@@ -1,7 +1,9 @@
 package com.justnothing.testmodule.command.functions.network;
 
+import com.justnothing.testmodule.hooks.HookAPI;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
+import com.justnothing.testmodule.utils.reflect.ReflectionUtils;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -15,7 +17,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import de.robv.android.xposed.XC_MethodHook;
-import de.robv.android.xposed.XposedHelpers;
+import kotlin.jvm.internal.Reflection;
 
 public class NetworkInterceptor {
 
@@ -64,7 +66,7 @@ public class NetworkInterceptor {
                 return false;
             }
 
-            XC_MethodHook.Unhook unhook = XposedHelpers.findAndHookMethod(
+            XC_MethodHook.Unhook unhook = HookAPI.findAndHookMethod(
                     okHttpClientClass,
                     OKHTTP_NEW_CALL,
                     requestClass,
@@ -142,11 +144,11 @@ public class NetworkInterceptor {
         try {
             Class<?> callClass = call.getClass();
 
-            XposedHelpers.findAndHookMethod(callClass, "execute", new XC_MethodHook() {
+            HookAPI.findAndHookMethod(callClass, "execute", new XC_MethodHook() {
                 @Override
-                protected void beforeHookedMethod(MethodHookParam param) {
+                protected void beforeHookedMethod(MethodHookParam param) throws Exception {
                     Object thisObject = param.thisObject;
-                    Object request = XposedHelpers.callMethod(thisObject, "request");
+                    Object request = ReflectionUtils.callMethod(thisObject, "request");
 
                     NetworkRequestInfo requestInfo = extractOkHttpRequest(request);
                     param.setObjectExtra("network_request", requestInfo);
@@ -173,11 +175,11 @@ public class NetworkInterceptor {
 
             Class<?> callbackClass = ClassResolver.findClass(OKHTTP_CALLBACK, classLoader);
             if (callbackClass != null) {
-                XposedHelpers.findAndHookMethod(callClass, "enqueue", callbackClass, new XC_MethodHook() {
+                HookAPI.findAndHookMethod(callClass, "enqueue", callbackClass, new XC_MethodHook() {
                     @Override
-                    protected void beforeHookedMethod(MethodHookParam param) {
+                    protected void beforeHookedMethod(MethodHookParam param) throws Exception {
                         Object thisObject = param.thisObject;
-                        Object request = XposedHelpers.callMethod(thisObject, "request");
+                        Object request = ReflectionUtils.callMethod(thisObject, "request");
                         Object originalCallback = param.args[0];
 
                         NetworkRequestInfo requestInfo = extractOkHttpRequest(request);
@@ -233,34 +235,34 @@ public class NetworkInterceptor {
 
     private static NetworkRequestInfo extractOkHttpRequest(Object request, String clientType) {
         try {
-            Object url = XposedHelpers.callMethod(request, "url");
-            String urlStr = (String) XposedHelpers.callMethod(url, "toString");
+            Object url = ReflectionUtils.callMethod(request, "url");
+            String urlStr = (String) ReflectionUtils.callMethod(url, "toString");
 
-            String method = (String) XposedHelpers.callMethod(request, "method");
+            String method = (String) ReflectionUtils.callMethod(request, "method");
 
             NetworkRequestInfo info = NetworkManager.getInstance()
                     .createRequest(urlStr, method, clientType);
 
-            Object headers = XposedHelpers.callMethod(request, "headers");
+            Object headers = ReflectionUtils.callMethod(request, "headers");
             if (headers != null) {
                 try {
                     Method namesMethod = headers.getClass().getMethod("names");
                     Iterable<?> names = (Iterable<?>) namesMethod.invoke(headers);
                     for (Object name : names) {
                         String nameStr = name.toString();
-                        String value = (String) XposedHelpers.callMethod(headers, "get", nameStr);
+                        String value = (String) ReflectionUtils.callMethod(headers, "get", nameStr);
                         info.addHeader(nameStr, value);
                     }
                 } catch (Exception ignored) {
                 }
             }
 
-            Object body = XposedHelpers.callMethod(request, "body");
+            Object body = ReflectionUtils.callMethod(request, "body");
             if (body != null) {
                 try {
                     Class<?> bufferClass = ClassResolver.findClass("okio.Buffer", cachedClassLoader);
                     Object buffer = bufferClass.newInstance();
-                    XposedHelpers.callMethod(body, "writeTo", buffer);
+                    ReflectionUtils.callMethod(body, "writeTo", buffer);
                     String bodyStr = buffer.toString();
                     info.setRequestBody(bodyStr);
                 } catch (Exception e) {
@@ -278,33 +280,33 @@ public class NetworkInterceptor {
 
     private static void extractOkHttpResponse(Object response, NetworkRequestInfo requestInfo) {
         try {
-            int code = (int) XposedHelpers.callMethod(response, "code");
-            String message = (String) XposedHelpers.callMethod(response, "message");
+            int code = (int) ReflectionUtils.callMethod(response, "code");
+            String message = (String) ReflectionUtils.callMethod(response, "message");
 
             requestInfo.setResponseCode(code);
             requestInfo.setResponseMessage(message);
 
-            Object headers = XposedHelpers.callMethod(response, "headers");
+            Object headers = ReflectionUtils.callMethod(response, "headers");
             if (headers != null) {
                 try {
                     Method namesMethod = headers.getClass().getMethod("names");
                     Iterable<?> names = (Iterable<?>) namesMethod.invoke(headers);
                     for (Object name : names) {
                         String nameStr = name.toString();
-                        String value = (String) XposedHelpers.callMethod(headers, "get", nameStr);
+                        String value = (String) ReflectionUtils.callMethod(headers, "get", nameStr);
                         requestInfo.addResponseHeader(nameStr, value);
                     }
                 } catch (Exception ignored) {
                 }
             }
 
-            Object body = XposedHelpers.callMethod(response, "body");
+            Object body = ReflectionUtils.callMethod(response, "body");
             if (body != null) {
                 try {
-                    Object source = XposedHelpers.callMethod(body, "source");
-                    XposedHelpers.callMethod(source, "request", Long.MAX_VALUE);
-                    Object buffer = XposedHelpers.callMethod(source, "buffer");
-                    String bodyStr = XposedHelpers.callMethod(buffer, "clone").toString();
+                    Object source = ReflectionUtils.callMethod(body, "source");
+                    ReflectionUtils.callMethod(source, "request", Long.MAX_VALUE);
+                    Object buffer = ReflectionUtils.callMethod(source, "buffer");
+                    String bodyStr = ReflectionUtils.callMethod(buffer, "clone").toString();
 
                     if (bodyStr == null || bodyStr.isEmpty()) {
                         bodyStr = buffer.toString();
@@ -327,16 +329,16 @@ public class NetworkInterceptor {
             Class<?> responseBuilderClass = ClassResolver.findClass("okhttp3.Response$Builder", cl);
             Object builder = responseBuilderClass.newInstance();
 
-            XposedHelpers.callMethod(builder, "request", request);
-            XposedHelpers.callMethod(builder, "protocol",
+            ReflectionUtils.callMethod(builder, "request", request);
+            ReflectionUtils.callMethod(builder, "protocol",
                     ClassResolver.findClass("okhttp3.Protocol", cl).getField("HTTP_1_1").get(null));
-            XposedHelpers.callMethod(builder, "code", rule.statusCode);
-            XposedHelpers.callMethod(builder, "message", "Mocked");
+            ReflectionUtils.callMethod(builder, "code", rule.statusCode);
+            ReflectionUtils.callMethod(builder, "message", "Mocked");
 
             Object responseBody = createResponseBody(rule.response, cl);
-            XposedHelpers.callMethod(builder, "body", responseBody);
+            ReflectionUtils.callMethod(builder, "body", responseBody);
 
-            return XposedHelpers.callMethod(builder, "build");
+            return ReflectionUtils.callMethod(builder, "build");
 
         } catch (Exception e) {
             logger.error("创建 Mock 响应失败", e);
@@ -347,14 +349,14 @@ public class NetworkInterceptor {
     private static Object createRequestBody(String content, String contentType, ClassLoader cl) {
         try {
             Class<?> mediaTypeClass = ClassResolver.findClass("okhttp3.MediaType", cl);
-            Object mediaType = XposedHelpers.callStaticMethod(mediaTypeClass, "parse", contentType);
+            Object mediaType = ReflectionUtils.callStaticMethod(mediaTypeClass, "parse", contentType);
 
             Class<?> requestBodyClass = ClassResolver.findClass(OKHTTP_REQUEST_BODY, cl);
 
             try {
-                return XposedHelpers.callStaticMethod(requestBodyClass, "create", mediaType, content);
+                return ReflectionUtils.callStaticMethod(requestBodyClass, "create", mediaType, content);
             } catch (Exception e1) {
-                return XposedHelpers.callStaticMethod(requestBodyClass, "create", content, mediaType);
+                return ReflectionUtils.callStaticMethod(requestBodyClass, "create", content, mediaType);
             }
 
         } catch (Exception e) {
@@ -366,18 +368,19 @@ public class NetworkInterceptor {
     private static Object createResponseBody(String content, ClassLoader cl) {
         try {
             Class<?> mediaTypeClass = ClassResolver.findClass("okhttp3.MediaType", cl);
-            Object mediaType = XposedHelpers.callStaticMethod(mediaTypeClass, "parse", "application/json; charset=utf-8");
+            Object mediaType = ReflectionUtils.callStaticMethod(mediaTypeClass, "parse", "application/json; charset=utf-8");
 
             Class<?> responseBodyClass = ClassResolver.findClass(OKHTTP_RESPONSE_BODY, cl);
 
             try {
-                return XposedHelpers.callStaticMethod(responseBodyClass, "create", mediaType, content);
+                return ReflectionUtils.callStaticMethod(responseBodyClass, "create", mediaType, content);
             } catch (Exception e1) {
                 try {
-                    return XposedHelpers.callStaticMethod(responseBodyClass, "create", content, mediaType);
+                    return ReflectionUtils.callStaticMethod(responseBodyClass, "create", content, mediaType);
                 } catch (Exception e2) {
-                    return XposedHelpers.callStaticMethod(responseBodyClass, "create",
-                            ClassResolver.findClass("okio.ByteString", cl).getMethod("encodeUtf8", String.class).invoke(null, content),
+                    return ReflectionUtils.callStaticMethod(responseBodyClass, "create",
+                            ClassResolver.findClassOrFail("okio.ByteString", cl)
+                                    .getMethod("encodeUtf8", String.class).invoke(null, content),
                             mediaType);
                 }
             }
@@ -451,7 +454,7 @@ public class NetworkInterceptor {
         }
 
         try {
-            XposedHelpers.findAndHookMethod(URL.class, "openConnection", new XC_MethodHook() {
+            HookAPI.findAndHookMethod(URL.class, "openConnection", new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) {
                     Object connection = param.getResult();
@@ -473,7 +476,7 @@ public class NetworkInterceptor {
 
     private static void hookHttpUrlConnectionInstance(HttpURLConnection connection) {
         try {
-            XposedHelpers.findAndHookMethod(connection.getClass(), "getInputStream", new XC_MethodHook() {
+            HookAPI.findAndHookMethod(connection.getClass(), "getInputStream", new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) {
                     if (!NetworkManager.getInstance().isRecordEnabled()) {
@@ -547,9 +550,7 @@ public class NetworkInterceptor {
                 return false;
             }
 
-            Class<?> retrofitResponseClass = ClassResolver.findClass(RETROFIT_RESPONSE, classLoader);
-
-            XposedHelpers.findAndHookMethod(retrofitCallClass, "execute", new XC_MethodHook() {
+            HookAPI.findAndHookMethod(retrofitCallClass, "execute", new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) {
                     if (!NetworkManager.getInstance().isRecordEnabled()) {
@@ -558,8 +559,8 @@ public class NetworkInterceptor {
 
                     try {
                         Object retrofitCall = param.thisObject;
-                        Object okHttpCall = XposedHelpers.callMethod(retrofitCall, "raw");
-                        Object request = XposedHelpers.callMethod(okHttpCall, "request");
+                        Object okHttpCall = ReflectionUtils.callMethod(retrofitCall, "raw");
+                        Object request = ReflectionUtils.callMethod(okHttpCall, "request");
 
                         NetworkRequestInfo info = extractOkHttpRequest(request, "Retrofit");
 
@@ -578,20 +579,20 @@ public class NetworkInterceptor {
                     try {
                         Object retrofitResponse = param.getResult();
                         if (retrofitResponse != null) {
-                            int code = (int) XposedHelpers.callMethod(retrofitResponse, "code");
-                            String message = (String) XposedHelpers.callMethod(retrofitResponse, "message");
+                            int code = (int) ReflectionUtils.callMethod(retrofitResponse, "code");
+                            String message = (String) ReflectionUtils.callMethod(retrofitResponse, "message");
 
                             info.setResponseCode(code);
                             info.setResponseMessage(message);
 
-                            Object body = XposedHelpers.callMethod(retrofitResponse, "body");
+                            Object body = ReflectionUtils.callMethod(retrofitResponse, "body");
                             if (body != null) {
                                 info.setResponseBody(body.toString());
                             }
 
-                            Object errorBody = XposedHelpers.callMethod(retrofitResponse, "errorBody");
+                            Object errorBody = ReflectionUtils.callMethod(retrofitResponse, "errorBody");
                             if (errorBody != null) {
-                                String errorStr = (String) XposedHelpers.callMethod(errorBody, "string");
+                                String errorStr = (String) ReflectionUtils.callMethod(errorBody, "string");
                                 if (info.getResponseBody() == null || info.getResponseBody().isEmpty()) {
                                     info.setResponseBody(errorStr);
                                 }

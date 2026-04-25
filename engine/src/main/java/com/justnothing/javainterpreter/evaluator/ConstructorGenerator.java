@@ -81,7 +81,7 @@ public class ConstructorGenerator {
      */
     public void addDefaultConstructor(ClassWriter cw, String className, 
             String superInternalName, List<FieldDeclarationNode> fields, 
-            ConstructorDeclarationNode constructorDecl) throws Exception {
+            ConstructorDeclarationNode constructorDecl) {
         try {
             Class<?> superClass = loadClass(superInternalName);
             checkSuperConstructorAccessible(superClass, null, constructorDecl);

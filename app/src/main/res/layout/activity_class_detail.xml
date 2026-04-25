@@ -13,7 +13,7 @@
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            app:title="@string/class_info"
+            app:title="@string/analysis_class_info"
             app:navigationIcon="?attr/homeAsUpIndicator" />
 
     </com.google.android.material.appbar.AppBarLayout>
@@ -106,7 +106,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/super_class"
+                        android:text="@string/analysis_super_class"
                         android:textAppearance="?attr/textAppearanceLabelSmall"
                         android:textColor="@android:color/darker_gray" />
 
@@ -122,7 +122,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
-                        android:text="@string/implemented_interfaces"
+                        android:text="@string/analysis_implemented_interfaces"
                         android:textAppearance="?attr/textAppearanceLabelSmall"
                         android:textColor="@android:color/darker_gray" />
 
@@ -141,7 +141,7 @@
                 android:id="@+id/label_constructors"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/constructors"
+                android:text="@string/analysis_constructors_label"
                 android:textAppearance="?attr/textAppearanceTitleSmall"
                 android:textStyle="bold"
                 android:layout_marginBottom="8dp" />
@@ -164,7 +164,7 @@
                     android:id="@+id/label_methods"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/methods"
+                    android:text="@string/analysis_methods"
                     android:textAppearance="?attr/textAppearanceTitleSmall"
                     android:textStyle="bold" />
 
@@ -189,7 +189,7 @@
                 android:id="@+id/label_fields"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/fields"
+                android:text="@string/analysis_fields_label"
                 android:textAppearance="?attr/textAppearanceTitleSmall"
                 android:textStyle="bold"
                 android:layout_marginBottom="8dp" />

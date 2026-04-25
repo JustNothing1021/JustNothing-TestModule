@@ -13,7 +13,7 @@ public class FieldViewActivity extends AppCompatActivity {
         setContentView(R.layout.activity_placeholder);
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setTitle(getString(R.string.view_fields));
+            getSupportActionBar().setTitle(getString(R.string.analysis_view_fields));
         }
     }
     @Override

@@ -90,7 +90,7 @@ public class ConstructorDetailActivity extends AppCompatActivity {
         
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setTitle(getString(R.string.constructor));
+            getSupportActionBar().setTitle(getString(R.string.analysis_constructor));
         }
     }
     
@@ -107,9 +107,8 @@ public class ConstructorDetailActivity extends AppCompatActivity {
                 cardResult.setVisibility(View.VISIBLE);
                 tvResult.setText(result.getResultString() != null ? result.getResultString() : "null");
                 tvResult.setTextColor(getColor(R.color.green));
-                tvResultType.setText(getString(R.string.result_type_label) + ": " + 
-                    (result.getResultTypeName() != null ? result.getResultTypeName() : "unknown"));
-                tvResultHash.setText(getString(R.string.result_hash_label) + ": " + result.getResultHash());
+                tvResultType.setText(getString(R.string.analysis_invoke_result_type_label, result.getResultTypeName() != null ? result.getResultTypeName() : "unknown"));
+                tvResultHash.setText(getString(R.string.analysis_invoke_result_hash_label, result.getResultHash()));
             }
         });
         
@@ -146,7 +145,7 @@ public class ConstructorDetailActivity extends AppCompatActivity {
         
         StringBuilder signatureBuilder = new StringBuilder();
         if (genericParamTypes.isEmpty()) {
-            signatureBuilder.append(getString(R.string.no_params));
+            signatureBuilder.append(getString(R.string.analysis_no_params));
         } else {
             for (int i = 0; i < genericParamTypes.size(); i++) {
                 if (i > 0) signatureBuilder.append(", ");
@@ -193,7 +192,7 @@ public class ConstructorDetailActivity extends AppCompatActivity {
         ImageButton btnRemove = paramView.findViewById(R.id.btn_remove_param);
         
         String paramType = DescriptorColorizer.formatTypeName(genericParamTypes.get(index));
-        tvLabel.setText(getString(R.string.param_label_format, index, paramType));
+        tvLabel.setText(getString(R.string.analysis_param_label_format, index, paramType));
         tilType.setVisibility(View.GONE);
         btnRemove.setVisibility(View.GONE);
         
@@ -221,7 +220,7 @@ public class ConstructorDetailActivity extends AppCompatActivity {
         EditText etValue = paramView.findViewById(R.id.et_param_value);
         ImageButton btnRemove = paramView.findViewById(R.id.btn_remove_param);
         
-        tvLabel.setText(getString(R.string.param_label_format, index, getString(R.string.free_mode_param)));
+        tvLabel.setText(getString(R.string.analysis_param_label_format, index, getString(R.string.analyze_invoke_free_mode_param)));
         tilType.setVisibility(View.VISIBLE);
         btnRemove.setVisibility(View.VISIBLE);
         
@@ -245,7 +244,7 @@ public class ConstructorDetailActivity extends AppCompatActivity {
         for (int i = 0; i < paramInputs.size(); i++) {
             ParamInputHolder holder = paramInputs.get(i);
             TextView tvLabel = holder.rootView.findViewById(R.id.tv_param_label);
-            tvLabel.setText(getString(R.string.param_label_format, i, getString(R.string.free_mode_param)));
+            tvLabel.setText(getString(R.string.analysis_param_label_format, i, getString(R.string.analyze_invoke_free_mode_param)));
         }
     }
     

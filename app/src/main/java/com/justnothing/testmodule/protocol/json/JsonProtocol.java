@@ -10,20 +10,18 @@ import com.justnothing.testmodule.protocol.json.response.InvokeConstructorResult
 import com.justnothing.testmodule.protocol.json.response.InvokeMethodResult;
 import com.justnothing.testmodule.protocol.json.response.GetFieldValueResult;
 import com.justnothing.testmodule.protocol.json.response.SetFieldValueResult;
+import com.justnothing.testmodule.protocol.json.response.MemoryInfoResult;
+import com.justnothing.testmodule.protocol.json.response.GcResult;
+import com.justnothing.testmodule.protocol.json.response.ThreadInfoResult;
+import com.justnothing.testmodule.protocol.json.response.DeadlockDetectResult;
+import com.justnothing.testmodule.protocol.json.response.HookListResult;
+import com.justnothing.testmodule.protocol.json.response.HookAddResult;
 import com.justnothing.testmodule.utils.logging.Logger;
 
 public class JsonProtocol {
     
     private static final Logger logger = Logger.getLoggerForName("JsonProtocol");
-    
-    static {
-        RequestDispatcher.registerResultType("ClassInfo", ClassInfoResult::new);
-        RequestDispatcher.registerResultType("ClassHierarchy", ClassHierarchyResult::new);
-        RequestDispatcher.registerResultType("InvokeConstructor", InvokeConstructorResult::new);
-        RequestDispatcher.registerResultType("InvokeMethod", InvokeMethodResult::new);
-        RequestDispatcher.registerResultType("GetFieldValue", GetFieldValueResult::new);
-        RequestDispatcher.registerResultType("SetFieldValue", SetFieldValueResult::new);
-    }
+
     
     public static CommandRequest parseRequest(String json) {
         CommandRequestHandler.ensureInitialized();
@@ -31,6 +29,7 @@ public class JsonProtocol {
     }
     
     public static CommandResult parseResponse(String json) {
+        CommandRequestHandler.ensureInitialized();
         return RequestDispatcher.parseResponse(json);
     }
     

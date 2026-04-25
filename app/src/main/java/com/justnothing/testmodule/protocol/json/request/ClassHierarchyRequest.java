@@ -1,5 +1,6 @@
 package com.justnothing.testmodule.protocol.json.request;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 public class ClassHierarchyRequest extends CommandRequest {
@@ -24,10 +25,8 @@ public class ClassHierarchyRequest extends CommandRequest {
     }
     
     @Override
-    public JSONObject toJson() throws org.json.JSONException {
-        JSONObject obj = new JSONObject();
-        obj.put("requestId", getRequestId());
-        obj.put("commandType", getCommandType());
+    public JSONObject toJson() throws JSONException {
+        JSONObject obj = super.toJson();
         obj.put("className", className);
         return obj;
     }

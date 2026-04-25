@@ -81,7 +81,7 @@ public class MethodAdapter extends RecyclerView.Adapter<MethodAdapter.ViewHolder
         return groups.size();
     }
 
-    class ViewHolder extends RecyclerView.ViewHolder {
+    public class ViewHolder extends RecyclerView.ViewHolder {
         private final TextView tvMethodName;
         private final TextView tvOverloads;
 
@@ -93,15 +93,27 @@ public class MethodAdapter extends RecyclerView.Adapter<MethodAdapter.ViewHolder
 
         public void bind(MethodGroup group) {
             int count = group.overloads.size();
-            tvMethodName.setText(String.format(itemView.getContext().getString(R.string.method_name_with_overloads), group.name, count));
+            
+            int colorBlue = ContextCompat.getColor(itemView.getContext(), R.color.blue);
+            
+            SpannableStringBuilder nameBuilder = new SpannableStringBuilder();
+            String firstModifier = group.overloads.get(0).getModifiersString();
+            if (firstModifier != null && !firstModifier.isEmpty()) {
+                nameBuilder.append("(");
+                int modifierStart = nameBuilder.length();
+                nameBuilder.append(firstModifier);
+                nameBuilder.setSpan(new ForegroundColorSpan(colorBlue), modifierStart, nameBuilder.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                nameBuilder.append(") ");
+            }
+            nameBuilder.append(group.name);
+            nameBuilder.append(" (").append(String.valueOf(count)).append(")");
+            tvMethodName.setText(nameBuilder);
 
             int colorGreen = ContextCompat.getColor(itemView.getContext(), R.color.green);
-            int colorBlue = ContextCompat.getColor(itemView.getContext(), R.color.blue);
             int colorGray = ContextCompat.getColor(itemView.getContext(), android.R.color.darker_gray);
 
             SpannableStringBuilder sb = new SpannableStringBuilder();
 
-            sb.append(itemView.getContext().getString(R.string.return_type_label)).append("：");
             int returnTypeStart = sb.length();
             String returnTypeName = DescriptorColorizer.formatTypeName(
                 group.overloads.get(0).getGenericReturnType());
@@ -123,7 +135,7 @@ public class MethodAdapter extends RecyclerView.Adapter<MethodAdapter.ViewHolder
 
                 List<String> genericParamTypes = method.getGenericParameterTypes();
                 if (genericParamTypes.isEmpty()) {
-                    sb.append(itemView.getContext().getString(R.string.no_params));
+                    sb.append(itemView.getContext().getString(R.string.analysis_no_params));
                 } else {
                     for (int j = 0; j < genericParamTypes.size(); j++) {
                         if (j > 0) sb.append(", ");
@@ -136,14 +148,14 @@ public class MethodAdapter extends RecyclerView.Adapter<MethodAdapter.ViewHolder
                     sb.append("  ");
                     int inheritStart = sb.length();
                     if (method.isDeclaringClassIsInterface()) {
-                        sb.append("[").append(itemView.getContext().getString(R.string.implements_interface, DescriptorColorizer.formatTypeName(declaringClass))).append("]");
+                        sb.append("[").append(itemView.getContext().getString(R.string.analysis_implements, DescriptorColorizer.formatTypeName(declaringClass))).append("]");
                     } else {
-                        sb.append("[").append(itemView.getContext().getString(R.string.inherited_from, DescriptorColorizer.formatTypeName(declaringClass))).append("]");
+                        sb.append("[").append(itemView.getContext().getString(R.string.analysis_extends, DescriptorColorizer.formatTypeName(declaringClass))).append("]");
                     }
                     sb.setSpan(new ForegroundColorSpan(colorGray), inheritStart, sb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 }
             }
-            tvOverloads.setText(sb);
+            tvOverloads.setText(itemView.getContext().getString(R.string.analysis_method_return_type_label, sb.toString()));
 
             itemView.setOnClickListener(v -> {
                 if (onItemClickListener != null && group.overloads.size() == 1) {
@@ -233,10 +245,22 @@ public class MethodAdapter extends RecyclerView.Adapter<MethodAdapter.ViewHolder
             void bind(MethodInfo method, int position) {
                 tvIndex.setText(String.format(itemView.getContext().getString(R.string.index_format), position + 1));
                 
-                StringBuilder paramsBuilder = new StringBuilder();
+                int colorBlue = ContextCompat.getColor(itemView.getContext(), R.color.blue);
+                
+                SpannableStringBuilder paramsBuilder = new SpannableStringBuilder();
+                
+                String modifier = method.getModifiersString();
+                if (modifier != null && !modifier.isEmpty()) {
+                    paramsBuilder.append("(");
+                    int modifierStart = paramsBuilder.length();
+                    paramsBuilder.append(modifier);
+                    paramsBuilder.setSpan(new ForegroundColorSpan(colorBlue), modifierStart, paramsBuilder.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    paramsBuilder.append(") ");
+                }
+                
                 List<String> paramTypes = method.getGenericParameterTypes();
                 if (paramTypes.isEmpty()) {
-                    paramsBuilder.append(itemView.getContext().getString(R.string.no_params));
+                    paramsBuilder.append(itemView.getContext().getString(R.string.analysis_no_params));
                 } else {
                     for (int j = 0; j < paramTypes.size(); j++) {
                         if (j > 0) paramsBuilder.append(", ");
