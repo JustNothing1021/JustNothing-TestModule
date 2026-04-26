@@ -1,9 +1,10 @@
-package com.justnothing.javainterpreter.evaluator;
+package com.justnothing.javainterpreter.builtins;
 
 
 import com.justnothing.javainterpreter.ast.SourceLocation;
 import com.justnothing.javainterpreter.exception.ErrorCode;
 import com.justnothing.javainterpreter.exception.EvaluationException;
+import com.justnothing.javainterpreter.utils.TypeUtils;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -121,7 +122,7 @@ public class MethodReference {
                     }
                     boolean match = true;
                     for (int i = 0; i < paramTypes.length; i++) {
-                        if (argTypes[i] != null && !isAssignable(paramTypes[i], argTypes[i])) {
+                        if (argTypes[i] != null && !TypeUtils.isAssignable(paramTypes[i], argTypes[i])) {
                             match = false;
                             break;
                         }
@@ -136,19 +137,7 @@ public class MethodReference {
         throw new NoSuchMethodException(methodName + Arrays.toString(argTypes));
     }
     
-    private boolean isAssignable(Class<?> targetType, Class<?> sourceType) {
-        if (targetType.isPrimitive()) {
-            if (targetType == int.class) return sourceType == Integer.class || sourceType == int.class;
-            if (targetType == long.class) return sourceType == Long.class || sourceType == long.class;
-            if (targetType == double.class) return sourceType == Double.class || sourceType == double.class;
-            if (targetType == float.class) return sourceType == Float.class || sourceType == float.class;
-            if (targetType == boolean.class) return sourceType == Boolean.class || sourceType == boolean.class;
-            if (targetType == char.class) return sourceType == Character.class || sourceType == char.class;
-            if (targetType == byte.class) return sourceType == Byte.class || sourceType == byte.class;
-            if (targetType == short.class) return sourceType == Short.class || sourceType == short.class;
-        }
-        return targetType.isAssignableFrom(sourceType);
-    }
+
     
     @SuppressWarnings("unchecked")
     public <T> T asInterface(Class<T> interfaceClass) {
@@ -164,15 +153,21 @@ public class MethodReference {
         return (T) Proxy.newProxyInstance(
             classLoader,
             new Class<?>[] { interfaceClass },
-            new MethodReferenceInvocationHandler(this)
+            new MethodReferenceInvocationHandler(this, interfaceClass)
         );
     }
     
     public static class MethodReferenceInvocationHandler implements InvocationHandler {
         private final MethodReference methodReference;
-        
+        private final Class<?> interfaceClass;
+
         public MethodReferenceInvocationHandler(MethodReference methodReference) {
+            this(methodReference, null);
+        }
+
+        public MethodReferenceInvocationHandler(MethodReference methodReference, Class<?> interfaceClass) {
             this.methodReference = methodReference;
+            this.interfaceClass = interfaceClass;
         }
         
         public MethodReference getMethodReference() {
@@ -181,16 +176,11 @@ public class MethodReference {
         
         @Override
         public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-            if (method.getName().equals("toString") && method.getParameterCount() == 0) {
-                return methodReference.toString();
+            if (method.getDeclaringClass() == Object.class || (
+                interfaceClass != null && interfaceClass.isAssignableFrom(method.getDeclaringClass())
+            )) {
+                return method.invoke(proxy, args);
             }
-            if (method.getName().equals("hashCode") && method.getParameterCount() == 0) {
-                return System.identityHashCode(methodReference);
-            }
-            if (method.getName().equals("equals") && method.getParameterCount() == 1) {
-                return proxy == args[0];
-            }
-            
             Object[] invokeArgs = args != null ? args : new Object[0];
             return methodReference.invoke(invokeArgs);
         }

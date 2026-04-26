@@ -1,13 +1,19 @@
 package com.justnothing.javainterpreter;
 
 import com.justnothing.javainterpreter.api.DefaultOutputHandler;
+import com.justnothing.javainterpreter.builtins.MethodReference;
+
 import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
 
 import java.lang.reflect.Array;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 
 public class ParserTest {
@@ -200,6 +206,53 @@ public class ParserTest {
     }
 
     // ========== 数组字面量测试 ==========
+    @Test
+    public void array_literalInBrackets() throws Exception {
+        Object result = eval("{1, 2, 3}");
+        assertEquals(3, Array.getLength(result));
+        assertEquals(1, Array.get(result, 0));
+        assertEquals(2, Array.get(result, 1));
+        assertEquals(3, Array.get(result, 2));
+    }
+
+    @Test
+    public void array_braceLiteral() throws Exception {
+        Object result = eval("{1, 2, 3}");
+        assertNotNull(result);
+        assertTrue("应该是数组", result.getClass().isArray());
+        assertEquals(3, Array.getLength(result));
+        assertEquals(1, Array.get(result, 0));
+        assertEquals(2, Array.get(result, 1));
+        assertEquals(3, Array.get(result, 2));
+    }
+
+    @Test
+    public void array_braceLiteralSingleElement() throws Exception {
+        Object result = eval("{1}");
+        assertNotNull(result);
+        assertTrue("应该是数组", result.getClass().isArray());
+        assertEquals(1, Array.getLength(result));
+        assertEquals(1, Array.get(result, 0));
+    }
+
+    @Test
+    public void array_braceLiteralAddition() throws Exception {
+        Object result = eval("{1} + {2}");
+        assertNotNull(result);
+        // 这里的结果应该是字符串拼接，因为两个数组相加会被转换为字符串
+        assertTrue("应该是字符串", result instanceof String);
+    }
+
+    @Test
+    public void array_braceLiteralWithSize() throws Exception {
+        Object result = eval("new int[3] {1, 2}");
+        assertNotNull(result);
+        assertTrue("应该是数组", result.getClass().isArray());
+        assertEquals(3, Array.getLength(result));
+        assertEquals(1, Array.get(result, 0));
+        assertEquals(2, Array.get(result, 1));
+        assertEquals(0, Array.get(result, 2)); // 应该补齐默认值
+    }
 
     @Test
     public void array_literalWithIndex() throws Exception {
@@ -235,6 +288,20 @@ public class ParserTest {
         Object elem = Array.get(result, 0);
         assertTrue("元素应该是数字", elem instanceof Number);
         assertEquals(1.5, ((Number) elem).doubleValue(), 0.001);
+    }
+
+    // ========== 字典测试 ==========
+
+    @Test
+    public void dict_literalInBrackets() throws Exception {
+        Object result = eval("{\"a\": 1, \"b\": 2, \"c\": 3}");
+        assertNotNull(result);
+        assertTrue(result instanceof Map);
+        Map<?, ?> map = (Map<?, ?>) result;
+        assertEquals(3, map.size());
+        assertEquals(1, map.get("a"));
+        assertEquals(2, map.get("b"));
+        assertEquals(3, map.get("c"));
     }
 
     // ========== 幂运算测试 ==========
@@ -276,4 +343,45 @@ public class ParserTest {
                 """);
         assertEquals(2, result);
     }
+
+    @Test
+    public void method_staticMethodReference() throws Exception {
+        Object result = eval("Comparator.comparing");
+        assertNotNull("Comparator.comparing should return a MethodReference", result);
+        assertTrue(" 应该是MethodReference类型", result instanceof MethodReference);
+    }
+
+    @Test
+    public void method_staticMethodReferenceInvoke() throws Exception {
+        Object result = eval("Integer.valueOf(42)");
+        assertEquals(42, result);
+    }
+
+    @Test
+    public void method_staticMethodReferenceOnClass() throws Exception {
+        Object result = eval("Math.max(10, 20)");
+        assertEquals(20, result);
+    }
+
+    @Test
+    public void method_functionalInterfaceConversion() throws Exception {
+        Object result = eval("""
+                Arrays.stream(new int[]{1, 1, 4, 5, 1, 4})
+                    .filter(i -> i > 3)
+                    .sorted()
+                    .toArray();
+                """);
+        int[] excepted = Arrays.stream(new int[]{1, 1, 4, 5, 1, 4})
+                .filter(i -> i > 3)
+                .sorted()
+                .toArray();
+
+        assertTrue(result.getClass().isArray());
+        assertEquals(excepted.length, Array.getLength(result));
+        for (int i = 0; i < excepted.length; i++) {
+            assertEquals(excepted[i], Array.get(result, i));
+        }
+    }
+
+
 }

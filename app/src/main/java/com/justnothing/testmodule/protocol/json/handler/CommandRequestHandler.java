@@ -16,6 +16,7 @@ import com.justnothing.testmodule.command.functions.hook.HookActionRequestHandle
 import com.justnothing.testmodule.command.functions.packages.PackagesRequestHandler;
 import com.justnothing.testmodule.command.functions.exportcontext.ExportContextRequestHandler;
 import com.justnothing.testmodule.command.functions.system.SystemInfoRequestHandler;
+import com.justnothing.testmodule.command.functions.alias.AliasRequestHandler;
 import com.justnothing.testmodule.protocol.json.request.CommandRequest;
 import com.justnothing.testmodule.protocol.json.response.CommandResult;
 import com.justnothing.testmodule.utils.logging.Logger;
@@ -49,6 +50,7 @@ public class CommandRequestHandler {
             RequestDispatcher.registerHandler(new PackagesRequestHandler());
             RequestDispatcher.registerHandler(new ExportContextRequestHandler());
             RequestDispatcher.registerHandler(new SystemInfoRequestHandler());
+            RequestDispatcher.registerHandler(new AliasRequestHandler());
             logger.info("默认请求处理器已注册完成");
         }
     }

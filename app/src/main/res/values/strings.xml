@@ -17,7 +17,7 @@
     <string name="about_author">作者</string>
     <string name="about_author_info">JustNothing1021 (后端和极少的前端)\nNoneColdWind (\"你知道吗？\"和拓展包)\nNAN (\"你知道吗？\"和ADB教程)</string>
     <string name="about_assistant_development">协助开发</string>
-    <string name="about_assistant_info">DYD (吉祥物, 基本不写代码)\n 云沫 (也是吉祥物, 完全不写代码) \n GLM-4.7 AI Assistant (前端)\nDeepSeek (后端)</string>
+    <string name="about_assistant_info">DYD (吉祥物, 基本不写代码)\n云沫 (也是吉祥物, 完全不写代码) \nGLM-4.7 AI Assistant (前端)\nDeepSeek (后端)</string>
     <string name="about_version">版本</string>
     <string name="general_back">返回</string>
     <string name="settings_title">界面设置</string>
@@ -517,4 +517,31 @@
     <string name="sys_category_cpu_info">CPU 信息</string>
     <string name="sys_category_memory_info">内存信息</string>
     <string name="sys_category_system_props">系统属性</string>
+
+    <!-- Alias Analysis -->
+    <string name="analysis_alias">命令别名</string>
+    <string name="analysis_alias_desc">管理命令别名，简化命令输入</string>
+    <string name="analysis_alias_load_failed">加载别名失败</string>
+    <string name="analysis_alias_add_success">别名添加成功</string>
+    <string name="analysis_alias_add_failed">添加别名失败</string>
+    <string name="analysis_alias_remove_success">别名删除成功</string>
+    <string name="analysis_alias_remove_failed">删除别名失败</string>
+    <string name="analysis_alias_clear_success">已清除所有自定义别名</string>
+    <string name="analysis_alias_clear_failed">清除别名失败</string>
+    <string name="analysis_alias_loading">正在加载别名…</string>
+    <string name="analysis_alias_empty">暂无别名</string>
+    <string name="analysis_alias_total_format">共 %1$d 个别名</string>
+    <string name="analysis_alias_add_title">添加别名</string>
+    <string name="analysis_alias_name_hint">别名名称</string>
+    <string name="analysis_alias_command_hint">对应命令</string>
+    <string name="analysis_alias_add_button">添加</string>
+    <string name="analysis_alias_clear_all">清空所有</string>
+    <string name="analysis_alias_name_label">名称:</string>
+    <string name="analysis_alias_command_label">命令:</string>
+    <string name="analysis_alias_name_empty">别名名称不能为空</string>
+    <string name="analysis_alias_command_empty">命令不能为空</string>
+    <string name="analysis_alias_delete_title">删除别名</string>
+    <string name="analysis_alias_delete_message">确定要删除别名 "%1$s" 吗？</string>
+    <string name="analysis_alias_clear_title">清空别名</string>
+    <string name="analysis_alias_clear_message">确定要清空所有自定义别名吗？（默认别名会保留）</string>
 </resources>

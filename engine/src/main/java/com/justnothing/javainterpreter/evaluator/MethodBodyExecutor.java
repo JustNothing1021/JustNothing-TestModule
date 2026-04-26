@@ -5,6 +5,7 @@ import com.justnothing.javainterpreter.ast.ASTNode;
 import com.justnothing.javainterpreter.ast.nodes.*;
 import com.justnothing.javainterpreter.exception.EvaluationException;
 import com.justnothing.javainterpreter.exception.ReturnException;
+import com.justnothing.javainterpreter.utils.TypeUtils;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -108,7 +109,7 @@ public class MethodBodyExecutor {
         ASTNode body = methodDecl.getBody();
         
         if (body == null) {
-            return getDefaultValue(methodDecl.getReturnType().getTypeName());
+            return TypeUtils.getDefaultValue(methodDecl.getReturnType().getResolvedClass());
         }
         
         ExecutionContext context = info.creationContext.createChildContext();
@@ -171,13 +172,12 @@ public class MethodBodyExecutor {
                     }
                     clazz = clazz.getSuperclass();
                 }
-            } catch (Exception e) {
+            } catch (Exception ignored) {
             }
         }
         
         try {
-            Object result = evaluateWithFieldResolution(body, context, instance);
-            return result;
+            return evaluateWithFieldResolution(body, context, instance);
         } catch (ReturnException e) {
             return e.getValue();
         } catch (EvaluationException e) {
@@ -197,14 +197,14 @@ public class MethodBodyExecutor {
             }
             Object fieldValue = null;
             if (instance != null) {
-                fieldValue = resolveField(varNode.getName(), instance);
+                fieldValue = TypeUtils.resolveField(varNode.getName(), instance);
             }
             if (fieldValue == null) {
                 ScopeManager.Variable thisVar = context.getScopeManager().getVariable("this");
                 if (thisVar != null) {
                     Object thisInstance = thisVar.getValue();
                     if (thisInstance != null) {
-                        fieldValue = resolveField(varNode.getName(), thisInstance);
+                        fieldValue = TypeUtils.resolveField(varNode.getName(), thisInstance);
                     }
                 }
             }
@@ -221,12 +221,12 @@ public class MethodBodyExecutor {
                     }
                     if (targetClass != null) {
                         try {
-                            Field field = findField(targetClass, varNode.getName());
+                            Field field = TypeUtils.findField(targetClass, varNode.getName());
                             if (field != null && Modifier.isStatic(field.getModifiers())) {
                                 field.setAccessible(true);
                                 fieldValue = field.get(null);
                             }
-                        } catch (Exception e) {
+                        } catch (Exception ignored) {
                         }
                     }
                 }
@@ -236,7 +236,7 @@ public class MethodBodyExecutor {
             }
             return ASTEvaluator.evaluate(node, context);
         }
-        
+
         if (node instanceof FieldAccessNode fieldNode) {
             ASTNode targetNode = fieldNode.getTarget();
             if (targetNode instanceof VariableNode varNode && varNode.getName().equals("this")) {
@@ -244,7 +244,7 @@ public class MethodBodyExecutor {
                 Object fieldValue = null;
                 // 首先尝试使用传入的 instance 参数
                 if (instance != null) {
-                    fieldValue = resolveField(fieldNode.getFieldName(), instance);
+                    fieldValue = TypeUtils.resolveField(fieldNode.getFieldName(), instance);
                 }
                 // 如果从 instance 参数中解析失败，尝试从 context 中获取 this 变量
                 if (fieldValue == null) {
@@ -252,7 +252,7 @@ public class MethodBodyExecutor {
                     if (thisVar != null) {
                         Object thisInstance = thisVar.getValue();
                         if (thisInstance != null) {
-                            fieldValue = resolveField(fieldNode.getFieldName(), thisInstance);
+                            fieldValue = TypeUtils.resolveField(fieldNode.getFieldName(), thisInstance);
                         }
                     }
                 }
@@ -270,13 +270,13 @@ public class MethodBodyExecutor {
                 Object value = evaluateWithFieldResolution(fieldNode.getValue(), context, instance);
                 if (instance != null) {
                     try {
-                        Field field = findField(instance.getClass(), fieldNode.getFieldName());
+                        Field field = TypeUtils.findField(instance.getClass(), fieldNode.getFieldName());
                         if (field != null) {
                             field.setAccessible(true);
                             field.set(instance, value);
                             return value;
                         }
-                    } catch (Exception e) {
+                    } catch (Exception ignored) {
                     }
                 }
                 ScopeManager.Variable thisVar = context.getScopeManager().getVariable("this");
@@ -284,20 +284,20 @@ public class MethodBodyExecutor {
                     Object thisInstance = thisVar.getValue();
                     if (thisInstance != null) {
                         try {
-                            Field field = findField(thisInstance.getClass(), fieldNode.getFieldName());
+                            Field field = TypeUtils.findField(thisInstance.getClass(), fieldNode.getFieldName());
                             if (field != null) {
                                 field.setAccessible(true);
                                 field.set(thisInstance, value);
                                 return value;
                             }
-                        } catch (Exception e) {
+                        } catch (Exception ignored) {
                         }
                     }
                 }
                 if (instance == null) {
                     String className = getCurrentClassContext();
                     if (className != null) {
-                        Class<?> targetClass = null;
+                        Class<?> targetClass;
                         if (context.hasCustomClass(className)) {
                             targetClass = context.getCustomClass(className);
                         } else {
@@ -306,13 +306,13 @@ public class MethodBodyExecutor {
                         }
                         if (targetClass != null) {
                             try {
-                                Field field = findField(targetClass, fieldNode.getFieldName());
+                                Field field = TypeUtils.findField(targetClass, fieldNode.getFieldName());
                                 if (field != null && Modifier.isStatic(field.getModifiers())) {
                                     field.setAccessible(true);
                                     field.set(null, value);
                                     return value;
                                 }
-                            } catch (Exception e) {
+                            } catch (Exception ignored) {
                             }
                         }
                     }
@@ -333,7 +333,7 @@ public class MethodBodyExecutor {
                     // 首先尝试使用传入的 instance 参数
                     if (instance != null) {
                         try {
-                            Field field = findField(instance.getClass(), fieldName);
+                            Field field = TypeUtils.findField(instance.getClass(), fieldName);
                             if (field != null) {
                                 field.setAccessible(true);
                                 Object currentValue = field.get(instance);
@@ -385,7 +385,7 @@ public class MethodBodyExecutor {
                             Object thisInstance = thisVar.getValue();
                             if (thisInstance != null) {
                                 try {
-                                    Field field = findField(thisInstance.getClass(), fieldName);
+                                    Field field = TypeUtils.findField(thisInstance.getClass(), fieldName);
                                     if (field != null) {
                                         field.setAccessible(true);
                                         Object currentValue = field.get(thisInstance);
@@ -455,7 +455,7 @@ public class MethodBodyExecutor {
                 } catch (RuntimeException e) {
                     if (e.getMessage() != null && e.getMessage().startsWith("Method not found")) {
                         try {
-                            Method method = ASTEvaluator.findMethod(instance.getClass(), funcName, argValues);
+                            Method method = TypeUtils.findMethod(instance.getClass(), funcName, argValues);
                             if (method != null) {
                                 method.setAccessible(true);
                                 return method.invoke(instance, argValues);
@@ -486,7 +486,7 @@ public class MethodBodyExecutor {
             // 检查是否是实例字段
             boolean isField = false;
             if (instance != null) {
-                Field field = findField(instance.getClass(), varName);
+                Field field = TypeUtils.findField(instance.getClass(), varName);
                 if (field != null) {
                     isField = true;
                     try {
@@ -527,53 +527,9 @@ public class MethodBodyExecutor {
         return ASTEvaluator.evaluate(node, context);
     }
     
-    public static Object resolveField(String fieldName, Object instance) {
-        if (instance == null) {
-            return null;
-        }
-        try {
-            // 尝试使用反射直接获取字段，包括从父类继承的字段
-            Field field = findField(instance.getClass(), fieldName);
-            if (field != null) {
-                field.setAccessible(true);
-                return field.get(instance);
-            }
-        } catch (Exception e) {
-            // 字段访问失败，返回 null 让调用者尝试其他方法
-            return null;
-        }
-        // 字段未找到，返回 null 让调用者尝试其他方法
-        return null;
-    }
+
     
-    public static Field findField(Class<?> clazz, String fieldName) {
-        try {
-            // 首先尝试在当前类中查找字段
-            Field field = clazz.getDeclaredField(fieldName);
-            return field;
-        } catch (NoSuchFieldException e) {
-            // 如果当前类没有该字段，尝试在父类中查找
-            Class<?> superClass = clazz.getSuperclass();
-            if (superClass != null && superClass != Object.class) {
-                return findField(superClass, fieldName);
-            }
-            return null;
-        }
-    }
     
-    private static Object getDefaultValue(String returnTypeName) {
-        if (returnTypeName == null || returnTypeName.equals("void")) {
-            return null;
-        }
-        return switch (returnTypeName) {
-            case "int", "byte", "short", "char" -> 0;
-            case "long" -> 0L;
-            case "float" -> 0.0f;
-            case "double" -> 0.0;
-            case "boolean" -> false;
-            default -> null;
-        };
-    }
     
     private static String getParameterSignature(List<ParameterNode> parameters) {
         if (parameters == null || parameters.isEmpty()) {

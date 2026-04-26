@@ -3,19 +3,7 @@ package com.justnothing.testmodule.protocol.json;
 import com.justnothing.testmodule.protocol.json.handler.CommandRequestHandler;
 import com.justnothing.testmodule.protocol.json.handler.RequestDispatcher;
 import com.justnothing.testmodule.protocol.json.request.CommandRequest;
-import com.justnothing.testmodule.protocol.json.response.ClassInfoResult;
-import com.justnothing.testmodule.protocol.json.response.ClassHierarchyResult;
 import com.justnothing.testmodule.protocol.json.response.CommandResult;
-import com.justnothing.testmodule.protocol.json.response.InvokeConstructorResult;
-import com.justnothing.testmodule.protocol.json.response.InvokeMethodResult;
-import com.justnothing.testmodule.protocol.json.response.GetFieldValueResult;
-import com.justnothing.testmodule.protocol.json.response.SetFieldValueResult;
-import com.justnothing.testmodule.protocol.json.response.MemoryInfoResult;
-import com.justnothing.testmodule.protocol.json.response.GcResult;
-import com.justnothing.testmodule.protocol.json.response.ThreadInfoResult;
-import com.justnothing.testmodule.protocol.json.response.DeadlockDetectResult;
-import com.justnothing.testmodule.protocol.json.response.HookListResult;
-import com.justnothing.testmodule.protocol.json.response.HookAddResult;
 import com.justnothing.testmodule.utils.logging.Logger;
 
 public class JsonProtocol {

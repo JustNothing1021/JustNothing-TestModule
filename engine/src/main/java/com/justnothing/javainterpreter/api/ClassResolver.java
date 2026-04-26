@@ -125,32 +125,52 @@ public class ClassResolver {
     }
 
     public static Class<?> findClassWithImports(String className, ClassLoader classLoader, List<String> imports) {
+
         switch (className) {
-            case "int": return int.class;
-            case "long": return long.class;
-            case "float": return float.class;
-            case "double": return double.class;
-            case "boolean": return boolean.class;
-            case "char": return char.class;
-            case "byte": return byte.class;
-            case "short": return short.class;
-            case "void": return void.class;
+            case "int":
+                return int.class;
+            case "long":
+                return long.class;
+            case "float":
+                return float.class;
+            case "double":
+                return double.class;
+            case "boolean":
+                return boolean.class;
+            case "char":
+                return char.class;
+            case "byte":
+                return byte.class;
+            case "short":
+                return short.class;
+            case "void":
+                return void.class;
         }
 
         Class<?> clazz;
         if (className.contains(".")) {
             clazz = findClassInternal(className, classLoader);
-            if (clazz != null) return clazz;
+
+            if (clazz != null) {
+                return clazz;
+            }
+
             String[] parts = className.split("\\.");
             if (parts.length >= 2) {
                 for (int i = parts.length - 1; i >= 1; i--) {
                     StringBuilder nestedClassName = new StringBuilder(parts[0]);
                     for (int j = 1; j < parts.length; j++) {
-                        if (j < i) nestedClassName.append('.').append(parts[j]);
-                        else nestedClassName.append('$').append(parts[j]);
+                        if (j < i) {
+                            nestedClassName.append('.').append(parts[j]);
+                        } else {
+                            nestedClassName.append('$').append(parts[j]);
+                        }
                     }
                     clazz = findClassInternal(nestedClassName.toString(), classLoader);
-                    if (clazz != null) return clazz;
+
+                    if (clazz != null) {
+                        return clazz;
+                    }
                 }
             }
         }
@@ -163,10 +183,33 @@ public class ClassResolver {
             } else {
                 fullClassName = importStmt;
                 String lastName = fullClassName.substring(fullClassName.lastIndexOf('.') + 1);
-                if (!lastName.equals(className)) continue;
+                if (!lastName.equals(className)) {
+                    continue;
+                }
             }
             clazz = findClassInternal(fullClassName, classLoader);
-            if (clazz != null) return clazz;
+            if (clazz != null) {
+                return clazz;
+            }
+
+            String[] parts = fullClassName.split("\\.");
+            if (parts.length >= 2) {
+                for (int i = parts.length - 1; i >= 1; i--) {
+                    StringBuilder nestedClassName = new StringBuilder(parts[0]);
+                    for (int j = 1; j < parts.length; j++) {
+                        if (j < i) {
+                            nestedClassName.append('.').append(parts[j]);
+                        } else {
+                            nestedClassName.append('$').append(parts[j]);
+                        }
+                    }
+                    clazz = findClassInternal(nestedClassName.toString(), classLoader);
+
+                    if (clazz != null) {
+                        return clazz;
+                    }
+                }
+            }
         }
         return null;
     }

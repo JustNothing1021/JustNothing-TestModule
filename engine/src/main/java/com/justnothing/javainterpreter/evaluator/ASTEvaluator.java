@@ -3,11 +3,15 @@ package com.justnothing.javainterpreter.evaluator;
 import com.justnothing.javainterpreter.api.ClassResolver;
 import com.justnothing.javainterpreter.ast.ASTNode;
 import com.justnothing.javainterpreter.ast.GenericType;
-import com.justnothing.javainterpreter.ast.SourceLocation;
 import com.justnothing.javainterpreter.ast.nodes.*;
+import com.justnothing.javainterpreter.builtins.Lambda;
+import com.justnothing.javainterpreter.builtins.MethodReference;
 import com.justnothing.javainterpreter.exception.ErrorCode;
 import com.justnothing.javainterpreter.exception.EvaluationException;
 import com.justnothing.javainterpreter.exception.ReturnException;
+import com.justnothing.javainterpreter.utils.ArrayUtils;
+import com.justnothing.javainterpreter.utils.NumberUtils;
+import com.justnothing.javainterpreter.utils.TypeUtils;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
@@ -17,15 +21,13 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.Constructor;
 import java.util.Arrays;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
 import java.util.Objects;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Consumer;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
-    
+import java.util.stream.Collectors;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -117,7 +119,7 @@ public class ASTEvaluator {
                         Object instance = thisVar.getValue();
                         if (instance != null) {
                             try {
-                                java.lang.reflect.Field field = findField(instance.getClass(), varName);
+                                Field field = TypeUtils.findField(instance.getClass(), varName);
                                 if (field != null) {
                                     field.setAccessible(true);
                                     return field.get(instance);
@@ -134,74 +136,59 @@ public class ASTEvaluator {
             throw e;
         }
     }
-    
-    private static Field findField(Class<?> clazz, String fieldName) {
-        try {
-            // 首先尝试在当前类中查找字段
-            return clazz.getDeclaredField(fieldName);
-        } catch (NoSuchFieldException e) {
-            // 如果当前类没有该字段，尝试在父类中查找
-            Class<?> superClass = clazz.getSuperclass();
-            if (superClass != null && superClass != Object.class) {
-                return findField(superClass, fieldName);
-            }
-            return null;
-        }
-    }
+
     
     public static Object evaluateBinaryOp(BinaryOpNode node, ExecutionContext context) throws EvaluationException {
         Object left = evaluate(node.getLeft(), context);
         Object right = evaluate(node.getRight(), context);
         BinaryOpNode.Operator op = node.getOperator();
 
+        boolean isBothArray = left != null && right != null && left.getClass().isArray() && right.getClass().isArray();
         switch (op) {
             case ADD:
-                if (left instanceof String || right instanceof String) {
-                    // 拼接字符串
+                if (left instanceof String || right instanceof String || isBothArray) {
+                    // 拼接字符串，包括数组
                     return formatValue(left) + formatValue(right);
                 }
                 if (left instanceof Number && right instanceof Number) {
                     // 单纯的数字运算
-                    return addNumbers((Number) left, (Number) right);
-                }
-                if (left.getClass().isArray() && right.getClass().isArray()) {
-                    return arrayCombine((Object[]) left, (Object[]) right);
+                    return NumberUtils.addNumbers((Number) left, (Number) right);
                 }
                 break;
             case SUBTRACT:
                 if (left instanceof Number && right instanceof Number) {
-                    return subtractNumbers((Number) left, (Number) right);
+                    return NumberUtils.subtractNumbers((Number) left, (Number) right);
                 }
-                if (left.getClass().isArray() && right.getClass().isArray()) {
-                    return arrayDifference((Object[]) left, (Object[]) right);
+                if (isBothArray) {
+                    return ArrayUtils.arrayDifference(left, right, node.getLocation());
                 }
                 break;
             case MULTIPLY:
                 if (left instanceof Number && right instanceof Number) {
                     // 单纯的乘法
-                    return multiplyNumbers((Number) left, (Number) right);
+                    return NumberUtils.multiplyNumbers((Number) left, (Number) right);
                 } else if (left instanceof String && right instanceof Number) {
                     // 字符串重复
                     return ((String) left).repeat((int) right);
-                } else if (left.getClass().isArray() && right instanceof Number) {
+                } else if (left != null && left.getClass().isArray() && right instanceof Number) {
                     // 数组重复
-                    return arrayRepeat((Object[]) left, (int) right);
+                    return ArrayUtils.arrayRepeat(left, (int) right, node.getLocation());
                 }
                 break;
             case DIVIDE:
                 if (left instanceof Number && right instanceof Number) {
-                    return divideNumbers((Number) left, (Number) right);
+                    return NumberUtils.divideNumbers((Number) left, (Number) right);
                 }
                 break;
             case MODULO:
                 if (left instanceof Number && right instanceof Number) {
-                    return moduloNumbers((Number) left, (Number) right);
+                    return NumberUtils.moduloNumbers((Number) left, (Number) right);
                 }
                 break;
             case POWER:
                 if (left instanceof Number && right instanceof Number) {
                     double result = Math.pow(((Number) left).doubleValue(), ((Number) right).doubleValue());
-                    if (isFloatingType((Number) left) || isFloatingType((Number) right)) {
+                    if (TypeUtils.isFloatingType((Number) left) || TypeUtils.isFloatingType((Number) right)) {
                         return result;
                     }
                     if (result == Math.floor(result) && result <= Long.MAX_VALUE && result >= Long.MIN_VALUE) {
@@ -209,8 +196,8 @@ public class ASTEvaluator {
                     }
                     return result;
                 }
-                if (left.getClass().isArray() && right.getClass().isArray()) {
-                    return arrayCartesianProduct((Object[]) left, (Object[]) right);
+                if (isBothArray) {
+                    return ArrayUtils.arrayCartesianProduct(left, right, node.getLocation());
                 }
                 break;
             case INT_DIVIDE:
@@ -237,58 +224,58 @@ public class ASTEvaluator {
                 return !Objects.equals(left, right);
             case LESS_THAN:
                 if (left instanceof Number && right instanceof Number) {
-                    return compareNumbers((Number) left, (Number) right) < 0;
+                    return NumberUtils.compareNumbers((Number) left, (Number) right) < 0;
                 }
                 break;
             case LESS_THAN_OR_EQUAL:
                 if (left instanceof Number && right instanceof Number) {
-                    return compareNumbers((Number) left, (Number) right) <= 0;
+                    return NumberUtils.compareNumbers((Number) left, (Number) right) <= 0;
                 }
                 break;
             case GREATER_THAN:
                 if (left instanceof Number && right instanceof Number) {
-                    return compareNumbers((Number) left, (Number) right) > 0;
+                    return NumberUtils.compareNumbers((Number) left, (Number) right) > 0;
                 }
                 break;
             case GREATER_THAN_OR_EQUAL:
                 if (left instanceof Number && right instanceof Number) {
-                    return compareNumbers((Number) left, (Number) right) >= 0;
+                    return NumberUtils.compareNumbers((Number) left, (Number) right) >= 0;
                 }
                 break;
             case SPACESHIP:
                 if (left instanceof Number && right instanceof Number) {
-                    return compareNumbers((Number) left, (Number) right);
+                    return NumberUtils.compareNumbers((Number) left, (Number) right);
                 }
                 if (left instanceof Comparable && right != null) {
                     return ((Comparable) left).compareTo(right);
                 }
                 break;
             case LOGICAL_AND:
-                return toBoolean(left) && toBoolean(right);
+                return TypeUtils.toBoolean(left) && TypeUtils.toBoolean(right);
             case LOGICAL_OR:
-                return toBoolean(left) || toBoolean(right);
+                return TypeUtils.toBoolean(left) || TypeUtils.toBoolean(right);
             case BITWISE_AND:
                 if (left instanceof Number && right instanceof Number) {
                     return ((Number) left).longValue() & ((Number) right).longValue();
                 }
-                if (left.getClass().isArray() && right.getClass().isArray()) {
-                    return arrayIntersection((Object[]) left, (Object[]) right);
+                if (isBothArray) {
+                    return ArrayUtils.arrayIntersection(left, right, node.getLocation());
                 }
                 break;
             case BITWISE_OR:
                 if (left instanceof Number && right instanceof Number) {
                     return ((Number) left).longValue() | ((Number) right).longValue();
                 }
-                if (left.getClass().isArray() && right.getClass().isArray()) {
-                    return arrayUnion((Object[]) left, (Object[]) right);
+                if (isBothArray) {
+                    return ArrayUtils.arrayUnion(left, right, node.getLocation());
                 }
                 break;
             case BITWISE_XOR:
                 if (left instanceof Number && right instanceof Number) {
                     return ((Number) left).longValue() ^ ((Number) right).longValue();
                 }
-                if (left.getClass().isArray() && right.getClass().isArray()) {
-                    return arraySymmetricDifference((Object[]) left, (Object[]) right);
+                if (isBothArray) {
+                    return ArrayUtils.arraySymmetricDifference(left, right, node.getLocation());
                 }
                 break;
             case LEFT_SHIFT:
@@ -324,17 +311,12 @@ public class ASTEvaluator {
         }
         
         throw new EvaluationException(
-            "Invalid binary operation: " + op.getSymbol() + " on " + 
-            (left != null ? left.getClass().getName() : "null") + " and " +
-            (right != null ? right.getClass().getName() : "null"),
+                "Invalid binary operation: " + op.getSymbol() + " on " +
+                        left.getClass().getName() + " and " +
+                (right != null ? right.getClass().getName() : "null"),
             node.getLocation(),
             ErrorCode.EVAL_INVALID_OPERATION
         );
-    }
-    
-
-    private static boolean isFloatingType(Number n) {
-        return n instanceof Double || n instanceof Float;
     }
     
     private static Object createRange(Object start, Object end, boolean exclusive) {
@@ -389,77 +371,7 @@ public class ASTEvaluator {
         );
     }
     
-    private static Object[] arrayCartesianProduct(Object[] arr1, Object[] arr2) {
-        int len1 = arr1.length;
-        int len2 = arr2.length;
-        Object[] result = new Object[len1 * len2];
-        
-        int index = 0;
-        for (Object o : arr1) {
-            for (Object object : arr2) {
-                Object[] pair = new Object[2];
-                pair[0] = o;
-                pair[1] = object;
-                result[index++] = pair;
-            }
-        }
-        
-        return result;
-    }
-    
-    private static Number addNumbers(Number a, Number b) {
-        if (isFloatingType(a) || isFloatingType(b)) {
-            return a.doubleValue() + b.doubleValue();
-        }
-        if (a instanceof Long || b instanceof Long) {
-            return a.longValue() + b.longValue();
-        }
-        return a.intValue() + b.intValue();
-    }
-    
-    private static Number subtractNumbers(Number a, Number b) {
-        if (isFloatingType(a) || isFloatingType(b)) {
-            return a.doubleValue() - b.doubleValue();
-        }
-        if (a instanceof Long || b instanceof Long) {
-            return a.longValue() - b.longValue();
-        }
-        return a.intValue() - b.intValue();
-    }
-    
-    private static Number multiplyNumbers(Number a, Number b) {
-        if (isFloatingType(a) || isFloatingType(b)) {
-            return a.doubleValue() * b.doubleValue();
-        }
-        if (a instanceof Long || b instanceof Long) {
-            return a.longValue() * b.longValue();
-        }
-        return a.intValue() * b.intValue();
-    }
-    
-    private static Number divideNumbers(Number a, Number b) {
-        if (isFloatingType(a) || isFloatingType(b)) {
-            return a.doubleValue() / b.doubleValue();
-        }
-        if (a instanceof Long || b instanceof Long) {
-            return a.longValue() / b.longValue();
-        }
-        return a.intValue() / b.intValue();
-    }
-    
-    private static Number moduloNumbers(Number a, Number b) {
-        if (isFloatingType(a) || isFloatingType(b)) {
-            return a.doubleValue() % b.doubleValue();
-        }
-        if (a instanceof Long || b instanceof Long) {
-            return a.longValue() % b.longValue();
-        }
-        return a.intValue() % b.intValue();
-    }
-    
-    private static int compareNumbers(Number a, Number b) {
-        return Double.compare(a.doubleValue(), b.doubleValue());
-    }
+
     
     public static Object evaluateUnaryOp(UnaryOpNode node, ExecutionContext context) throws EvaluationException {
         UnaryOpNode.Operator op = node.getOperator();
@@ -468,7 +380,7 @@ public class ASTEvaluator {
             case NEGATIVE: {
                 Object operand = evaluate(node.getOperand(), context);
                 if (operand instanceof Number n) {
-                    if (isFloatingType(n)) {
+                    if (TypeUtils.isFloatingType(n)) {
                         return -n.doubleValue();
                     }
                     if (n instanceof Long) {
@@ -480,7 +392,7 @@ public class ASTEvaluator {
             }
             case LOGICAL_NOT: {
                 Object operand = evaluate(node.getOperand(), context);
-                return !toBoolean(operand);
+                return !TypeUtils.toBoolean(operand);
             }
             case NOT_NULL: {
                 Object operand = evaluate(node.getOperand(), context);
@@ -503,7 +415,7 @@ public class ASTEvaluator {
                     return ~n.intValue();
                 }
                 if (operand.getClass().isArray()) {
-                    return arrayReverse((Object[]) operand);
+                    return ArrayUtils.arrayReverse(operand, node.getLocation());
                 }
                 break;
             }
@@ -638,7 +550,7 @@ public class ASTEvaluator {
             }
             value = evaluate(valueNode, context);
         } else if (node.isDeclaration()) {
-            value = getDefaultValue(node.getDeclaredClass());
+            value = TypeUtils.getDefaultValue(node.getDeclaredClass());
         } else {
             value = null;
         }
@@ -650,7 +562,7 @@ public class ASTEvaluator {
                 declaredType = AutoClass.inferStrictType(value);
             }
             
-            value = convertValue(value, declaredType, node.getLocation());
+            value = TypeUtils.convertValue(value, declaredType, node.getLocation());
             
             context.getScopeManager().declareVariable(
                 node.getVariableName(), 
@@ -661,7 +573,7 @@ public class ASTEvaluator {
         } else {
             ScopeManager.Variable variable = context.getScopeManager().getVariable(node.getVariableName());
             if (variable != null && variable.getType() != null) {
-                value = convertValue(value, variable.getType(), node.getLocation());
+                value = TypeUtils.convertValue(value, variable.getType(), node.getLocation());
             }
             context.getScopeManager().setVariable(node.getVariableName(), value);
         }
@@ -707,131 +619,15 @@ public class ASTEvaluator {
         return existing.getValue();
     }
     
-    private static Object convertValue(Object value, Class<?> targetType, SourceLocation location) throws EvaluationException {
-        if (value == null) {
-            if (targetType.isPrimitive()) {
-                throw new EvaluationException(
-                    "Cannot assign null to primitive type: " + targetType.getName(),
-                    location,
-                    ErrorCode.EVAL_TYPE_MISMATCH
-                );
-            }
-            return null;
-        }
-        
-        if (targetType == null || targetType == Object.class) {
-            return value;
-        }
-        
-        Class<?> sourceType = value.getClass();
-        
-        if (targetType.isAssignableFrom(sourceType)) {
-            return value;
-        }
-
-        if (targetType.isArray() && sourceType.isArray()) {
-            return convertArray(value, targetType, location);
-        }
-
-        if (targetType.isPrimitive() && sourceType.isAssignableFrom(getWrapperType(targetType))) {
-            return value;
-        }
-        
-        if (value instanceof Number num) {
-
-            if (targetType == int.class || targetType == Integer.class) {
-                return num.intValue();
-            }
-            if (targetType == long.class || targetType == Long.class) {
-                return num.longValue();
-            }
-            if (targetType == float.class || targetType == Float.class) {
-                return num.floatValue();
-            }
-            if (targetType == double.class || targetType == Double.class) {
-                return num.doubleValue();
-            }
-            if (targetType == byte.class || targetType == Byte.class) {
-                return num.byteValue();
-            }
-            if (targetType == short.class || targetType == Short.class) {
-                return num.shortValue();
-            }
-        }
-        
-        if (targetType == boolean.class || targetType == Boolean.class) {
-            if (value instanceof Boolean) {
-                return value;
-            }
-        }
-        
-        if (targetType == char.class || targetType == Character.class) {
-            if (value instanceof Character) {
-                return value;
-            }
-            if (value instanceof Number) {
-                return (char) ((Number) value).intValue();
-            }
-        }
-
-        if (value.getClass().isArray() && targetType.isArray()) {
-            return convertArray(value, targetType, location);
-        }
-        
-        throw new EvaluationException(
-            "Cannot convert " + sourceType.getName() + " to " + targetType.getName(),
-            location,
-            ErrorCode.EVAL_TYPE_MISMATCH
-        );
-    }
-
-    private static Object convertArray(Object value, Class<?> targetType, SourceLocation location) throws EvaluationException {
-        int length = Array.getLength(value);
-        Class<?> componentType = targetType.getComponentType();
-        Object result = Array.newInstance(componentType, length);
-
-        for (int i = 0; i < length; i++) {
-            Object element = Array.get(value, i);
-            try {
-                Object converted = convertValue(element, componentType, location);
-                Array.set(result, i, converted);
-            } catch (EvaluationException e) {
-                throw new EvaluationException(
-                    "Cannot convert element at index " + i + ": " + e.getMessage(),
-                    location,
-                    ErrorCode.EVAL_TYPE_MISMATCH
-                );
-            }
-        }
-
-        return result;
-    }
-
-    private static Object getDefaultValue(Class<?> type) {
-        if (type == null) return null;
-        
-        if (type == int.class) return 0;
-        if (type == long.class) return 0L;
-        if (type == float.class) return 0.0f;
-        if (type == double.class) return 0.0;
-        if (type == boolean.class) return false;
-        if (type == char.class) return '\0';
-        if (type == byte.class) return (byte) 0;
-        if (type == short.class) return (short) 0;
-        
-        return null;
-    }
-    
     public static Object evaluateFieldAssignment(FieldAssignmentNode node, ExecutionContext context) throws EvaluationException {
         Object target = evaluate(node.getTarget(), context);
         Object value = evaluate(node.getValue(), context);
         
         try {
             Field field;
-            if (target instanceof Class) {
+            if (target instanceof Class<?> targetClass) {
                 // 处理静态字段赋值
-                Class<?> targetClass = (Class<?>) target;
-                field = findField(targetClass, node.getFieldName());
+                field = TypeUtils.findField(targetClass, node.getFieldName());
                 if (field == null) {
                     throw new EvaluationException(
                         "Field not found: " + node.getFieldName(),
@@ -843,7 +639,7 @@ public class ASTEvaluator {
                 field.set(null, value);
             } else {
                 // 处理实例字段赋值
-                field = findField(target.getClass(), node.getFieldName());
+                field = TypeUtils.findField(target.getClass(), node.getFieldName());
                 if (field == null) {
                     throw new EvaluationException(
                         "Field not found: " + node.getFieldName(),
@@ -871,11 +667,12 @@ public class ASTEvaluator {
         Object index = evaluate(node.getIndex(), context);
         Object value = evaluate(node.getValue(), context);
         
-        int idx = toInt(index);
+        int idx = TypeUtils.toInt(index);
         Array.set(array, idx, value);
         return value;
     }
-    
+
+    @SuppressWarnings("unchecked")
     public static Object evaluateFunctionCall(FunctionCallNode node, ExecutionContext context) throws EvaluationException {
         String functionName = node.getFunctionName();
         
@@ -940,7 +737,7 @@ public class ASTEvaluator {
             } catch (RuntimeException e) {
                 if (e.getMessage() != null && e.getMessage().startsWith("Method not found")) {
                     try {
-                        java.lang.reflect.Method method = findMethod(currentInstance.getClass(), functionName, args);
+                        Method method = TypeUtils.findMethod(currentInstance.getClass(), functionName, args);
                         if (method != null) {
                             method.setAccessible(true);
                             return method.invoke(currentInstance, args);
@@ -964,7 +761,7 @@ public class ASTEvaluator {
                     Class<?> currentClassObj = ClassResolver.findClassWithImports(
                         currentClass, context.getClassLoader(), context.getImports());
                     if (currentClassObj != null) {
-                        Method method = findMethod(currentClassObj, functionName, args);
+                        Method method = TypeUtils.findMethod(currentClassObj, functionName, args);
                         if (method != null && Modifier.isStatic(method.getModifiers())) {
                             try {
                                 method.setAccessible(true);
@@ -1012,25 +809,29 @@ public class ASTEvaluator {
         }
 
         try {
-            if (target instanceof Lambda) {
-                return ((Lambda) target).invoke(args);
-            }
-
-            if (target instanceof MethodReference) {
-                return ((MethodReference) target).invoke(args);
-            }
-
             Class<?> targetClass;
             Object targetInstance;
 
-            if (target instanceof Class<?> targetClassObj) {
-                Method classMethod = findMethod(Class.class, methodName, args);
+            if (target instanceof Lambda) {
+                // 检查是否是 Object 类的方法
+                if ("getClass".equals(methodName) || "toString".equals(methodName) || 
+                    "hashCode".equals(methodName) || "equals".equals(methodName)) {
+                    // 按照普通对象处理
+                    targetClass = target.getClass();
+                    targetInstance = target;
+                } else {
+                    // 调用 Lambda 函数
+                    return ((Lambda) target).invoke(args);
+                }
+            } else if (target instanceof MethodReference) {
+                return ((MethodReference) target).invoke(args);
+            } else if (target instanceof Class<?> targetClassObj) {
+                Method classMethod = TypeUtils.findMethod(Class.class, methodName, args);
                 if (classMethod != null) {
                     classMethod.setAccessible(true);
-                    Object[] invokeArgs = prepareInvokeArguments(classMethod, args);
+                    Object[] invokeArgs = TypeUtils.prepareInvokeArguments(classMethod, args);
                     return classMethod.invoke(targetClassObj, invokeArgs);
                 }
-
                 targetClass = targetClassObj;
                 targetInstance = null;
             } else {
@@ -1040,13 +841,13 @@ public class ASTEvaluator {
 
             context.checkMethodAccess(targetClass.getName(), methodName, null);
 
-            Method method = findMethod(targetClass, methodName, args);
+            Method method = TypeUtils.findMethod(targetClass, methodName, args);
             if (method != null) {
                 try {
                     method.setAccessible(true);
                 } catch (Exception ignored) {
                 }
-                Object[] invokeArgs = prepareInvokeArguments(method, args);
+                Object[] invokeArgs = TypeUtils.prepareInvokeArguments(method, args);
                 return method.invoke(targetInstance, invokeArgs);
             }
 
@@ -1061,8 +862,29 @@ public class ASTEvaluator {
                 }
             }
 
+            // 如果方法实际存在，是因为方法签名对不上而返回的null，就告诉用户所有的候选项
+            if (Arrays.stream(targetClass.getMethods())
+                .map(Method::getName)
+                .anyMatch(methodName::equals)) {
+
+                String finalMethodName = methodName;
+                throw new EvaluationException(
+                    "Can't find method " + methodName + " with signature " + Arrays.toString(args) + "\n" +
+                    "Possible candidates are: " + "\n" + Arrays.stream(targetClass.getMethods())
+                        .filter(m -> m.getName().equals(finalMethodName))
+                        .map(Method::toString)
+                        .map(s -> s.substring(s.indexOf('(') + 1, s.indexOf(')')))
+                        .map(s -> s.replace(",", ", "))
+                        .map(s -> s.isEmpty() ? "[No arguments]" : s)
+                        .map(s -> "  " + s)
+                        .collect(Collectors.joining("\n")) + "\n",
+                    node.getLocation(),
+                    ErrorCode.METHOD_NOT_FOUND
+                );
+            }
+
             throw new EvaluationException(
-                "Method not found: " + methodName,
+                        "Method not found: " + methodName,
                 node.getLocation(),
                 ErrorCode.METHOD_NOT_FOUND
             );
@@ -1113,10 +935,10 @@ public class ASTEvaluator {
             Object targetInstance;
             
             if (target instanceof Class<?> targetClassObj) {
-                Method classMethod = findMethod(Class.class, methodName, args);
+                Method classMethod = TypeUtils.findMethod(Class.class, methodName, args);
                 if (classMethod != null) {
                     classMethod.setAccessible(true);
-                    Object[] invokeArgs = prepareInvokeArguments(classMethod, args);
+                    Object[] invokeArgs = TypeUtils.prepareInvokeArguments(classMethod, args);
                     return classMethod.invoke(targetClassObj, invokeArgs);
                 }
                 
@@ -1127,10 +949,10 @@ public class ASTEvaluator {
                 targetInstance = target;
             }
             
-            Method method = findMethod(targetClass, methodName, args);
+            Method method = TypeUtils.findMethod(targetClass, methodName, args);
             if (method != null) {
                 method.setAccessible(true);
-                Object[] invokeArgs = prepareInvokeArguments(method, args);
+                Object[] invokeArgs = TypeUtils.prepareInvokeArguments(method, args);
                 return method.invoke(targetInstance, invokeArgs);
             }
             
@@ -1140,53 +962,7 @@ public class ASTEvaluator {
         }
     }
     
-    private static Object[] prepareInvokeArguments(Method method, Object[] args) {
-        Class<?>[] paramTypes = method.getParameterTypes();
-        
-        if (!method.isVarArgs() || paramTypes.length == 0) {
-            return args;
-        }
-        
-        int fixedParamCount = paramTypes.length - 1;
-        Class<?> varArgsType = paramTypes[fixedParamCount];
-        Class<?> varArgsComponentType = varArgsType.getComponentType();
-        
-        if (args.length < fixedParamCount) {
-            return args;
-        }
-        
-        Object[] invokeArgs = new Object[paramTypes.length];
 
-        System.arraycopy(args, 0, invokeArgs, 0, fixedParamCount);
-        
-        int varArgCount = args.length - fixedParamCount;
-        
-        if (varArgCount == 1) {
-            Object lastArg = args[fixedParamCount];
-            
-            if (lastArg != null && lastArg.getClass().isArray() &&
-                    Objects.requireNonNull(varArgsComponentType).isAssignableFrom(Objects.requireNonNull(lastArg.getClass().getComponentType()))) {
-                invokeArgs[fixedParamCount] = lastArg;
-            } else {
-                assert varArgsComponentType != null;
-                Object varArgArray = Array.newInstance(varArgsComponentType, 1);
-                Array.set(varArgArray, 0, lastArg);
-                invokeArgs[fixedParamCount] = varArgArray;
-            }
-        } else if (varArgCount == 0) {
-            assert varArgsComponentType != null;
-            invokeArgs[fixedParamCount] = Array.newInstance(varArgsComponentType, 0);
-        } else {
-            assert varArgsComponentType != null;
-            Object varArgArray = Array.newInstance(varArgsComponentType, varArgCount);
-            for (int i = 0; i < varArgCount; i++) {
-                Array.set(varArgArray, i, args[fixedParamCount + i]);
-            }
-            invokeArgs[fixedParamCount] = varArgArray;
-        }
-        
-        return invokeArgs;
-    }
     
     public static Object evaluateSuperMethodCall(SuperMethodCallNode node, ExecutionContext context) throws EvaluationException {
         try {
@@ -1209,7 +985,7 @@ public class ASTEvaluator {
             
             String currentClass = MethodBodyExecutor.getCurrentClassContext();
             if (currentClass != null) {
-                Class<?> currentClazz = null;
+                Class<?> currentClazz;
                 if (context.hasCustomClass(currentClass)) {
                     currentClazz = context.getCustomClass(currentClass);
                 } else {
@@ -1225,10 +1001,10 @@ public class ASTEvaluator {
                             return MethodBodyExecutor.executeMethod(superClassName, methodName, thisInstance, args);
                         } catch (RuntimeException e) {
                             if (e.getMessage() != null && e.getMessage().startsWith("Method not found")) {
-                                Method method = findMethod(superClass, methodName, args);
+                                Method method = TypeUtils.findMethod(superClass, methodName, args);
                                 if (method != null) {
                                     method.setAccessible(true);
-                                    Object[] invokeArgs = prepareInvokeArguments(method, args);
+                                    Object[] invokeArgs = TypeUtils.prepareInvokeArguments(method, args);
                                     return method.invoke(thisInstance, invokeArgs);
                                 }
                             }
@@ -1252,7 +1028,7 @@ public class ASTEvaluator {
                 return MethodBodyExecutor.executeMethod(superClassName, methodName, thisInstance, args);
             } catch (RuntimeException e) {
                 if (e.getMessage() != null && e.getMessage().startsWith("Method not found")) {
-                    Method method = findMethod(superClass, methodName, args);
+                    Method method = TypeUtils.findMethod(superClass, methodName, args);
                     if (method == null) {
                         throw new EvaluationException(
                             "Method not found in superclass: " + methodName,
@@ -1261,7 +1037,7 @@ public class ASTEvaluator {
                         );
                     }
                     method.setAccessible(true);
-                    Object[] invokeArgs = prepareInvokeArguments(method, args);
+                    Object[] invokeArgs = TypeUtils.prepareInvokeArguments(method, args);
                     return method.invoke(thisInstance, invokeArgs);
                 }
                 throw e;
@@ -1296,15 +1072,24 @@ public class ASTEvaluator {
             context.checkFieldAccess(targetClass.getName(), node.getFieldName());
             
             if (target instanceof Class) {
-                Field field = MethodBodyExecutor.findField(targetClass, node.getFieldName());
+                Field field = TypeUtils.findField(targetClass, node.getFieldName());
                 if (field != null) {
                     field.setAccessible(true);
                     return field.get(null);
                 }
+
+                Method[] methods = targetClass.getDeclaredMethods();
+                for (Method method : methods) {
+                    if (method.getName().equals(node.getFieldName()) && Modifier.isStatic(method.getModifiers())) {
+                        method.setAccessible(true);
+                        return new MethodReference(targetClass, null, node.getFieldName(), true, node.getLocation());
+                    }
+                }
+
                 throw new NoSuchFieldException("Field " + node.getFieldName() + " not found in " + targetClass.getName());
             }
             
-            Field field = MethodBodyExecutor.findField(targetClass, node.getFieldName());
+            Field field = TypeUtils.findField(targetClass, node.getFieldName());
             if (field != null) {
                 field.setAccessible(true);
                 return field.get(target);
@@ -1357,11 +1142,19 @@ public class ASTEvaluator {
         Object array = evaluate(node.getArray(), context);
         Object index = evaluate(node.getIndex(), context);
         
-        return Array.get(array, toInt(index));
+        return Array.get(array, TypeUtils.toInt(index));
     }
     
     public static Object evaluateClassReference(ClassReferenceNode node, ExecutionContext context) throws EvaluationException {
         try {
+            // 优先使用 AST 解析阶段已经解析好的类
+            Class<?> resolvedClass = node.getResolvedClass();
+            if (resolvedClass != null) {
+                context.checkClassAccess(resolvedClass.getName());
+                return resolvedClass;
+            }
+            
+            // 如果解析失败，再尝试其他方法
             String className = node.getTypeName();
             
             // 首先尝试从自定义类中查找
@@ -1380,7 +1173,7 @@ public class ASTEvaluator {
             throw new EvaluationException(
                 "Class not found: " + node.getTypeName(),
                 node.getLocation(),
-                ErrorCode.EVAL_TYPE_MISMATCH
+                ErrorCode.EVAL_CLASS_NOT_FOUND
             );
         } catch (SecurityException e) {
             throw new EvaluationException(
@@ -1393,7 +1186,7 @@ public class ASTEvaluator {
             throw new EvaluationException(
                 "Class not found: " + node.getTypeName(),
                 node.getLocation(),
-                ErrorCode.EVAL_TYPE_MISMATCH
+                ErrorCode.EVAL_CLASS_NOT_FOUND
             );
         }
     }
@@ -1402,8 +1195,7 @@ public class ASTEvaluator {
         try {
             Class<?> componentType = node.getElementType();
             Object size = evaluate(node.getSize(), context);
-            
-            return Array.newInstance(componentType, toInt(size));
+            return Array.newInstance(componentType, TypeUtils.toInt(size));
         } catch (Exception e) {
             throw new EvaluationException(
                 "Failed to create array: " + e.getMessage(),
@@ -1434,10 +1226,10 @@ public class ASTEvaluator {
 
                 Class<?> superRawType = type.getRawType();
                 if (superRawType != null && argTypes.length > 0) {
-                    Class<?>[] superArgTypes = resolveSuperConstructorArgTypes(superRawType, argTypes);
+                    Class<?>[] superArgTypes = TypeUtils.resolveSuperConstructorArgTypes(superRawType, argTypes);
                     if (superArgTypes != null) {
                         for (int i = 0; i < args.length; i++) {
-                            if (args[i] instanceof com.justnothing.javainterpreter.evaluator.Lambda lambda &&
+                            if (args[i] instanceof Lambda lambda &&
                                 superArgTypes[i].isInterface()) {
                                 args[i] = lambda.asInterface(superArgTypes[i]);
                             }
@@ -1467,7 +1259,7 @@ public class ASTEvaluator {
             
             context.checkNewInstance(clazz.getName());
             
-            Constructor<?> constructor = findConstructor(clazz, argTypes);
+            Constructor<?> constructor = TypeUtils.findConstructor(clazz, argTypes);
             return constructor.newInstance(args);
         } catch (EvaluationException e) {
             throw e;
@@ -1480,7 +1272,7 @@ public class ASTEvaluator {
             );
         } catch (Exception e) {
             throw new EvaluationException(
-                "Failed to create instance: " + e.getMessage() + "\n" + java.util.Arrays.toString(e.getStackTrace()),
+                "Failed to create instance: " + e.getMessage() + "\n" + Arrays.toString(e.getStackTrace()),
                 node.getLocation(),
                 ErrorCode.EVAL_INVALID_OPERATION,
                 e
@@ -1488,272 +1280,59 @@ public class ASTEvaluator {
         }
     }
     
-    private static Class<?>[] resolveSuperConstructorArgTypes(Class<?> superClass, Class<?>[] runtimeArgTypes) {
-        try {
-            Constructor<?> bestMatch = null;
-            int bestScore = -1;
 
-            for (Constructor<?> constructor : superClass.getDeclaredConstructors()) {
-                Class<?>[] paramTypes = constructor.getParameterTypes();
-                if (isApplicableArgs(paramTypes, runtimeArgTypes, constructor.isVarArgs())) {
-                    int score = computeMatchScore(paramTypes, runtimeArgTypes);
-                    if (score > bestScore) {
-                        bestScore = score;
-                        bestMatch = constructor;
-                    }
-                } else if (isLambdaFunctionalInterfaceMatch(paramTypes, runtimeArgTypes)) {
-                    int score = computeMatchScore(paramTypes, runtimeArgTypes);
-                    if (score > bestScore) {
-                        bestScore = score;
-                        bestMatch = constructor;
-                    }
-                }
-            }
 
-            if (bestMatch == null) {
-                for (Constructor<?> constructor : superClass.getConstructors()) {
-                    Class<?>[] paramTypes = constructor.getParameterTypes();
-                    if (isApplicableArgs(paramTypes, runtimeArgTypes, constructor.isVarArgs())) {
-                        int score = computeMatchScore(paramTypes, runtimeArgTypes);
-                        if (score > bestScore) {
-                            bestScore = score;
-                            bestMatch = constructor;
-                        }
-                    } else if (isLambdaFunctionalInterfaceMatch(paramTypes, runtimeArgTypes)) {
-                        int score = computeMatchScore(paramTypes, runtimeArgTypes);
-                        if (score > bestScore) {
-                            bestScore = score;
-                            bestMatch = constructor;
-                        }
-                    }
-                }
-            }
-
-            if (bestMatch != null) {
-                return bestMatch.getParameterTypes();
-            }
-        } catch (Exception ignored) {}
-        return null;
-    }
-
-    private static boolean isLambdaFunctionalInterfaceMatch(Class<?>[] paramTypes, Class<?>[] runtimeArgTypes) {
-        if (paramTypes.length != runtimeArgTypes.length) return false;
-        for (int i = 0; i < paramTypes.length; i++) {
-            if (runtimeArgTypes[i] == com.justnothing.javainterpreter.evaluator.Lambda.class) {
-                if (!paramTypes[i].isInterface()) return false;
-            } else if (!paramTypes[i].isAssignableFrom(runtimeArgTypes[i])) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private static Constructor<?> findConstructor(Class<?> clazz, Class<?>[] argTypes) throws NoSuchMethodException {
-        // 首先尝试精确匹配
-        try {
-            Constructor<?> constructor = clazz.getDeclaredConstructor(argTypes);
-            constructor.setAccessible(true);
-            return constructor;
-        } catch (NoSuchMethodException ignored) {
-        }
-        
-        // 然后尝试公共构造函数
-        try {
-            Constructor<?> constructor = clazz.getConstructor(argTypes);
-            return constructor;
-        } catch (NoSuchMethodException ignored) {
-        }
-        
-        // 最后尝试找到最匹配的构造函数
-        Constructor<?> bestMatch = null;
-        int bestScore = -1;
-        
-        // 检查所有声明的构造函数
-        for (Constructor<?> constructor : clazz.getDeclaredConstructors()) {
-            Class<?>[] paramTypes = constructor.getParameterTypes();
-            if (isApplicableArgs(paramTypes, argTypes, constructor.isVarArgs())) {
-                int score = computeMatchScore(paramTypes, argTypes);
-                if (score > bestScore) {
-                    bestScore = score;
-                    bestMatch = constructor;
-                }
-            }
-        }
-        
-        // 如果没有找到，检查公共构造函数
-        if (bestMatch == null) {
-            for (Constructor<?> constructor : clazz.getConstructors()) {
-                Class<?>[] paramTypes = constructor.getParameterTypes();
-                if (isApplicableArgs(paramTypes, argTypes, constructor.isVarArgs())) {
-                    int score = computeMatchScore(paramTypes, argTypes);
-                    if (score > bestScore) {
-                        bestScore = score;
-                        bestMatch = constructor;
-                    }
-                }
-            }
-        }
-        
-        if (bestMatch != null) {
-            bestMatch.setAccessible(true);
-            return bestMatch;
-        }
-        
-        throw new NoSuchMethodException("No suitable constructor found for arguments: " + java.util.Arrays.toString(argTypes));
-    }
-    
-
-    
-    private static boolean isApplicableArgs(Class<?>[] paramTypes, Class<?>[] argTypes, boolean isVarArgs) {
-        if (isVarArgs) {
-            if (argTypes.length < paramTypes.length - 1) {
-                return false;
-            }
-            for (int i = 0; i < paramTypes.length - 1; i++) {
-                if (!isAssignable(paramTypes[i], argTypes[i])) {
-                    return false;
-                }
-            }
-            Class<?> varArgType = paramTypes[paramTypes.length - 1].getComponentType();
-            for (int i = paramTypes.length - 1; i < argTypes.length; i++) {
-                if (!isAssignable(varArgType, argTypes[i])) {
-                    return false;
-                }
-            }
-        } else {
-            if (paramTypes.length != argTypes.length) {
-                return false;
-            }
-            for (int i = 0; i < paramTypes.length; i++) {
-                if (!isAssignable(paramTypes[i], argTypes[i])) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-    
-    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
-    private static boolean isAssignable(Class<?> targetType, Class<?> sourceType) {
-        if (sourceType == null) {
-            return !targetType.isPrimitive();
-        }
-        if (targetType.isPrimitive()) {
-            if (sourceType.isPrimitive()) {
-                return isPrimitiveAssignable(targetType, sourceType);
-            }
-            // 检查源类型是否是目标类型的包装类
-            Class<?> wrapper = getWrapperClass(targetType);
-            if (wrapper != null && wrapper.isAssignableFrom(sourceType)) {
-                return true;
-            }
-            // 检查源类型是否是其他基本类型的包装类，并且可以转换为目标类型
-            if (sourceType == Integer.class) {
-                return isPrimitiveAssignable(targetType, int.class);
-            }
-            if (sourceType == Long.class) {
-                return isPrimitiveAssignable(targetType, long.class);
-            }
-            if (sourceType == Float.class) {
-                return isPrimitiveAssignable(targetType, float.class);
-            }
-            if (sourceType == Double.class) {
-                return isPrimitiveAssignable(targetType, double.class);
-            }
-            if (sourceType == Byte.class) {
-                return isPrimitiveAssignable(targetType, byte.class);
-            }
-            if (sourceType == Short.class) {
-                return isPrimitiveAssignable(targetType, short.class);
-            }
-            if (sourceType == Character.class) {
-                return isPrimitiveAssignable(targetType, char.class);
-            }
-            if (sourceType == Boolean.class) {
-                return isPrimitiveAssignable(targetType, boolean.class);
-            }
-            return false;
-        }
-        if (sourceType.isPrimitive()) {
-            // 检查目标类型是否是源类型的包装类
-            Class<?> wrapper = getWrapperClass(sourceType);
-            if (wrapper != null && targetType.isAssignableFrom(wrapper)) {
-                return true;
-            }
-        }
-        return targetType.isAssignableFrom(sourceType);
-    }
-    
-    private static boolean isPrimitiveAssignable(Class<?> targetType, Class<?> sourceType) {
-        if (targetType == sourceType) {
-            return true;
-        }
-        if (targetType == byte.class) {
-            return sourceType == short.class || sourceType == int.class || sourceType == long.class || sourceType == float.class || sourceType == double.class;
-        }
-        if (targetType == short.class) {
-            return sourceType == int.class || sourceType == long.class || sourceType == float.class || sourceType == double.class;
-        }
-        if (targetType == int.class) {
-            return sourceType == long.class || sourceType == float.class || sourceType == double.class;
-        }
-        if (targetType == long.class) {
-            return sourceType == float.class || sourceType == double.class;
-        }
-        if (targetType == float.class) {
-            return sourceType == double.class;
-        }
-        if (targetType == double.class) {
-            return sourceType == byte.class || sourceType == short.class || sourceType == int.class || sourceType == long.class || sourceType == float.class;
-        }
-        if (targetType == char.class) {
-            return sourceType == int.class || sourceType == long.class || sourceType == float.class || sourceType == double.class;
-        }
-        if (targetType == boolean.class) {
-            return false;
-        }
-        return false;
-    }
-    
-    private static Class<?> getWrapperClass(Class<?> primitiveType) {
-        if (primitiveType == int.class) return Integer.class;
-        if (primitiveType == long.class) return Long.class;
-        if (primitiveType == float.class) return Float.class;
-        if (primitiveType == double.class) return Double.class;
-        if (primitiveType == boolean.class) return Boolean.class;
-        if (primitiveType == char.class) return Character.class;
-        if (primitiveType == byte.class) return Byte.class;
-        if (primitiveType == short.class) return Short.class;
-        if (primitiveType == void.class) return Void.class;
-        return null;
-    }
-    
     public static Object evaluateArrayLiteral(ArrayLiteralNode node, ExecutionContext context) throws EvaluationException {
         List<ASTNode> elements = node.getElements();
         Class<?> expectedType = node.getExpectedElementType();
+        ASTNode arrayLengthNode = node.getArrayLength();
         
         if (expectedType != null) {
-            Class<?> componentType = expectedType;
-            Object array = java.lang.reflect.Array.newInstance(componentType, elements.size());
-            
-            for (int i = 0; i < elements.size(); i++) {
-                Object value = evaluate(elements.get(i), context);
-                
-                if (value != null && !componentType.isAssignableFrom(value.getClass())) {
-                    if (componentType.isPrimitive()) {
-                        value = convertToPrimitive(value, componentType);
-                    } else {
-                        throw new EvaluationException(
-                            "Type mismatch in array initializer: expected " + componentType.getSimpleName() + 
-                            ", but got " + value.getClass().getSimpleName() + " at index " + i,
-                            node.getLocation().getLine(),
-                            node.getLocation().getColumn(),
-                            ErrorCode.EVAL_TYPE_MISMATCH
-                        );
-                    }
+            // 对于 new int[3] {1, 2} 形式的数组初始化，
+            // 我们需要创建指定长度的数组，并在元素不足时用默认值填充
+            int arrayLength;
+            if (arrayLengthNode != null) {
+                // 解析并计算数组长度
+                Object lengthValue = evaluate(arrayLengthNode, context);
+                if (!(lengthValue instanceof Number)) {
+                    throw new EvaluationException(
+                        "Array size must be a number",
+                        node.getLocation().getLine(),
+                        node.getLocation().getColumn(),
+                        ErrorCode.EVAL_TYPE_MISMATCH
+                    );
                 }
-                
-                java.lang.reflect.Array.set(array, i, value);
+                arrayLength = ((Number) lengthValue).intValue();
+            } else {
+                // 没有指定长度，使用元素的实际长度
+                arrayLength = elements.size();
+            }
+            
+            Object array = Array.newInstance(expectedType, arrayLength);
+            
+            for (int i = 0; i < arrayLength; i++) {
+                if (i < elements.size()) {
+                    Object value = evaluate(elements.get(i), context);
+                    
+                    if (value != null && !TypeUtils.isAssignable(expectedType, value.getClass())) {
+                        if (expectedType.isPrimitive()) {
+                            value = TypeUtils.convertToPrimitive(value, expectedType);
+                        } else {
+                            throw new EvaluationException(
+                                "Type mismatch in array initializer: expected " + expectedType.getSimpleName() +
+                                ", but got " + value.getClass().getSimpleName() + " at index " + i,
+                                node.getLocation().getLine(),
+                                node.getLocation().getColumn(),
+                                ErrorCode.EVAL_TYPE_MISMATCH
+                            );
+                        }
+                    }
+                    
+                    Array.set(array, i, value);
+                } else {
+                    // 元素不足时，用默认值填充
+                    Array.set(array, i, TypeUtils.getDefaultValue(expectedType));
+                }
             }
             
             return array;
@@ -1764,13 +1343,12 @@ public class ASTEvaluator {
             evaluated[i] = evaluate(elements.get(i), context);
         }
         
-        Class<?> inferredType = inferArrayType(evaluated);
+        Class<?> inferredType = TypeUtils.inferArrayType(evaluated);
         if (inferredType != null && inferredType != Object.class) {
-            Class<?> componentType = inferredType.isPrimitive() ? inferredType : inferredType;
-            Object array = java.lang.reflect.Array.newInstance(componentType, evaluated.length);
+            Object array = Array.newInstance(inferredType, evaluated.length);
             for (int i = 0; i < evaluated.length; i++) {
-                Object converted = convertValue(evaluated[i], componentType, node.getLocation());
-                java.lang.reflect.Array.set(array, i, converted);
+                Object converted = TypeUtils.convertValue(evaluated[i], inferredType, node.getLocation());
+                Array.set(array, i, converted);
             }
             return array;
         }
@@ -1778,96 +1356,10 @@ public class ASTEvaluator {
         return evaluated;
     }
 
-    private static Class<?> inferArrayType(Object[] elements) {
-        if (elements.length == 0) return null;
-
-        Class<?> result = null;
-        boolean hasNull = false;
-        boolean allNumbers = true;
-
-        for (Object elem : elements) {
-            if (elem == null) {
-                hasNull = true;
-                continue;
-            }
-            Class<?> elemType = elem.getClass();
-            if (!(elem instanceof Number)) allNumbers = false;
-            if (result == null) {
-                result = elemType;
-            } else if (!result.isAssignableFrom(elemType)) {
-                if (elemType.isAssignableFrom(result)) {
-                    result = elemType;
-                } else {
-                    return Object.class;
-                }
-            }
-        }
-
-        if (result == null) return null;
-
-        if (allNumbers && result != Object.class) {
-            return inferPrimitiveNumberType(elements);
-        }
-
-        return hasNull && result.isPrimitive() ? getWrapperClass(result) : result;
-    }
-
-    private static Class<?> inferPrimitiveNumberType(Object[] elements) {
-        boolean hasDouble = false, hasFloat = false, hasLong = false;
-        for (Object elem : elements) {
-            if (elem == null) continue;
-            if (elem instanceof Double || elem instanceof Float) hasDouble = true;
-            else if (elem instanceof Float) hasFloat = true;
-            else if (elem instanceof Long) hasLong = true;
-        }
-        if (hasDouble) return double.class;
-        if (hasFloat) return float.class;
-        if (hasLong) return long.class;
-        return int.class;
-    }
-    
-    private static Object convertToPrimitive(Object value, Class<?> targetType) throws EvaluationException {
-        if (value == null) {
-            return getDefaultValue(targetType);
-        }
-        
-        if (targetType == int.class) {
-            if (value instanceof Number) return ((Number) value).intValue();
-            if (value instanceof Character) return (int) (Character) value;
-        } else if (targetType == long.class) {
-            if (value instanceof Number) return ((Number) value).longValue();
-            if (value instanceof Character) return (long) (Character) value;
-        } else if (targetType == double.class) {
-            if (value instanceof Number) return ((Number) value).doubleValue();
-            if (value instanceof Character) return (double) (Character) value;
-        } else if (targetType == float.class) {
-            if (value instanceof Number) return ((Number) value).floatValue();
-            if (value instanceof Character) return (float) (Character) value;
-        } else if (targetType == short.class) {
-            if (value instanceof Number) return ((Number) value).shortValue();
-            if (value instanceof Character) return (short) ((Character) value).charValue();
-        } else if (targetType == byte.class) {
-            if (value instanceof Number) return ((Number) value).byteValue();
-            if (value instanceof Character) return (byte) ((Character) value).charValue();
-        } else if (targetType == char.class) {
-            if (value instanceof Number) return (char) ((Number) value).intValue();
-            if (value instanceof Character) return value;
-            if (value instanceof String && ((String) value).length() == 1) return ((String) value).charAt(0);
-        } else if (targetType == boolean.class) {
-            if (value instanceof Boolean) return value;
-        }
-        
-        throw new EvaluationException(
-            "Cannot convert " + value.getClass().getSimpleName() + " to " + targetType.getSimpleName(),
-            -1,
-            -1,
-            ErrorCode.EVAL_TYPE_MISMATCH
-        );
-    }
 
     
     public static Object evaluateMapLiteral(MapLiteralNode node, ExecutionContext context) throws EvaluationException {
-        Map<Object, Object> map = new java.util.LinkedHashMap<>();
+        Map<Object, Object> map = new LinkedHashMap<>();
         
         for (Map.Entry<ASTNode, ASTNode> entry : node.getEntries().entrySet()) {
             Object key = evaluate(entry.getKey(), context);
@@ -1881,7 +1373,7 @@ public class ASTEvaluator {
     public static Object evaluateIf(IfNode node, ExecutionContext context) throws EvaluationException {
         Object condition = evaluate(node.getCondition(), context);
         
-        if (toBoolean(condition)) {
+        if (TypeUtils.toBoolean(condition)) {
             return evaluate(node.getThenBlock(), context);
         } else if (node.getElseBlock() != null) {
             return evaluate(node.getElseBlock(), context);
@@ -1893,7 +1385,7 @@ public class ASTEvaluator {
     public static Object evaluateWhile(WhileNode node, ExecutionContext context) throws EvaluationException {
         context.incrementLoopDepth();
         try {
-            while (toBoolean(evaluate(node.getCondition(), context))) {
+            while (TypeUtils.toBoolean(evaluate(node.getCondition(), context))) {
                 context.getScopeManager().enterScope();
                 try {
                     evaluate(node.getBody(), context);
@@ -1917,7 +1409,7 @@ public class ASTEvaluator {
                 } finally {
                     context.getScopeManager().exitScope();
                 }
-            } while (toBoolean(evaluate(node.getCondition(), context)));
+            } while (TypeUtils.toBoolean(evaluate(node.getCondition(), context)));
         } finally {
             context.decrementLoopDepth();
         }
@@ -1933,7 +1425,7 @@ public class ASTEvaluator {
                 evaluate(node.getInitialization(), context);
             }
             
-            while (node.getCondition() == null || toBoolean(evaluate(node.getCondition(), context))) {
+            while (node.getCondition() == null || TypeUtils.toBoolean(evaluate(node.getCondition(), context))) {
                 evaluate(node.getBody(), context);
                 
                 if (node.getUpdate() != null) {
@@ -1986,7 +1478,7 @@ public class ASTEvaluator {
     public static Object evaluateTernary(TernaryNode node, ExecutionContext context) throws EvaluationException {
         Object condition = evaluate(node.getCondition(), context);
         
-        if (toBoolean(condition)) {
+        if (TypeUtils.toBoolean(condition)) {
             return evaluate(node.getThenExpr(), context);
         } else {
             return evaluate(node.getElseExpr(), context);
@@ -2023,7 +1515,7 @@ public class ASTEvaluator {
                     for (Method method : clazz.getMethods()) {
                         if (method.getName().equals(methodName) && method.getParameterCount() == 0) {
                             method.setAccessible(true);
-                            if (java.lang.reflect.Modifier.isStatic(method.getModifiers())) {
+                            if (Modifier.isStatic(method.getModifiers())) {
                                 return method.invoke(null);
                             } else {
                                 return method.invoke(input);
@@ -2031,10 +1523,10 @@ public class ASTEvaluator {
                         }
                     }
                     
-                    Method method = findMethod(clazz, methodName, new Object[]{input});
+                    Method method = TypeUtils.findMethod(clazz, methodName, new Object[]{input});
                     if (method != null) {
                         method.setAccessible(true);
-                        if (java.lang.reflect.Modifier.isStatic(method.getModifiers())) {
+                        if (Modifier.isStatic(method.getModifiers())) {
                             return method.invoke(null, input);
                         } else {
                             return method.invoke(input);
@@ -2138,7 +1630,7 @@ public class ASTEvaluator {
             Class<?> type = resolveType(node.getTypeName(), context);
             
             if (type.isPrimitive()) {
-                Class<?> wrapperType = getWrapperType(type);
+                Class<?> wrapperType = TypeUtils.getWrapperType(type);
                 return wrapperType.isInstance(value);
             }
             
@@ -2152,17 +1644,7 @@ public class ASTEvaluator {
         }
     }
     
-    private static Class<?> getWrapperType(Class<?> primitiveType) {
-        if (primitiveType == int.class) return Integer.class;
-        if (primitiveType == long.class) return Long.class;
-        if (primitiveType == double.class) return Double.class;
-        if (primitiveType == float.class) return Float.class;
-        if (primitiveType == boolean.class) return Boolean.class;
-        if (primitiveType == char.class) return Character.class;
-        if (primitiveType == byte.class) return Byte.class;
-        if (primitiveType == short.class) return Short.class;
-        return primitiveType;
-    }
+
     
     public static Object evaluateCast(CastNode node, ExecutionContext context) throws EvaluationException {
         Object value = evaluate(node.getExpression(), context);
@@ -2170,14 +1652,14 @@ public class ASTEvaluator {
         Class<?> type = node.getTargetType();
         
         try {
-            if (type == int.class) return toInt(value);
-            if (type == long.class) return toLong(value);
-            if (type == float.class) return toFloat(value);
-            if (type == double.class) return toDouble(value);
-            if (type == boolean.class) return toBoolean(value);
-            if (type == char.class) return toChar(value);
-            if (type == byte.class) return toByte(value);
-            if (type == short.class) return toShort(value);
+            if (type == int.class) return TypeUtils.toInt(value);
+            if (type == long.class) return TypeUtils.toLong(value);
+            if (type == float.class) return TypeUtils.toFloat(value);
+            if (type == double.class) return TypeUtils.toDouble(value);
+            if (type == boolean.class) return TypeUtils.toBoolean(value);
+            if (type == char.class) return TypeUtils.toChar(value);
+            if (type == byte.class) return TypeUtils.toByte(value);
+            if (type == short.class) return TypeUtils.toShort(value);
             if (type == String.class) return value == null ? "null" : value.toString();
             
             return type.cast(value);
@@ -2221,8 +1703,8 @@ public class ASTEvaluator {
                     ErrorCode.EVAL_CLASS_NOT_FOUND
                 );
             }
-        } else if (targetNode instanceof VariableNode) {
-            String varName = ((VariableNode) targetNode).getName();
+        } else if (targetNode instanceof VariableNode varNode) {
+            String varName = varNode.getName();
             
             if (context.getScopeManager().hasVariable(varName)) {
                 targetInstance = context.getScopeManager().getVariable(varName).getValue();
@@ -2244,9 +1726,12 @@ public class ASTEvaluator {
             targetClass = targetInstance != null ? targetInstance.getClass() : Object.class;
         }
         
-        if (isStatic && targetClass != null) {
-            java.lang.reflect.Method actualMethod = findMethodInClass(targetClass, methodName);
-            if (actualMethod != null && !java.lang.reflect.Modifier.isStatic(actualMethod.getModifiers())) {
+        if (isStatic) {
+            Method actualMethod = Arrays.stream(targetClass.getMethods())
+                .filter(method -> method.getName().equals(methodName))
+                .findFirst()
+                .orElse(null);
+            if (actualMethod != null && !Modifier.isStatic(actualMethod.getModifiers())) {
                 return MethodReference.createUnboundInstanceMethod(targetClass, methodName, node.getLocation());
             }
         }
@@ -2254,15 +1739,7 @@ public class ASTEvaluator {
         return new MethodReference(targetClass, targetInstance, methodName, isStatic, node.getLocation());
     }
     
-    private static Method findMethodInClass(Class<?> clazz, String methodName) {
-        for (Method method : clazz.getMethods()) {
-            if (method.getName().equals(methodName)) {
-                return method;
-            }
-        }
-        return null;
-    }
-    
+
     public static Object evaluateTry(TryNode node, ExecutionContext context) throws EvaluationException {
         List<Object> resources = new ArrayList<>();
         List<Throwable> suppressedExceptions = new ArrayList<>();
@@ -2392,158 +1869,7 @@ public class ASTEvaluator {
         return generatedClass;
     }
     
-    public static Method findMethod(Class<?> clazz, String name, Object[] args) {
-        List<Method> candidates = new ArrayList<>();
-        
-        for (Method method : clazz.getMethods()) {
-            if (method.getName().equals(name)) {
-                candidates.add(method);
-            }
-        }
-        
-        for (Method method : clazz.getDeclaredMethods()) {
-            if (method.getName().equals(name) && !candidates.contains(method)) {
-                candidates.add(method);
-            }
-        }
-        
-        Method bestMatch = null;
-        int bestScore = -1;
-        Method varArgsCandidate = null;
-        
-        for (Method method : candidates) {
-            Class<?>[] paramTypes = method.getParameterTypes();
-            boolean isVarArgs = method.isVarArgs();
-            
-            if (isApplicableArgs(paramTypes, args, isVarArgs)) {
-                if (!isVarArgs && paramTypes.length == (args != null ? args.length : 0)) {
-                    int matchScore = computeMatchScore(paramTypes, args);
-                    
-                    if (matchScore > bestScore) {
-                        bestScore = matchScore;
-                        bestMatch = method;
-                    }
-                }
-                
-                if (isVarArgs && varArgsCandidate == null) {
-                    varArgsCandidate = method;
-                }
-            }
-        }
-        
-        if (bestMatch != null) {
-            return bestMatch;
-        }
-        
-        return varArgsCandidate;
-    }
-    
-    private static int computeMatchScore(Class<?>[] paramTypes, Object[] args) {
-        int score = 0;
-        for (int i = 0; i < paramTypes.length; i++) {
-            if (args == null || i >= args.length) {
-                return 0;
-            }
-            if (args[i] == null) {
-                if (paramTypes[i].isPrimitive()) {
-                    return 0;
-                }
-                score += 1;
-            } else {
-                Class<?> argType = args[i].getClass();
-                
-                if (paramTypes[i].equals(argType)) {
-                    score += 3;
-                } else if (paramTypes[i].isPrimitive() && isExactWrapperFor(argType, paramTypes[i])) {
-                    score += 2;
-                } else if (paramTypes[i].isAssignableFrom(argType)) {
-                    score += 1;
-                } else if (paramTypes[i].isPrimitive() && isWrapperFor(argType, paramTypes[i])) {
-                    score += 1;
-                } else {
-                    return 0;
-                }
-            }
-        }
-        return score;
-    }
-    
-    private static boolean isExactWrapperFor(Class<?> wrapperType, Class<?> primitiveType) {
-        if (primitiveType == int.class) return wrapperType == Integer.class;
-        if (primitiveType == long.class) return wrapperType == Long.class;
-        if (primitiveType == double.class) return wrapperType == Double.class;
-        if (primitiveType == float.class) return wrapperType == Float.class;
-        if (primitiveType == boolean.class) return wrapperType == Boolean.class;
-        if (primitiveType == char.class) return wrapperType == Character.class;
-        if (primitiveType == byte.class) return wrapperType == Byte.class;
-        if (primitiveType == short.class) return wrapperType == Short.class;
-        return false;
-    }
-    
-    private static boolean isApplicableArgs(Class<?>[] paramTypes, Object[] args, boolean isVarArgs) {
-        int paramCount = paramTypes.length;
-        int argCount = args != null ? args.length : 0;
-        
-        if (isVarArgs) {
-            if (argCount < paramCount - 1) {
-                return false;
-            }
-            
-            for (int i = 0; i < paramCount - 1; i++) {
-                if (!isAssignable(paramTypes[i], args[i])) {
-                    return false;
-                }
-            }
-            
-            if (argCount >= paramCount) {
-                Class<?> varArgType = paramTypes[paramCount - 1].getComponentType();
-                for (int i = paramCount - 1; i < argCount; i++) {
-                    if (!isAssignable(varArgType, args[i])) {
-                        return false;
-                    }
-                }
-            }
 
-        } else {
-            if (paramCount != argCount) {
-                return false;
-            }
-            
-            for (int i = 0; i < paramCount; i++) {
-                if (!isAssignable(paramTypes[i], args[i])) {
-                    return false;
-                }
-            }
-
-        }
-        return true;
-    }
-    
-    private static boolean isAssignable(Class<?> targetType, Object arg) {
-        if (arg == null) {
-            return !targetType.isPrimitive();
-        }
-        
-        Class<?> argType = arg.getClass();
-        
-        if (targetType.isPrimitive()) {
-            return isWrapperFor(argType, targetType);
-        }
-        
-        return targetType.isAssignableFrom(argType);
-    }
-    
-    private static boolean isWrapperFor(Class<?> wrapperType, Class<?> primitiveType) {
-        if (primitiveType == int.class) return wrapperType == Integer.class;
-        if (primitiveType == long.class) return wrapperType == Long.class || wrapperType == Integer.class;
-        if (primitiveType == double.class) return wrapperType == Double.class || wrapperType == Float.class || wrapperType == Long.class || wrapperType == Integer.class;
-        if (primitiveType == float.class) return wrapperType == Float.class || wrapperType == Integer.class;
-        if (primitiveType == boolean.class) return wrapperType == Boolean.class;
-        if (primitiveType == char.class) return wrapperType == Character.class;
-        if (primitiveType == byte.class) return wrapperType == Byte.class;
-        if (primitiveType == short.class) return wrapperType == Short.class || wrapperType == Byte.class;
-        return false;
-    }
 
     private static Class<?> resolveType(String typeName, ExecutionContext context) throws ClassNotFoundException {
         if (typeName == null || typeName.isEmpty()) {
@@ -2591,57 +1917,7 @@ public class ASTEvaluator {
     }
     
     
-    private static boolean toBoolean(Object value) {
-        if (value == null) return false;
-        if (value instanceof Boolean) return (Boolean) value;
-        if (value instanceof Number) return ((Number) value).doubleValue() != 0;
-        return true;
-    }
-    
-    private static int toInt(Object value) {
-        if (value == null) return 0;
-        if (value instanceof Number) return ((Number) value).intValue();
-        if (value instanceof Boolean) return ((Boolean) value) ? 1 : 0;
-        if (value instanceof Character) return (Character) value;
-        return 0;
-    }
-    
-    private static long toLong(Object value) {
-        if (value == null) return 0L;
-        if (value instanceof Number) return ((Number) value).longValue();
-        return 0L;
-    }
-    
-    private static float toFloat(Object value) {
-        if (value == null) return 0.0f;
-        if (value instanceof Number) return ((Number) value).floatValue();
-        return 0.0f;
-    }
-    
-    private static double toDouble(Object value) {
-        if (value == null) return 0.0;
-        if (value instanceof Number) return ((Number) value).doubleValue();
-        return 0.0;
-    }
-    
-    private static char toChar(Object value) {
-        if (value == null) return '\0';
-        if (value instanceof Character) return (Character) value;
-        if (value instanceof Number) return (char) ((Number) value).intValue();
-        return '\0';
-    }
-    
-    private static byte toByte(Object value) {
-        if (value == null) return 0;
-        if (value instanceof Number) return ((Number) value).byteValue();
-        return 0;
-    }
-    
-    private static short toShort(Object value) {
-        if (value == null) return 0;
-        if (value instanceof Number) return ((Number) value).shortValue();
-        return 0;
-    }
+
     
     public static Object evaluateReturn(ReturnNode node, ExecutionContext context) throws EvaluationException {
         Object value = null;
@@ -2651,78 +1927,7 @@ public class ASTEvaluator {
         throw new ReturnException(value);
     }
 
-    private static Object[] arrayCombine(Object[] left, Object[] right) {
-        Object[] result = new Object[Array.getLength(left) + Array.getLength(right)];
-        System.arraycopy(left, 0, result, 0, Array.getLength(left));
-        System.arraycopy(right, 0, result, Array.getLength(left), Array.getLength(right));
-        return result;
-    }
 
-    private static Object[] arrayDifference(Object[] left, Object[] right) {
-        Set<Object> rightSet = new HashSet<>(Arrays.asList(right));
-        List<Object> result = new ArrayList<>();
-        for (Object obj : left) {
-            if (!rightSet.contains(obj)) {
-                result.add(obj);
-            }
-        }
-        return result.toArray();
-    }
-
-    private static Object[] arrayRepeat(Object[] arr, int count) {
-        Object[] newArr = new Object[(int) (Array.getLength(arr) * count)];
-        for (int i = 0; i < count; i++) {
-            for (int j = 0; j < Array.getLength(arr); j++) {
-                newArr[i * Array.getLength(arr) + j] = Array.get(arr, j);
-            }
-        }
-        return newArr;
-    }
-    
-    private static Object[] arrayIntersection(Object[] left, Object[] right) {
-        Set<Object> rightSet = new HashSet<>(Arrays.asList(right));
-        List<Object> result = new ArrayList<>();
-        Set<Object> seen = new HashSet<>();
-        for (Object obj : left) {
-            if (rightSet.contains(obj) && !seen.contains(obj)) {
-                result.add(obj);
-                seen.add(obj);
-            }
-        }
-        return result.toArray();
-    }
-    
-    private static Object[] arrayUnion(Object[] left, Object[] right) {
-        Set<Object> resultSet = new LinkedHashSet<>();
-        resultSet.addAll(Arrays.asList(left));
-        resultSet.addAll(Arrays.asList(right));
-        return resultSet.toArray();
-    }
-    
-    private static Object[] arraySymmetricDifference(Object[] left, Object[] right) {
-        Set<Object> leftSet = new HashSet<>(Arrays.asList(left));
-        Set<Object> rightSet = new HashSet<>(Arrays.asList(right));
-        List<Object> result = new ArrayList<>();
-        for (Object obj : left) {
-            if (!rightSet.contains(obj)) {
-                result.add(obj);
-            }
-        }
-        for (Object obj : right) {
-            if (!leftSet.contains(obj)) {
-                result.add(obj);
-            }
-        }
-        return result.toArray();
-    }
-    
-    private static Object[] arrayReverse(Object[] arr) {
-        Object[] result = new Object[arr.length];
-        for (int i = 0; i < arr.length; i++) {
-            result[i] = arr[arr.length - 1 - i];
-        }
-        return result;
-    }
     
     private static String formatValue(Object value) {
         if (value == null) {

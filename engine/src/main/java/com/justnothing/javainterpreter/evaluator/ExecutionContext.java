@@ -4,6 +4,7 @@ import com.justnothing.javainterpreter.api.DefaultClassFinder;
 import com.justnothing.javainterpreter.api.DefaultOutputHandler;
 import com.justnothing.javainterpreter.api.IClassFinder;
 import com.justnothing.javainterpreter.api.IOutputHandler;
+import com.justnothing.javainterpreter.builtins.Builtins;
 import com.justnothing.javainterpreter.security.IPermissionChecker;
 import com.justnothing.javainterpreter.security.PermissionType;
 

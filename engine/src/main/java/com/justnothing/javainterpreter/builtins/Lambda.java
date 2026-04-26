@@ -1,7 +1,10 @@
-package com.justnothing.javainterpreter.evaluator;
+package com.justnothing.javainterpreter.builtins;
 
 
 import com.justnothing.javainterpreter.ast.nodes.LambdaNode;
+import com.justnothing.javainterpreter.evaluator.ASTEvaluator;
+import com.justnothing.javainterpreter.evaluator.ExecutionContext;
+import com.justnothing.javainterpreter.evaluator.ScopeManager;
 import com.justnothing.javainterpreter.exception.ErrorCode;
 import com.justnothing.javainterpreter.exception.EvaluationException;
 import com.justnothing.javainterpreter.exception.ReturnException;
@@ -144,31 +147,34 @@ public class Lambda implements Function<Object[], Object> {
         return (T) Proxy.newProxyInstance(
             classLoader,
             new Class<?>[] { interfaceClass },
-            new LambdaInvocationHandler(this)
+            new LambdaInvocationHandler(this, interfaceClass)
         );
     }
     
     public static class LambdaInvocationHandler implements InvocationHandler {
         private final Lambda lambda;
-        
+        private final Class<?> interfaceClass;
+
         LambdaInvocationHandler(Lambda lambda) {
             this.lambda = lambda;
+            this.interfaceClass = null;
         }
-        
+
+        LambdaInvocationHandler(Lambda lambda, Class<?> interfaceClass) {
+            this.lambda = lambda;
+            this.interfaceClass = interfaceClass;
+        }
+
         public Lambda getLambda() {
             return lambda;
         }
         
         @Override
         public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-            if (method.getName().equals("toString") && method.getParameterCount() == 0) {
-                return lambda.toString();
-            }
-            if (method.getName().equals("hashCode") && method.getParameterCount() == 0) {
-                return System.identityHashCode(lambda);
-            }
-            if (method.getName().equals("equals") && method.getParameterCount() == 1) {
-                return proxy == args[0];
+            if (method.getDeclaringClass() == Object.class
+                    || (interfaceClass != null &&
+                        interfaceClass.isAssignableFrom(method.getDeclaringClass()))) {
+                return method.invoke(lambda, args);
             }
             
             Object[] invokeArgs = args != null ? args : new Object[0];

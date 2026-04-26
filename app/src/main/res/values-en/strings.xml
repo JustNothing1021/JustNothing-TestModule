@@ -539,4 +539,31 @@
     <string name="sys_category_cpu_info">CPU Information</string>
     <string name="sys_category_memory_info">Memory Information</string>
     <string name="sys_category_system_props">System Properties</string>
+
+    <!-- Alias Analysis -->
+    <string name="analysis_alias">Command Aliases</string>
+    <string name="analysis_alias_desc">Manage command aliases to simplify command input</string>
+    <string name="analysis_alias_load_failed">Failed to load aliases</string>
+    <string name="analysis_alias_add_success">Alias added successfully</string>
+    <string name="analysis_alias_add_failed">Failed to add alias</string>
+    <string name="analysis_alias_remove_success">Alias removed successfully</string>
+    <string name="analysis_alias_remove_failed">Failed to remove alias</string>
+    <string name="analysis_alias_clear_success">All custom aliases cleared</string>
+    <string name="analysis_alias_clear_failed">Failed to clear aliases</string>
+    <string name="analysis_alias_loading">Loading aliases…</string>
+    <string name="analysis_alias_empty">No aliases available</string>
+    <string name="analysis_alias_total_format">%1$d aliases total</string>
+    <string name="analysis_alias_add_title">Add Alias</string>
+    <string name="analysis_alias_name_hint">Alias name</string>
+    <string name="analysis_alias_command_hint">Command</string>
+    <string name="analysis_alias_add_button">Add</string>
+    <string name="analysis_alias_clear_all">Clear All</string>
+    <string name="analysis_alias_name_label">Name:</string>
+    <string name="analysis_alias_command_label">Command:</string>
+    <string name="analysis_alias_name_empty">Alias name cannot be empty</string>
+    <string name="analysis_alias_command_empty">Command cannot be empty</string>
+    <string name="analysis_alias_delete_title">Delete Alias</string>
+    <string name="analysis_alias_delete_message">Are you sure you want to delete alias "%1$s"?</string>
+    <string name="analysis_alias_clear_title">Clear Aliases</string>
+    <string name="analysis_alias_clear_message">Are you sure you want to clear all custom aliases? (Default aliases will be preserved)</string>
 </resources>

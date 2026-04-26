@@ -11,6 +11,7 @@ import com.justnothing.javainterpreter.lexer.Lexer;
 import com.justnothing.javainterpreter.lexer.Token;
 import com.justnothing.javainterpreter.lexer.TokenType;
 import com.justnothing.javainterpreter.exception.ErrorCode;
+import com.justnothing.javainterpreter.utils.TypeUtils;
 
 import java.lang.reflect.Array;
 import java.util.ArrayDeque;
@@ -23,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 
 /**
  * 语法分析器（Parser）
@@ -38,10 +40,7 @@ public class Parser {
     private static final ConcurrentHashMap<String, String> classNameCache = new ConcurrentHashMap<>();
     private static final String NOT_A_CLASS = "__NOT_A_CLASS__";
     
-    public static void clearClassNameCache() {
-        classNameCache.clear();
-    }
-    
+
     public static void clearFailedClassCache() {
         classNameCache.entrySet().removeIf(entry -> NOT_A_CLASS.equals(entry.getValue()));
     }
@@ -133,7 +132,7 @@ public class Parser {
         if (isAtEnd()) {
             return false;
         }
-        return peek().getType() == type;
+        return peek().type() == type;
     }
     
     private Token consume(TokenType type, String message) throws ParseException {
@@ -147,27 +146,28 @@ public class Parser {
         Token token = peek();
         return new ParseException(
                 message,
-                token.getLocation().getLine(),
-                token.getLocation().getColumn(),
+                token.location().getLine(),
+                token.location().getColumn(),
                 ErrorCode.PARSE_INVALID_SYNTAX
         );
     }
 
+    @SuppressWarnings("SameParameterValue")
     private ParseException error(String message, ErrorCode errorCode) {
         Token token = peek();
         return new ParseException(
                 message,
-                token.getLocation().getLine(),
-                token.getLocation().getColumn(),
+                token.location().getLine(),
+                token.location().getColumn(),
                 errorCode
         );
     }
     
     private SourceLocation createLocation() {
         if (isAtEnd()) {
-            return tokens.get(tokens.size() - 1).getLocation();
+            return tokens.get(tokens.size() - 1).location();
         }
-        return peek().getLocation();
+        return peek().location();
     }
     
     private VariableNode createVariableNode(String name, SourceLocation location) {
@@ -178,9 +178,8 @@ public class Parser {
         return node;
     }
     
-    private int savePosition() {
+    private void savePosition() {
         savedPositions.push(position);
-        return position;
     }
     
     private void restorePosition() {
@@ -287,48 +286,16 @@ public class Parser {
         if (match(TokenType.KEYWORD_CONTINUE)) {
             return parseContinueStatement();
         }
-        
+
+        int currentPosition = position;
         if (check(TokenType.DELIMITER_LEFT_BRACE)) {
-            int savedPos = position;
             try {
                 advance();
-                if (check(TokenType.DELIMITER_RIGHT_BRACE)) {
-                    advance();
-                    if (check(TokenType.DELIMITER_SEMICOLON)) {
-                        advance();
-                        return new ArrayLiteralNode(new ArrayList<>(), createLocation());
-                    }
-                    position = savedPos;
-                    advance();
-                    return parseBlock();
-                }
-                
-                try {
-                    parseExpression();
-                    if (check(TokenType.OPERATOR_COLON)) {
-                        position = savedPos;
-                        ASTNode expr = parseExpression();
-                        consumeOptionalSemicolon();
-                        return expr;
-                    }
-                    if (check(TokenType.DELIMITER_COMMA) || check(TokenType.DELIMITER_RIGHT_BRACE) || check(TokenType.DELIMITER_SEMICOLON)) {
-                        position = savedPos;
-                        ASTNode expr = parseExpression();
-                        consumeOptionalSemicolon();
-                        return expr;
-                    }
-                } catch (ParseException ignored) {
-                }
-                position = savedPos;
-                advance();
                 return parseBlock();
-            } catch (ParseException e) {
-                position = savedPos;
-                advance();
-                return parseBlock();
+            } catch (ParseException ignored) {
+                position = currentPosition;
             }
         }
-        
         return parseExpressionStatement();
     }
     
@@ -373,7 +340,7 @@ public class Parser {
         SourceLocation location = createLocation();
         
         if (check(TokenType.IDENTIFIER) && checkNext(TokenType.OPERATOR_DECLARE_ASSIGN)) {
-            String varName = consume(TokenType.IDENTIFIER, "Expected variable name").getText();
+            String varName = consume(TokenType.IDENTIFIER, "Expected variable name").text();
             consume(TokenType.OPERATOR_DECLARE_ASSIGN, "Expected :=");
             ASTNode value = parseExpression();
             if (consumeSemicolon) {
@@ -384,7 +351,7 @@ public class Parser {
         }
 
         boolean isFinal = false;
-        if (peek().getType() == TokenType.KEYWORD_FINAL) {
+        if (peek().type() == TokenType.KEYWORD_FINAL) {
             isFinal = true;
             advance();
         }
@@ -392,7 +359,7 @@ public class Parser {
         GenericType type;
         boolean isAuto = false;
         
-        if (peek().getType() == TokenType.KEYWORD_AUTO) {
+        if (peek().type() == TokenType.KEYWORD_AUTO) {
             advance();
             type = new GenericType(AutoClass.class, Collections.emptyList(), 0, "auto");
             isAuto = true;
@@ -404,7 +371,7 @@ public class Parser {
         
         do {
             SourceLocation varLocation = createLocation();
-            String varName = consume(TokenType.IDENTIFIER, "Expected variable name").getText();
+            String varName = consume(TokenType.IDENTIFIER, "Expected variable name").text();
             
             ASTNode value = null;
             if (match(TokenType.OPERATOR_ASSIGN)) {
@@ -440,11 +407,11 @@ public class Parser {
             StringBuilder typeName = new StringBuilder();
             
             while (true) {
-                if (check(TokenType.IDENTIFIER) || isTypeKeyword(peek().getType())) {
+                if (check(TokenType.IDENTIFIER) || isTypeKeyword(peek().type())) {
                     if (typeName.length() > 0 && !typeName.toString().endsWith(".")) {
                         break;
                     }
-                    String text = advance().getText();
+                    String text = advance().text();
                     typeName.append(text);
                     
                     if (check(TokenType.OPERATOR_DOT)) {
@@ -525,11 +492,11 @@ public class Parser {
             StringBuilder typeName = new StringBuilder();
             
             while (true) {
-                if (check(TokenType.IDENTIFIER) || isTypeKeyword(peek().getType())) {
+                if (check(TokenType.IDENTIFIER) || isTypeKeyword(peek().type())) {
                     if (typeName.length() > 0 && !typeName.toString().endsWith(".")) {
                         break;
                     }
-                    String text = advance().getText();
+                    String text = advance().text();
                     typeName.append(text);
                     
                     if (check(TokenType.OPERATOR_DOT)) {
@@ -645,13 +612,13 @@ public class Parser {
         }
         
         if (check(TokenType.IDENTIFIER)) {
-            typeName.append(advance().getText());
+            typeName.append(advance().text());
             
             while (check(TokenType.OPERATOR_DOT)) {
                 advance();
                 typeName.append(".");
                 if (check(TokenType.IDENTIFIER)) {
-                    typeName.append(advance().getText());
+                    typeName.append(advance().text());
                 } else {
                     throw error("Expected identifier after '.'");
                 }
@@ -702,7 +669,7 @@ public class Parser {
     private String resolveClassName(String className) {
         String cached = classNameCache.get(className);
         if (cached != null) {
-            return cached == NOT_A_CLASS ? null : cached;
+            return cached.equals(NOT_A_CLASS) ? null : cached;
         }
         
         Class<?> clazz = context.getClassFinder().findClassWithImports(className, context.getClassLoader(), context.getImports());
@@ -880,12 +847,12 @@ public class Parser {
             return parseTraditionalFor(location);
         }
         
-        if (isTypeKeyword(peek().getType()) || peek().getType() == TokenType.IDENTIFIER) {
+        if (isTypeKeyword(peek().type()) || peek().type() == TokenType.IDENTIFIER) {
             int savedPos = position;
             
             try {
                 Class<?> itemType = parseType();
-                String itemName = consume(TokenType.IDENTIFIER, "Expected variable name").getText();
+                String itemName = consume(TokenType.IDENTIFIER, "Expected variable name").text();
                 
                 if (check(TokenType.OPERATOR_COLON)) {
                     advance();
@@ -894,7 +861,9 @@ public class Parser {
                     ASTNode body = parseStatement();
                     return new ForEachNode(itemType, itemName, collection, body, location);
                 }
-            } catch (ParseException ignored) {
+            } catch (ParseException e) {
+                if (e.getErrorCode() == ErrorCode.PARSE_CLASS_NOT_FOUND)
+                    throw e;
             }
             
             position = savedPos;
@@ -909,7 +878,7 @@ public class Parser {
     private ForNode parseTraditionalFor(SourceLocation location) throws ParseException {
         ASTNode initialization = null;
         if (!check(TokenType.DELIMITER_SEMICOLON)) {
-            if (isTypeKeyword(peek().getType()) || peek().getType() == TokenType.IDENTIFIER) {
+            if (isTypeKeyword(peek().type()) || peek().type() == TokenType.IDENTIFIER) {
                 savePosition();
                 try {
                     initialization = parseVariableDeclaration(false);
@@ -982,7 +951,7 @@ public class Parser {
         ASTNode expression = parseExpression();
         consume(TokenType.DELIMITER_RIGHT_PAREN, "Expected ')' after switch expression");
         
-        SwitchBodyResult result = parseSwitchBody(location, true);
+        SwitchBodyResult result = parseSwitchBody(location);
         return new SwitchNode(expression, result.cases(), result.defaultCase(), location);
     }
     
@@ -997,15 +966,14 @@ public class Parser {
         ASTNode expression = parseExpression();
         consume(TokenType.DELIMITER_RIGHT_PAREN, "Expected ')' after switch expression");
         
-        SwitchBodyResult result = parseSwitchBody(location, true);
+        SwitchBodyResult result = parseSwitchBody(location);
         return new SwitchNode(expression, result.cases(), result.defaultCase(), location);
     }
 
     /**
      * 解析 switch body (花括号内的 case/default 列表)
-     * @param allowArrow 是否支持箭头语法 (case v -> expr)
      */
-    private SwitchBodyResult parseSwitchBody(SourceLocation location, boolean allowArrow) throws ParseException {
+    private SwitchBodyResult parseSwitchBody(SourceLocation location) throws ParseException {
         consume(TokenType.DELIMITER_LEFT_BRACE, "Expected '{' after switch expression");
         
         List<CaseNode> cases = new ArrayList<>();
@@ -1013,33 +981,24 @@ public class Parser {
         
         while (!check(TokenType.DELIMITER_RIGHT_BRACE) && !isAtEnd()) {
             if (match(TokenType.KEYWORD_CASE)) {
-                ASTNode caseValue = allowArrow ? parseTernary() : parseExpression();
+                ASTNode caseValue = parseTernary();
                 
-                if (allowArrow && match(TokenType.DELIMITER_ARROW)) {
+                if (match(TokenType.DELIMITER_ARROW)) {
                     ASTNode caseExpr = parseExpression();
                     List<ASTNode> caseStatements = new ArrayList<>();
                     caseStatements.add(caseExpr);
                     consumeOptionalSemicolon();
                     cases.add(new CaseNode(caseValue, caseStatements, location));
                 } else {
-                    if (allowArrow) {
-                        consume(TokenType.OPERATOR_COLON, "Expected '->' or ':' after case value");
-                    } else {
-                        consume(TokenType.OPERATOR_COLON, "Expected ':' after case value");
-                    }
+                    consume(TokenType.OPERATOR_COLON, "Expected '->' or ':' after case value");
                     cases.add(new CaseNode(caseValue, parseCaseBlockStatements(), location));
                 }
             } else if (match(TokenType.KEYWORD_DEFAULT)) {
-                if (allowArrow && match(TokenType.DELIMITER_ARROW)) {
-                    ASTNode defaultExpr = parseExpression();
-                    defaultCase = defaultExpr;
+                if (match(TokenType.DELIMITER_ARROW)) {
+                    defaultCase = parseExpression();
                     consumeOptionalSemicolon();
                 } else {
-                    if (allowArrow) {
-                        consume(TokenType.OPERATOR_COLON, "Expected '->' or ':' after default");
-                    } else {
-                        consume(TokenType.OPERATOR_COLON, "Expected ':' after default");
-                    }
+                    consume(TokenType.OPERATOR_COLON, "Expected '->' or ':' after default");
                     defaultCase = new BlockNode(parseCaseBlockStatements(), location);
                 }
             } else {
@@ -1116,9 +1075,9 @@ public class Parser {
     private ResourceDeclaration parseResourceDeclaration() throws ParseException {
         SourceLocation location = createLocation();
         
-        if (isTypeKeyword(peek().getType())) {
+        if (isTypeKeyword(peek().type())) {
             Class<?> type = parseType();
-            String varName = consume(TokenType.IDENTIFIER, "Expected variable name").getText();
+            String varName = consume(TokenType.IDENTIFIER, "Expected variable name").text();
             consume(TokenType.OPERATOR_ASSIGN, "Expected '=' in resource declaration");
             ASTNode initializer = parseExpression();
             return new ResourceDeclaration(type, varName, initializer, location);
@@ -1129,7 +1088,7 @@ public class Parser {
             try {
                 Class<?> type = parseType();
                 if (check(TokenType.IDENTIFIER) && checkNext(TokenType.OPERATOR_ASSIGN)) {
-                    String varName = consume(TokenType.IDENTIFIER, "Expected variable name").getText();
+                    String varName = consume(TokenType.IDENTIFIER, "Expected variable name").text();
                     consume(TokenType.OPERATOR_ASSIGN, "Expected '=' in resource declaration");
                     ASTNode initializer = parseExpression();
                     return new ResourceDeclaration(type, varName, initializer, location);
@@ -1139,7 +1098,7 @@ public class Parser {
             position = savedPos;
         }
         
-        String varName = consume(TokenType.IDENTIFIER, "Expected resource variable name").getText();
+        String varName = consume(TokenType.IDENTIFIER, "Expected resource variable name").text();
         return new ResourceDeclaration(varName, location);
     }
     
@@ -1158,7 +1117,7 @@ public class Parser {
             exceptionTypes.add(parseType());
         } while (match(TokenType.OPERATOR_BITWISE_OR));
         
-        String variableName = consume(TokenType.IDENTIFIER, "Expected exception variable name").getText();
+        String variableName = consume(TokenType.IDENTIFIER, "Expected exception variable name").text();
         
         consume(TokenType.DELIMITER_RIGHT_PAREN, "Expected ')' after catch clause");
         
@@ -1192,7 +1151,7 @@ public class Parser {
         
         while (true) {
             if (check(TokenType.IDENTIFIER)) {
-                packageName.append(advance().getText());
+                packageName.append(advance().text());
             } else if (check(TokenType.OPERATOR_MULTIPLY)) {
                 advance();
                 packageName.append("*");
@@ -1214,7 +1173,6 @@ public class Parser {
         String importStmt = packageName.toString();
         context.addImport(importStmt);
         clearFailedClassCache();
-        
         return new ImportNode(importStmt, location);
     }
     
@@ -1231,7 +1189,7 @@ public class Parser {
             return new DeleteNode(true, location);
         }
         
-        String varName = consume(TokenType.IDENTIFIER, "Expected variable name after delete").getText();
+        String varName = consume(TokenType.IDENTIFIER, "Expected variable name after delete").text();
         consume(TokenType.DELIMITER_SEMICOLON, "Expected semicolon after delete");
         
         return new DeleteNode(varName, location);
@@ -1244,7 +1202,7 @@ public class Parser {
     private ASTNode parseClassDeclaration(List<AnnotationNode> annotations) throws ParseException {
         SourceLocation location = createLocation();
         
-        String className = consume(TokenType.IDENTIFIER, "Expected class name").getText();
+        String className = consume(TokenType.IDENTIFIER, "Expected class name").text();
         
         List<String> typeParams = Collections.emptyList();
         if (check(TokenType.OPERATOR_LESS_THAN)) {
@@ -1283,7 +1241,7 @@ public class Parser {
                 ClassModifiers modifiers = parseModifiers();
                 
                 if (check(TokenType.IDENTIFIER) && checkNext(TokenType.DELIMITER_LEFT_PAREN)) {
-                    String constructorName = consume(TokenType.IDENTIFIER, "Expected constructor name").getText();
+                    String constructorName = consume(TokenType.IDENTIFIER, "Expected constructor name").text();
                     if (!constructorName.equals(className)) {
                         throw error("Constructor name must match class name");
                     }
@@ -1294,7 +1252,7 @@ public class Parser {
                     classDecl.addConstructor(constructor);
                 } else if (isTypeStart()) {
                     ClassReferenceNode type = parseTypeName();
-                    String memberName = consume(TokenType.IDENTIFIER, "Expected member name").getText();
+                    String memberName = consume(TokenType.IDENTIFIER, "Expected member name").text();
                     
                     if (check(TokenType.DELIMITER_LEFT_PAREN)) {
                         MethodDeclarationNode method = parseMethodDeclaration(memberName, type, modifiers);
@@ -1328,7 +1286,7 @@ public class Parser {
         consume(TokenType.OPERATOR_LESS_THAN, "Expected '<'");
         int depth = 1;
         while (depth > 0 && !isAtEnd()) {
-            TokenType type = peek().getType();
+            TokenType type = peek().type();
             if (type == TokenType.OPERATOR_LESS_THAN) {
                 advance();
                 depth++;
@@ -1342,7 +1300,7 @@ public class Parser {
                 advance();
                 depth -= 3;
             } else if (type == TokenType.IDENTIFIER && depth == 1) {
-                String paramName = advance().getText();
+                String paramName = advance().text();
                 typeParams.add(paramName);
                 if (check(TokenType.OPERATOR_LESS_THAN)) {
                     advance();
@@ -1368,7 +1326,7 @@ public class Parser {
     private ASTNode parseInterfaceDeclaration(List<AnnotationNode> annotations) throws ParseException {
         SourceLocation location = createLocation();
         
-        String interfaceName = consume(TokenType.IDENTIFIER, "Expected interface name").getText();
+        String interfaceName = consume(TokenType.IDENTIFIER, "Expected interface name").text();
         
         List<String> typeParams = Collections.emptyList();
         if (check(TokenType.OPERATOR_LESS_THAN)) {
@@ -1404,7 +1362,7 @@ public class Parser {
                 
                 if (match(TokenType.KEYWORD_DEFAULT)) {
                     ClassReferenceNode type = parseTypeName();
-                    String memberName = consume(TokenType.IDENTIFIER, "Expected member name").getText();
+                    String memberName = consume(TokenType.IDENTIFIER, "Expected member name").text();
                     MethodDeclarationNode method = parseMethodDeclaration(memberName, type, modifiers);
                     for (AnnotationNode annotation : memberAnnotations) {
                         method.addAnnotation(annotation);
@@ -1412,7 +1370,7 @@ public class Parser {
                     interfaceDecl.addMethod(method);
                 } else if (isTypeStart()) {
                     ClassReferenceNode type = parseTypeName();
-                    String memberName = consume(TokenType.IDENTIFIER, "Expected member name").getText();
+                    String memberName = consume(TokenType.IDENTIFIER, "Expected member name").text();
                     
                     if (check(TokenType.DELIMITER_LEFT_PAREN)) {
                         // 接口方法默认是抽象的
@@ -1507,7 +1465,7 @@ public class Parser {
         SourceLocation location = createLocation();
         
         consume(TokenType.DELIMITER_AT, "Expected '@'");
-        String annotationName = consume(TokenType.IDENTIFIER, "Expected annotation name").getText();
+        String annotationName = consume(TokenType.IDENTIFIER, "Expected annotation name").text();
         
         if (!check(TokenType.DELIMITER_LEFT_PAREN)) {
             return new AnnotationNode(annotationName, location);
@@ -1523,16 +1481,13 @@ public class Parser {
         Map<String, Object> values = new LinkedHashMap<>();
         
         if (check(TokenType.IDENTIFIER) && checkNext(TokenType.OPERATOR_ASSIGN)) {
-            while (true) {
-                String key = consume(TokenType.IDENTIFIER, "Expected parameter name").getText();
+            do {
+                String key = consume(TokenType.IDENTIFIER, "Expected parameter name").text();
                 consume(TokenType.OPERATOR_ASSIGN, "Expected '=' in annotation parameter");
                 Object value = parseAnnotationValue();
                 values.put(key, value);
-                
-                if (!match(TokenType.DELIMITER_COMMA)) {
-                    break;
-                }
-            }
+
+            } while (match(TokenType.DELIMITER_COMMA));
         } else {
             Object singleValue = parseAnnotationValue();
             consume(TokenType.DELIMITER_RIGHT_PAREN, "Expected ')' after annotation value");
@@ -1563,23 +1518,23 @@ public class Parser {
         }
         
         if (check(TokenType.LITERAL_STRING)) {
-            return advance().getValue();
+            return advance().value();
         }
         
         if (check(TokenType.LITERAL_INTEGER) || check(TokenType.LITERAL_LONG)) {
-            return advance().getValue();
+            return advance().value();
         }
         
         if (check(TokenType.LITERAL_DECIMAL)) {
-            return advance().getValue();
+            return advance().value();
         }
         
         if (check(TokenType.LITERAL_BOOLEAN)) {
-            return advance().getValue();
+            return advance().value();
         }
         
         if (check(TokenType.LITERAL_CHAR)) {
-            return advance().getValue();
+            return advance().value();
         }
         
         if (check(TokenType.KEYWORD_TRUE)) {
@@ -1598,18 +1553,18 @@ public class Parser {
         }
         
         if (check(TokenType.IDENTIFIER)) {
-            String name = advance().getText();
+            String name = advance().text();
             
             if (check(TokenType.DELIMITER_DOT)) {
                 StringBuilder fullName = new StringBuilder(name);
                 while (match(TokenType.DELIMITER_DOT)) {
                     fullName.append(".");
-                    fullName.append(consume(TokenType.IDENTIFIER, "Expected identifier after '.'").getText());
+                    fullName.append(consume(TokenType.IDENTIFIER, "Expected identifier after '.'").text());
                 }
                 
                 if (check(TokenType.DELIMITER_DOT) || 
-                    (peek().getText() != null && peek().getText().equals("class"))) {
-                    if (peek().getText() != null && peek().getText().equals("class")) {
+                    (peek().text() != null && peek().text().equals("class"))) {
+                    if (peek().text() != null && peek().text().equals("class")) {
                         advance();
                         try {
                             Class<?> clazz = context.getClassFinder().findClassWithImports(
@@ -1622,7 +1577,7 @@ public class Parser {
                     }
                 }
                 
-                if (peek().getText() != null && peek().getText().equals("class")) {
+                if (peek().text() != null && peek().text().equals("class")) {
                     advance();
                     try {
                         Class<?> clazz = context.getClassFinder().findClassWithImports(
@@ -1637,7 +1592,7 @@ public class Parser {
                 return fullName.toString();
             }
             
-            if (peek().getText() != null && peek().getText().equals("class")) {
+            if (peek().text() != null && peek().text().equals("class")) {
                 advance();
                 try {
                     Class<?> clazz = context.getClassFinder().findClassWithImports(
@@ -1688,13 +1643,13 @@ public class Parser {
         boolean isPrimitive = false;
         
         if (check(TokenType.IDENTIFIER)) {
-            typeNameBuilder.append(advance().getText());
+            typeNameBuilder.append(advance().text());
             
             while (check(TokenType.OPERATOR_DOT)) {
                 advance();
                 typeNameBuilder.append(".");
                 if (check(TokenType.IDENTIFIER)) {
-                    typeNameBuilder.append(advance().getText());
+                    typeNameBuilder.append(advance().text());
                 } else {
                     throw error("Expected identifier after '.'");
                 }
@@ -1754,30 +1709,21 @@ public class Parser {
             arrayDepth++;
         }
         
-        Class<?> resolvedClass = null;
+        Class<?> resolvedClass;
         if (isPrimitive) {
             // 基本类型使用对应的包装类或原始类型
-            switch (typeName) {
-                case "int": resolvedClass = int.class;
-                    break;
-                case "long": resolvedClass = long.class;
-                    break;
-                case "float": resolvedClass = float.class;
-                    break;
-                case "double": resolvedClass = double.class;
-                    break;
-                case "boolean": resolvedClass = boolean.class;
-                    break;
-                case "char": resolvedClass = char.class;
-                    break;
-                case "byte": resolvedClass = byte.class;
-                    break;
-                case "short": resolvedClass = short.class;
-                    break;
-                case "void": resolvedClass = void.class;
-                    break;
-                default: resolvedClass = Object.class;
-            }
+            resolvedClass = switch (typeName) {
+                case "int" -> int.class;
+                case "long" -> long.class;
+                case "float" -> float.class;
+                case "double" -> double.class;
+                case "boolean" -> boolean.class;
+                case "char" -> char.class;
+                case "byte" -> byte.class;
+                case "short" -> short.class;
+                case "void" -> void.class;
+                default -> Object.class;
+            };
         } else {
             resolvedClass = context.resolveClass(typeName);
             if (resolvedClass == null) {
@@ -1847,10 +1793,8 @@ public class Parser {
         consume(TokenType.DELIMITER_RIGHT_PAREN, "Expected ')' after constructor parameters");
         
         Set<String> paramNames = new HashSet<>();
-        if (parameters != null) {
-            for (ParameterNode p : parameters) {
-                paramNames.add(p.getParameterName());
-            }
+        for (ParameterNode p : parameters) {
+            paramNames.add(p.getParameterName());
         }
         context.enterMethod(paramNames);
         
@@ -1875,12 +1819,10 @@ public class Parser {
         consume(TokenType.DELIMITER_RIGHT_PAREN, "Expected ')' after method parameters");
         
         Set<String> paramNames = new HashSet<>();
-        if (parameters != null) {
-            for (ParameterNode p : parameters) {
-                paramNames.add(p.getParameterName());
-            }
+        for (ParameterNode p : parameters) {
+            paramNames.add(p.getParameterName());
         }
-        
+
         // 处理抽象方法
         if (modifiers.isAbstract()) {
             consume(TokenType.DELIMITER_SEMICOLON, "Expected ';' after abstract method declaration");
@@ -1930,7 +1872,7 @@ public class Parser {
         if (!check(TokenType.DELIMITER_RIGHT_PAREN)) {
             do {
                 ClassReferenceNode type = parseTypeName();
-                String paramName = consume(TokenType.IDENTIFIER, "Expected parameter name").getText();
+                String paramName = consume(TokenType.IDENTIFIER, "Expected parameter name").text();
                 parameters.add(new ParameterNode(paramName, type, createLocation()));
             } while (match(TokenType.DELIMITER_COMMA));
         }
@@ -2143,7 +2085,7 @@ public class Parser {
             SourceLocation location = createLocation();
             ASTNode right = parseLogicalOr();
             
-            if (opToken.getType() == TokenType.OPERATOR_NULL_COALESCING) {
+            if (opToken.type() == TokenType.OPERATOR_NULL_COALESCING) {
                 left = new BinaryOpNode(BinaryOpNode.Operator.NULL_COALESCING, left, right, location);
             } else {
                 left = new BinaryOpNode(BinaryOpNode.Operator.ELVIS, left, right, location);
@@ -2236,7 +2178,7 @@ public class Parser {
             SourceLocation location = createLocation();
             ASTNode right = parseRange();
             
-            BinaryOpNode.Operator operator = opToken.getType() == TokenType.OPERATOR_EQUAL ? 
+            BinaryOpNode.Operator operator = opToken.type() == TokenType.OPERATOR_EQUAL ?
                     BinaryOpNode.Operator.EQUAL : BinaryOpNode.Operator.NOT_EQUAL;
             left = new BinaryOpNode(operator, left, right, location);
         }
@@ -2278,7 +2220,7 @@ public class Parser {
             SourceLocation location = createLocation();
             ASTNode right = parseShift();
             
-            BinaryOpNode.Operator operator = switch (opToken.getType()) {
+            BinaryOpNode.Operator operator = switch (opToken.type()) {
                 case OPERATOR_LESS_THAN -> BinaryOpNode.Operator.LESS_THAN;
                 case OPERATOR_LESS_THAN_OR_EQUAL -> BinaryOpNode.Operator.LESS_THAN_OR_EQUAL;
                 case OPERATOR_GREATER_THAN -> BinaryOpNode.Operator.GREATER_THAN;
@@ -2296,11 +2238,11 @@ public class Parser {
             StringBuilder typeName = new StringBuilder();
             
             while (true) {
-                if (check(TokenType.IDENTIFIER) || isTypeKeyword(peek().getType())) {
+                if (check(TokenType.IDENTIFIER) || isTypeKeyword(peek().type())) {
                     if (typeName.length() > 0 && !typeName.toString().endsWith(".")) {
                         break;
                     }
-                    String text = advance().getText();
+                    String text = advance().text();
                     typeName.append(text);
                     
                     if (check(TokenType.OPERATOR_DOT)) {
@@ -2350,7 +2292,7 @@ public class Parser {
             SourceLocation location = createLocation();
             ASTNode right = parseAdditive();
             
-            BinaryOpNode.Operator operator = switch (opToken.getType()) {
+            BinaryOpNode.Operator operator = switch (opToken.type()) {
                 case OPERATOR_LEFT_SHIFT -> BinaryOpNode.Operator.LEFT_SHIFT;
                 case OPERATOR_RIGHT_SHIFT -> BinaryOpNode.Operator.RIGHT_SHIFT;
                 case OPERATOR_UNSIGNED_RIGHT_SHIFT -> BinaryOpNode.Operator.UNSIGNED_RIGHT_SHIFT;
@@ -2374,7 +2316,7 @@ public class Parser {
             SourceLocation location = createLocation();
             ASTNode right = parseMultiplicative();
             
-            BinaryOpNode.Operator operator = opToken.getType() == TokenType.OPERATOR_PLUS ? 
+            BinaryOpNode.Operator operator = opToken.type() == TokenType.OPERATOR_PLUS ?
                     BinaryOpNode.Operator.ADD : BinaryOpNode.Operator.SUBTRACT;
             left = new BinaryOpNode(operator, left, right, location);
         }
@@ -2398,7 +2340,7 @@ public class Parser {
             SourceLocation location = createLocation();
             ASTNode right = parsePower();
             
-            BinaryOpNode.Operator operator = switch (opToken.getType()) {
+            BinaryOpNode.Operator operator = switch (opToken.type()) {
                 case OPERATOR_MULTIPLY -> BinaryOpNode.Operator.MULTIPLY;
                 case OPERATOR_DIVIDE -> BinaryOpNode.Operator.DIVIDE;
                 case OPERATOR_MODULO -> BinaryOpNode.Operator.MODULO;
@@ -2457,7 +2399,7 @@ public class Parser {
             SourceLocation location = createLocation();
             ASTNode operand = parseUnary();
             
-            UnaryOpNode.Operator operator = switch (opToken.getType()) {
+            UnaryOpNode.Operator operator = switch (opToken.type()) {
                 case OPERATOR_PLUS -> UnaryOpNode.Operator.POSITIVE;
                 case OPERATOR_MINUS -> UnaryOpNode.Operator.NEGATIVE;
                 case OPERATOR_LOGICAL_NOT -> UnaryOpNode.Operator.LOGICAL_NOT;
@@ -2535,9 +2477,9 @@ public class Parser {
             String methodName;
             
             if (check(TokenType.IDENTIFIER)) {
-                methodName = advance().getText();
+                methodName = advance().text();
             } else if (check(TokenType.KEYWORD_NEW)) {
-                methodName = advance().getText();
+                methodName = advance().text();
             } else {
                 throw error("Expected method name after '::'");
             }
@@ -2549,9 +2491,9 @@ public class Parser {
     }
     
     private ASTNode parseInterpolatedString(Token token) throws ParseException {
-        List<?> parts = (List<?>) token.getValue();
+        List<?> parts = (List<?>) token.value();
         InterpolatedStringNode.Builder builder = new InterpolatedStringNode.Builder();
-        builder.location(token.getLocation());
+        builder.location(token.location());
         
         for (Object part : parts) {
             if (part instanceof String) {
@@ -2575,22 +2517,22 @@ public class Parser {
     private ASTNode parsePrimary() throws ParseException {
         if (match(TokenType.LITERAL_INTEGER)) {
             Token token = tokens.get(position - 1);
-            return new LiteralNode(token.getValue(), int.class, token.getLocation());
+            return new LiteralNode(token.value(), int.class, token.location());
         }
         
         if (match(TokenType.LITERAL_LONG)) {
             Token token = tokens.get(position - 1);
-            return new LiteralNode(token.getValue(), long.class, token.getLocation());
+            return new LiteralNode(token.value(), long.class, token.location());
         }
         
         if (match(TokenType.LITERAL_DECIMAL)) {
             Token token = tokens.get(position - 1);
-            return new LiteralNode(token.getValue(), double.class, token.getLocation());
+            return new LiteralNode(token.value(), double.class, token.location());
         }
         
         if (match(TokenType.LITERAL_STRING)) {
             Token token = tokens.get(position - 1);
-            return new LiteralNode(token.getValue(), String.class, token.getLocation());
+            return new LiteralNode(token.value(), String.class, token.location());
         }
         
         if (match(TokenType.LITERAL_INTERPOLATED_STRING)) {
@@ -2600,17 +2542,17 @@ public class Parser {
         
         if (match(TokenType.LITERAL_CHAR)) {
             Token token = tokens.get(position - 1);
-            return new LiteralNode(token.getValue(), char.class, token.getLocation());
+            return new LiteralNode(token.value(), char.class, token.location());
         }
         
         if (match(TokenType.LITERAL_BOOLEAN)) {
             Token token = tokens.get(position - 1);
-            return new LiteralNode(token.getValue(), boolean.class, token.getLocation());
+            return new LiteralNode(token.value(), boolean.class, token.location());
         }
         
         if (match(TokenType.LITERAL_NULL)) {
             Token token = tokens.get(position - 1);
-            return new LiteralNode(null, null, token.getLocation());
+            return new LiteralNode(null, null, token.location());
         }
         
         if (match(TokenType.KEYWORD_THIS)) {
@@ -2627,15 +2569,14 @@ public class Parser {
             check(TokenType.KEYWORD_BYTE) || check(TokenType.KEYWORD_SHORT) ||
             check(TokenType.KEYWORD_VOID)) {
             Token token = advance();
-            String typeName = token.getText();
-            Class<?> primitiveClass = getPrimitiveClass(typeName);
-            return ClassReferenceNode.of(typeName, primitiveClass, true, token.getLocation());
+            String typeName = token.text();
+            Class<?> primitiveClass = TypeUtils.getPrimitiveType(typeName);
+            return ClassReferenceNode.of(typeName, primitiveClass, true, token.location());
         }
         
         if (check(TokenType.DELIMITER_LEFT_BRACKET)) {
             return parseArrayLiteral();
         }
-        
         if (check(TokenType.DELIMITER_LEFT_BRACE)) {
             return parseArrayInitializerBrace();
         }
@@ -2656,20 +2597,20 @@ public class Parser {
             
             savePosition();
             try {
-                StringBuilder className = new StringBuilder(token.getText());
+                StringBuilder className = new StringBuilder(token.text());
                 String lastValidClassName = null;
                 int lastValidPosition = position;
                 
-                String simpleResolved = resolveClassName(token.getText());
-                if (simpleResolved != null && !context.isClassDeclared(token.getText())) {
-                    lastValidClassName = token.getText();
+                String simpleResolved = resolveClassName(token.text());
+                if (simpleResolved != null && !context.isClassDeclared(token.text())) {
+                    lastValidClassName = token.text();
                     lastValidPosition = position;
                 }
                 
                 while (check(TokenType.OPERATOR_DOT) && !isAtEnd()) {
                     advance();
                     if (check(TokenType.IDENTIFIER)) {
-                        className.append(".").append(advance().getText());
+                        className.append(".").append(advance().text());
                         String currentClassName = className.toString();
                         
                         String resolved = resolveClassName(currentClassName);
@@ -2683,7 +2624,7 @@ public class Parser {
                     }
                 }
                 
-                if (lastValidClassName != null && !context.isClassDeclared(token.getText())) {
+                if (lastValidClassName != null && !context.isClassDeclared(token.text())) {
                     position = lastValidPosition;
                     
                     if (check(TokenType.OPERATOR_LESS_THAN)) {
@@ -2695,7 +2636,7 @@ public class Parser {
                         if (resolvedClass == null) {
                             resolvedClass = Object.class;
                         }
-                        return ClassReferenceNode.of(genericType.toString(), resolvedClass, false, token.getLocation());
+                        return ClassReferenceNode.of(genericType.toString(), resolvedClass, false, token.location());
                     }
                     
                     releasePosition();
@@ -2703,21 +2644,21 @@ public class Parser {
                     if (resolvedClass == null) {
                         resolvedClass = Object.class;
                     }
-                    return ClassReferenceNode.of(lastValidClassName, resolvedClass, false, token.getLocation());
+                    return ClassReferenceNode.of(lastValidClassName, resolvedClass, false, token.location());
                 }
                 
                 // 检查是否是已声明的类
-                if (context.isClassDeclared(token.getText())) {
+                if (context.isClassDeclared(token.text())) {
                     // 不直接返回，继续解析后面的成员访问
                     restorePosition();
-                    return new VariableNode(token.getText(), token.getLocation());
+                    return new VariableNode(token.text(), token.location());
                 }
                 
                 restorePosition();
-                return new VariableNode(token.getText(), token.getLocation());
+                return new VariableNode(token.text(), token.location());
             } catch (ParseException e) {
                 restorePosition();
-                return new VariableNode(token.getText(), token.getLocation());
+                return new VariableNode(token.text(), token.location());
             }
         }
         
@@ -2756,24 +2697,27 @@ public class Parser {
     
     /**
      * 收集逗号分隔的元素列表
-     * @param endToken 结束标记 (如 }, ])
+     * 不会消耗掉开始标记（如 {, [）
+     *
+     * @param endToken      结束标记 (如 }, ])
      * @param elementParser 元素解析器
-     * @param allowTrailingComma 是否允许尾部逗号
      */
     private List<ASTNode> collectCommaSeparatedElements(
             TokenType endToken, 
-            java.util.function.Supplier<ASTNode> elementParser,
-            Boolean allowTrailingComma) throws ParseException {
+            Supplier<ASTNode> elementParser) throws ParseException {
         List<ASTNode> elements = new ArrayList<>();
         
         if (check(endToken)) {
             return elements;
         }
-        
+
+        if (check(TokenType.DELIMITER_COMMA)) {
+            advance();  // 吃掉调用者可能遗漏的逗号
+        }
+
         do {
             elements.add(elementParser.get());
-        } while (match(TokenType.DELIMITER_COMMA) && 
-                (allowTrailingComma == Boolean.TRUE || !check(endToken)));
+        } while (match(TokenType.DELIMITER_COMMA) && !check(endToken));
         
         return elements;
     }
@@ -2789,8 +2733,7 @@ public class Parser {
 
         List<ASTNode> elements = collectCommaSeparatedElements(
             TokenType.DELIMITER_RIGHT_BRACKET,
-            () -> parseExpression(),
-            null
+            this::parseExpression
         );
 
         consume(TokenType.DELIMITER_RIGHT_BRACKET, "Expected ']' after array literal");
@@ -2824,8 +2767,7 @@ public class Parser {
         elements.add(firstElement);
         elements.addAll(collectCommaSeparatedElements(
             TokenType.DELIMITER_RIGHT_BRACE,
-            () -> parseExpression(),
-            null
+            this::parseExpression
         ));
         
         consume(TokenType.DELIMITER_RIGHT_BRACE, "Expected '}' after array initializer");
@@ -2947,7 +2889,7 @@ public class Parser {
                 ClassModifiers modifiers = parseModifiers();
                 
                 if (check(TokenType.IDENTIFIER) && checkNext(TokenType.DELIMITER_LEFT_PAREN)) {
-                    String constructorName = consume(TokenType.IDENTIFIER, "Expected constructor name").getText();
+                    String constructorName = consume(TokenType.IDENTIFIER, "Expected constructor name").text();
                     if (!constructorName.equals(anonymousClassName)) {
                         throw error("Constructor name must match class name in anonymous class");
                     }
@@ -2958,7 +2900,7 @@ public class Parser {
                     classDecl.addConstructor(constructor);
                 } else if (isTypeStart()) {
                     ClassReferenceNode type = parseTypeName();
-                    String memberName = consume(TokenType.IDENTIFIER, "Expected member name").getText();
+                    String memberName = consume(TokenType.IDENTIFIER, "Expected member name").text();
                     
                     if (check(TokenType.DELIMITER_LEFT_PAREN)) {
                         MethodDeclarationNode method = parseMethodDeclaration(memberName, type, modifiers);
@@ -3003,13 +2945,12 @@ public class Parser {
                     return parseArrayInitializer(componentType, createLocation());
                 }
                 return parseExpression();
-            },
-            null
+            }
         );
         
         consume(TokenType.DELIMITER_RIGHT_BRACE, "Expected '}' after array initializer");
         
-        return new ArrayLiteralNode(elements, componentType, location);
+        return new ArrayLiteralNode(elements, componentType, size, location);
     }
     
     /**
@@ -3028,8 +2969,7 @@ public class Parser {
                     return parseArrayInitializer(componentType, createLocation());
                 }
                 return parseExpression();
-            },
-            null
+            }
         );
         
         consume(TokenType.DELIMITER_RIGHT_BRACE, "Expected '}' after array initializer");
@@ -3040,6 +2980,7 @@ public class Parser {
     /**
      * 解析成员访问
      */
+    @SuppressWarnings("CheckResult")
     private ASTNode parseMemberAccess(ASTNode target) throws ParseException {
         SourceLocation location = createLocation();
         
@@ -3123,7 +3064,7 @@ public class Parser {
             );
         }
         
-        String memberName = consume(TokenType.IDENTIFIER, "Expected member name").getText();
+        String memberName = consume(TokenType.IDENTIFIER, "Expected member name").text();
         
         if (target instanceof ClassReferenceNode classRef) {
             // 首先检查是否是方法调用（带括号）
@@ -3169,10 +3110,11 @@ public class Parser {
                         clazz.getDeclaredField(memberName);
                         return new FieldAccessNode(target, memberName, location);
                     } catch (NoSuchFieldException e) {
+                        // TODO: 记录一下警告
                         return new FieldAccessNode(target, memberName, location);
                     }
                 }
-            } catch (Exception e) {
+            } catch (Exception ignored) {
             }
             return new FieldAccessNode(target, memberName, location);
         }
@@ -3196,7 +3138,7 @@ public class Parser {
     
     private ASTNode parseSafeMemberAccess(ASTNode target) throws ParseException {
         SourceLocation location = createLocation();
-        String memberName = consume(TokenType.IDENTIFIER, "Expected member name").getText();
+        String memberName = consume(TokenType.IDENTIFIER, "Expected member name").text();
         
         if (check(TokenType.DELIMITER_LEFT_PAREN)) {
             advance();
@@ -3273,7 +3215,7 @@ public class Parser {
         
         if (check(TokenType.IDENTIFIER) && checkNext(TokenType.DELIMITER_ARROW)) {
             Token paramToken = peek();
-            String paramName = paramToken.getText();
+            String paramName = paramToken.text();
             
             if (context != null && context.isClassDeclared(paramName)) {
                 return null;
@@ -3293,7 +3235,7 @@ public class Parser {
                         return null;
                     }
                     Token paramToken = advance();
-                    parameters.add(new LambdaNode.Parameter(paramToken.getText(), Object.class));
+                    parameters.add(new LambdaNode.Parameter(paramToken.text(), Object.class));
                 } while (match(TokenType.DELIMITER_COMMA));
             }
             
@@ -3341,29 +3283,20 @@ public class Parser {
         if (position + 1 >= tokens.size()) {
             return false;
         }
-        return tokens.get(position + 1).getType() == type;
+        return tokens.get(position + 1).type() == type;
     }
-    
-    private boolean isTypeFollowedByClass() {
-        if (position + 1 >= tokens.size()) {
-            return false;
-        }
-        return tokens.get(position + 1).getType() == TokenType.OPERATOR_DOT &&
-               position + 2 < tokens.size() &&
-               tokens.get(position + 2).getType() == TokenType.KEYWORD_CLASS;
-    }
-    
+
     private boolean isGenericVariableDeclaration() {
         if (!check(TokenType.IDENTIFIER)) {
             return false;
         }
-        if (position + 1 >= tokens.size() || tokens.get(position + 1).getType() != TokenType.OPERATOR_LESS_THAN) {
+        if (position + 1 >= tokens.size() || tokens.get(position + 1).type() != TokenType.OPERATOR_LESS_THAN) {
             return false;
         }
         int depth = 0;
         int pos = position + 1;
         while (pos < tokens.size()) {
-            TokenType type = tokens.get(pos).getType();
+            TokenType type = tokens.get(pos).type();
             if (type == TokenType.OPERATOR_LESS_THAN) {
                 depth++;
             } else if (type == TokenType.OPERATOR_GREATER_THAN) {
@@ -3371,7 +3304,7 @@ public class Parser {
                 if (depth == 0) {
                     int afterGeneric = pos + 1;
                     if (afterGeneric < tokens.size()) {
-                        TokenType nextType = tokens.get(afterGeneric).getType();
+                        TokenType nextType = tokens.get(afterGeneric).type();
                         return nextType == TokenType.IDENTIFIER ||
                                nextType == TokenType.KEYWORD_INT || nextType == TokenType.KEYWORD_LONG ||
                                nextType == TokenType.KEYWORD_FLOAT || nextType == TokenType.KEYWORD_DOUBLE ||
@@ -3385,7 +3318,7 @@ public class Parser {
                 if (depth == 0) {
                     int afterGeneric = pos + 1;
                     if (afterGeneric < tokens.size()) {
-                        TokenType nextType = tokens.get(afterGeneric).getType();
+                        TokenType nextType = tokens.get(afterGeneric).type();
                         return nextType == TokenType.IDENTIFIER ||
                                nextType == TokenType.KEYWORD_INT || nextType == TokenType.KEYWORD_LONG ||
                                nextType == TokenType.KEYWORD_FLOAT || nextType == TokenType.KEYWORD_DOUBLE ||
@@ -3399,7 +3332,7 @@ public class Parser {
                 if (depth == 0) {
                     int afterGeneric = pos + 1;
                     if (afterGeneric < tokens.size()) {
-                        TokenType nextType = tokens.get(afterGeneric).getType();
+                        TokenType nextType = tokens.get(afterGeneric).type();
                         return nextType == TokenType.IDENTIFIER ||
                                nextType == TokenType.KEYWORD_INT || nextType == TokenType.KEYWORD_LONG ||
                                nextType == TokenType.KEYWORD_FLOAT || nextType == TokenType.KEYWORD_DOUBLE ||
@@ -3423,16 +3356,16 @@ public class Parser {
         }
         
         int pos = position;
-        int genericDepth = 0;
+        int genericDepth;
         boolean hadTypePart = false;
         
         while (pos < tokens.size()) {
-            TokenType type = tokens.get(pos).getType();
+            TokenType type = tokens.get(pos).type();
             
             if (type == TokenType.IDENTIFIER) {
                 pos++;
                 if (pos < tokens.size()) {
-                    TokenType nextType = tokens.get(pos).getType();
+                    TokenType nextType = tokens.get(pos).type();
                     if (nextType == TokenType.OPERATOR_DOT) {
                         hadTypePart = true;
                         pos++;
@@ -3442,7 +3375,7 @@ public class Parser {
                         genericDepth = 1;
                         pos++;
                         while (pos < tokens.size() && genericDepth > 0) {
-                            TokenType gt = tokens.get(pos).getType();
+                            TokenType gt = tokens.get(pos).type();
                             if (gt == TokenType.OPERATOR_LESS_THAN) {
                                 genericDepth++;
                             } else if (gt == TokenType.OPERATOR_GREATER_THAN) {
@@ -3458,7 +3391,7 @@ public class Parser {
                     } else if (nextType == TokenType.DELIMITER_LEFT_BRACKET) {
                         hadTypePart = true;
                         pos++;
-                        if (pos < tokens.size() && tokens.get(pos).getType() == TokenType.DELIMITER_RIGHT_BRACKET) {
+                        if (pos < tokens.size() && tokens.get(pos).type() == TokenType.DELIMITER_RIGHT_BRACKET) {
                             pos++;
                             continue;
                         }
@@ -3467,18 +3400,15 @@ public class Parser {
                         return hadTypePart;
                     } else if (isTypeKeyword(nextType)) {
                         return hadTypePart;
-                    } else if ((nextType == TokenType.OPERATOR_ASSIGN || nextType == TokenType.DELIMITER_SEMICOLON) && hadTypePart) {
-                        return true;
-                    }
+                    } else return (nextType == TokenType.OPERATOR_ASSIGN || nextType == TokenType.DELIMITER_SEMICOLON) && hadTypePart;
                 }
                 return false;
             } else if (type == TokenType.DELIMITER_LEFT_BRACKET) {
-                hadTypePart = true;
                 pos++;
-                if (pos < tokens.size() && tokens.get(pos).getType() == TokenType.DELIMITER_RIGHT_BRACKET) {
+                if (pos < tokens.size() && tokens.get(pos).type() == TokenType.DELIMITER_RIGHT_BRACKET) {
                     pos++;
                     if (pos < tokens.size()) {
-                        TokenType nextType = tokens.get(pos).getType();
+                        TokenType nextType = tokens.get(pos).type();
                         return nextType == TokenType.IDENTIFIER || isTypeKeyword(nextType);
                     }
                 }
@@ -3509,27 +3439,12 @@ public class Parser {
                 isGenericVariableDeclaration() || isQualifiedTypeVariableDeclaration()) {
                 return true;
             }
-            
-            if (isTypeKeyword(peekNext().getType())) {
-                return true;
-            }
+
+            return isTypeKeyword(peekNext().type());
         }
         
         return false;
     }
 
-    private Class<?> getPrimitiveClass(String typeName) {
-        return switch (typeName) {
-            case "int" -> int.class;
-            case "long" -> long.class;
-            case "float" -> float.class;
-            case "double" -> double.class;
-            case "boolean" -> boolean.class;
-            case "char" -> char.class;
-            case "byte" -> byte.class;
-            case "short" -> short.class;
-            case "void" -> void.class;
-            default -> Object.class;
-        };
-    }
+
 }

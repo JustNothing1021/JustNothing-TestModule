@@ -23,6 +23,16 @@ sourceSets {
     }
 }
 
+test {
+    // Java 17+ Module System: 允许访问 java.base 内部实现类
+    jvmArgs += [
+        '--add-opens', 'java.base/java.util.stream=ALL-UNNAMED',
+        '--add-opens', 'java.base/java.lang=ALL-UNNAMED',
+        '--add-opens', 'java.base/java.lang.reflect=ALL-UNNAMED',
+        '--add-opens', 'java.base/java.util=ALL-UNNAMED'
+    ]
+}
+
 publishing {
     publications {
         mavenJava(MavenPublication) {

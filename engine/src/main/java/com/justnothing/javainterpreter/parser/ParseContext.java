@@ -33,6 +33,7 @@ public class ParseContext {
     }
     
     private void addDefaultImports() {
+        imports.add("com.justnothing.javainterpreter.builtins.*");
         imports.add("java.lang.*");
         imports.add("java.util.*");
         imports.add("java.lang.reflect.*");

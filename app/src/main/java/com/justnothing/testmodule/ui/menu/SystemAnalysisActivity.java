@@ -18,6 +18,7 @@ import com.justnothing.testmodule.ui.analysis.network.NetworkAnalysisActivity;
 import com.justnothing.testmodule.ui.analysis.packages.PackagesAnalysisActivity;
 import com.justnothing.testmodule.ui.analysis.exportcontext.ExportContextAnalysisActivity;
 import com.justnothing.testmodule.ui.analysis.systeminfo.SystemInfoAnalysisActivity;
+import com.justnothing.testmodule.ui.analysis.alias.AliasAnalysisActivity;
 
 /**
  * 系统分析菜单Activity（第二层）。
@@ -42,6 +43,7 @@ public class SystemAnalysisActivity extends AppCompatActivity {
     private CardView cardPackages;
     private CardView cardExportContext;
     private CardView cardSystemInfo;
+    private CardView cardAlias;
     private View tvServerStatus;
     
     @Override
@@ -63,6 +65,7 @@ public class SystemAnalysisActivity extends AppCompatActivity {
         cardPackages = findViewById(R.id.card_packages);
         cardExportContext = findViewById(R.id.card_export_context);
         cardSystemInfo = findViewById(R.id.card_system_info);
+        cardAlias = findViewById(R.id.card_alias);
         tvServerStatus = findViewById(R.id.tv_server_status);
         
         if (getSupportActionBar() != null) {
@@ -102,6 +105,10 @@ public class SystemAnalysisActivity extends AppCompatActivity {
 
         cardSystemInfo.setOnClickListener(v -> {
             startActivity(new Intent(this, SystemInfoAnalysisActivity.class));
+        });
+
+        cardAlias.setOnClickListener(v -> {
+            startActivity(new Intent(this, AliasAnalysisActivity.class));
         });
     }
     
