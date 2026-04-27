@@ -245,9 +245,8 @@ public class ConstructorGenerator {
             throw new EvaluationException(
                 "Cannot extend " + superClass.getSimpleName() + 
                 ": its constructor is private",
-                constructorDecl == null ? new SourceLocation(-1, -1) : constructorDecl.getLocation(),
                 ErrorCode.EVAL_INVALID_OPERATION,
-                null);
+                constructorDecl);
         }
     }
     

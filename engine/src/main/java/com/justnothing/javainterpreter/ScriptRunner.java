@@ -62,15 +62,20 @@ public class ScriptRunner {
     public void setParseContext(ParseContext parseContext) {
         this.parseContext = parseContext;
     }
-    
+
+
     public Object executeWithResult(String code) {
+        return executeWithResult(code, "<stdin>");
+    }
+
+    public Object executeWithResult(String code, String sourceFileName) {
         context.clearOutput();
         context.clearWarnMessages();
         
         try {
             String processedCode = preprocess(code);
-            Lexer lexer = new Lexer(processedCode);
-            Parser parser = new Parser(lexer.tokenize(), parseContext, classLoader);
+            Lexer lexer = new Lexer(processedCode, sourceFileName);
+            Parser parser = new Parser(lexer.tokenize(), parseContext, classLoader, sourceFileName);
             BlockNode ast = parser.parse();
             if (context.isPrintAST()) {
                 context.getOutputBuffer().println("AST:");
@@ -89,15 +94,21 @@ public class ScriptRunner {
         context.setWarnMsgBuffer(errorHandler);
         return executeWithResult(code);
     }
-    
+
     public void execute(String code) {
-        context.clearOutput();
-        context.clearWarnMessages();
-        
+        execute(code, true, "<stdin>");
+    }
+
+    public void execute(String code, boolean clearOutput, String sourceFileName) {
+        if (clearOutput) {
+            context.clearOutput();
+            context.clearWarnMessages();
+        }
+
         try {
             String processedCode = preprocess(code);
-            Lexer lexer = new Lexer(processedCode);
-            Parser parser = new Parser(lexer.tokenize(), parseContext, classLoader);
+            Lexer lexer = new Lexer(processedCode, sourceFileName);
+            Parser parser = new Parser(lexer.tokenize(), parseContext, classLoader, sourceFileName);
             BlockNode ast = parser.parse();
             ASTEvaluator.evaluate(ast, context);
         } catch (ParseException e) {
@@ -131,12 +142,16 @@ public class ScriptRunner {
     }
 
     public List<ASTNode> tryParse(String code) {
+        return tryParse(code, "<stdin>");
+    }
+
+    public List<ASTNode> tryParse(String code, String sourceFileName) {
         context.clearOutput();
         context.clearWarnMessages();
         
         try {
-            Lexer lexer = new Lexer(code);
-            Parser parser = new Parser(lexer.tokenize(), parseContext, classLoader);
+            Lexer lexer = new Lexer(code, sourceFileName);
+            Parser parser = new Parser(lexer.tokenize(), parseContext, classLoader, sourceFileName);
             BlockNode ast = parser.parse();
             List<ASTNode> nodes = new ArrayList<>();
             if (ast.getStatements() != null) {

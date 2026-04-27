@@ -17,7 +17,7 @@ import static org.junit.Assert.*;
  */
 public class DCGTest {
 
-    private static final SourceLocation LOC = new SourceLocation(1, 1);
+    private static final SourceLocation LOC = new SourceLocation(1, 1, "test");
 
     private ExecutionContext context;
     private DynamicClassGenerator generator;

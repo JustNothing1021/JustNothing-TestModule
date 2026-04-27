@@ -515,7 +515,8 @@ public class HookManager {
             for (String item : imports) context.addImport(item);
             addHookBuiltIn(context, param, getLoadPackageParam(), hookInfo, phase, returnValueSet);
             runner.setExecutionContext(context);
-            runner.execute(code);
+            runner.clearVariables(); // 以防上一次的变量给当前Hook执行带来影响
+            runner.execute(code, false, "<code in phase " + phase + " of " + hookInfo.getId() + ">");
         } catch (Exception e) {
             logger.error("Hook代码执行失败: " + hookInfo.getId(), e);
         } finally {

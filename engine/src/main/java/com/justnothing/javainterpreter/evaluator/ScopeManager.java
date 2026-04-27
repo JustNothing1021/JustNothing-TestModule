@@ -1,7 +1,11 @@
 package com.justnothing.javainterpreter.evaluator;
 
+import com.justnothing.javainterpreter.ast.ASTNode;
 import com.justnothing.javainterpreter.exception.EvaluationException;
 import com.justnothing.javainterpreter.exception.ErrorCode;
+import com.justnothing.javainterpreter.utils.TypeUtils;
+
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -133,57 +137,30 @@ public class ScopeManager {
      * @param value 初始值
      * @param isFinal 是否是final
      */
-    public void declareVariable(String name, Class<?> type, Object value, boolean isFinal) {
+    public void declareVariable(String name, Class<?> type, Object value, boolean isFinal, ASTNode sourceNode) {
         Scope current = scopeStack.peek();
+        assert current != null: "INTERNAL ERROR: Current scope is null";
         if (current.getVariables().containsKey(name)) {
             throw new EvaluationException(
                 "Variable already declared in current scope: " + name,
-                -1,
-                -1,
-                ErrorCode.SCOPE_VARIABLE_ALREADY_DECLARED);
+                ErrorCode.SCOPE_VARIABLE_ALREADY_DECLARED,
+                sourceNode);
         }
         
         Variable variable = new Variable(name, type, value, isFinal, currentLevel);
         current.getVariables().put(name, variable);
     }
-    
-    /**
-     * 声明变量（便捷方法，自动推断类型）
-     * 
-     * @param name 变量名
-     * @param value 初始值
-     */
-    public void declareVariable(String name, Object value) {
-        Class<?> type = value != null ? value.getClass() : Object.class;
-        declareVariable(name, type, value, false);
-    }
-    
-    /**
-     * 获取所有变量（用于导出）
-     * 
-     * @return 变量名到值的映射
-     */
-    public Map<String, Object> getAllVariables() {
-        Map<String, Object> result = new HashMap<>();
-        for (Scope scope : scopeStack) {
-            for (Map.Entry<String, Variable> entry : scope.getVariables().entrySet()) {
-                result.put(entry.getKey(), entry.getValue().getValue());
-            }
-        }
-        return result;
-    }
-    
+
+
     /**
      * 获取所有变量详细信息（用于导出）
      * 
      * @return 变量名到Variable的映射
      */
-    public Map<String, Variable> getAllVariablesDetailed() {
+    public Map<String, Variable> getAllVariables() {
         Map<String, Variable> result = new HashMap<>();
         for (Scope scope : scopeStack) {
-            for (Map.Entry<String, Variable> entry : scope.getVariables().entrySet()) {
-                result.put(entry.getKey(), entry.getValue());
-            }
+            result.putAll(scope.getVariables());
         }
         return result;
     }
@@ -203,7 +180,7 @@ public class ScopeManager {
      * @param name 变量名
      * @return 变量
      */
-    public Variable getVariable(String name) {
+    public Variable getVariable(String name, ASTNode sourceNode) {
         for (Scope scope : scopeStack) {
             Variable variable = scope.getVariables().get(name);
             if (variable != null) {
@@ -213,9 +190,8 @@ public class ScopeManager {
         
         throw new EvaluationException(
             "Variable not found: " + name,
-            -1,
-            -1,
-            ErrorCode.SCOPE_VARIABLE_NOT_FOUND);
+            ErrorCode.SCOPE_VARIABLE_NOT_FOUND,
+            sourceNode);
     }
 
 
@@ -226,15 +202,14 @@ public class ScopeManager {
      * @param name 变量名
      * @param value 新值
      */
-    public void setVariable(String name, Object value) {
-        Variable variable = getVariable(name);
+    public void setVariable(String name, Object value, ASTNode sourceNode) {
+        Variable variable = getVariable(name, sourceNode);
         
         if (variable.isFinal()) {
             throw new EvaluationException(
                 "Cannot assign to final variable: " + name,
-                -1,
-                -1,
-                ErrorCode.SCOPE_CANNOT_ASSIGN_TO_FINAL);
+                ErrorCode.SCOPE_CANNOT_ASSIGN_TO_FINAL,
+                sourceNode);
         }
         
         variable.setValue(value);
@@ -270,6 +245,7 @@ public class ScopeManager {
      * @return 变量数量
      */
     public int getCurrentScopeVariableCount() {
+        assert scopeStack.peek() != null: "INTERNAL ERROR: Current scope is null";
         return scopeStack.peek().getVariables().size();
     }
     
@@ -293,6 +269,7 @@ public class ScopeManager {
      * 清空当前作用域的所有变量
      */
     public void clearCurrentScope() {
+        assert scopeStack.peek() != null: "INTERNAL ERROR: Current scope is null";
         scopeStack.peek().getVariables().clear();
     }
     
@@ -327,8 +304,10 @@ public class ScopeManager {
     /**
      * 声明捕获的变量（用于闭包）
      */
-    public void declareCapturedVariable(String name, Class<?> type, Variable capturedVar, boolean isFinal) {
+    public void declareCapturedVariable(String name, Class<?> type, Variable capturedVar, boolean isFinal, @NotNull ASTNode sourceNode) {
         Scope current = scopeStack.peek();
+        assert current != null: "INTERNAL ERROR: Current scope is null";
+        capturedVar.value = TypeUtils.convertValue(capturedVar.value, type, sourceNode);
         if (!current.getVariables().containsKey(name)) {
             current.getVariables().put(name, capturedVar);
         }

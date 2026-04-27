@@ -2,6 +2,8 @@ package com.justnothing.javainterpreter.exception;
 
 import com.justnothing.javainterpreter.ast.SourceLocation;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -17,42 +19,42 @@ import java.util.Locale;
  * @since 1.0.0
  */
 public abstract class ScriptException extends RuntimeException {
-    
-    private final int line;
-    private final int column;
+    private SourceLocation location;
+
     private final ErrorCode errorCode;
     private List<String> scriptCallStack = new ArrayList<>();
-    
-    public ScriptException(String message, int line, int column, ErrorCode errorCode) {
+
+    public ScriptException(String message, ErrorCode errorCode) {
         super(message);
-        this.line = line;
-        this.column = column;
         this.errorCode = errorCode;
     }
-    
-    public ScriptException(String message, int line, int column, ErrorCode errorCode, Throwable cause) {
-        super(message, cause);
-        this.line = line;
-        this.column = column;
-        this.errorCode = errorCode;
-    }
-    
+
     public ScriptException(String message, SourceLocation location, ErrorCode errorCode) {
-        this(message, location != null ? location.getLine() : -1, location != null ? location.getColumn() : -1, errorCode);
+        super(message);
+        this.location = location;
+        this.errorCode = errorCode;
     }
     
     public ScriptException(String message, SourceLocation location, ErrorCode errorCode, Throwable cause) {
-        this(message, location.getLine(), location.getColumn(), errorCode, cause);
+        super(message, cause);
+        this.location = location;
+        this.errorCode = errorCode;
     }
-    
+
+
     public int getLine() {
-        return line;
+        return location != null ? location.getLine() : -1;
     }
-    
+
     public int getColumn() {
-        return column;
+        return location != null ? location.getColumn() : -1;
     }
-    
+
+    @NotNull
+    public String getSource() {
+        return location != null ? location.getSource() : "<unlocated>";
+    }
+
     public ErrorCode getErrorCode() {
         return errorCode;
     }
@@ -85,7 +87,7 @@ public abstract class ScriptException extends RuntimeException {
     public String getMessage() {
         return String.format(
                 Locale.getDefault(),
-                "%s (Line %d, Column %d) [%s]",
-                super.getMessage(), line, column, errorCode);
+                "%s (In file %s, Line %d, Column %d) [%s]",
+                super.getMessage(), getSource(), getLine(), getColumn(), errorCode.name());
     }
 }

@@ -9,6 +9,7 @@ import java.lang.reflect.Array;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.Path;
+import java.util.concurrent.ExecutionException;
 
 import com.justnothing.javainterpreter.ast.nodes.BlockNode;
 import com.justnothing.javainterpreter.evaluator.ASTEvaluator;
@@ -241,8 +242,8 @@ public class REPL {
     private static void executeCode(String input, ExecutionContext context, ParseContext parseContext, Preprocessor preprocessor) {
         try {
             String processedCode = preprocessor.process(input);
-            Lexer lexer = new Lexer(processedCode);
-            Parser parser = new Parser(lexer.tokenize(), parseContext);
+            Lexer lexer = new Lexer(processedCode, "<stdin>");
+            Parser parser = new Parser(lexer.tokenize(), parseContext, "<stdin>");
             BlockNode ast = parser.parse();
             
             System.out.println("AST:");
@@ -251,10 +252,14 @@ public class REPL {
             Object result = ASTEvaluator.evaluate(ast, context);
             
             System.out.println("Result: " + formatValue(result));
-        } catch (ParseException | EvaluationException e) {
+        } catch (ParseException e) {
             System.out.println("错误: " + e.getMessage());
-        } catch (Exception e) {
-            System.out.println("内部错误: " + e.getMessage());
+        } catch (EvaluationException e) {
+            System.out.println("执行出现错误: " + e.getMessage());
+            if (context.isPrintAST() && e.getNode() != null) {
+                System.out.println("出错的AST:");
+                System.out.println(e.getNode().formatString());
+            }
             e.printStackTrace();
         }
     }
@@ -268,7 +273,12 @@ public class REPL {
             int length = Array.getLength(value);
             for (int i = 0; i < length; i++) {
                 if (i > 0) sb.append(", ");
-                sb.append(formatValue(Array.get(value, i)));
+                Object elem = Array.get(value, i);
+                if (elem == value) {
+                    sb.append("~");
+                } else {
+                    sb.append(formatValue(elem));
+                }
             }
             sb.append("]");
             return sb.toString();
@@ -288,8 +298,8 @@ public class REPL {
             System.out.println("===== 运行文件: " + fileName + " =====");
             
             String processedCode = preprocessor.process(code, fileName);
-            Lexer lexer = new Lexer(processedCode);
-            Parser parser = new Parser(lexer.tokenize(), parseContext);
+            Lexer lexer = new Lexer(processedCode, fileName);
+            Parser parser = new Parser(lexer.tokenize(), parseContext, fileName);
             BlockNode ast = parser.parse();
             
             Object result = ASTEvaluator.evaluate(ast, context);

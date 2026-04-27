@@ -77,8 +77,8 @@ public abstract class ASTNode {
         }
 
         @SuppressWarnings("unchecked")
-        public B location(int line, int column) {
-            this.location = new SourceLocation(line, column);
+        public B location(int line, int column, String source) {
+            this.location = new SourceLocation(line, column, source);
             return (B) this;
         }
         

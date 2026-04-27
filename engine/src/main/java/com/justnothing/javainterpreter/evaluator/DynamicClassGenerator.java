@@ -290,9 +290,9 @@ public class DynamicClassGenerator {
                     } catch (ClassNotFoundException e) {
                         throw new EvaluationException(
                             "Failed to load parent class: " + superClassName,
-                            classDecl.getLocation(),
                             ErrorCode.EVAL_CLASS_NOT_FOUND,
-                            e
+                            e,
+                            classDecl
                         );
                     }
                     generatedClasses.put(superClassName, superClass);
@@ -452,8 +452,7 @@ public class DynamicClassGenerator {
             depth++;
         }
         
-        return new EvaluationException(sb.toString(), classDecl.getLocation(), 
-            ErrorCode.EVAL_INVALID_OPERATION, e);
+        return new EvaluationException(sb.toString(), ErrorCode.EVAL_INVALID_OPERATION, e, classDecl);
     }
 
     /**

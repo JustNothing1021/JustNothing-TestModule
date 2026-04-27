@@ -13,14 +13,10 @@ import com.justnothing.javainterpreter.ast.SourceLocation;
  */
 public class ParseException extends ScriptException {
     
-    public ParseException(String message, int line, int column, ErrorCode errorCode) {
-        super(message, line, column, errorCode);
+    public ParseException(String message, ErrorCode errorCode) {
+        super(message, errorCode);
     }
-    
-    public ParseException(String message, int line, int column, ErrorCode errorCode, Throwable cause) {
-        super(message, line, column, errorCode, cause);
-    }
-    
+
     public ParseException(String message, SourceLocation location, ErrorCode errorCode) {
         super(message, location, errorCode);
     }

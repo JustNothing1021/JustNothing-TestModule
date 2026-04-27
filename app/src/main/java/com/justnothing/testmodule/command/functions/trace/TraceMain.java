@@ -218,13 +218,11 @@ public class TraceMain extends CommandBase {
             boolean success = manager.removeTask(id);
             if (success) {
                 context.println("停止trace任务成功", Colors.GREEN);
-                context.print("ID: ", Colors.CYAN);
-                context.println(String.valueOf(id), Colors.YELLOW);
             } else {
                 context.println("错误: 未找到trace任务", Colors.RED);
-                context.print("ID: ", Colors.CYAN);
-                context.println(String.valueOf(id), Colors.YELLOW);
             }
+            context.print("ID: ", Colors.CYAN);
+            context.println(String.valueOf(id), Colors.YELLOW);
         } catch (NumberFormatException e) {
             context.println("错误: 无效的ID: " + args[1], Colors.RED);
         }

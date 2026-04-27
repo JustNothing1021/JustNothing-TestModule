@@ -1,5 +1,6 @@
 package com.justnothing.javainterpreter.utils;
 
+import com.justnothing.javainterpreter.ast.ASTNode;
 import com.justnothing.javainterpreter.ast.SourceLocation;
 
 import java.lang.reflect.Array;
@@ -28,7 +29,7 @@ public class ArrayUtils {
     }
 
 
-    public static Object arrayDifference(Object left, Object right, SourceLocation location) {
+    public static Object arrayDifference(Object left, Object right, ASTNode sourceNode) {
         if (left == null || right == null) {
             if (left == null && right == null) {
                 return new Object[0];
@@ -42,7 +43,7 @@ public class ArrayUtils {
             Object[] leftArr = castToObjectArray(left);
             Object[] rightArr = castToObjectArray(right);
             Object[] result = arrayDifference(leftArr, rightArr);
-            return TypeUtils.convertArray(result, resultComponentType, location);
+            return TypeUtils.convertArray(result, resultComponentType, sourceNode);
         }
         return new Object[0];
     }
@@ -62,7 +63,7 @@ public class ArrayUtils {
 
 
 
-    public static Object arrayCombine(Object left, Object right, SourceLocation location) {
+    public static Object arrayConcat(Object left, Object right, ASTNode sourceNode) {
         if (left == null || right == null) {
             if (left == null && right == null) {
                 return new Object[0];
@@ -75,29 +76,29 @@ public class ArrayUtils {
             Class<?> resultComponentType = TypeUtils.closetCommonSuperClass(leftComponentType, rightComponentType);
             Object[] leftArr = castToObjectArray(left);
             Object[] rightArr = castToObjectArray(right);
-            Object[] result = arrayCombine(leftArr, rightArr);
-            return TypeUtils.convertArray(result, resultComponentType, location);
+            Object[] result = arrayConcat(leftArr, rightArr);
+            return TypeUtils.convertArray(result, resultComponentType, sourceNode);
         }
         return new Object[0];
 
     }
 
 
-    private static Object[] arrayCombine(Object[] left, Object[] right) {
+    private static Object[] arrayConcat(Object[] left, Object[] right) {
         Object[] result = new Object[Array.getLength(left) + Array.getLength(right)];
         System.arraycopy(left, 0, result, 0, Array.getLength(left));
         System.arraycopy(right, 0, result, Array.getLength(left), Array.getLength(right));
         return result;
     }
 
-    public static Object arrayRepeat(Object arr, int count, SourceLocation location) {
+    public static Object arrayRepeat(Object arr, int count, ASTNode sourceNode) {
         if (arr == null) {
             return new Object[0];
         }
         if (count <= 0) {
             return new Object[0];
         }
-        return TypeUtils.convertArray(arrayRepeat(castToObjectArray(arr), count), arr.getClass().getComponentType(), location);
+        return TypeUtils.convertArray(arrayRepeat(castToObjectArray(arr), count), arr.getClass().getComponentType(), sourceNode);
     }
 
     private static Object[] arrayRepeat(Object[] arr, int count) {
@@ -110,7 +111,7 @@ public class ArrayUtils {
         return newArr;
     }
 
-    public static Object arrayIntersection(Object left, Object right, SourceLocation location) {
+    public static Object arrayIntersection(Object left, Object right, ASTNode sourceNode) {
         if (left == null || right == null) {
             if (left == null && right == null) {
                 return new Object[0];
@@ -124,7 +125,7 @@ public class ArrayUtils {
             Object[] leftArr = castToObjectArray(left);
             Object[] rightArr = castToObjectArray(right);
             Object[] result = arrayIntersection(leftArr, rightArr);
-            return TypeUtils.convertArray(result, resultComponentType, location);
+            return TypeUtils.convertArray(result, resultComponentType, sourceNode);
         }
         return new Object[0];
     }
@@ -142,7 +143,7 @@ public class ArrayUtils {
         return result.toArray();
     }
 
-    public static Object arrayUnion(Object left, Object right, SourceLocation location) {
+    public static Object arrayUnion(Object left, Object right, ASTNode sourceNode) {
         if (left == null || right == null) {
             if (left == null && right == null) {
                 return new Object[0];
@@ -156,7 +157,7 @@ public class ArrayUtils {
             Object[] leftArr = castToObjectArray(left);
             Object[] rightArr = castToObjectArray(right);
             Object[] result = arrayUnion(leftArr, rightArr);
-            return TypeUtils.convertArray(result, resultComponentType, location);
+            return TypeUtils.convertArray(result, resultComponentType, sourceNode);
         }
         return new Object[0];
     }
@@ -168,7 +169,7 @@ public class ArrayUtils {
         return resultSet.toArray();
     }
 
-    public static Object arrayCartesianProduct(Object left, Object right, SourceLocation location) {
+    public static Object arrayCartesianProduct(Object left, Object right, ASTNode sourceNode) {
         if (left == null || right == null) {
             if (left == null && right == null) {
                 return new Object[0];
@@ -182,7 +183,7 @@ public class ArrayUtils {
             Object[] leftArr = castToObjectArray(left);
             Object[] rightArr = castToObjectArray(right);
             Object[] result = arrayCartesianProduct(leftArr, rightArr);
-            return TypeUtils.convertArray(result, resultComponentType, location);
+            return TypeUtils.convertArray(result, resultComponentType, sourceNode);
         }
         return new Object[0];
     }
@@ -205,7 +206,7 @@ public class ArrayUtils {
         return result;
     }
 
-    public static Object arraySymmetricDifference(Object left, Object right, SourceLocation location) {
+    public static Object arraySymmetricDifference(Object left, Object right, ASTNode sourceNode) {
         if (left == null || right == null) {
             if (left == null && right == null) {
                 return new Object[0];
@@ -219,7 +220,7 @@ public class ArrayUtils {
             Object[] leftArr = castToObjectArray(left);
             Object[] rightArr = castToObjectArray(right);
             Object[] result = arraySymmetricDifference(leftArr, rightArr);
-            return TypeUtils.convertArray(result, resultComponentType, location);
+            return TypeUtils.convertArray(result, resultComponentType, sourceNode);
         }
         return new Object[0];
     }
@@ -242,10 +243,10 @@ public class ArrayUtils {
     }
 
 
-    public static Object arrayReverse(Object arr, SourceLocation location) {
+    public static Object arrayReverse(Object arr, ASTNode sourceNode) {
         Class<?> arrComponentType = arr.getClass().getComponentType();
         Object[] result = arrayReverse(castToObjectArray(arr));
-        return TypeUtils.convertArray(result, arrComponentType, location);
+        return TypeUtils.convertArray(result, arrComponentType, sourceNode);
     }
 
 

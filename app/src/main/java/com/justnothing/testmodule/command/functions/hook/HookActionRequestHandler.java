@@ -73,7 +73,7 @@ public class HookActionRequestHandler implements RequestHandler<HookActionReques
                         result.setSuccessAction(true);
                     } else {
                         result.setSuccessAction(false);
-                        result.getMessage();
+                        result.setMessage("Hook not found: " + request.getHookId());
                     }
                 }
                 case HookActionRequest.ACTION_CLEAR -> {

@@ -3,24 +3,27 @@ package com.justnothing.testmodule.command.functions.script;
 import static com.justnothing.testmodule.constants.CommandServer.CMD_SCRIPT_VER;
 
 
+import com.justnothing.javainterpreter.evaluator.ExecutionContext;
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.CommandBase;
 import com.justnothing.testmodule.command.output.Colors;
-import com.justnothing.javainterpreter.ScriptRunner;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 import com.justnothing.testmodule.utils.data.DataBridge;
 import com.justnothing.testmodule.utils.io.IOManager;
+import com.justnothing.testmodule.utils.reflect.AppClassFinder;
+import com.justnothing.testmodule.utils.sandbox.BlockGuardSandbox;
+import com.justnothing.testmodule.utils.reflect.DexClassDefiner;
+
+import com.justnothing.javainterpreter.ScriptRunner;
 import com.justnothing.javainterpreter.exception.EvaluationException;
 import com.justnothing.javainterpreter.exception.ParseException;
 import com.justnothing.javainterpreter.security.PermissionType;
 import com.justnothing.javainterpreter.security.SandboxConfig;
-import com.justnothing.testmodule.utils.reflect.AppClassFinder;
-import com.justnothing.testmodule.utils.sandbox.BlockGuardSandbox;
-import com.justnothing.testmodule.utils.reflect.DexClassDefiner;
 import com.justnothing.javainterpreter.evaluator.DynamicClassGenerator;
 
 import java.io.File;
+import java.lang.reflect.Array;
 import java.util.Map;
 import java.util.Date;
 import java.io.IOException;
@@ -815,16 +818,17 @@ public class ScriptExecutorMain extends CommandBase {
         try {
             ScriptRunner runner = new ScriptRunner(context.classLoader());
             runner.setClassFinder(new AppClassFinder());
-            
+            Object result = null;
             if (config != null) {
                 if (config.getAstPermissionChecker() != null) {
                     runner.getExecutionContext().setPermissionChecker(config.getAstPermissionChecker());
                 }
                 BlockGuardSandbox.execute(config, () -> runner.execute(code, context.output(), context.output()));
             } else {
-                runner.execute(code, context.output(), context.output());
+                result = runner.executeWithResult(code, context.output(), context.output());
             }
             context.println("代码执行成功", Colors.GREEN);
+            context.println("执行结果: " + result, Colors.CYAN);
         } catch (Exception e) {
             CommandExceptionHandler.handleException("script run_code", e, context, "代码执行失败");
         }
@@ -1364,6 +1368,28 @@ public class ScriptExecutorMain extends CommandBase {
         return sdf.format(new Date(timestamp));
     }
 
+    private static String formatValue(Object value) {
+        if (value == null) {
+            return "null";
+        }
+        if (value.getClass().isArray()) {
+            StringBuilder sb = new StringBuilder("[");
+            int length = Array.getLength(value);
+            for (int i = 0; i < length; i++) {
+                if (i > 0) sb.append(", ");
+                Object elem = Array.get(value, i);
+                if (elem == value) {
+                    sb.append("~");
+                } else {
+                    sb.append(formatValue(elem));
+                }
+            }
+            sb.append("]");
+            return sb.toString();
+        }
+        return String.valueOf(value);
+    }
+
     private void runInteractiveMode(CommandExecutor.CmdExecContext context) {
         ClassLoader classLoader = context.classLoader();
         ScriptRunner runner = getScriptExecutor(classLoader);
@@ -1476,22 +1502,22 @@ public class ScriptExecutorMain extends CommandBase {
                     }
                 });
             } catch (Throwable e) {
-                handleExecutionException(e, context);
+                handleExecutionException(e, context, runner.getExecutionContext());
             }
         } else {
             runner.getExecutionContext().setPermissionChecker(null);
             try {
                 Object result = runner.executeWithResult(code, context.output(), context.output());
                 if (result != null) {
-                    context.println(String.valueOf(result), Colors.GRAY);
+                    context.println(formatValue(result), Colors.GRAY);
                 }
             } catch (Throwable e) {
-                handleExecutionException(e, context);
+                handleExecutionException(e, context, runner.getExecutionContext());
             }
         }
     }
     
-    private void handleExecutionException(Throwable e, CommandExecutor.CmdExecContext context) {
+    private void handleExecutionException(Throwable e, CommandExecutor.CmdExecContext context, ExecutionContext executionContext) {
         Throwable cause = e.getCause();
         String message = e.getMessage();
         boolean isParseError = message != null && message.startsWith("Parse error:");
@@ -1500,8 +1526,12 @@ public class ScriptExecutorMain extends CommandBase {
         
         if (cause instanceof EvaluationException evalEx) {
             Throwable innerCause = evalEx.getCause();
-            context.print("错误: ", errorColor);
+            context.print("执行错误: ", errorColor);
             context.println(evalEx.getMessage(), errorColor);
+            if (executionContext.isPrintAST() && evalEx.getNode() != null) {
+                context.println("出错的AST: ", Colors.GRAY);
+                context.println(evalEx.getNode().formatString(), Colors.GRAY);
+            }
             if (innerCause != null) {
                 context.output().printStackTrace(innerCause, Colors.GRAY);
             }

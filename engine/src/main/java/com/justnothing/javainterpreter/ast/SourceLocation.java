@@ -16,12 +16,18 @@ public class SourceLocation {
     
     private final int line;
     private final int column;
-    
-    public SourceLocation(int line, int column) {
+    private final String source;
+
+    public SourceLocation(int line, int column, String source) {
         this.line = line;
         this.column = column;
+        this.source = source;
     }
     
+    public String getSource() {
+        return source;
+    }
+
     public int getLine() {
         return line;
     }
@@ -48,6 +54,7 @@ public class SourceLocation {
         return "SourceLocation[" +
                 "line=" + line +
                 ", column=" + column +
+                ", source='" + source + '\'' +
                 ']';
     }
 }

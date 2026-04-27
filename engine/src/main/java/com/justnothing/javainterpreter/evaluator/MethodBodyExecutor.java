@@ -115,7 +115,7 @@ public class MethodBodyExecutor {
         ExecutionContext context = info.creationContext.createChildContext();
         
         context.getScopeManager().declareVariable("this", 
-            instance != null ? instance.getClass() : Object.class, instance, false);
+            instance != null ? instance.getClass() : Object.class, instance, false, info.methodDecl);
         
         Set<String> paramNames = new HashSet<>();
         List<ParameterNode> parameters = methodDecl.getParameters();
@@ -128,7 +128,8 @@ public class MethodBodyExecutor {
                     param.getParameterName(), 
                     Object.class,
                     argValue, 
-                    false
+                    false,
+                    info.methodDecl
                 );
             }
         }
@@ -167,8 +168,9 @@ public class MethodBodyExecutor {
                             fieldName, 
                             field.getType(),
                             fieldValue, 
-                            false
-                        );
+                            false,
+                            info.methodDecl
+                           );
                     }
                     clazz = clazz.getSuperclass();
                 }
@@ -188,7 +190,7 @@ public class MethodBodyExecutor {
     private static Object evaluateWithFieldResolution(ASTNode node, ExecutionContext context, Object instance) 
             throws EvaluationException {
         if (node instanceof VariableNode varNode) {
-            ScopeManager.Variable scopeVar = context.getScopeManager().getVariable(varNode.getName());
+            ScopeManager.Variable scopeVar = context.getScopeManager().getVariable(varNode.getName(), node);
             if (scopeVar != null && !varNode.getName().equals("this")) {
                 Object scopeValue = scopeVar.getValue();
                 if (scopeValue != null) {
@@ -200,7 +202,7 @@ public class MethodBodyExecutor {
                 fieldValue = TypeUtils.resolveField(varNode.getName(), instance);
             }
             if (fieldValue == null) {
-                ScopeManager.Variable thisVar = context.getScopeManager().getVariable("this");
+                ScopeManager.Variable thisVar = context.getScopeManager().getVariable("this", node);
                 if (thisVar != null) {
                     Object thisInstance = thisVar.getValue();
                     if (thisInstance != null) {
@@ -248,7 +250,7 @@ public class MethodBodyExecutor {
                 }
                 // 如果从 instance 参数中解析失败，尝试从 context 中获取 this 变量
                 if (fieldValue == null) {
-                    ScopeManager.Variable thisVar = context.getScopeManager().getVariable("this");
+                    ScopeManager.Variable thisVar = context.getScopeManager().getVariable("this", node);
                     if (thisVar != null) {
                         Object thisInstance = thisVar.getValue();
                         if (thisInstance != null) {
@@ -279,7 +281,7 @@ public class MethodBodyExecutor {
                     } catch (Exception ignored) {
                     }
                 }
-                ScopeManager.Variable thisVar = context.getScopeManager().getVariable("this");
+                ScopeManager.Variable thisVar = context.getScopeManager().getVariable("this", node);
                 if (thisVar != null) {
                     Object thisInstance = thisVar.getValue();
                     if (thisInstance != null) {
@@ -380,7 +382,7 @@ public class MethodBodyExecutor {
                     }
                     // 如果从 instance 参数中解析失败，尝试从 context 中获取 this 变量
                     if (instance == null) {
-                        ScopeManager.Variable thisVar = context.getScopeManager().getVariable("this");
+                        ScopeManager.Variable thisVar = context.getScopeManager().getVariable("this", node);
                         if (thisVar != null) {
                             Object thisInstance = thisVar.getValue();
                             if (thisInstance != null) {
@@ -502,9 +504,9 @@ public class MethodBodyExecutor {
             if (!isField) {
                 if (assignmentNode.isDeclaration()) {
                     Class<?> declaredType = assignmentNode.getDeclaredClass() != null ? assignmentNode.getDeclaredClass() : Object.class;
-                    context.getScopeManager().declareVariable(varName, declaredType, value, assignmentNode.isFinal());
+                    context.getScopeManager().declareVariable(varName, declaredType, value, assignmentNode.isFinal(), node);
                 } else {
-                    context.getScopeManager().setVariable(varName, value);
+                    context.getScopeManager().setVariable(varName, value, node);
                 }
             }
             

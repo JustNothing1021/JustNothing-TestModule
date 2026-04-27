@@ -9,11 +9,13 @@ import com.justnothing.javainterpreter.ast.nodes.AsyncNode;
 import com.justnothing.javainterpreter.ast.nodes.AwaitNode;
 import com.justnothing.javainterpreter.ast.nodes.BinaryOpNode;
 import com.justnothing.javainterpreter.ast.nodes.BlockNode;
+import com.justnothing.javainterpreter.ast.nodes.BreakNode;
 import com.justnothing.javainterpreter.ast.nodes.CastNode;
 import com.justnothing.javainterpreter.ast.nodes.ClassDeclarationNode;
 import com.justnothing.javainterpreter.ast.nodes.ClassReferenceNode;
 import com.justnothing.javainterpreter.ast.nodes.ConditionalAssignNode;
 import com.justnothing.javainterpreter.ast.nodes.ConstructorCallNode;
+import com.justnothing.javainterpreter.ast.nodes.ContinueNode;
 import com.justnothing.javainterpreter.ast.nodes.DeleteNode;
 import com.justnothing.javainterpreter.ast.nodes.DoWhileNode;
 import com.justnothing.javainterpreter.ast.nodes.FieldAccessNode;
@@ -128,8 +130,8 @@ public class EvaluatorRegistry {
         if (disabledNodeTypes.contains(nodeType)) {
             throw new EvaluationException(
                 "Node type " + nodeType.getSimpleName() + " is disabled in restricted mode",
-                node.getLocation(),
-                ErrorCode.EVAL_INVALID_OPERATION
+                ErrorCode.EVAL_INVALID_OPERATION,
+                node
             );
         }
 
@@ -137,8 +139,8 @@ public class EvaluatorRegistry {
         if (evaluator == null) {
             throw new EvaluationException(
                 "Unsupported AST node type: " + nodeType.getSimpleName(),
-                node.getLocation(),
-                ErrorCode.EVAL_INVALID_OPERATION
+                ErrorCode.EVAL_INVALID_OPERATION,
+                node
             );
         }
 
@@ -178,6 +180,8 @@ public class EvaluatorRegistry {
         register(CastNode.class, ASTEvaluator::evaluateCast);
         register(LambdaNode.class, ASTEvaluator::evaluateLambda);
         register(ReturnNode.class, ASTEvaluator::evaluateReturn);
+        register(BreakNode.class, ASTEvaluator::evaluateBreak);
+        register(ContinueNode.class, ASTEvaluator::evaluateContinue);
         register(MethodReferenceNode.class, ASTEvaluator::evaluateMethodReference);
         register(TryNode.class, ASTEvaluator::evaluateTry);
         register(ThrowNode.class, ASTEvaluator::evaluateThrow);

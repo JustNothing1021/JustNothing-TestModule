@@ -383,8 +383,8 @@ public class MiniApp {
                 }
                 """;
             
-            Lexer lexer = new Lexer(source);
-            Parser parser = new Parser(lexer.tokenize());
+            Lexer lexer = new Lexer(source, "mini_app.cyv");
+            Parser parser = new Parser(lexer.tokenize(), "mini_app.cyv");
             BlockNode block = parser.parse();
             
             ExecutionContext context = new ExecutionContext(MiniApp.class.getClassLoader());

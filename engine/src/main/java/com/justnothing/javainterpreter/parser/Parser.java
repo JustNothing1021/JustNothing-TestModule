@@ -50,12 +50,15 @@ public class Parser {
     private final ParseContext context;
     private final Deque<Integer> savedPositions;
     private final ClassLoader classLoader;
+    private final String sourceFileName;
 
-    public Parser(List<Token> tokens) {
-        this(tokens, Thread.currentThread().getContextClassLoader());
+
+    public Parser(List<Token> tokens, String sourceFileName) {
+        this(tokens, Thread.currentThread().getContextClassLoader(), sourceFileName);
     }
-    
-    public Parser(List<Token> tokens, ClassLoader classLoader) {
+
+    public Parser(List<Token> tokens, ClassLoader classLoader, String sourceFileName) {
+        this.sourceFileName = sourceFileName;
         this.tokens = tokens;
         this.position = 0;
         this.context = new ParseContext();
@@ -64,11 +67,12 @@ public class Parser {
         this.classLoader = classLoader;
     }
     
-    public Parser(List<Token> tokens, ParseContext context) {
-        this(tokens, context, Thread.currentThread().getContextClassLoader());
+    public Parser(List<Token> tokens, ParseContext context, String sourceFileName) {
+        this(tokens, context, Thread.currentThread().getContextClassLoader(), sourceFileName);
     }
     
-    public Parser(List<Token> tokens, ParseContext context, ClassLoader classLoader) {
+    public Parser(List<Token> tokens, ParseContext context, ClassLoader classLoader, String sourceFileName) {
+        this.sourceFileName = sourceFileName;
         this.tokens = tokens;
         this.position = 0;
         this.context = context;
@@ -146,8 +150,7 @@ public class Parser {
         Token token = peek();
         return new ParseException(
                 message,
-                token.location().getLine(),
-                token.location().getColumn(),
+                token.location(),
                 ErrorCode.PARSE_INVALID_SYNTAX
         );
     }
@@ -157,8 +160,7 @@ public class Parser {
         Token token = peek();
         return new ParseException(
                 message,
-                token.location().getLine(),
-                token.location().getColumn(),
+                token.location(),
                 errorCode
         );
     }
@@ -1901,16 +1903,13 @@ public class Parser {
     private ASTNode parseBreakStatement() throws ParseException {
         SourceLocation location = createLocation();
         consume(TokenType.DELIMITER_SEMICOLON, "Expected semicolon after break");
-        return new LiteralNode(null, null, location);
+        return new BreakNode(location);
     }
-    
-    /**
-     * 解析continue语句
-     */
+
     private ASTNode parseContinueStatement() throws ParseException {
         SourceLocation location = createLocation();
         consume(TokenType.DELIMITER_SEMICOLON, "Expected semicolon after continue");
-        return new LiteralNode(null, null, location);
+        return new ContinueNode(location);
     }
     
     /**
@@ -2500,9 +2499,9 @@ public class Parser {
                 builder.addLiteral((String) part);
             } else if (part instanceof Lexer.InterpolationPart) {
                 String exprStr = ((Lexer.InterpolationPart) part).getExpression();
-                Lexer subLexer = new Lexer(exprStr);
+                Lexer subLexer = new Lexer(exprStr, sourceFileName);
                 List<Token> subTokens = subLexer.tokenize();
-                Parser subParser = new Parser(subTokens, context, classLoader);
+                Parser subParser = new Parser(subTokens, context, classLoader, sourceFileName);
                 ASTNode expr = subParser.parseExpression();
                 builder.addExpression(expr);
             }
@@ -2584,7 +2583,7 @@ public class Parser {
         if (check(TokenType.IDENTIFIER)) {
             savePosition();
             try {
-                ASTNode lambda = tryParseLambda();
+                ASTNode lambda = parseLambda();
                 if (lambda != null) {
                     releasePosition();
                     return lambda;
@@ -2665,7 +2664,7 @@ public class Parser {
         if (check(TokenType.DELIMITER_LEFT_PAREN)) {
             savePosition();
             try {
-                ASTNode lambda = tryParseLambda();
+                ASTNode lambda = parseLambda();
                 if (lambda != null) {
                     releasePosition();
                     return lambda;
@@ -3209,7 +3208,7 @@ public class Parser {
      * @return LambdaNode如果解析成功，null如果不是Lambda表达式
      * @throws ParseException 如果解析过程中出错
      */
-    private ASTNode tryParseLambda() throws ParseException {
+    private ASTNode parseLambda() throws ParseException {
         SourceLocation location = createLocation();
         List<LambdaNode.Parameter> parameters = new ArrayList<>();
         
@@ -3445,6 +3444,5 @@ public class Parser {
         
         return false;
     }
-
 
 }

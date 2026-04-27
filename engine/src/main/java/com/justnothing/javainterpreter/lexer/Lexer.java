@@ -19,14 +19,16 @@ import java.util.List;
 public class Lexer {
     
     private final String source;
+    private final String fileName;
     private final int length;
     private int position;
     private int line;
     private int column;
     private final List<Token> tokens;
-    
-    public Lexer(String source) {
+
+    public Lexer(String source, String fileName) {
         this.source = source;
+        this.fileName = fileName;
         this.length = source.length();
         this.position = 0;
         this.line = 1;
@@ -145,9 +147,13 @@ public class Lexer {
     }
     
     private SourceLocation createLocation() {
-        return new SourceLocation(line, column);
+        return new SourceLocation(line, column, fileName);
     }
-    
+
+    private SourceLocation createLocation(int line, int column) {
+        return new SourceLocation(line, column, fileName);
+    }
+
     private ParseException error(String message) {
         return new ParseException(
                 message,
@@ -178,7 +184,7 @@ public class Lexer {
                     sb.append(advance());
                 }
                 String hexStr = sb.toString();
-                SourceLocation location = new SourceLocation(startLine, startColumn);
+                SourceLocation location = createLocation(startLine, startColumn);
                 try {
                     long value = Long.parseLong(hexStr, 16);
                     addToken(TokenType.LITERAL_INTEGER, value, location);
@@ -193,7 +199,7 @@ public class Lexer {
                     sb.append(advance());
                 }
                 String binStr = sb.toString();
-                SourceLocation location = new SourceLocation(startLine, startColumn);
+                SourceLocation location = createLocation(startLine, startColumn);
                 try {
                     long value = Long.parseLong(binStr, 2);
                     addToken(TokenType.LITERAL_INTEGER, value, location);
@@ -208,7 +214,7 @@ public class Lexer {
                     sb.append(advance());
                 }
                 String octStr = sb.toString();
-                SourceLocation location = new SourceLocation(startLine, startColumn);
+                SourceLocation location = createLocation(startLine, startColumn);
                 try {
                     long value = Long.parseLong(octStr, 8);
                     addToken(TokenType.LITERAL_INTEGER, value, location);
@@ -226,6 +232,7 @@ public class Lexer {
         if (!isAtEnd() && peek() == '.') {
             char nextNext = position + 1 < length ? source.charAt(position + 1) : '\0';
             if (nextNext == '.') {
+
             } else if (Character.isDigit(nextNext)) {
                 do {
                     sb.append(advance());
@@ -244,7 +251,7 @@ public class Lexer {
         }
         
         String numberStr = sb.toString();
-        SourceLocation location = new SourceLocation(startLine, startColumn);
+        SourceLocation location = createLocation(startLine, startColumn);
         
         boolean isFloat = false;
         boolean isLong = false;
@@ -406,7 +413,7 @@ public class Lexer {
         }
         
         advance();
-        SourceLocation location = new SourceLocation(startLine, startColumn);
+        SourceLocation location = createLocation(startLine, startColumn);
         
         if (quote == '\'') {
             if (sb.length() != 1) {
@@ -487,7 +494,7 @@ public class Lexer {
         }
         
         advance();
-        SourceLocation location = new SourceLocation(startLine, startColumn);
+        SourceLocation location = createLocation(startLine, startColumn);
         
         if (sb.length() > 0) {
             interpolatedParts.add(sb.toString());
@@ -517,7 +524,7 @@ public class Lexer {
         }
         
         String text = sb.toString();
-        SourceLocation location = new SourceLocation(startLine, startColumn);
+        SourceLocation location = createLocation(startLine, startColumn);
         
         if (TokenType.isKeyword(text)) {
             TokenType type = TokenType.getKeywordType(text);
@@ -540,7 +547,7 @@ public class Lexer {
         int startColumn = column;
         char c = advance();
         
-        SourceLocation location = new SourceLocation(startLine, startColumn);
+        SourceLocation location = createLocation(startLine, startColumn);
         
         switch (c) {
             case '+':
@@ -657,7 +664,7 @@ public class Lexer {
         int startColumn = column;
         char c = advance();
         
-        SourceLocation location = new SourceLocation(startLine, startColumn);
+        SourceLocation location = createLocation(startLine, startColumn);
         
         switch (c) {
             case ';':

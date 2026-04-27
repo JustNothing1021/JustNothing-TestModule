@@ -62,7 +62,8 @@ public enum ErrorCode {
     METHOD_NOT_FOUND("METHOD_001", "Method not found"),
     METHOD_AMBIGUOUS_CALL("METHOD_002", "Ambiguous method call"),
     METHOD_NO_APPLICABLE_METHOD("METHOD_003", "No applicable method found"),
-    METHOD_INVALID_ARGUMENTS("METHOD_004", "Invalid arguments for method");
+    METHOD_INVALID_ARGUMENTS("METHOD_004", "Invalid arguments for method"),
+    METHOD_INVOCATION_TARGET_NULL("METHOD_005", "Method invocation target is null");
     
     private final String code;
     private final String description;

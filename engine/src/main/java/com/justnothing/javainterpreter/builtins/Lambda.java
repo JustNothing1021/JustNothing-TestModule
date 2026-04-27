@@ -77,8 +77,8 @@ public class Lambda implements Function<Object[], Object> {
         if (args != null && args.length != parameterNames.size()) {
             throw new EvaluationException(
                 "Lambda expects " + parameterNames.size() + " arguments but got " + args.length,
-                lambdaNode.getLocation(),
-                ErrorCode.METHOD_INVALID_ARGUMENTS
+                ErrorCode.METHOD_INVALID_ARGUMENTS,
+                lambdaNode
             );
         }
         
@@ -97,7 +97,7 @@ public class Lambda implements Function<Object[], Object> {
                 if (!parameterNames.contains(varName)) {
                     ScopeManager.Variable var = entry.getValue();
                     callContext.getScopeManager().declareCapturedVariable(
-                        var.getName(), var.getType(), var, var.isFinal()
+                        var.getName(), var.getType(), var, var.isFinal(), lambdaNode
                     );
                 }
             }
@@ -108,7 +108,8 @@ public class Lambda implements Function<Object[], Object> {
                     parameterNames.get(i),
                     argValue != null ? argValue.getClass() : Object.class,
                     argValue,
-                    false
+                    false,
+                    lambdaNode
                 );
             }
             
@@ -121,9 +122,8 @@ public class Lambda implements Function<Object[], Object> {
         } catch (RuntimeException e) {
             EvaluationException wrapped = new EvaluationException(
                 e.getMessage(), 
-                lambdaNode.getLocation(), 
-                ErrorCode.EVAL_METHOD_INVOCATION_FAILED, 
-                e
+                ErrorCode.EVAL_METHOD_INVOCATION_FAILED,
+                e, lambdaNode
             );
             wrapped.setScriptCallStack(callContext.getCallStackStrings());
             throw wrapped;

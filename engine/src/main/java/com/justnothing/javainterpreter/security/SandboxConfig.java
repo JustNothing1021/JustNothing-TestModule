@@ -398,6 +398,7 @@ public class SandboxConfig {
                     .denyClass("java.lang.ProcessBuilder")
                     .denyClass("java.lang.Thread")
                     .denyClass("java.lang.System")
+                    .denyClass("java.lang.ThreadGroup")
                     .denyClass("java.io.*")
                     .denyClass("java.net.*")
                     .denyClass("java.nio.*")

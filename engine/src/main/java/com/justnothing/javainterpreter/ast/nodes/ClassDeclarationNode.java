@@ -84,7 +84,7 @@ public class ClassDeclarationNode extends ASTNode {
     public void addConstructor(ConstructorDeclarationNode constructor) {
         constructors.add(constructor);
     }
-    
+
     public void addAnnotation(AnnotationNode annotation) {
         annotations.add(annotation);
     }
@@ -93,22 +93,22 @@ public class ClassDeclarationNode extends ASTNode {
     public <T> T accept(ASTVisitor<T> visitor) {
         return visitor.visit(this);
     }
-    
+
     @Override
     public String formatString(int indent) {
         StringBuilder sb = new StringBuilder();
         sb.append(indent(indent)).append("ClassDeclarationNode\n");
-        
+
         if (!annotations.isEmpty()) {
             sb.append(indent(indent + 1)).append("annotations:\n");
             for (AnnotationNode annotation : annotations) {
                 sb.append(annotation.formatString(indent + 2)).append("\n");
             }
         }
-        
-        sb.append(indent(indent + 1)).append("className: " + className + "\n");
+
+        sb.append(indent(indent + 1)).append("className: ").append(className).append("\n");
         if (superClass != null) {
-            sb.append(indent(indent + 1)).append("superClass: " + superClass.getTypeName() + "\n");
+            sb.append(indent(indent + 1)).append("superClass: ").append(superClass.getTypeName()).append("\n");
         }
         if (!interfaces.isEmpty()) {
             sb.append(indent(indent + 1)).append("interfaces: ");
@@ -118,26 +118,26 @@ public class ClassDeclarationNode extends ASTNode {
             }
             sb.append("\n");
         }
-        sb.append(indent(indent + 1)).append("modifiers: " + modifiers.toModifierString() + "\n");
-        
-        sb.append(indent(indent + 1)).append("fields: " + fields.size() + "\n");
+        sb.append(indent(indent + 1)).append("modifiers: ").append(modifiers.toModifierString()).append("\n");
+
+        sb.append(indent(indent + 1)).append("fields: ").append(fields.size()).append("\n");
         for (int i = 0; i < fields.size(); i++) {
-            sb.append(indent(indent + 2)).append("field[" + i + "]:\n");
+            sb.append(indent(indent + 2)).append("field[").append(i).append("]:\n");
             sb.append(fields.get(i).formatString(indent + 3)).append("\n");
         }
-        
-        sb.append(indent(indent + 1)).append("constructors: " + constructors.size() + "\n");
+
+        sb.append(indent(indent + 1)).append("constructors: ").append(constructors.size()).append("\n");
         for (int i = 0; i < constructors.size(); i++) {
-            sb.append(indent(indent + 2)).append("constructor[" + i + "]:\n");
+            sb.append(indent(indent + 2)).append("constructor[").append(i).append("]:\n");
             sb.append(constructors.get(i).formatString(indent + 3)).append("\n");
         }
-        
-        sb.append(indent(indent + 1)).append("methods: " + methods.size() + "\n");
+
+        sb.append(indent(indent + 1)).append("methods: ").append(methods.size()).append("\n");
         for (int i = 0; i < methods.size(); i++) {
-            sb.append(indent(indent + 2)).append("method[" + i + "]:\n");
+            sb.append(indent(indent + 2)).append("method[").append(i).append("]:\n");
             sb.append(methods.get(i).formatString(indent + 3)).append("\n");
         }
-        
+
         return sb.toString().stripTrailing();
     }
 }

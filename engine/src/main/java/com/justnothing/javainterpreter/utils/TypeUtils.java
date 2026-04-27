@@ -1,5 +1,6 @@
 package com.justnothing.javainterpreter.utils;
 
+import com.justnothing.javainterpreter.ast.ASTNode;
 import com.justnothing.javainterpreter.ast.SourceLocation;
 import com.justnothing.javainterpreter.builtins.Lambda;
 import com.justnothing.javainterpreter.builtins.MethodReference;
@@ -132,7 +133,7 @@ public class TypeUtils {
         return int.class;
     }
 
-    public static Object convertToPrimitive(Object value, Class<?> targetType) throws EvaluationException {
+    public static Object convertToPrimitive(Object value, Class<?> targetType, ASTNode sourceNode) throws EvaluationException {
         if (value == null) {
             return getDefaultValue(targetType);
         }
@@ -165,9 +166,8 @@ public class TypeUtils {
 
         throw new EvaluationException(
                 "Cannot convert " + value.getClass().getSimpleName() + " to " + targetType.getSimpleName(),
-                -1,
-                -1,
-                ErrorCode.EVAL_TYPE_MISMATCH
+                ErrorCode.EVAL_TYPE_MISMATCH,
+                sourceNode
         );
     }
 
@@ -578,13 +578,13 @@ public class TypeUtils {
     }
 
 
-    public static Object convertValue(Object value, Class<?> targetType, SourceLocation location) throws EvaluationException {
+    public static Object convertValue(Object value, Class<?> targetType, @NotNull ASTNode sourceNode) throws EvaluationException {
         if (value == null) {
             if (targetType.isPrimitive()) {
                 throw new EvaluationException(
                         "Cannot assign null to primitive type: " + targetType.getName(),
-                        location,
-                        ErrorCode.EVAL_TYPE_MISMATCH
+                        ErrorCode.EVAL_TYPE_MISMATCH,
+                        sourceNode
                 );
             }
             return null;
@@ -601,7 +601,7 @@ public class TypeUtils {
         }
 
         if (targetType.isArray() && sourceType.isArray()) {
-            return convertArray(value, targetType, location);
+            return convertArray(value, targetType, sourceNode);
         }
 
         if (targetType.isPrimitive() && sourceType.isAssignableFrom(TypeUtils.getWrapperType(targetType))) {
@@ -647,13 +647,13 @@ public class TypeUtils {
 
         throw new EvaluationException(
                 "Cannot convert " + sourceType.getName() + " to " + targetType.getName(),
-                location,
-                ErrorCode.EVAL_TYPE_MISMATCH
+                ErrorCode.EVAL_TYPE_MISMATCH,
+                sourceNode
         );
     }
 
 
-    public static Object convertArray(Object value, Class<?> targetType, SourceLocation location) throws EvaluationException {
+    public static Object convertArray(Object value, Class<?> targetType, @NotNull ASTNode sourceNode) throws EvaluationException {
         int length = Array.getLength(value);
         Class<?> componentType = targetType.getComponentType();
         Object result = Array.newInstance(componentType, length);
@@ -661,13 +661,13 @@ public class TypeUtils {
         for (int i = 0; i < length; i++) {
             Object element = Array.get(value, i);
             try {
-                Object converted = convertValue(element, componentType, location);
+                Object converted = convertValue(element, componentType, sourceNode);
                 Array.set(result, i, converted);
             } catch (EvaluationException e) {
                 throw new EvaluationException(
                         "Cannot convert element at index " + i + ": " + e.getMessage(),
-                        location,
-                        ErrorCode.EVAL_TYPE_MISMATCH
+                        ErrorCode.EVAL_TYPE_MISMATCH,
+                        sourceNode
                 );
             }
         }

@@ -1,6 +1,10 @@
 package com.justnothing.javainterpreter.exception;
 
+import com.justnothing.javainterpreter.ast.ASTNode;
 import com.justnothing.javainterpreter.ast.SourceLocation;
+
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * 求值异常
@@ -12,20 +16,20 @@ import com.justnothing.javainterpreter.ast.SourceLocation;
  * @since 1.0.0
  */
 public class EvaluationException extends ScriptException {
-    
-    public EvaluationException(String message, int line, int column, ErrorCode errorCode) {
-        super(message, line, column, errorCode);
+    private final ASTNode node;
+
+    public EvaluationException(String message, ErrorCode errorCode, ASTNode node) {
+        super(message, node.getLocation(), errorCode);
+        this.node = node;
     }
-    
-    public EvaluationException(String message, int line, int column, ErrorCode errorCode, Throwable cause) {
-        super(message, line, column, errorCode, cause);
+
+
+    public EvaluationException(String message, ErrorCode errorCode, Throwable cause, ASTNode node) {
+        super(message, node.getLocation(), errorCode, cause);
+        this.node = node;
     }
-    
-    public EvaluationException(String message, SourceLocation location, ErrorCode errorCode) {
-        super(message, location, errorCode);
-    }
-    
-    public EvaluationException(String message, SourceLocation location, ErrorCode errorCode, Throwable cause) {
-        super(message, location, errorCode, cause);
+
+    public @Nullable ASTNode getNode() {
+        return node;
     }
 }

@@ -1,6 +1,7 @@
 package com.justnothing.javainterpreter.builtins;
 
 
+import com.justnothing.javainterpreter.ast.ASTNode;
 import com.justnothing.javainterpreter.ast.SourceLocation;
 import com.justnothing.javainterpreter.exception.ErrorCode;
 import com.justnothing.javainterpreter.exception.EvaluationException;
@@ -17,29 +18,30 @@ public class MethodReference {
     private final String methodName;
     private final boolean isStatic;
     private final boolean isUnboundInstanceMethod;
-    private final SourceLocation location;
+    private final ASTNode sourceNode;
     
-    public MethodReference(Class<?> targetClass, Object targetInstance, String methodName, boolean isStatic, SourceLocation location) {
+    public MethodReference(Class<?> targetClass, Object targetInstance, String methodName, boolean isStatic, ASTNode sourceNode) {
         this.targetClass = targetClass;
         this.targetInstance = targetInstance;
         this.methodName = methodName;
         this.isStatic = isStatic;
         this.isUnboundInstanceMethod = false;
-        this.location = location;
+        this.sourceNode = sourceNode;
     }
     
-    public static MethodReference createUnboundInstanceMethod(Class<?> targetClass, String methodName, SourceLocation location) {
-        MethodReference ref = new MethodReference(targetClass, null, methodName, false, location);
-        return new MethodReference(targetClass, null, methodName, false, true, location);
+    public static MethodReference createUnboundInstanceMethod(Class<?> targetClass, String methodName, ASTNode sourceNode) {
+        MethodReference ref = new MethodReference(targetClass, null, methodName, false, sourceNode);
+        return new MethodReference(targetClass, null, methodName, false, true, sourceNode);
     }
     
-    private MethodReference(Class<?> targetClass, Object targetInstance, String methodName, boolean isStatic, boolean isUnboundInstanceMethod, SourceLocation location) {
+    private MethodReference(Class<?> targetClass, Object targetInstance, String methodName,
+                            boolean isStatic, boolean isUnboundInstanceMethod, ASTNode sourceNode) {
         this.targetClass = targetClass;
         this.targetInstance = targetInstance;
         this.methodName = methodName;
         this.isStatic = isStatic;
         this.isUnboundInstanceMethod = isUnboundInstanceMethod;
-        this.location = location;
+        this.sourceNode = sourceNode;
     }
     
     public Class<?> getTargetClass() {
@@ -68,16 +70,16 @@ public class MethodReference {
                 if (args == null || args.length == 0) {
                     throw new EvaluationException(
                         "Unbound instance method reference requires target instance as first argument",
-                        location,
-                        ErrorCode.EVAL_INVALID_OPERATION
+                        ErrorCode.EVAL_INVALID_OPERATION,
+                        sourceNode
                     );
                 }
                 Object instance = args[0];
                 if (instance == null) {
                     throw new EvaluationException(
                         "Cannot invoke method on null instance",
-                        location,
-                        ErrorCode.EVAL_NULL_POINTER
+                        ErrorCode.METHOD_INVOCATION_TARGET_NULL,
+                        sourceNode
                     );
                 }
                 Object[] methodArgs = args.length > 1 ? Arrays.copyOfRange(args, 1, args.length) : new Object[0];
@@ -99,8 +101,8 @@ public class MethodReference {
         } catch (Exception e) {
             throw new EvaluationException(
                 "Failed to invoke method reference: " + methodName + " - " + e.getMessage(),
-                location,
-                ErrorCode.METHOD_NOT_FOUND
+                ErrorCode.METHOD_NOT_FOUND,
+                sourceNode
             );
         }
     }

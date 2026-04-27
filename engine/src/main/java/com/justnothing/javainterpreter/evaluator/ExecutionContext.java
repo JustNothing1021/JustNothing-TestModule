@@ -306,11 +306,11 @@ public class ExecutionContext {
     }
     
     public void setVariable(String name, Object value, Class<?> type) {
-        scopeManager.declareVariable(name, type, value, false);
+        scopeManager.declareVariable(name, type, value, false, null);
     }
     
     public Variable getVariable(String name) {
-        ScopeManager.Variable var = scopeManager.getVariable(name);
+        ScopeManager.Variable var = scopeManager.getVariable(name, null);
         return new Variable(var.getValue(), var.getType());
     }
     
@@ -324,7 +324,7 @@ public class ExecutionContext {
     
     public Map<String, Variable> getAllVariables() {
         Map<String, Variable> result = new HashMap<>();
-        Map<String, ScopeManager.Variable> vars = scopeManager.getAllVariablesDetailed();
+        Map<String, ScopeManager.Variable> vars = scopeManager.getAllVariables();
         for (Map.Entry<String, ScopeManager.Variable> entry : vars.entrySet()) {
             result.put(entry.getKey(), new Variable(entry.getValue().getValue(), entry.getValue().getType()));
         }
