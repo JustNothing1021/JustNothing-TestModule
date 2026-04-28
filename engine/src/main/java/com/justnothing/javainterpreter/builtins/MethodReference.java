@@ -2,7 +2,6 @@ package com.justnothing.javainterpreter.builtins;
 
 
 import com.justnothing.javainterpreter.ast.ASTNode;
-import com.justnothing.javainterpreter.ast.SourceLocation;
 import com.justnothing.javainterpreter.exception.ErrorCode;
 import com.justnothing.javainterpreter.exception.EvaluationException;
 import com.justnothing.javainterpreter.utils.TypeUtils;
@@ -30,7 +29,6 @@ public class MethodReference {
     }
     
     public static MethodReference createUnboundInstanceMethod(Class<?> targetClass, String methodName, ASTNode sourceNode) {
-        MethodReference ref = new MethodReference(targetClass, null, methodName, false, sourceNode);
         return new MethodReference(targetClass, null, methodName, false, true, sourceNode);
     }
     
@@ -178,11 +176,15 @@ public class MethodReference {
         
         @Override
         public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-            if (method.getDeclaringClass() == Object.class || (
-                interfaceClass != null && interfaceClass.isAssignableFrom(method.getDeclaringClass())
-            )) {
-                return method.invoke(proxy, args);
+            if (method.getDeclaringClass() == Object.class) {
+                if (method.getName().equals("toString")) {
+                    return methodReference.toString();
+                }
+                if (method.getName().equals("hashCode")) {
+                    return System.identityHashCode(proxy);
+                }
             }
+
             Object[] invokeArgs = args != null ? args : new Object[0];
             return methodReference.invoke(invokeArgs);
         }

@@ -1,7 +1,6 @@
 package com.justnothing.javainterpreter.utils;
 
 import com.justnothing.javainterpreter.ast.ASTNode;
-import com.justnothing.javainterpreter.ast.SourceLocation;
 import com.justnothing.javainterpreter.builtins.Lambda;
 import com.justnothing.javainterpreter.builtins.MethodReference;
 import com.justnothing.javainterpreter.exception.ErrorCode;
@@ -14,9 +13,14 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class TypeUtils {
 
@@ -654,8 +658,17 @@ public class TypeUtils {
 
 
     public static Object convertArray(Object value, Class<?> targetType, @NotNull ASTNode sourceNode) throws EvaluationException {
+        if (targetType == null) {
+            return value;
+        }
         int length = Array.getLength(value);
         Class<?> componentType = targetType.getComponentType();
+        if (componentType == null && targetType.isPrimitive()) {
+            componentType = getWrapperType(targetType);
+        }
+        if (componentType == null) {
+            return value;
+        }
         Object result = Array.newInstance(componentType, length);
 
         for (int i = 0; i < length; i++) {
@@ -750,6 +763,127 @@ public class TypeUtils {
         if (value == null) return 0;
         if (value instanceof Number) return ((Number) value).shortValue();
         return 0;
+    }
+
+    public static Object invokeMethodSafely(Method method, Object targetInstance,
+            Class<?> targetClass, Object[] args, ASTNode node) throws EvaluationException {
+        Object[] invokeArgs = prepareInvokeArguments(method, args);
+
+        try {
+            return method.invoke(targetInstance, invokeArgs);
+        } catch (IllegalAccessException e) {
+            return tryInvokeViaPublicLookup(method, targetInstance, targetClass, args, node);
+        } catch (java.lang.reflect.InvocationTargetException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof Error) throw (Error) cause;
+            if (cause instanceof RuntimeException) throw (RuntimeException) cause;
+            throw new EvaluationException(
+                    "Method threw exception: " + method.getName(),
+                    ErrorCode.METHOD_INVOCATION_FAILED, cause, node);
+        } catch (Throwable t) {
+            throw new EvaluationException(
+                    "Failed to call method: " + method.getName() + " - " + t.getMessage(),
+                    ErrorCode.METHOD_INVOCATION_FAILED, t, node);
+        }
+    }
+
+    private static Object tryInvokeViaPublicLookup(Method originalMethod, Object targetInstance,
+            Class<?> targetClass, Object[] args, ASTNode node) throws EvaluationException {
+
+        String methodName = originalMethod.getName();
+
+        for (Method ifaceMethod : findPublicInterfaceMethods(targetClass, methodName)) {
+            if (!ifaceMethod.getDeclaringClass().isInstance(targetInstance)) {
+                continue;
+            }
+            try {
+                Object[] ifaceArgs = prepareInvokeArguments(ifaceMethod, args);
+                return ifaceMethod.invoke(targetInstance, ifaceArgs);
+            } catch (IllegalAccessException ignored) {
+            } catch (IllegalArgumentException e) {
+                if (!"object is not an instance of declaring class".equals(e.getMessage())) {
+                    throw new EvaluationException(
+                            "Failed to call method via public interface: " + methodName,
+                            ErrorCode.METHOD_INVOCATION_FAILED, e, node);
+                }
+            } catch (java.lang.reflect.InvocationTargetException e) {
+                Throwable cause = e.getCause();
+                if (cause instanceof Error) throw (Error) cause;
+                if (cause instanceof RuntimeException) throw (RuntimeException) cause;
+                throw new EvaluationException(
+                        "Method threw exception: " + methodName,
+                        ErrorCode.METHOD_INVOCATION_FAILED, cause, node);
+            } catch (Throwable t) {
+                throw new EvaluationException(
+                        "Failed to call method via public interface: " + methodName,
+                        ErrorCode.METHOD_INVOCATION_FAILED, t, node);
+            }
+        }
+
+        MethodHandle handle = tryCreateMethodHandle(originalMethod, targetClass, targetInstance);
+        if (handle != null) {
+            try {
+                Object[] mhArgs = prepareInvokeArguments(originalMethod, args);
+                return handle.invokeWithArguments(mhArgs);
+            } catch (Throwable t) {
+                throw new EvaluationException(
+                        "Failed to call method via MethodHandle: " + originalMethod.getName(),
+                        ErrorCode.METHOD_INVOCATION_FAILED, t, node);
+            }
+        }
+
+        throw new EvaluationException(
+                "Cannot access method " + targetClass.getSimpleName() + "." + originalMethod.getName()
+                        + " - module restrictions prevent reflection and no public interface equivalent found",
+                ErrorCode.METHOD_NOT_FOUND, null, node);
+    }
+
+    private static List<Method> findPublicInterfaceMethods(Class<?> clazz, String methodName) {
+        List<Method> results = new ArrayList<>();
+        collectPublicMethods(clazz, methodName, results, new HashSet<>());
+        return results;
+    }
+
+    private static void collectPublicMethods(Class<?> clazz, String methodName,
+            List<Method> results, Set<Class<?>> visited) {
+        if (clazz == null || !visited.add(clazz)) {
+            return;
+        }
+        for (Class<?> iface : clazz.getInterfaces()) {
+            for (Method m : iface.getMethods()) {
+                if (m.getName().equals(methodName) && Modifier.isPublic(m.getModifiers())) {
+                    results.add(m);
+                }
+            }
+            collectPublicMethods(iface, methodName, results, visited);
+        }
+        Class<?> superclass = clazz.getSuperclass();
+        if (superclass != null) {
+            for (Method m : superclass.getMethods()) {
+                if (m.getName().equals(methodName) && Modifier.isPublic(m.getModifiers())) {
+                    results.add(m);
+                }
+            }
+            collectPublicMethods(superclass, methodName, results, visited);
+        }
+    }
+
+    private static MethodHandle tryCreateMethodHandle(Method method, Class<?> targetClass, Object targetInstance) {
+        try {
+            MethodHandles.Lookup lookup;
+            if (targetInstance != null) {
+                lookup = MethodHandles.privateLookupIn(targetClass, MethodHandles.lookup());
+            } else {
+                lookup = MethodHandles.lookup();
+            }
+            MethodHandle handle = lookup.unreflect(method);
+            if (targetInstance != null && !Modifier.isStatic(method.getModifiers())) {
+                handle = handle.bindTo(targetInstance);
+            }
+            return handle;
+        } catch (IllegalAccessException e) {
+            return null;
+        }
     }
 
 }

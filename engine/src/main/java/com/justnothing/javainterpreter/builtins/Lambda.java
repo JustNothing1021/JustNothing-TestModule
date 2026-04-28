@@ -122,7 +122,7 @@ public class Lambda implements Function<Object[], Object> {
         } catch (RuntimeException e) {
             EvaluationException wrapped = new EvaluationException(
                 e.getMessage(), 
-                ErrorCode.EVAL_METHOD_INVOCATION_FAILED,
+                ErrorCode.METHOD_INVOCATION_FAILED,
                 e, lambdaNode
             );
             wrapped.setScriptCallStack(callContext.getCallStackStrings());
@@ -171,12 +171,18 @@ public class Lambda implements Function<Object[], Object> {
         
         @Override
         public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-            if (method.getDeclaringClass() == Object.class
-                    || (interfaceClass != null &&
-                        interfaceClass.isAssignableFrom(method.getDeclaringClass()))) {
-                return method.invoke(lambda, args);
+            if (method.getDeclaringClass() == Object.class) {
+                if (method.getName().equals("toString")) {
+                    return lambda.toString();
+                }
+                if (method.getName().equals("hashCode")) {
+                    return System.identityHashCode(proxy);
+                }
+                if (method.getName().equals("equals")) {
+                    return proxy.equals(args[0]);
+                }
             }
-            
+
             Object[] invokeArgs = args != null ? args : new Object[0];
             return lambda.invoke(invokeArgs);
         }

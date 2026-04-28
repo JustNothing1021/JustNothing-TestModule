@@ -1,7 +1,6 @@
 package com.justnothing.javainterpreter;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
@@ -9,7 +8,6 @@ import java.lang.reflect.Array;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.Path;
-import java.util.concurrent.ExecutionException;
 
 import com.justnothing.javainterpreter.ast.nodes.BlockNode;
 import com.justnothing.javainterpreter.evaluator.ASTEvaluator;

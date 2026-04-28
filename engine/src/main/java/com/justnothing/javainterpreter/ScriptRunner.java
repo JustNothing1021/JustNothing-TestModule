@@ -84,6 +84,8 @@ public class ScriptRunner {
             return ASTEvaluator.evaluate(ast, context);
         } catch (ParseException e) {
             throw new RuntimeException("Parse error: " + e.getMessage(), e);
+        } catch (com.justnothing.javainterpreter.exception.EvaluationException e) {
+            throw e;
         } catch (Exception e) {
             throw simplifyException(e);
         }
@@ -113,6 +115,8 @@ public class ScriptRunner {
             ASTEvaluator.evaluate(ast, context);
         } catch (ParseException e) {
             throw new RuntimeException("Parse error: " + e.getMessage(), e);
+        } catch (com.justnothing.javainterpreter.exception.EvaluationException e) {
+            throw e;
         } catch (Exception e) {
             throw simplifyException(e);
         }

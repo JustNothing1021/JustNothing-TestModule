@@ -45,6 +45,10 @@ public class ParseContext {
     public ClassLoader getClassLoader() {
         return classLoader;
     }
+
+    public String getCurrentClassName() {
+        return currentClassName;
+    }
     
     public void setClassLoader(ClassLoader classLoader) {
         this.classLoader = classLoader;

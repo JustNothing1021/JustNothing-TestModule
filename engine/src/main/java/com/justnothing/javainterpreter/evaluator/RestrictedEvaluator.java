@@ -20,7 +20,6 @@ import com.justnothing.javainterpreter.ast.nodes.UnaryOpNode;
 import com.justnothing.javainterpreter.ast.nodes.VariableNode;
 import com.justnothing.javainterpreter.ast.nodes.WhileNode;
 import com.justnothing.javainterpreter.exception.EvaluationException;
-import com.justnothing.javainterpreter.exception.ErrorCode;
 
 import java.util.HashSet;
 import java.util.Set;

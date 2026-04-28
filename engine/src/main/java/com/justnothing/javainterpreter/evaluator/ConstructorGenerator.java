@@ -1,7 +1,6 @@
 package com.justnothing.javainterpreter.evaluator;
 
 import com.justnothing.javainterpreter.ast.ASTNode;
-import com.justnothing.javainterpreter.ast.SourceLocation;
 import com.justnothing.javainterpreter.ast.nodes.*;
 import com.justnothing.javainterpreter.exception.ErrorCode;
 import com.justnothing.javainterpreter.exception.EvaluationException;

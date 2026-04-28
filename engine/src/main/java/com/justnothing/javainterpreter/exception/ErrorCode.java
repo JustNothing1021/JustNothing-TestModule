@@ -42,16 +42,15 @@ public enum ErrorCode {
     EVAL_NULL_POINTER("EVAL_004", "Null pointer exception"),
     EVAL_INDEX_OUT_OF_BOUNDS("EVAL_005", "Index out of bounds"),
     EVAL_INVALID_OPERATION("EVAL_006", "Invalid operation"),
-    EVAL_METHOD_INVOCATION_FAILED("EVAL_007", "Method invocation failed"),
-    EVAL_CONSTRUCTOR_INVOCATION_FAILED("EVAL_008", "Constructor invocation failed"),
-    EVAL_FIELD_ACCESS_FAILED("EVAL_009", "Field access failed"),
-    EVAL_ARRAY_ACCESS_FAILED("EVAL_010", "Array access failed"),
-    EVAL_ASSIGNMENT_FAILED("EVAL_011", "Assignment failed"),
-    EVAL_LOOP_LIMIT_EXCEEDED("EVAL_012", "Loop limit exceeded"),
-    EVAL_STACK_OVERFLOW("EVAL_013", "Stack overflow"),
-    EVAL_CLASS_NOT_FOUND("EVAL_014", "Class not found"),
-    EVAL_EXCEPTION_THROWN("EVAL_015", "Exception thrown"),
-    EVAL_PERMISSION_DENIED("EVAL_016", "Permission denied"),
+    EVAL_CONSTRUCTOR_INVOCATION_FAILED("EVAL_007", "Constructor invocation failed"),
+    EVAL_FIELD_ACCESS_FAILED("EVAL_008", "Field access failed"),
+    EVAL_ARRAY_ACCESS_FAILED("EVAL_009", "Array access failed"),
+    EVAL_ASSIGNMENT_FAILED("EVAL_010", "Assignment failed"),
+    EVAL_LOOP_LIMIT_EXCEEDED("EVAL_011", "Loop limit exceeded"),
+    EVAL_STACK_OVERFLOW("EVAL_012", "Stack overflow"),
+    EVAL_CLASS_NOT_FOUND("EVAL_013", "Class not found"),
+    EVAL_EXCEPTION_THROWN("EVAL_014", "Exception thrown"),
+    EVAL_PERMISSION_DENIED("EVAL_015", "Permission denied"),
     
     // 作用域错误 (SCOPE_xxx)
     SCOPE_VARIABLE_ALREADY_DECLARED("SCOPE_001", "Variable already declared in current scope"),
@@ -63,7 +62,8 @@ public enum ErrorCode {
     METHOD_AMBIGUOUS_CALL("METHOD_002", "Ambiguous method call"),
     METHOD_NO_APPLICABLE_METHOD("METHOD_003", "No applicable method found"),
     METHOD_INVALID_ARGUMENTS("METHOD_004", "Invalid arguments for method"),
-    METHOD_INVOCATION_TARGET_NULL("METHOD_005", "Method invocation target is null");
+    METHOD_INVOCATION_TARGET_NULL("METHOD_005", "Method invocation target is null"),
+    METHOD_INVOCATION_FAILED("METHOD_006", "Method invocation failed");
     
     private final String code;
     private final String description;

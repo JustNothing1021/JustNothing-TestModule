@@ -1,7 +1,6 @@
 package com.justnothing.javainterpreter.utils;
 
 import com.justnothing.javainterpreter.ast.ASTNode;
-import com.justnothing.javainterpreter.ast.SourceLocation;
 
 import java.lang.reflect.Array;
 import java.util.ArrayList;

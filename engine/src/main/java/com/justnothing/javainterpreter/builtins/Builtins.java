@@ -110,10 +110,10 @@ public class Builtins {
             return outputHandler.readLine(prompt);
         });
         
-        functions.put("readPassword", args -> {
-            String prompt = args.isEmpty() ? "" : args.get(0).toString();
-            return outputHandler.readPassword(prompt);
-        });
+        // functions.put("readPassword", args -> {
+        //     String prompt = args.isEmpty() ? "" : args.get(0).toString();
+        //     return outputHandler.readPassword(prompt);
+        // });
     }
     
     private String formatValue(Object value) {
@@ -641,6 +641,16 @@ public class Builtins {
             }
             return obj.getClass().getSimpleName();
         });
+        functions.put("typeOf", args -> {
+            if (args.size() != 1) {
+                throw new RuntimeException("typeOf() requires exactly 1 argument");
+            }
+            Object obj = args.get(0);
+            if (obj == null) {
+                return "null";
+            }
+            return obj.getClass().getSimpleName();
+        });
         
         functions.put("toStr", args -> {
             if (args.size() != 1) {
@@ -963,6 +973,7 @@ public class Builtins {
                 return constructor.newInstance(looper);
             }
             
+            @SuppressWarnings("unused")
             public Object runOnMainThread(Callable<Object> task) throws Exception {
                 Class<?> looperClass = ClassResolver.findClassOrFail("android.os.Looper", contextClassLoader);
                 Class<?> handlerClass = ClassResolver.findClassOrFail("android.os.Handler", contextClassLoader);
@@ -1006,6 +1017,7 @@ public class Builtins {
                 return result[0];
             }
             
+            @SuppressWarnings("unused")
             public Object runOnLooperThread(Callable<Object> task) throws Exception {
                 Object handlerThread = createLooperThread();
                 try {
@@ -1109,6 +1121,7 @@ public class Builtins {
                 }
             }
             
+            @SuppressWarnings("unused")
             public Object createInstanceWithHandler(String className, Object... args) throws Exception {
                 return runWithLooper(() -> {
                     Class<?> clazz = ClassResolver.findClassOrFail(className, contextClassLoader);

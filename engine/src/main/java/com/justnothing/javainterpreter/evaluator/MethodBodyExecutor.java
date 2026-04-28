@@ -45,6 +45,12 @@ public class MethodBodyExecutor {
     public static void clearCurrentInstanceContext() {
         currentInstanceContext.remove();
     }
+
+    public static void clearAll() {
+        methodRegistry.clear();
+        currentClassContext.remove();
+        currentInstanceContext.remove();
+    }
     
     public static void registerMethod(String classKey, String methodName, 
                                        MethodDeclarationNode methodDecl, 
@@ -528,10 +534,6 @@ public class MethodBodyExecutor {
         
         return ASTEvaluator.evaluate(node, context);
     }
-    
-
-    
-    
     
     private static String getParameterSignature(List<ParameterNode> parameters) {
         if (parameters == null || parameters.isEmpty()) {

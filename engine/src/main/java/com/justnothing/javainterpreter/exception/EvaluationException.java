@@ -1,9 +1,6 @@
 package com.justnothing.javainterpreter.exception;
 
 import com.justnothing.javainterpreter.ast.ASTNode;
-import com.justnothing.javainterpreter.ast.SourceLocation;
-
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**

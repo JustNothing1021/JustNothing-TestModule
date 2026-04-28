@@ -11,6 +11,7 @@ import com.justnothing.javainterpreter.exception.EvaluationException;
 import com.justnothing.javainterpreter.exception.ReturnException;
 import com.justnothing.javainterpreter.exception.BreakException;
 import com.justnothing.javainterpreter.exception.ContinueException;
+import com.justnothing.javainterpreter.exception.LabeledBreakException;
 import com.justnothing.javainterpreter.utils.ArrayUtils;
 import com.justnothing.javainterpreter.utils.NumberUtils;
 import com.justnothing.javainterpreter.utils.TypeUtils;
@@ -25,11 +26,15 @@ import java.lang.reflect.Constructor;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Consumer;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+
+import org.w3c.dom.Node;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +52,7 @@ import java.util.concurrent.Executors;
  * @since 1.0.0
  */
 public class ASTEvaluator {
+
 
     private static final EvaluatorRegistry defaultRegistry = EvaluatorRegistry.getDefault();
 
@@ -353,9 +359,9 @@ public class ASTEvaluator {
                 Object operand = evaluate(node.getOperand(), context);
                 if (operand == null) {
                     throw new EvaluationException(
-                            "Non-null assertion failed: value is null",
-                            ErrorCode.EVAL_NULL_POINTER,
-                            node);
+                        "Non-null assertion failed: value is null",
+                        ErrorCode.EVAL_NULL_POINTER,
+                        node);
                 }
                 // 其实双重否定都不用管了, 因为直接返回原来的值
                 return operand;
@@ -799,6 +805,10 @@ public class ASTEvaluator {
 
             context.checkMethodAccess(targetClass.getName(), methodName, null);
 
+            if (isDynamicClassInstance(targetInstance, context)) {
+                return invokeMethodOnDynamicClass(targetInstance, methodName, args, context);
+            }
+
             Method method = TypeUtils.findMethod(targetClass, methodName, args);
             if (method != null) {
                 if (!Modifier.isStatic(method.getModifiers()) && targetInstance == null) {
@@ -811,8 +821,7 @@ public class ASTEvaluator {
                     method.setAccessible(true);
                 } catch (Exception ignored) {
                 }
-                Object[] invokeArgs = TypeUtils.prepareInvokeArguments(method, args);
-                return method.invoke(targetInstance, invokeArgs);
+                return TypeUtils.invokeMethodSafely(method, targetInstance, targetClass, args, node);
             }
 
             if (target instanceof Class<?> targetClassObj) {
@@ -851,22 +860,29 @@ public class ASTEvaluator {
                     "Method not found: " + methodName,
                     ErrorCode.METHOD_NOT_FOUND,
                     node);
-        } catch (EvaluationException e) {
-            throw e;
-        } catch (SecurityException e) {
-            throw new EvaluationException(
-                    "Permission denied for method call: " + methodName + " - " + e.getMessage(),
-                    ErrorCode.EVAL_PERMISSION_DENIED,
-                    e,
-                    node);
-        } catch (Exception e) {
-            Throwable cause = e.getCause() != null ? e.getCause() : e;
-            throw new EvaluationException(
-                    "Failed to call method: " + methodName + " - " + cause.getMessage(),
-                    ErrorCode.EVAL_METHOD_INVOCATION_FAILED,
-                    cause,
-                    node);
-        }
+        }catch(
+
+    EvaluationException e)
+    {
+        throw e;
+    }catch(
+    SecurityException e)
+    {
+        throw new EvaluationException(
+                "Permission denied for method call: " + methodName + " - " + e.getMessage(),
+                ErrorCode.EVAL_PERMISSION_DENIED,
+                e,
+                node);
+    }catch(
+    Exception e)
+    {
+        Throwable cause = e.getCause() != null ? e.getCause() : e;
+        throw new EvaluationException(
+                "Failed to call method: " + methodName + " - " + cause.getMessage(),
+                ErrorCode.METHOD_INVOCATION_FAILED,
+                cause,
+                node);
+    }
     }
 
     public static Object evaluateSafeMethodCall(SafeMethodCallNode node, ExecutionContext context)
@@ -991,7 +1007,7 @@ public class ASTEvaluator {
                     if (method == null) {
                         throw new EvaluationException(
                                 "Method not found in superclass: " + methodName,
-                                ErrorCode.EVAL_METHOD_INVOCATION_FAILED,
+                                ErrorCode.METHOD_INVOCATION_FAILED,
                                 node);
                     }
                     method.setAccessible(true);
@@ -1509,7 +1525,7 @@ public class ASTEvaluator {
                 } catch (Exception e) {
                     throw new EvaluationException(
                             "Failed to invoke method in pipeline: " + methodName + " - " + e.getMessage(),
-                            ErrorCode.EVAL_METHOD_INVOCATION_FAILED,
+                            ErrorCode.METHOD_INVOCATION_FAILED,
                             node);
                 }
             }
@@ -1710,7 +1726,9 @@ public class ASTEvaluator {
     public static Object evaluateTry(TryNode node, ExecutionContext context) throws EvaluationException {
         List<Object> resources = new ArrayList<>();
         List<Throwable> suppressedExceptions = new ArrayList<>();
+        Object tryResult = null;
 
+        context.getScopeManager().enterScope();
         try {
             for (ResourceDeclaration resource : node.getResources()) {
                 Object value = evaluate(resource.getInitializer(), context);
@@ -1723,7 +1741,7 @@ public class ASTEvaluator {
                         node);
             }
 
-            return evaluate(node.getTryBlock(), context);
+            tryResult = evaluate(node.getTryBlock(), context);
         } catch (EvaluationException e) {
             Throwable actualException = e.getCause() != null ? e.getCause() : e;
 
@@ -1751,10 +1769,13 @@ public class ASTEvaluator {
                 Object resource = resources.get(i);
                 if (resource != null) {
                     try {
-                        if (resource instanceof AutoCloseable) {
+                        if (isDynamicClassInstance(resource, context)) {
+                            invokeMethodOnDynamicClass(resource, "close", new Object[0], context);
+                        } else if (resource instanceof AutoCloseable) {
                             ((AutoCloseable) resource).close();
                         } else {
                             Method closeMethod = resource.getClass().getMethod("close");
+                            closeMethod.setAccessible(true);
                             closeMethod.invoke(resource);
                         }
                     } catch (Exception closeException) {
@@ -1763,9 +1784,36 @@ public class ASTEvaluator {
                 }
             }
 
+            context.getScopeManager().exitScope();
+
             if (node.getFinallyBlock() != null) {
                 evaluate(node.getFinallyBlock(), context);
             }
+        }
+
+        return tryResult;
+    }
+
+    private static boolean isDynamicClassInstance(Object obj, ExecutionContext context) {
+        if (obj == null)
+            return false;
+        String className = obj.getClass().getName();
+        int dot = className.lastIndexOf('.');
+        String simpleName = dot >= 0 ? className.substring(dot + 1) : className;
+        return context.hasCustomClass(simpleName);
+    }
+
+    private static Object invokeMethodOnDynamicClass(Object instance, String methodName,
+            Object[] args, ExecutionContext context) throws EvaluationException {
+        String className = instance.getClass().getName();
+        int dot = className.lastIndexOf('.');
+        String simpleName = dot >= 0 ? className.substring(dot + 1) : className;
+        try {
+            return MethodBodyExecutor.executeMethod(simpleName, methodName, instance, args);
+        } catch (Exception e) {
+            throw new EvaluationException(
+                    "Failed to execute dynamic class method " + simpleName + "." + methodName + ": " + e.getMessage(),
+                    ErrorCode.EVAL_EXCEPTION_THROWN, e, null);
         }
     }
 
@@ -1793,10 +1841,14 @@ public class ASTEvaluator {
                 continue;
             }
             Object caseValue = evaluate(caseNode.getValue(), context);
-            if (Objects.equals(value, caseValue)) {
+            if (switchValueEquals(value, caseValue)) {
                 Object result = null;
-                for (ASTNode stmt : caseNode.getStatements()) {
-                    result = evaluate(stmt, context);
+                try {
+                    for (ASTNode stmt : caseNode.getStatements()) {
+                        result = evaluate(stmt, context);
+                    }
+                } catch (BreakException e) {
+                    break;
                 }
                 return result;
             }
@@ -1807,6 +1859,15 @@ public class ASTEvaluator {
         }
 
         return null;
+    }
+
+    private static boolean switchValueEquals(Object value, Object caseValue) {
+        if (value == null && caseValue == null) return true;
+        if (value == null || caseValue == null) return false;
+        if (value instanceof Number && caseValue instanceof Number) {
+            return ((Number) value).doubleValue() == ((Number) caseValue).doubleValue();
+        }
+        return Objects.equals(value, caseValue);
     }
 
     public static Object evaluateDelete(DeleteNode node, ExecutionContext context) throws EvaluationException {
@@ -1909,11 +1970,26 @@ public class ASTEvaluator {
     }
 
     public static Object evaluateBreak(BreakNode node, ExecutionContext context) {
+        if (node.isLabeled()) {
+            throw new LabeledBreakException(node.getLabel());
+        }
         throw new BreakException();
     }
 
     public static Object evaluateContinue(ContinueNode node, ExecutionContext context) {
         throw new ContinueException();
+    }
+
+    public static Object evaluateLabeledStatement(LabeledStatementNode node, ExecutionContext context)
+            throws EvaluationException {
+        try {
+            return evaluate(node.getStatement(), context);
+        } catch (LabeledBreakException e) {
+            if (node.getLabel().equals(e.getLabel())) {
+                return null;
+            }
+            throw e;
+        }
     }
 
     private static String formatValue(Object value) {

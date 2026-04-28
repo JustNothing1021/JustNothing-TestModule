@@ -28,6 +28,7 @@ import com.justnothing.javainterpreter.ast.nodes.ImportNode;
 import com.justnothing.javainterpreter.ast.nodes.InstanceofNode;
 import com.justnothing.javainterpreter.ast.nodes.InterpolatedStringNode;
 import com.justnothing.javainterpreter.ast.nodes.LambdaNode;
+import com.justnothing.javainterpreter.ast.nodes.LabeledStatementNode;
 import com.justnothing.javainterpreter.ast.nodes.LiteralNode;
 import com.justnothing.javainterpreter.ast.nodes.MapLiteralNode;
 import com.justnothing.javainterpreter.ast.nodes.MethodCallNode;
@@ -77,7 +78,6 @@ public class EvaluatorRegistry {
         return defaultInstance;
     }
 
-    @SuppressWarnings("unchecked")
     public <T extends ASTNode> void register(Class<T> nodeType, NodeEvaluator<T> evaluator) {
         evaluators.put(nodeType, evaluator);
     }
@@ -182,6 +182,7 @@ public class EvaluatorRegistry {
         register(ReturnNode.class, ASTEvaluator::evaluateReturn);
         register(BreakNode.class, ASTEvaluator::evaluateBreak);
         register(ContinueNode.class, ASTEvaluator::evaluateContinue);
+        register(LabeledStatementNode.class, ASTEvaluator::evaluateLabeledStatement);
         register(MethodReferenceNode.class, ASTEvaluator::evaluateMethodReference);
         register(TryNode.class, ASTEvaluator::evaluateTry);
         register(ThrowNode.class, ASTEvaluator::evaluateThrow);

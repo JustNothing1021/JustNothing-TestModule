@@ -1,6 +1,7 @@
 package com.justnothing.javainterpreter;
 
 import com.justnothing.javainterpreter.api.DefaultOutputHandler;
+import com.justnothing.javainterpreter.evaluator.MethodBodyExecutor;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -20,13 +21,10 @@ public class ControlFlowTest {
 
     private Object eval(String code) throws Exception {
         runner.getExecutionContext().clearVariables();
+        MethodBodyExecutor.clearAll();
         return runner.executeWithResult(code, outputHandler, outputHandler);
     }
 
-    private void evalNoResult(String code) throws Exception {
-        runner.getExecutionContext().clearVariables();
-        runner.execute(code, outputHandler, outputHandler);
-    }
 
     // ========== continue 测试 ==========
 

@@ -108,6 +108,13 @@ public class Parser {
         }
         return tokens.get(position);
     }
+
+    private Token peek(int offset) {
+        if (position + offset >= tokens.size()) {
+            return tokens.get(tokens.size() - 1);
+        }
+        return tokens.get(position + offset);
+    }
     
     @SuppressWarnings("unused")
        private Token peekNext() {
@@ -229,7 +236,9 @@ public class Parser {
             try {
                 return parseVariableDeclaration();
             } catch (ParseException e) {
-                if (e.getErrorCode() == ErrorCode.PARSE_CLASS_NOT_FOUND) {
+                if (e.getErrorCode() == ErrorCode.PARSE_CLASS_NOT_FOUND
+                        || (e.getErrorCode() == ErrorCode.PARSE_INVALID_SYNTAX
+                            && e.getMessage().contains("Expected variable name"))) {
                     restorePosition();
                 } else {
                     throw e;
@@ -238,6 +247,9 @@ public class Parser {
         }
         
         if (check(TokenType.IDENTIFIER)) {
+            if (checkNext(TokenType.OPERATOR_COLON)) {
+                return parseLabeledStatement();
+            }
             return parseExpressionStatement();
         }
         
@@ -772,15 +784,14 @@ public class Parser {
         Class<?> baseType;
         baseType = context.getClassFinder().findClassWithImports(baseTypeName, context.getClassLoader(), context.getImports());
         if (baseType == null) {
-            if (context.isClassDeclared(baseTypeName)) {
+            if (!context.isClassDeclared(baseTypeName)) {
                 baseType = Object.class;
             } else {
-                throw error("Class not found: " + baseTypeName, ErrorCode.PARSE_CLASS_NOT_FOUND);
+                baseType = Object.class;
             }
-            return new GenericType(baseType, typeArguments, arrayDepth, baseTypeName);
         }
-        
-        return new GenericType(baseType, typeArguments, arrayDepth);
+
+        return new GenericType(baseType, typeArguments, arrayDepth, baseTypeName);
     }
     
     /**
@@ -1061,8 +1072,8 @@ public class Parser {
             finallyBlock = parseStatement();
         }
         
-        if (catchClauses.isEmpty() && finallyBlock == null) {
-            throw error("Try statement must have at least one catch or finally clause");
+        if (catchClauses.isEmpty() && finallyBlock == null && resources.isEmpty()) {
+            throw error("Try statement must have at least one catch or finally clause (or use try-with-resources)");
         }
         
         return new TryNode(resources, tryBlock, catchClauses, finallyBlock, location);
@@ -1076,7 +1087,7 @@ public class Parser {
      */
     private ResourceDeclaration parseResourceDeclaration() throws ParseException {
         SourceLocation location = createLocation();
-        
+
         if (isTypeKeyword(peek().type())) {
             Class<?> type = parseType();
             String varName = consume(TokenType.IDENTIFIER, "Expected variable name").text();
@@ -1084,7 +1095,7 @@ public class Parser {
             ASTNode initializer = parseExpression();
             return new ResourceDeclaration(type, varName, initializer, location);
         }
-        
+
         if (check(TokenType.IDENTIFIER)) {
             int savedPos = position;
             try {
@@ -1098,8 +1109,24 @@ public class Parser {
             } catch (ParseException ignored) {
             }
             position = savedPos;
+
+            int savedPos2 = position;
+            try {
+                String possibleTypeName = peek().text();
+                if (peek(1) != null && peek(1).is(TokenType.IDENTIFIER)
+                        && peek(2) != null && peek(2).is(TokenType.OPERATOR_ASSIGN)) {
+                    advance();
+                    Class<?> type = resolveType(possibleTypeName);
+                    String varName = consume(TokenType.IDENTIFIER, "Expected variable name").text();
+                    consume(TokenType.OPERATOR_ASSIGN, "Expected '=' in resource declaration");
+                    ASTNode initializer = parseExpression();
+                    return new ResourceDeclaration(type, varName, initializer, location);
+                }
+            } catch (ParseException ignored) {
+            }
+            position = savedPos2;
         }
-        
+
         String varName = consume(TokenType.IDENTIFIER, "Expected resource variable name").text();
         return new ResourceDeclaration(varName, location);
     }
@@ -1263,12 +1290,20 @@ public class Parser {
                         }
                         classDecl.addMethod(method);
                     } else {
-                        FieldDeclarationNode field = parseFieldDeclaration(memberName, type, modifiers);
-                        for (AnnotationNode annotation : memberAnnotations) {
-                            field.addAnnotation(annotation);
-                        }
-                        classDecl.addField(field);
-                        context.addField(memberName);
+                        do {
+                            FieldDeclarationNode field = parseFieldDeclaration(memberName, type, modifiers);
+                            for (AnnotationNode annotation : memberAnnotations) {
+                                field.addAnnotation(annotation);
+                            }
+                            classDecl.addField(field);
+                            context.addField(memberName);
+                            if (match(TokenType.DELIMITER_COMMA)) {
+                                memberName = consume(TokenType.IDENTIFIER, "Expected field name after ','").text();
+                            } else {
+                                break;
+                            }
+                        } while (true);
+                        consume(TokenType.DELIMITER_SEMICOLON, "Expected ';' after field declaration");
                     }
                 } else {
                     throw error("Unexpected token in class body");
@@ -1401,6 +1436,16 @@ public class Parser {
                         }
                         interfaceDecl.addField(field);
                         context.addField(memberName);
+                        while (match(TokenType.DELIMITER_COMMA)) {
+                            memberName = consume(TokenType.IDENTIFIER, "Expected field name after ','").text();
+                            field = parseFieldDeclaration(memberName, type, modifiers);
+                            for (AnnotationNode annotation : memberAnnotations) {
+                                field.addAnnotation(annotation);
+                            }
+                            interfaceDecl.addField(field);
+                            context.addField(memberName);
+                        }
+                        consume(TokenType.DELIMITER_SEMICOLON, "Expected ';' after field declaration");
                     }
                 } else {
                     throw error("Unexpected token in interface body");
@@ -1854,14 +1899,12 @@ public class Parser {
      */
     private FieldDeclarationNode parseFieldDeclaration(String fieldName, ClassReferenceNode type, ClassModifiers modifiers) throws ParseException {
         SourceLocation location = createLocation();
-        
+
         ASTNode initialValue = null;
         if (match(TokenType.OPERATOR_ASSIGN)) {
             initialValue = parseExpression();
         }
-        
-        consume(TokenType.DELIMITER_SEMICOLON, "Expected ';' after field declaration");
-        
+
         return new FieldDeclarationNode(fieldName, type, initialValue, modifiers, location);
     }
     
@@ -1902,6 +1945,11 @@ public class Parser {
      */
     private ASTNode parseBreakStatement() throws ParseException {
         SourceLocation location = createLocation();
+        if (check(TokenType.IDENTIFIER)) {
+            String label = advance().text();
+            consume(TokenType.DELIMITER_SEMICOLON, "Expected semicolon after break");
+            return new BreakNode(label, location);
+        }
         consume(TokenType.DELIMITER_SEMICOLON, "Expected semicolon after break");
         return new BreakNode(location);
     }
@@ -1911,7 +1959,15 @@ public class Parser {
         consume(TokenType.DELIMITER_SEMICOLON, "Expected semicolon after continue");
         return new ContinueNode(location);
     }
-    
+
+    private ASTNode parseLabeledStatement() throws ParseException {
+        SourceLocation location = createLocation();
+        String label = consume(TokenType.IDENTIFIER, "Expected label identifier").text();
+        consume(TokenType.OPERATOR_COLON, "Expected ':' after label");
+        ASTNode statement = parseStatement();
+        return new LabeledStatementNode(label, statement, location);
+    }
+
     /**
      * 解析代码块
      */
@@ -2561,6 +2617,10 @@ public class Parser {
         if (match(TokenType.KEYWORD_SUPER)) {
             return createVariableNode("super", createLocation());
         }
+
+        if (match(TokenType.KEYWORD_TRY)) {
+            return parseTryStatement();
+        }
         
         if (check(TokenType.KEYWORD_INT) || check(TokenType.KEYWORD_LONG) ||
             check(TokenType.KEYWORD_FLOAT) || check(TokenType.KEYWORD_DOUBLE) ||
@@ -2908,12 +2968,20 @@ public class Parser {
                         }
                         classDecl.addMethod(method);
                     } else {
-                        FieldDeclarationNode field = parseFieldDeclaration(memberName, type, modifiers);
-                        for (AnnotationNode annotation : memberAnnotations) {
-                            field.addAnnotation(annotation);
-                        }
-                        classDecl.addField(field);
-                        context.addField(memberName);
+                        do {
+                            FieldDeclarationNode field = parseFieldDeclaration(memberName, type, modifiers);
+                            for (AnnotationNode annotation : memberAnnotations) {
+                                field.addAnnotation(annotation);
+                            }
+                            classDecl.addField(field);
+                            context.addField(memberName);
+                            if (match(TokenType.DELIMITER_COMMA)) {
+                                memberName = consume(TokenType.IDENTIFIER, "Expected field name after ','").text();
+                            } else {
+                                break;
+                            }
+                        } while (true);
+                        consume(TokenType.DELIMITER_SEMICOLON, "Expected ';' after field declaration");
                     }
                 } else {
                     throw error("Unexpected token in anonymous class body");
@@ -2998,6 +3066,9 @@ public class Parser {
             } else if (target instanceof VariableNode) {
                 String varName = ((VariableNode) target).getName();
                 Class<?> clazz = context.getClassFinder().findClassWithImports(varName, context.getClassLoader(), context.getImports());
+                if (clazz == null && context.isClassDeclared(varName)) {
+                    clazz = Object.class;
+                }
                 if (clazz != null) {
                     return new LiteralNode(clazz, Class.class, location);
                 }
@@ -3044,6 +3115,9 @@ public class Parser {
             } else if (target instanceof VariableNode) {
                 String varName = ((VariableNode) target).getName();
                 Class<?> clazz = context.getClassFinder().findClassWithImports(varName, context.getClassLoader(), context.getImports());
+                if (clazz == null && context.isClassDeclared(varName)) {
+                    clazz = Object.class;
+                }
                 if (clazz != null) {
                     consume(TokenType.DELIMITER_LEFT_PAREN, "Expected '(' after 'new'");
                     List<ASTNode> arguments = new ArrayList<>();
@@ -3053,7 +3127,8 @@ public class Parser {
                         } while (match(TokenType.DELIMITER_COMMA));
                     }
                     consume(TokenType.DELIMITER_RIGHT_PAREN, "Expected ')' after constructor arguments");
-                    return new ConstructorCallNode(new GenericType(clazz), arguments, null, location);
+                    GenericType gt = new GenericType(clazz, java.util.Collections.emptyList(), 0, varName);
+                    return new ConstructorCallNode(gt, arguments, null, location);
                 }
             }
             throw new ParseException(
