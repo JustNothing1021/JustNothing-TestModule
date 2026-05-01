@@ -2,8 +2,9 @@ package com.justnothing.methodsclient.executor;
 
 
 import com.justnothing.methodsclient.StreamClient;
+import com.justnothing.methodsclient.model.ColoredSegment;
 import com.justnothing.testmodule.command.output.Colors;
-import com.justnothing.testmodule.protocol.interactive.InteractiveProtocol;
+import com.justnothing.testmodule.command.protocol.InteractiveProtocol;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
 import java.io.BufferedReader;

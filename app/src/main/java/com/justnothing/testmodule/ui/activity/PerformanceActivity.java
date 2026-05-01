@@ -1,0 +1,146 @@
+package com.justnothing.testmodule.ui.activity;
+
+import android.annotation.SuppressLint;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.justnothing.testmodule.R;
+import com.justnothing.testmodule.utils.logging.Logger;
+import com.justnothing.testmodule.utils.data.PerformanceMonitor;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+public class PerformanceActivity extends AppCompatActivity {
+    private static final Logger logger = Logger.getLoggerForName("PerformanceActivity");
+    private PerformanceMonitor monitor;
+    private StatsAdapter adapter;
+    private List<PerformanceMonitor.HookStats> statsList;
+    private Handler handler;
+    private Runnable updateRunnable;
+    private static final int REFRESH_INTERVAL = 3000;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_performance);
+
+        monitor = new PerformanceMonitor();
+        handler = new Handler(Looper.getMainLooper());
+
+        statsList = new ArrayList<>();
+        adapter = new StatsAdapter();
+
+        RecyclerView recyclerView = findViewById(R.id.stats_list);
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        recyclerView.setAdapter(adapter);
+
+        Button btnRefresh = findViewById(R.id.btn_refresh);
+        Button btnClear = findViewById(R.id.btn_clear);
+
+        btnRefresh.setOnClickListener(v -> {
+            refreshStats();
+            logger.info("刷新性能统计");
+        });
+
+        btnClear.setOnClickListener(v -> {
+            monitor.clearStats();
+            refreshStats();
+            logger.info("清除性能统计");
+        });
+
+        refreshStats();
+        startAutoUpdate();
+    }
+
+    private void startAutoUpdate() {
+        updateRunnable = new Runnable() {
+            @Override
+            public void run() {
+                refreshStats();
+                handler.postDelayed(this, REFRESH_INTERVAL);
+            }
+        };
+        handler.post(updateRunnable);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (handler != null && updateRunnable != null) {
+            handler.removeCallbacks(updateRunnable);
+        }
+    }
+
+    @SuppressLint("NotifyDataSetChanged")
+    private void refreshStats() {
+        Map<String, PerformanceMonitor.HookStats> stats = monitor.getAllStats();
+        statsList.clear();
+        statsList.addAll(stats.values());
+        adapter.notifyDataSetChanged();
+        String statDesc = getString(R.string.performance_monitor_stat_desc,
+                (monitor.isEnabled() ?
+                        getString(R.string.performance_monitor_stat_enabled) :
+                        getString(R.string.performance_monitor_stat_disabled)));
+        String hookDesc = getString(R.string.performance_hook_count, statsList.size());
+        String finalDesc = statDesc + getString(R.string.newline) + hookDesc;
+        TextView textStatus = findViewById(R.id.text_status);
+        textStatus.setText(finalDesc);
+
+    }
+
+    private class StatsAdapter extends RecyclerView.Adapter<StatsAdapter.ViewHolder> {
+        @NonNull
+        @Override
+        public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View view = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_performance_stat, parent, false);
+            return new ViewHolder(view);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+            PerformanceMonitor.HookStats stat = statsList.get(position);
+            holder.bind(stat);
+        }
+
+        @Override
+        public int getItemCount() {
+            return statsList.size();
+        }
+
+        class ViewHolder extends RecyclerView.ViewHolder {
+            TextView textName;
+            TextView textCallCount;
+            TextView textTotalTime;
+            TextView textAvgTime;
+
+            ViewHolder(View itemView) {
+                super(itemView);
+                textName = itemView.findViewById(R.id.text_stat_name);
+                textCallCount = itemView.findViewById(R.id.text_call_count);
+                textTotalTime = itemView.findViewById(R.id.text_total_time);
+                textAvgTime = itemView.findViewById(R.id.text_avg_time);
+            }
+
+            void bind(PerformanceMonitor.HookStats stat) {
+                textName.setText(stat.name);
+                textCallCount.setText(getString(R.string.performance_hook_call_cnt, stat.callCount));
+                textTotalTime.setText(getString(R.string.performance_hook_total_time, stat.totalTime));
+                textAvgTime.setText(getString(R.string.performance_hook_avg_time, stat.avgTime));
+            }
+        }
+    }
+}

@@ -3,11 +3,13 @@ package com.justnothing.testmodule.command.functions.threads;
 import static com.justnothing.testmodule.constants.CommandServer.CMD_THREADS_VER;
 
 
+import com.justnothing.testmodule.command.base.CommandRequest;
+import com.justnothing.testmodule.command.base.MainCommand;
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.functions.CommandBase;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandArgumentParser;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
+import com.justnothing.testmodule.command.handlers.threads.ThreadInfoRequestHandler;
 
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
@@ -16,10 +18,13 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
-public class ThreadsMain extends CommandBase {
+import com.justnothing.testmodule.command.base.RegisterCommand;
+
+@RegisterCommand("threads")
+public class ThreadsMain extends MainCommand<ThreadInfoRequest, ThreadInfoResult> {
 
     public ThreadsMain() {
-        super("Threads");
+        super("Threads", ThreadInfoResult.class);
     }
 
     @Override
@@ -71,12 +76,12 @@ public class ThreadsMain extends CommandBase {
     }
 
     @Override
-    public void runMain(CommandExecutor.CmdExecContext context) {
+    public ThreadInfoResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
         String[] args = context.args();
         
         if (args.length < 1) {
             context.println(getHelpText(), Colors.WHITE);
-            return;
+            return null;
         }
 
         String subCommand = args[0];
@@ -93,7 +98,20 @@ public class ThreadsMain extends CommandBase {
             };
         } catch (Exception e) {
             CommandExceptionHandler.handleException("threads", e, context, "执行threads命令失败");
+
+            if (shouldReturnStructuredData(context)) {
+                return createErrorResult("执行threads命令失败: " + e.getMessage());
+            }
         }
+
+        if (shouldReturnStructuredData(context)) {
+            ThreadInfoRequestHandler handler = new ThreadInfoRequestHandler();
+            ThreadInfoRequest request = new ThreadInfoRequest();
+            request.setRequestId(java.util.UUID.randomUUID().toString());
+            request.setDetailLevel("full");
+            return handler.handle(request);
+        }
+        return null;
     }
 
     private void handleList(String[] args, CommandExecutor.CmdExecContext ctx) {

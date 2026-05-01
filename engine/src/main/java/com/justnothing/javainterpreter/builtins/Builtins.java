@@ -110,7 +110,7 @@ public class Builtins {
             return outputHandler.readLine(prompt);
         });
         
-        // functions.put("readPassword", args -> {
+        // cli.put("readPassword", args -> {
         //     String prompt = args.isEmpty() ? "" : args.get(0).toString();
         //     return outputHandler.readPassword(prompt);
         // });

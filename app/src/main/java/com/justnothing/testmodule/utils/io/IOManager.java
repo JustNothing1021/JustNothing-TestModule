@@ -33,7 +33,7 @@ public class IOManager {
 
     private IOManager() {
         super();
-        logger.info("IOManager初始化完成");
+        // logger.info("IOManager初始化完成");
     }
 
 
@@ -92,7 +92,7 @@ public class IOManager {
             throw new IOException("文件过大: " + filePath + " (" + fileSize + " bytes, 最大允许: " + maxSize + " bytes)");
         }
 
-        logger.debug("开始读取文件: " + filePath + ", 大小: " + fileSize + " bytes, 最大行数: " + maxLines);
+        // logger.debug("开始读取文件: " + filePath + ", 大小: " + fileSize + " bytes, 最大行数: " + maxLines);
         
         byte[] bytes;
         if (maxLines > 0) {
@@ -109,7 +109,7 @@ public class IOManager {
             mgr.totalBytesRead.addAndGet(bytes.length);
             mgr.totalReadTime.addAndGet(duration);
 
-            logger.debug("文件读取完成: " + filePath + ", 耗时: " + duration + "ms, 字节数: " + bytes.length);
+            // logger.debug("文件读取完成: " + filePath + ", 耗时: " + duration + "ms, 字节数: " + bytes.length);
             
             if (duration > 1000) {
                 logger.warn("读取文件耗时过长: " + filePath + " (" + duration + "ms, " + bytes.length + " bytes)");
@@ -458,8 +458,8 @@ public class IOManager {
             public String toString() {
                 return String.format(
                         Locale.getDefault(),
-                        "ProcessResult[exitCode=%d, stdout=%s, stderr=%s, executionTime=%dms]",
-                        exitCode, stdout, stderr, executionTime);
+                        "ProcessResult[exitCode=%d, stdout=\"%s\", stderr=\"%s\", executionTime=%dms]",
+                        exitCode, stdout.replace("\n", "\\n"), stderr.replace("\n", "\\n"), executionTime);
             }
         }
 }

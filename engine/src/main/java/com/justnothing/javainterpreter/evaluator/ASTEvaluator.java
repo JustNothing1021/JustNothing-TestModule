@@ -26,14 +26,11 @@ import java.lang.reflect.Constructor;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Objects;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Consumer;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-
-import org.w3c.dom.Node;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -1357,12 +1354,12 @@ public class ASTEvaluator {
                 context.getScopeManager().enterScope();
                 try {
                     evaluate(node.getBody(), context);
-                } catch (ContinueException e) {
+                } catch (ContinueException ignored) {
                 } finally {
                     context.getScopeManager().exitScope();
                 }
             }
-        } catch (BreakException e) {
+        } catch (BreakException ignored) {
         } finally {
             context.decrementLoopDepth();
         }
@@ -1376,12 +1373,12 @@ public class ASTEvaluator {
                 context.getScopeManager().enterScope();
                 try {
                     evaluate(node.getBody(), context);
-                } catch (ContinueException e) {
+                } catch (ContinueException ignored) {
                 } finally {
                     context.getScopeManager().exitScope();
                 }
             } while (TypeUtils.toBoolean(evaluate(node.getCondition(), context)));
-        } catch (BreakException e) {
+        } catch (BreakException ignored) {
         } finally {
             context.decrementLoopDepth();
         }
@@ -1400,14 +1397,14 @@ public class ASTEvaluator {
             while (node.getCondition() == null || TypeUtils.toBoolean(evaluate(node.getCondition(), context))) {
                 try {
                     evaluate(node.getBody(), context);
-                } catch (ContinueException e) {
+                } catch (ContinueException ignored) {
                 }
 
                 if (node.getUpdate() != null) {
                     evaluate(node.getUpdate(), context);
                 }
             }
-        } catch (BreakException e) {
+        } catch (BreakException ignored) {
         } finally {
             context.decrementLoopDepth();
             context.getScopeManager().exitScope();
@@ -1435,7 +1432,7 @@ public class ASTEvaluator {
                     context.getScopeManager().setVariable(node.getItemName(), item, node);
                     try {
                         evaluate(node.getBody(), context);
-                    } catch (ContinueException e) {
+                    } catch (ContinueException ignored) {
                     }
                 }
             } else if (iterable != null && iterable.getClass().isArray()) {
@@ -1445,11 +1442,11 @@ public class ASTEvaluator {
                     context.getScopeManager().setVariable(node.getItemName(), item, node);
                     try {
                         evaluate(node.getBody(), context);
-                    } catch (ContinueException e) {
+                    } catch (ContinueException ignored) {
                     }
                 }
             }
-        } catch (BreakException e) {
+        } catch (BreakException ignored) {
         } finally {
             context.decrementLoopDepth();
             context.getScopeManager().exitScope();
@@ -1810,7 +1807,20 @@ public class ASTEvaluator {
         String simpleName = dot >= 0 ? className.substring(dot + 1) : className;
         try {
             return MethodBodyExecutor.executeMethod(simpleName, methodName, instance, args);
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
+            if (e.getMessage() != null && e.getMessage().startsWith("Method not found")) {
+                try {
+                    Method method = TypeUtils.findMethod(instance.getClass(), methodName, args);
+                    if (method != null) {
+                        method.setAccessible(true);
+                        return TypeUtils.invokeMethodSafely(method, instance, instance.getClass(), args, null);
+                    }
+                } catch (Exception ignored) {
+                }
+                throw new EvaluationException(
+                        "Method not found: " + simpleName + "." + methodName,
+                        ErrorCode.METHOD_NOT_FOUND, e, null);
+            }
             throw new EvaluationException(
                     "Failed to execute dynamic class method " + simpleName + "." + methodName + ": " + e.getMessage(),
                     ErrorCode.EVAL_EXCEPTION_THROWN, e, null);

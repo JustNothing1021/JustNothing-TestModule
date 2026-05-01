@@ -3,7 +3,8 @@ package com.justnothing.testmodule.command.functions.network;
 import static com.justnothing.testmodule.constants.CommandServer.CMD_NETWORK_VER;
 
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.base.MainCommand;
+import com.justnothing.testmodule.command.base.CommandRequest;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.io.IOManager;
@@ -20,10 +21,13 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-public class NetworkMain extends CommandBase {
+import com.justnothing.testmodule.command.base.RegisterCommand;
+
+@RegisterCommand("network")
+public class NetworkMain extends MainCommand<NetworkRequest, NetworkResult> {
 
     public NetworkMain() {
-        super("Network");
+        super("Network", NetworkResult.class);
     }
 
     @Override
@@ -89,12 +93,12 @@ public class NetworkMain extends CommandBase {
     }
 
     @Override
-    public void runMain(CommandExecutor.CmdExecContext context) {
+    public NetworkResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
         String[] args = context.args();
 
         if (args.length < 1) {
             context.println(getHelpText(), Colors.WHITE);
-            return;
+            return null;
         }
 
         String subCommand = args[0];
@@ -120,7 +124,17 @@ public class NetworkMain extends CommandBase {
             }
         } catch (Exception e) {
             CommandExceptionHandler.handleException("network", e, context, "执行 network 命令失败");
+
+            if (shouldReturnStructuredData(context)) {
+                return createErrorResult("执行network命令失败: " + e.getMessage());
+            }
         }
+
+        if (shouldReturnStructuredData(context)) {
+            NetworkResult result = new NetworkResult(java.util.UUID.randomUUID().toString());
+            return result;
+        }
+        return null;
     }
 
     private void handleIntercept(String[] args, CommandExecutor.CmdExecContext ctx) {

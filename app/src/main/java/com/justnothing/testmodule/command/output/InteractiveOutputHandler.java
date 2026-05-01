@@ -2,8 +2,8 @@ package com.justnothing.testmodule.command.output;
 
 import androidx.annotation.NonNull;
 
-import com.justnothing.testmodule.protocol.interactive.InteractiveProtocol;
-import com.justnothing.testmodule.protocol.json.JsonProtocol;
+import com.justnothing.testmodule.command.protocol.InteractiveProtocol;
+import com.justnothing.testmodule.command.protocol.JsonProtocol;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 

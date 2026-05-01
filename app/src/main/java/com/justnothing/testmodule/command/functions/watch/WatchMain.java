@@ -7,16 +7,20 @@ import java.util.HashMap;
 import java.util.Map;
 
 
+import com.justnothing.testmodule.command.base.MainCommand;
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.base.CommandRequest;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandArgumentParser;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 
-public class WatchMain extends CommandBase {
+import com.justnothing.testmodule.command.base.RegisterCommand;
+
+@RegisterCommand("watch")
+public class WatchMain extends MainCommand<WatchRequest, WatchResult> {
 
     public WatchMain() {
-        super("WatchMain");
+        super("Watch", WatchResult.class);
     }
 
     @Override
@@ -73,7 +77,7 @@ public class WatchMain extends CommandBase {
     }
 
     @Override
-    public void runMain(CommandExecutor.CmdExecContext context) {
+    public WatchResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
         String[] args = context.args();
         ClassLoader classLoader = context.classLoader();
         
@@ -82,7 +86,7 @@ public class WatchMain extends CommandBase {
         if (args.length < 1) {
             logger.warn("参数不足");
             context.println(getHelpText(), Colors.WHITE);
-            return;
+            return null;
         }
 
         String subCommand = args[0];
@@ -102,7 +106,17 @@ public class WatchMain extends CommandBase {
             }
         } catch (Exception e) {
             CommandExceptionHandler.handleException("watch", e, context, "执行watch命令失败");
+
+            if (shouldReturnStructuredData(context)) {
+                return createErrorResult("执行watch命令失败: " + e.getMessage());
+            }
         }
+
+        if (shouldReturnStructuredData(context)) {
+            WatchResult result = new WatchResult(java.util.UUID.randomUUID().toString());
+            return result;
+        }
+        return null;
     }
 
     private void handleAdd(String[] args, ClassLoader classLoader, WatchManager manager, CommandExecutor.CmdExecContext context) {

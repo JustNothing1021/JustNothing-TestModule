@@ -3,6 +3,7 @@ package com.justnothing.testmodule.utils.sandbox;
 import android.os.StrictMode;
 
 import com.justnothing.javainterpreter.security.SandboxConfig;
+import com.justnothing.testmodule.command.protocol.InteractiveProtocol;
 import com.justnothing.testmodule.utils.logging.Logger;
 
 import org.jetbrains.annotations.NotNull;
@@ -109,7 +110,7 @@ public final class BlockGuardSandbox {
             "android.net.LocalSocket",
             "android.net.LocalSocketAddress",
             "android.net.LocalSocketImpl",
-            com.justnothing.testmodule.protocol.interactive.InteractiveProtocol.class.getName(),
+            InteractiveProtocol.class.getName(),
             com.justnothing.testmodule.service.handler.SocketClientHandler.class.getName()
     );
 

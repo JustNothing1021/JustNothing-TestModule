@@ -421,8 +421,20 @@ public class DynamicClassGenerator {
      * 添加方法。
      */
     private void addMethods(ClassWriter cw, ClassDeclarationNode classDecl, String className) {
+        Class<?> parentClass = resolveParentClass(classDecl);
         for (var methodDecl : classDecl.getMethods()) {
-            methodGenerator.addMethod(cw, methodDecl, className, classDecl.isInterface());
+            methodGenerator.addMethod(cw, methodDecl, className, classDecl.isInterface(), parentClass);
+        }
+    }
+
+    private Class<?> resolveParentClass(ClassDeclarationNode classDecl) {
+        if (classDecl.getSuperClass() == null) return null;
+        String superName = classDecl.getSuperClass().getOriginalTypeName();
+        if (superName == null || superName.equals("java.lang.Object")) return null;
+        try {
+            return ClassResolver.findClassWithImports(superName, classLoader, context.getImports());
+        } catch (Exception e) {
+            return null;
         }
     }
     

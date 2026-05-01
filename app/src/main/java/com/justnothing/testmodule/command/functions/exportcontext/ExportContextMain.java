@@ -11,9 +11,11 @@ import android.os.Build;
 import android.text.TextUtils;
 
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.base.MainCommand;
+import com.justnothing.testmodule.command.base.CommandRequest;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
+import com.justnothing.testmodule.command.handlers.exportcontext.ExportContextRequestHandler;
 import com.justnothing.xtchttplib.ContextManager;
 import com.xtc.sync.elt;
 import com.xtc.sync.byw;
@@ -22,10 +24,13 @@ import java.lang.reflect.Method;
 import java.net.NetworkInterface;
 import java.util.Locale;
 
-public class ExportContextMain extends CommandBase {
+import com.justnothing.testmodule.command.base.RegisterCommand;
+
+@RegisterCommand("export-context")
+public class ExportContextMain extends MainCommand<CommandRequest, ExportContextResult> {
 
     public ExportContextMain() {
-        super("ExportContextExecutor");
+        super("ExportContext", ExportContextResult.class);
     }
 
     private static final String CONTENT_URI = "content://com.xtc.initservice/item";
@@ -48,14 +53,14 @@ public class ExportContextMain extends CommandBase {
     }
 
     @Override
-    public void runMain(CommandExecutor.CmdExecContext context) {
+    public ExportContextResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
         logger.debug("执行export-context命令");
         
         Context appContext = getApplicationContext();
         if (appContext == null) {
             logger.error("无法获取应用上下文");
             context.println("错误: 无法获取应用上下文", Colors.RED);
-            return;
+            return null;
         }
 
         try {
@@ -141,7 +146,19 @@ public class ExportContextMain extends CommandBase {
         } catch (Exception e) {
             logger.error("导出设备上下文信息失败", e);
             CommandExceptionHandler.handleException("export-context", e, context, "导出设备上下文信息失败");
+
+            if (shouldReturnStructuredData(context)) {
+                return createErrorResult("导出上下文失败: " + e.getMessage());
+            }
         }
+
+        if (shouldReturnStructuredData(context)) {
+            ExportContextRequestHandler handler = new ExportContextRequestHandler();
+            ExportContextRequest request = new ExportContextRequest();
+            request.setRequestId(java.util.UUID.randomUUID().toString());
+            return handler.handle(request);
+        }
+        return null;
     }
 
     private Context getApplicationContext() {

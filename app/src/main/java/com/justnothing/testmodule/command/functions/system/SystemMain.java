@@ -8,8 +8,11 @@ import android.content.Context;
 import android.os.Build;
 
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.base.CommandRequest;
+import com.justnothing.testmodule.command.base.MainCommand;
 import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.functions.script.SystemInfoRequest;
+import com.justnothing.testmodule.command.handlers.system.SystemInfoRequestHandler;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -17,10 +20,13 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.Locale;
 
-public class SystemMain extends CommandBase {
+import com.justnothing.testmodule.command.base.RegisterCommand;
+
+@RegisterCommand("system")
+public class SystemMain extends MainCommand<SystemInfoRequest, SystemInfoResult> {
 
     public SystemMain() {
-        super("System");
+        super("System", SystemInfoResult.class);
     }
 
     @Override
@@ -49,7 +55,7 @@ public class SystemMain extends CommandBase {
     }
 
     @Override
-    public void runMain(CommandExecutor.CmdExecContext context) {
+    public SystemInfoResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
         String[] args = context.args();
         
         boolean showCpu = false;
@@ -165,11 +171,26 @@ public class SystemMain extends CommandBase {
             }
             
             logger.info("系统信息查询完成");
-            
+
         } catch (Exception e) {
             logger.error("获取系统信息失败", e);
             context.println("错误: " + e.getMessage(), Colors.RED);
+
+            if (context.isGui() || context.isAgent()) {
+                return createErrorResult("获取系统信息失败: " + e.getMessage());
+            }
+            return null;
         }
+
+        // GUI/Agent模式：返回结构化数据
+        if (context.isGui() || context.isAgent()) {
+            SystemInfoRequestHandler handler = new SystemInfoRequestHandler();
+            SystemInfoRequest request = new SystemInfoRequest();
+            request.setRequestId(java.util.UUID.randomUUID().toString());
+            return handler.handle(request);
+        }
+
+        return null;
     }
     
     private void printInfoLine(CommandExecutor.CmdExecContext context, String label, String value) {

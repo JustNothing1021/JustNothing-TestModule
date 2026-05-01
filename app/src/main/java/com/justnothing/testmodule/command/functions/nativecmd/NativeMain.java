@@ -2,8 +2,9 @@ package com.justnothing.testmodule.command.functions.nativecmd;
 
 import static com.justnothing.testmodule.constants.CommandServer.CMD_NATIVE_VER;
 
+import com.justnothing.testmodule.command.base.MainCommand;
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.base.CommandRequest;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
@@ -22,10 +23,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class NativeMain extends CommandBase {
+import com.justnothing.testmodule.command.base.RegisterCommand;
+
+@RegisterCommand("native")
+public class NativeMain extends MainCommand<NativeRequest, NativeResult> {
 
     public NativeMain() {
-        super("Native");
+        super("Native", NativeResult.class);
     }
 
     @Override
@@ -38,7 +42,7 @@ public class NativeMain extends CommandBase {
                 子命令:
                     list [pattern]                          - 列出已加载的native库
                     info <lib_name>                         - 查看native库的详细信息
-                    functions <class_name>                  - 列出类的native方法
+                    cli <class_name>                  - 列出类的native方法
                     symbols <lib_name>                      - 查看库的符号表
                     memory                                  - 查看native内存使用情况
                     heap                                    - 查看native堆内存
@@ -54,7 +58,7 @@ public class NativeMain extends CommandBase {
                     native list
                     native list libart.so
                     native info libc.so
-                    native functions java.lang.System
+                    native cli java.lang.System
                     native symbols libc.so
                     native memory
                     native heap
@@ -70,12 +74,12 @@ public class NativeMain extends CommandBase {
     }
 
     @Override
-    public void runMain(CommandExecutor.CmdExecContext context) {
+    public NativeResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
         String[] args = context.args();
         
         if (args.length < 1) {
             context.println(getHelpText(), Colors.WHITE);
-            return;
+            return null;
         }
 
         String subcmd = args[0];
@@ -97,7 +101,7 @@ public class NativeMain extends CommandBase {
         switch (subcmd) {
             case "list" -> handleList(args, verbose, context);
             case "info" -> handleInfo(args, verbose, context);
-            case "functions" -> handleFunctions(args, verbose, context);
+            case "cli" -> handleFunctions(args, verbose, context);
             case "symbols" -> handleSymbols(args, context);
             case "memory" -> handleMemory(context);
             case "heap" -> handleHeap(verbose, context);
@@ -109,6 +113,12 @@ public class NativeMain extends CommandBase {
                 context.println(getHelpText(), Colors.WHITE);
             }
         }
+
+        if (shouldReturnStructuredData(context)) {
+            NativeResult result = new NativeResult(java.util.UUID.randomUUID().toString());
+            return result;
+        }
+        return null;
     }
     
     private void handleList(String[] args, boolean verbose, CommandExecutor.CmdExecContext context) {
@@ -118,7 +128,7 @@ public class NativeMain extends CommandBase {
             List<String> libraries = getLoadedLibraries();
             
             context.print("已加载的Native库: ", Colors.CYAN);
-            context.println(String.valueOf(libraries.size()) + " 个", Colors.YELLOW);
+            context.println(libraries.size() + " 个", Colors.YELLOW);
             context.println("", Colors.WHITE);
             
             for (String lib : libraries) {
@@ -223,7 +233,7 @@ public class NativeMain extends CommandBase {
             }
             
         } catch (Exception e) {
-            CommandExceptionHandler.handleException("native functions", e, context, "获取native方法失败");
+            CommandExceptionHandler.handleException("native cli", e, context, "获取native方法失败");
         }
     }
 

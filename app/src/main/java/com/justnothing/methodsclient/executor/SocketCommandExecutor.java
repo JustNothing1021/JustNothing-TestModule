@@ -1,9 +1,10 @@
 package com.justnothing.methodsclient.executor;
 
+import com.justnothing.methodsclient.model.ColoredSegment;
 import com.justnothing.methodsclient.monitor.ClientPortManager;
 import com.justnothing.methodsclient.StreamClient;
 import com.justnothing.methodsclient.monitor.PerformanceMonitor;
-import com.justnothing.testmodule.protocol.interactive.InteractiveProtocol;
+import com.justnothing.testmodule.command.protocol.InteractiveProtocol;
 import com.justnothing.testmodule.command.output.ClientRequirements;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 

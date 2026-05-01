@@ -1,14 +1,19 @@
 package com.justnothing.testmodule.command.functions.examples;
 
+import com.justnothing.testmodule.command.base.MainCommand;
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.base.CommandResult;
+import com.justnothing.testmodule.command.base.CommandRequest;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.output.ICommandOutputHandler;
 
-public class OutputExampleMain extends CommandBase {
+import com.justnothing.testmodule.command.base.RegisterCommand;
+
+@RegisterCommand("output_test")
+public class OutputExampleMain extends MainCommand<CommandRequest, CommandResult> {
 
     public OutputExampleMain() {
-        super("OutputExample");
+        super("OutputExample", CommandResult.class);
     }
 
     @Override
@@ -26,7 +31,7 @@ public class OutputExampleMain extends CommandBase {
     }
 
     @Override
-    public void runMain(CommandExecutor.CmdExecContext context) {
+    public CommandResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
         ICommandOutputHandler output = context.output();
 
         output.println("===== 输出处理器测试 =====");
@@ -143,5 +148,9 @@ public class OutputExampleMain extends CommandBase {
 
         output.println("");
         output.println("===== 测试完成 =====");
+        if (shouldReturnStructuredData(context)) {
+            return createSuccessResult("输出测试命令执行完成");
+        }
+        return null;
     }
 }

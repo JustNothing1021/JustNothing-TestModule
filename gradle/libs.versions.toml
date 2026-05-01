@@ -20,6 +20,7 @@ appcompat = "1.6.1"
 material = "1.10.0"
 constraintlayout = "2.1.4"
 materialVersion = "1.11.0"
+mpandroidchart = "v3.1.0"
 navigationFragment = "2.6.0"
 navigationFragmentVersion = "2.7.7"
 navigationUi = "2.6.0"
@@ -54,6 +55,7 @@ appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "a
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
 material-v1110 = { module = "com.google.android.material:material", version.ref = "materialVersion" }
+mpandroidchart = { module = "com.github.PhilJay:MPAndroidChart", version.ref = "mpandroidchart" }
 navigation-fragment = { group = "androidx.navigation", name = "navigation-fragment", version.ref = "navigationFragment" }
 navigation-ui = { group = "androidx.navigation", name = "navigation-ui", version.ref = "navigationUi" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompatVersion" }

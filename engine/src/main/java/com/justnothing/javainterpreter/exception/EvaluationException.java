@@ -1,6 +1,8 @@
 package com.justnothing.javainterpreter.exception;
 
 import com.justnothing.javainterpreter.ast.ASTNode;
+
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -16,13 +18,13 @@ public class EvaluationException extends ScriptException {
     private final ASTNode node;
 
     public EvaluationException(String message, ErrorCode errorCode, ASTNode node) {
-        super(message, node.getLocation(), errorCode);
+        super(message, node != null ? node.getLocation() : null, errorCode);
         this.node = node;
     }
 
 
-    public EvaluationException(String message, ErrorCode errorCode, Throwable cause, ASTNode node) {
-        super(message, node.getLocation(), errorCode, cause);
+    public EvaluationException(String message, ErrorCode errorCode, @NotNull Throwable cause, ASTNode node) {
+        super(message, node != null ? node.getLocation() : null, errorCode, cause);
         this.node = node;
     }
 

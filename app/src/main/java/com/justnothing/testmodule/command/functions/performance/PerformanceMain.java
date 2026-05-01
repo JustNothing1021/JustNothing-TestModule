@@ -5,7 +5,8 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_PERFORMANCE
 import androidx.annotation.NonNull;
 
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.base.MainCommand;
+import com.justnothing.testmodule.command.base.CommandRequest;
 import com.justnothing.testmodule.command.functions.intercept.PerformanceInterceptTask;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
@@ -38,7 +39,10 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class PerformanceMain extends CommandBase {
+import com.justnothing.testmodule.command.base.RegisterCommand;
+
+@RegisterCommand("performance")
+public class PerformanceMain extends MainCommand<PerformanceRequest, PerformanceResult> {
     private static final Logger staticLogger = Logger.getLoggerForName("Performance");
     private static final Map<Integer, SimpleSampler> samplers = new ConcurrentHashMap<>();
     private static final Map<Integer, SimpleSampleData> sampleDataMap = new ConcurrentHashMap<>();
@@ -67,7 +71,7 @@ public class PerformanceMain extends CommandBase {
     }
 
     public PerformanceMain() {
-        super("Performance");
+        super("Performance", PerformanceResult.class);
     }
 
     @Override
@@ -153,13 +157,13 @@ public class PerformanceMain extends CommandBase {
     }
 
     @Override
-    public void runMain(CommandExecutor.CmdExecContext context) {
+    public PerformanceResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
         this.execContext = context;
         String[] args = context.args();
         
         if (args.length < 1) {
             context.println(getHelpText(), Colors.WHITE);
-            return;
+            return null;
         }
 
         String subCommand = args[0];
@@ -187,6 +191,12 @@ public class PerformanceMain extends CommandBase {
         } finally {
             this.execContext = null;
         }
+
+        if (shouldReturnStructuredData(context)) {
+            PerformanceResult result = new PerformanceResult(java.util.UUID.randomUUID().toString());
+            return result;
+        }
+        return null;
     }
 
     private void handleSample(String[] args) throws JSONException {

@@ -13,7 +13,6 @@ import com.justnothing.testmodule.command.output.ICommandOutputHandler;
 import com.justnothing.testmodule.command.output.HookOutputHandler;
 import com.justnothing.testmodule.hooks.HookAPI;
 import com.justnothing.testmodule.hooks.HookEntry;
-import com.justnothing.testmodule.protocol.json.response.HookAddResult;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
 import com.justnothing.testmodule.utils.data.DataBridge;
 import com.justnothing.testmodule.utils.io.IOManager;

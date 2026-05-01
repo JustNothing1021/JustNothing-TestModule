@@ -18,6 +18,7 @@ import com.justnothing.javainterpreter.lexer.Lexer;
 import com.justnothing.javainterpreter.parser.ParseContext;
 import com.justnothing.javainterpreter.parser.Parser;
 import com.justnothing.javainterpreter.preprocessor.Preprocessor;
+import com.justnothing.javainterpreter.preprocessor.PreprocessorException;
 
 public class REPL {
     
@@ -259,6 +260,8 @@ public class REPL {
                 System.out.println(e.getNode().formatString());
             }
             e.printStackTrace();
+        } catch (PreprocessorException e) {
+            System.out.println("预处理器错误: " + e.getMessage());
         }
     }
 

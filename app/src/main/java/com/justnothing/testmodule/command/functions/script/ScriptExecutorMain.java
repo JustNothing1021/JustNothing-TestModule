@@ -4,8 +4,9 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_SCRIPT_VER;
 
 
 import com.justnothing.javainterpreter.evaluator.ExecutionContext;
+import com.justnothing.testmodule.command.base.MainCommand;
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.base.CommandRequest;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
@@ -24,9 +25,10 @@ import com.justnothing.javainterpreter.evaluator.DynamicClassGenerator;
 
 import java.io.File;
 import java.lang.reflect.Array;
-import java.util.Map;
 import java.util.Date;
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Locale;
@@ -37,7 +39,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class ScriptExecutorMain extends CommandBase {
+import com.justnothing.testmodule.command.base.RegisterCommand;
+
+@RegisterCommand("script")
+public class ScriptExecutorMain extends MainCommand<ScriptRequest, ScriptResult> {
 
     private static final ConcurrentHashMap<ClassLoader, ScriptRunner>
             scriptRunners = new ConcurrentHashMap<>();
@@ -52,8 +57,13 @@ public class ScriptExecutorMain extends CommandBase {
 
     private final String commandName;
 
+    public ScriptExecutorMain() {
+        super("script", ScriptResult.class);
+        this.commandName = "script";
+    }
+
     public ScriptExecutorMain(String commandName) {
-        super("ScriptExecutor");
+        super("ScriptExecutor", ScriptResult.class);
         this.commandName = commandName;
     }
 
@@ -388,7 +398,7 @@ public class ScriptExecutorMain extends CommandBase {
     }
 
     @Override
-    public void runMain(CommandExecutor.CmdExecContext context) {
+    public ScriptResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
         String cmdName = context.cmdName();
 
         switch (cmdName) {
@@ -400,15 +410,35 @@ public class ScriptExecutorMain extends CommandBase {
                 String[] args = context.args();
                 if (args.length == 0) {
                     context.println(getHelpText(), Colors.WHITE);
-                    return;
+                    if (shouldReturnStructuredData(context)) {
+                        return createErrorResult("参数不足，需要指定子命令");
+                    }
+                    return null;
                 }
                 try {
                     handleScriptManagerCommand(context);
                 } catch (Exception e) {
                     CommandExceptionHandler.handleException("script " + args[0], e, context, "执行script命令失败");
+                    if (shouldReturnStructuredData(context)) {
+                        return createErrorResult("执行script命令失败: " + e.getMessage());
+                    }
                 }
             }
         }
+        if (shouldReturnStructuredData(context)) {
+            ScriptResult scriptResult = new ScriptResult(java.util.UUID.randomUUID().toString());
+            scriptResult.setSubCommand(cmdName);
+            Map<String, Object> vars = getScriptExecutor(context.classLoader()).getAllVariablesAsObject();
+            if (vars != null && !vars.isEmpty()) {
+                List<ScriptResult.VariableInfo> varList = new java.util.ArrayList<>();
+                for (Map.Entry<String, Object> entry : vars.entrySet()) {
+                    varList.add(new ScriptResult.VariableInfo(entry.getKey(), entry.getValue()));
+                }
+                scriptResult.setVariables(varList);
+            }
+            return scriptResult;
+        }
+        return null;
     }
 
     private void executeScriptCode(CommandExecutor.CmdExecContext context) {

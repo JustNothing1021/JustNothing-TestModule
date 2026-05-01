@@ -12,7 +12,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.lang.reflect.Method;
 
-// AI写的，用于异步执行chmod操作
 // 其实感觉有点拆东墙补西墙。。。
 public class AsyncChmodExecutor extends Logger {
     private static final long SYNC_TIMEOUT_MS = 10000;

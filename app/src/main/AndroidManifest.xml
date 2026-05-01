@@ -26,7 +26,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.JustNothing">
         <activity
-            android:name=".ui.menu.WelcomeActivity"
+            android:name=".ui.activity.WelcomeActivity"
             android:exported="true"
             android:theme="@style/Theme.JustNothing">
             <intent-filter>
@@ -35,136 +35,136 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".ui.menu.HttpConfigActivity"
+            android:name=".ui.activity.HttpConfigActivity"
             android:exported="false"
             android:taskAffinity=""
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.menu.HookConfigActivity"
+            android:name=".ui.activity.HookConfigActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.menu.LogViewerActivity"
+            android:name=".ui.activity.LogViewerActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.menu.ScriptManagerActivity"
+            android:name=".ui.activity.ScriptManagerActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.menu.ModuleStatusActivity"
+            android:name=".ui.activity.ModuleStatusActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.menu.PerformanceActivity"
+            android:name=".ui.activity.PerformanceActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.menu.DataExportActivity"
+            android:name=".ui.activity.DataExportActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.menu.SettingsActivity"
+            android:name=".ui.activity.SettingsActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.menu.AboutActivity"
+            android:name=".ui.activity.AboutActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.menu.DidYouKnowActivity"
+            android:name=".ui.activity.DidYouKnowActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.menu.SystemAnalysisActivity"
+            android:name=".ui.activity.SystemAnalysisActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.analysis.classanalysis.ClassAnalysisActivity"
+            android:name=".ui.activity.analysis.classanalysis.ClassAnalysisActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.analysis.classanalysis.ClassQueryActivity"
+            android:name=".ui.activity.analysis.classanalysis.ClassQueryActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.analysis.classanalysis.ClassBrowserActivity"
+            android:name=".ui.activity.classanalysis.ClassBrowserActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.analysis.classanalysis.ConstructorDetailActivity"
+            android:name=".ui.activity.analysis.classanalysis.ConstructorDetailActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.analysis.classanalysis.MethodDetailActivity"
+            android:name=".ui.activity.analysis.classanalysis.MethodDetailActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.analysis.classanalysis.FieldDetailActivity"
+            android:name=".ui.activity.analysis.classanalysis.FieldDetailActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.analysis.classanalysis.ClassGraphActivity"
+            android:name=".ui.activity.analysis.classanalysis.ClassGraphActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.analysis.classanalysis.ClassDetailActivity"
+            android:name=".ui.activity.analysis.classanalysis.ClassDetailActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.analysis.classanalysis.FieldViewActivity"
+            android:name=".ui.activity.analysis.classanalysis.FieldViewActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.analysis.classanalysis.MethodInvokeActivity"
+            android:name=".ui.activity.analysis.classanalysis.MethodInvokeActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.analysis.memory.MemoryAnalysisActivity"
+            android:name=".ui.activity.analysis.memory.MemoryAnalysisActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.analysis.memory.MemoryTrendActivity"
+            android:name=".ui.activity.analysis.memory.MemoryTrendActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.analysis.hook.HookManagerActivity"
+            android:name=".ui.activity.analysis.hook.HookManagerActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.analysis.hook.HookEditorActivity"
+            android:name=".ui.activity.analysis.hook.HookEditorActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.analysis.hook.HookDetailActivity"
+            android:name=".ui.activity.analysis.hook.HookDetailActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.analysis.thread.ThreadAnalysisActivity"
+            android:name=".ui.activity.analysis.thread.ThreadAnalysisActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.analysis.thread.ThreadDetailActivity"
+            android:name=".ui.activity.analysis.thread.ThreadDetailActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.analysis.packages.PackagesAnalysisActivity"
+            android:name=".ui.activity.analysis.packages.PackagesAnalysisActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.analysis.exportcontext.ExportContextAnalysisActivity"
+            android:name=".ui.activity.analysis.exportcontext.ExportContextAnalysisActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.analysis.systeminfo.SystemInfoAnalysisActivity"
+            android:name=".ui.activity.analysis.systeminfo.SystemInfoAnalysisActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.analysis.alias.AliasAnalysisActivity"
+            android:name=".ui.activity.analysis.alias.AliasAnalysisActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.analysis.network.NetworkAnalysisActivity"
+            android:name=".ui.activity.analysis.network.NetworkAnalysisActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <meta-data android:name="xposedmodule" android:value="true" />

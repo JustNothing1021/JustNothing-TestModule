@@ -2,14 +2,19 @@ package com.justnothing.testmodule.command.functions.help;
 
 import static com.justnothing.testmodule.constants.CommandServer.CMD_HELP_VER;
 
+import com.justnothing.testmodule.command.base.MainCommand;
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.base.CommandResult;
+import com.justnothing.testmodule.command.base.CommandRequest;
 import com.justnothing.testmodule.command.output.Colors;
 
-public class HelpMain extends CommandBase {
+import com.justnothing.testmodule.command.base.RegisterCommand;
+
+@RegisterCommand("help")
+public class HelpMain extends MainCommand<CommandRequest, CommandResult> {
 
     public HelpMain() {
-        super("help");
+        super("Help", CommandResult.class);
     }
 
     @Override
@@ -32,11 +37,11 @@ public class HelpMain extends CommandBase {
     }
 
     @Override
-    public void runMain(CommandExecutor.CmdExecContext context) {
+    public CommandResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
         String[] args = context.args();
         if (args.length > 0) {
             String commandName = args[0];
-            CommandBase command = CommandExecutor.getCommand(commandName);
+            MainCommand command = CommandExecutor.getCommand(commandName);
             if (command != null) {
                 context.println(command.getHelpText(), Colors.WHITE);
             } else {
@@ -50,5 +55,11 @@ public class HelpMain extends CommandBase {
         } else {
             context.println(CommandExecutor.getHelpText(), Colors.WHITE);
         }
+
+        if (shouldReturnStructuredData(context)) {
+            return createSuccessResult("帮助信息已显示");
+        }
+
+        return null;
     }
 }

@@ -17,7 +17,6 @@ import java.util.Map;
 import java.util.Objects;
 
 import de.robv.android.xposed.XC_MethodHook;
-import kotlin.jvm.internal.Reflection;
 
 public class NetworkInterceptor {
 

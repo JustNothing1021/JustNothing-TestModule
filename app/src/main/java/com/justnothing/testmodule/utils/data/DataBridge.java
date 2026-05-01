@@ -171,13 +171,13 @@ public class DataBridge {
                 mergedStatus.put(key, status.get(key));
             }
             
-            logger.debug("开始写入模块状态文件: " + file.getAbsolutePath());
+            // logger.debug("开始写入模块状态文件: " + file.getAbsolutePath());
             IOManager.writeFile(file.getAbsolutePath(), mergedStatus.toString());
-            logger.debug("模块状态文件写入完成");
+            // logger.debug("模块状态文件写入完成");
             
             cachedModuleStatus = mergedStatus;
             moduleStatusCacheTimestamp = System.currentTimeMillis();
-            logger.debug("模块状态已写入文件");
+            // logger.debug("模块状态已写入文件");
         } catch (Exception e) {
             reportLogError("写入模块状态失败: " + e.getMessage(), e);
         } finally {
@@ -194,7 +194,7 @@ public class DataBridge {
         try {
             File file = getModuleStatusFile();
             if (!forceRefresh && isCacheValid(file, moduleStatusCacheTimestamp, MODULE_STATUS_CACHE_TTL_MS) && cachedModuleStatus != null) {
-                logger.debug("从缓存读取模块状态");
+                // logger.debug("从缓存读取模块状态");
                 return new JSONObject(cachedModuleStatus.toString());
             }
             
@@ -205,9 +205,9 @@ public class DataBridge {
                 return cachedModuleStatus;
             }
             
-            logger.debug("开始读取模块状态文件: " + file.getAbsolutePath());
+            // logger.debug("开始读取模块状态文件: " + file.getAbsolutePath());
             String content = IOManager.readFile(file.getAbsolutePath());
-            logger.debug("模块状态文件读取完成");
+            // logger.debug("模块状态文件读取完成");
             if (content != null) {
                 cachedModuleStatus = new JSONObject(content);
                 moduleStatusCacheTimestamp = System.currentTimeMillis();
@@ -273,9 +273,9 @@ public class DataBridge {
                 return cachedPerformanceData;
             }
             
-            logger.debug("开始读取性能数据文件: " + file.getAbsolutePath());
+            // logger.debug("开始读取性能数据文件: " + file.getAbsolutePath());
             String content = IOManager.readFile(file.getAbsolutePath());
-            logger.debug("性能数据文件读取完成");
+            // logger.debug("性能数据文件读取完成");
             if (content != null) {
                 cachedPerformanceData = new JSONObject(content);
                 performanceDataCacheTimestamp = System.currentTimeMillis();
@@ -475,7 +475,7 @@ public class DataBridge {
             }
             
             long fileSize = file.length();
-            logger.info("读取日志文件: " + file.getAbsolutePath() + ", 大小: " + fileSize + " bytes");
+            // logger.info("读取日志文件: " + file.getAbsolutePath() + ", 大小: " + fileSize + " bytes");
             
             try {
                 String content = IOManager.readFile(file.getAbsolutePath(), StandardCharsets.UTF_8, -1, maxLines);
@@ -599,9 +599,9 @@ public class DataBridge {
                 return clientHookConfig;
             }
             
-            logger.debug("开始读取Hook配置文件: " + file.getAbsolutePath());
+            // logger.debug("开始读取Hook配置文件: " + file.getAbsolutePath());
             String content = IOManager.readFile(file.getAbsolutePath());
-            logger.debug("Hook配置文件读取完成");
+            // logger.debug("Hook配置文件读取完成");
             if (content != null && !content.trim().isEmpty()) {
                 try {
                     clientHookConfig = new JSONObject(content);
@@ -640,14 +640,14 @@ public class DataBridge {
                 DataDirectoryManager.setFilePermissions(file, "777", "服务端Hook配置文件");
             }
 
-            logger.debug("开始写入服务端Hook配置文件: " + file.getAbsolutePath());
+            // logger.debug("开始写入服务端Hook配置文件: " + file.getAbsolutePath());
             IOManager.writeFile(file.getAbsolutePath(), hookList.toString());
-            logger.debug("服务端Hook配置文件写入完成");
+            // logger.debug("服务端Hook配置文件写入完成");
 
             serverHookConfig = hookList;
             serverHookConfigCacheTimestamp = System.currentTimeMillis();
             ServerHookConfig.invalidateCache();
-            logger.info("服务端Hook配置已写入文件");
+            // logger.info("服务端Hook配置已写入文件");
         } catch (Exception e) {
             reportLogError("写入服务端Hook配置失败: " + e.getMessage(), e);
         } finally {
@@ -676,9 +676,9 @@ public class DataBridge {
                 return serverHookConfig;
             }
             
-            logger.debug("开始读取服务端Hook配置文件: " + file.getAbsolutePath());
+            // logger.debug("开始读取服务端Hook配置文件: " + file.getAbsolutePath());
             String content = IOManager.readFile(file.getAbsolutePath());
-            logger.debug("服务端Hook配置文件读取完成");
+            // logger.debug("服务端Hook配置文件读取完成");
             if (content != null) {
                 serverHookConfig = new JSONObject(content);
                 serverHookConfigCacheTimestamp = System.currentTimeMillis();

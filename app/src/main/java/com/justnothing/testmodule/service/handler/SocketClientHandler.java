@@ -3,14 +3,15 @@ package com.justnothing.testmodule.service.handler;
 import android.util.Log;
 
 import com.justnothing.testmodule.command.CommandExecutor;
+import com.justnothing.testmodule.command.CommandType;
 import com.justnothing.testmodule.command.output.ClientRequirements;
 import com.justnothing.testmodule.command.output.ICommandOutputHandler;
 import com.justnothing.testmodule.command.output.InteractiveOutputHandler;
-import com.justnothing.testmodule.protocol.interactive.InteractiveProtocol;
-import com.justnothing.testmodule.protocol.json.JsonProtocol;
-import com.justnothing.testmodule.protocol.json.handler.CommandRequestHandler;
-import com.justnothing.testmodule.protocol.json.request.CommandRequest;
-import com.justnothing.testmodule.protocol.json.response.CommandResult;
+import com.justnothing.testmodule.command.output.GuiOutputHandler;
+import com.justnothing.testmodule.command.protocol.InteractiveProtocol;
+import com.justnothing.testmodule.command.protocol.JsonProtocol;
+import com.justnothing.testmodule.command.base.CommandRequest;
+import com.justnothing.testmodule.command.base.CommandResult;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
@@ -473,10 +474,10 @@ public class SocketClientHandler {
         try {
             String jsonRequest = new String(data, StandardCharsets.UTF_8);
             logger.info("命令请求: " + jsonRequest);
-            
+
             // 解析请求
             CommandRequest request = JsonProtocol.parseRequest(jsonRequest);
-            
+
             if (request == null) {
                 CommandResult errorResult = new CommandResult();
                 errorResult.setError(new CommandResult.ErrorInfo(
@@ -485,9 +486,85 @@ public class SocketClientHandler {
                 sendCommandResponse(output, errorResult);
                 return;
             }
-            CommandResult result = CommandRequestHandler.handleRequest(request);
-            sendCommandResponse(output, result);
-            
+
+            // 使用GuiOutputHandler吞掉CLI输出，只保留result.toJson()
+            ICommandOutputHandler socketOutput = new ICommandOutputHandler() {
+                @Override
+                public void print(String text) {
+                    try {
+                        output.write(text.getBytes(StandardCharsets.UTF_8));
+                    } catch (IOException e) {
+                        logger.error("写入输出失败", e);
+                    }
+                }
+
+                @Override
+                public void println(String line) {
+                    print(line + "\n");
+                }
+
+                @Override
+                public void printf(String format, Object... args) {
+                    print(String.format(format, args));
+                }
+
+                @Override
+                public void printError(String text) {
+                    print(text);
+                }
+
+                @Override
+                public void printlnError(String text) {
+                    println(text);
+                }
+
+                @Override
+                public void printStackTrace(Throwable t) {
+                    println(t.toString());
+                }
+
+                @Override
+                public void flush() {
+                    try {
+                        output.flush();
+                    } catch (IOException ignored) {}
+                }
+
+                @Override
+                public void close() {
+                    try {
+                        output.close();
+                    } catch (IOException ignored) {}
+                }
+
+                @Override
+                public boolean isClosed() {
+                    return false;
+                }
+
+                @Override
+                public void clear() {}
+
+                @Override
+                public String getString() {
+                    return "";
+                }
+
+                @Override
+                public boolean isInteractive() {
+                    return false;
+                }
+            };
+
+            GuiOutputHandler guiOutput = new GuiOutputHandler(socketOutput);
+
+            commandExecutor.execute(
+                request,
+                guiOutput,
+                null,
+                CommandType.USER_INTERFACE
+            );
+
         } catch (Exception e) {
             logger.error("处理命令请求失败", e);
             CommandResult errorResult = new CommandResult();

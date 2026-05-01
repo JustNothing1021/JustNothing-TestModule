@@ -2,18 +2,23 @@ package com.justnothing.testmodule.command.functions.tests;
 
 import com.justnothing.javainterpreter.ScriptRunner;
 import com.justnothing.javainterpreter.api.DefaultOutputHandler;
+import com.justnothing.testmodule.command.base.MainCommand;
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.base.CommandResult;
+import com.justnothing.testmodule.command.base.CommandRequest;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.utils.reflect.DexClassDefiner;
 import com.justnothing.javainterpreter.evaluator.DynamicClassGenerator;
 
 import java.util.concurrent.atomic.AtomicReference;
 
-public class AnonClassTestMain extends CommandBase {
+import com.justnothing.testmodule.command.base.RegisterCommand;
+
+@RegisterCommand("anonclasstest")
+public class AnonClassTestMain extends MainCommand<CommandRequest, CommandResult> {
 
     public AnonClassTestMain() {
-        super("AnonClassTest");
+        super("AnonClassTest", CommandResult.class);
     }
 
     @Override
@@ -35,7 +40,7 @@ public class AnonClassTestMain extends CommandBase {
     }
 
     @Override
-    public void runMain(CommandExecutor.CmdExecContext context) {
+    public CommandResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
         String[] args = context.args();
         
         boolean quickMode = false;
@@ -52,6 +57,11 @@ public class AnonClassTestMain extends CommandBase {
         executeInIsolatedThread(context, "AnonClass", () ->
             testAnonymousClassInternal(context, finalQuickMode)
         );
+
+        if (shouldReturnStructuredData(context)) {
+            return createSuccessResult("匿名类测试命令执行完成");
+        }
+        return null;
     }
 
     private interface TestRunnable {
@@ -157,19 +167,21 @@ public class AnonClassTestMain extends CommandBase {
                 String causeName = cause.getClass().getSimpleName();
 
                 boolean isExpectedLimitation = isExpectedClassLimitation(cause, msg);
-
+                logger.warn("测试 #" + name + " 失败" + (isExpectedLimitation ? " (预期限制)" : ""), t);
                 if (isExpectedLimitation) {
                     String limitType = msg != null && msg.contains("final") ? "final类" :
                                       msg != null && msg.contains("private") ? "私有构造函数" : "平台限制";
                     context.println(" 跳过 (" + limitType + ", " + causeName + ")", Colors.YELLOW);
                     warned++;
                 } else {
+
                     context.println(" [" + causeName + "] " +
                         (msg != null && msg.length() > 100 ? msg.substring(0, 100) + "..." : msg), Colors.RED);
                     context.println("   完整异常: " + cause.getClass().getName(), Colors.RED);
                     if (cause.getStackTrace().length > 0) {
                         context.println("   位置: " + cause.getStackTrace()[0], Colors.GRAY);
                     }
+
                     
                     Throwable root = cause;
                     int depth = 0;

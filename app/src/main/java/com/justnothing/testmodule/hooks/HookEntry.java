@@ -27,6 +27,7 @@ import com.justnothing.testmodule.hooks.launcher.initservice.AppInfoProviderHook
 import com.justnothing.testmodule.hooks.launcher.initservice.SafeUtilHook;
 import com.justnothing.testmodule.hooks.tests.ShellServiceHook;
 import com.justnothing.testmodule.service.ShellService;
+import com.justnothing.testmodule.command.agent.InspectionAgentHook;
 import com.justnothing.testmodule.utils.data.DataBridge;
 import com.justnothing.testmodule.utils.data.BootMonitor;
 import com.justnothing.testmodule.utils.logging.Logger;
@@ -47,6 +48,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.IXposedHookZygoteInit;
@@ -77,6 +79,7 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
         packageHooks.add(new BehaviorUtilHook());
         packageHooks.add(new SystemExceptionManagerHook());
         packageHooks.add(new ShellServiceHook());
+        packageHooks.add(new InspectionAgentHook());
         packageHooks.add(new AMServiceHook());
         packageHooks.add(new BehaviorEventHook());
         packageHooks.add(new InputMethodControlHook());
@@ -252,30 +255,30 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
             return false;
         }
         
-        logger.info("执行服务端Hook数据文件保存操作");
+        // logger.info("执行服务端Hook数据文件保存操作");
         try {
-            logger.info("开始写入服务端Hook配置");
+            // logger.info("开始写入服务端Hook配置");
             writeHookConfig();
-            logger.info("服务端Hook配置写入完成");
+            // logger.info("服务端Hook配置写入完成");
         } catch (Exception e) {
-            logger.error("写入服务端Hook配置失败", e);
+            // logger.error("写入服务端Hook配置失败", e);
         }
         try {
-            logger.info("开始更新服务端Hook状态");
+            // logger.info("开始更新服务端Hook状态");
             updateHookStatus();
-            logger.info("服务端Hook状态更新完成");
+            // logger.info("服务端Hook状态更新完成");
         } catch (Exception e) {
-            logger.error("更新服务端Hook状态失败", e);
+            // logger.error("更新服务端Hook状态失败", e);
         }
-        logger.info("服务端Hook数据更新完成");
+        // logger.info("服务端Hook数据更新完成");
         return true;
     }
 
     private static void scheduleFileOperations() {
         ThreadPoolManager.schedule(() -> {
-            logger.info("延迟执行文件操作");
+            // logger.info("延迟执行文件操作");
             executeFileOperations();
-        }, FILE_OPERATION_DELAY, java.util.concurrent.TimeUnit.MILLISECONDS);
+        }, FILE_OPERATION_DELAY, TimeUnit.MILLISECONDS);
     }
 
 
@@ -371,7 +374,7 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
             classLoaders.put(param.packageName, param.classLoader);
             setupHooks();
             
-            logger.debug("线程池状态: " + ThreadPoolManager.getPoolStats());
+            // logger.debug("线程池状态: " + ThreadPoolManager.getPoolStats());
             
             long hookBeginLong = System.currentTimeMillis();
 

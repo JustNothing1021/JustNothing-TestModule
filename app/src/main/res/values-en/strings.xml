@@ -566,4 +566,5 @@
     <string name="analysis_alias_delete_message">Are you sure you want to delete alias "%1$s"?</string>
     <string name="analysis_alias_clear_title">Clear Aliases</string>
     <string name="analysis_alias_clear_message">Are you sure you want to clear all custom aliases? (Default aliases will be preserved)</string>
+    <string name="analysis_execution_failed_format">Execution failed: %s</string>
 </resources>

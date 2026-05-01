@@ -1,6 +1,9 @@
 package com.justnothing.testmodule.command.base;
 
-public interface Command {
-    void execute(CommandContext context);
+import com.justnothing.testmodule.command.CommandExecutor;
+
+public interface Command<Req extends CommandRequest, Res extends CommandResult> {
+
+    Res execute(CommandExecutor.CmdExecContext<? extends CommandRequest> context);
     String getHelpText();
 }

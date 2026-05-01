@@ -1,7 +1,6 @@
 package com.justnothing.testmodule.command.functions.classcmd;
 
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.CommandContext;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.reflect.ReflectionUtils;
 
@@ -11,12 +10,11 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
 
-public class ClassCommandContext extends CommandContext {
-    public ClassCommandContext(String[] args, ClassLoader classLoader, String targetPackage, 
-                               CommandExecutor.CmdExecContext context, Logger logger) {
-        super(args, classLoader, targetPackage, context, logger);
-    }
-
+public record ClassCommandContext<Req extends ClassCommandRequest>
+         (String[] args, ClassLoader classLoader,
+          String targetPackage,
+          CommandExecutor.CmdExecContext<Req> execContext,
+          Logger logger) {
 
     public String formatValue(Object value, boolean rawOutput) {
         if (value == null) {
@@ -43,8 +41,8 @@ public class ClassCommandContext extends CommandContext {
         return ReflectionUtils.convertParams(params, paramTypes);
     }
 
-     static Method findMethod(@NotNull Class<?> clazz, String methodName, Class<?>[] paramTypes,
-                              boolean staticOnly, boolean accessSuper, boolean accessInterfaces) {
+    public static Method findMethod(@NotNull Class<?> clazz, String methodName, Class<?>[] paramTypes,
+                             boolean staticOnly, boolean accessSuper, boolean accessInterfaces) {
         Class<?> currentClass = clazz;
 
         while (currentClass != null) {

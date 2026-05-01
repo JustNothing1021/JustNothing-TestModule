@@ -2,18 +2,23 @@ package com.justnothing.testmodule.command.functions.packages;
 
 import static com.justnothing.testmodule.constants.CommandServer.CMD_PACKAGES_VER;
 
+import com.justnothing.testmodule.command.base.CommandRequest;
+import com.justnothing.testmodule.command.base.MainCommand;
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.functions.CommandBase;
 import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.handlers.packages.PackagesRequestHandler;
 import com.justnothing.testmodule.utils.reflect.ClassLoaderManager;
 
 import java.util.List;
 import java.util.Locale;
 
-public class PackagesMain extends CommandBase {
+import com.justnothing.testmodule.command.base.RegisterCommand;
+
+@RegisterCommand("packages")
+public class PackagesMain extends MainCommand<PackagesRequest, PackagesResult> {
 
     public PackagesMain() {
-        super("packages");
+        super("Packages", PackagesResult.class);
     }
 
     @Override
@@ -33,7 +38,7 @@ public class PackagesMain extends CommandBase {
     }
 
     @Override
-    public void runMain(CommandExecutor.CmdExecContext context) {
+    public PackagesResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
         List<String> packages = ClassLoaderManager.getAllKnownPackages();
         context.println(String.format(Locale.getDefault(), "当前进程的ClassLoader (总计%d个):", packages.size()), Colors.CYAN);
         for (String pkg : packages) {
@@ -41,5 +46,15 @@ public class PackagesMain extends CommandBase {
         }
         context.println("");
         context.println("提示: 用 'methods -cl <package> <command>' 可以指定ClassLoader", Colors.GRAY);
+
+        // GUI/Agent模式：返回结构化数据
+        if (context.isGui() || context.isAgent()) {
+            PackagesRequestHandler handler = new PackagesRequestHandler();
+            PackagesRequest request = new PackagesRequest();
+            request.setRequestId(java.util.UUID.randomUUID().toString());
+            return handler.handle(request);
+        }
+
+        return null;
     }
 }

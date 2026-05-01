@@ -1,10 +1,20 @@
 package com.justnothing.testmodule.command.functions.classcmd;
 
+import com.justnothing.testmodule.command.functions.classcmd.impl.AnalyzeCommand;
+import com.justnothing.testmodule.command.functions.classcmd.impl.ConstructorCommand;
+import com.justnothing.testmodule.command.functions.classcmd.impl.FieldCommand;
+import com.justnothing.testmodule.command.functions.classcmd.impl.GraphCommand;
+import com.justnothing.testmodule.command.functions.classcmd.impl.InfoCommand;
+import com.justnothing.testmodule.command.functions.classcmd.impl.InvokeCommand;
+import com.justnothing.testmodule.command.functions.classcmd.impl.ListCommand;
+import com.justnothing.testmodule.command.functions.classcmd.impl.ReflectCommand;
+import com.justnothing.testmodule.command.functions.classcmd.impl.SearchCommand;
+
 import java.util.HashMap;
 import java.util.Map;
 
 public class ClassCommandRegistry {
-    private static final Map<String, ClassCommand> commands = new HashMap<>();
+    private static final Map<String, ClassCommand<?, ?>> commands = new HashMap<>();
 
     static {
         registerCommand("info", new InfoCommand());
@@ -18,11 +28,11 @@ public class ClassCommandRegistry {
         registerCommand("reflect", new ReflectCommand());
     }
 
-    private static void registerCommand(String name, ClassCommand command) {
+    private static void registerCommand(String name, ClassCommand<?, ?> command) {
         commands.put(name, command);
     }
 
-    public static ClassCommand getCommand(String name) {
+    public static ClassCommand<?, ?> getCommand(String name) {
         return commands.get(name);
     }
 

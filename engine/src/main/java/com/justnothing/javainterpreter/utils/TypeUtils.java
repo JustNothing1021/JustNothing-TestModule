@@ -835,7 +835,7 @@ public class TypeUtils {
         throw new EvaluationException(
                 "Cannot access method " + targetClass.getSimpleName() + "." + originalMethod.getName()
                         + " - module restrictions prevent reflection and no public interface equivalent found",
-                ErrorCode.METHOD_NOT_FOUND, null, node);
+                ErrorCode.METHOD_NOT_FOUND, node);
     }
 
     private static List<Method> findPublicInterfaceMethods(Class<?> clazz, String methodName) {

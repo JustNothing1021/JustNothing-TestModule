@@ -191,6 +191,29 @@ public class ReflectionUtils {
         return null;
     }
 
+    public static Constructor<?> findConstructorBySignature(Class<?> clazz, String signature) {
+        try {
+            String[] typeNames = signature.split(",");
+            Class<?>[] paramTypes = new Class<?>[typeNames.length];
+            for (int i = 0; i < typeNames.length; i++) {
+                paramTypes[i] = Class.forName(typeNames[i].trim());
+            }
+            return findConstructor(clazz, paramTypes);
+        } catch (ClassNotFoundException e) {
+            logger.warn("无法解析签名中的类型: " + e.getMessage() + ", 尝试按参数数量匹配");
+            int paramCount = signature.isEmpty() ? 0 : signature.split(",").length;
+            Constructor<?> bestMatch = null;
+            for (Constructor<?> c : clazz.getDeclaredConstructors()) {
+                if (c.getParameterCount() == paramCount) {
+                    if (bestMatch == null || c.getParameters().length > bestMatch.getParameters().length) {
+                        bestMatch = c;
+                    }
+                }
+            }
+            return bestMatch;
+        }
+    }
+
     private static Constructor<?> findConstructorOrFail(Class<?> clazz, Class<?>[] paramTypes) throws NoSuchMethodException {
         Constructor<?> constructor = findConstructor(clazz, paramTypes);
         if (constructor == null) throw new NoSuchMethodException(

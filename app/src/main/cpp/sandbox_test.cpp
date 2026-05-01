@@ -192,7 +192,7 @@ JNIEXPORT jobject JNICALL
 Java_com_justnothing_testmodule_command_functions_tests_SandboxTestMain_testSeccompNative(
         JNIEnv *env, jobject thiz) {
 
-    jclass resultClass = env->FindClass("com/justnothing/testmodule/command/functions/tests/SandboxTestMain$SeccompTestResult");
+    jclass resultClass = env->FindClass("com/justnothing/testmodule/command/cli/tests/SandboxTestMain$SeccompTestResult");
     if (resultClass == nullptr) {
         return nullptr;
     }
@@ -353,7 +353,7 @@ JNIEXPORT jobject JNICALL
 Java_com_justnothing_testmodule_command_functions_tests_SandboxTestMain_testCloneForkBlocking(
         JNIEnv *env, jobject thiz, jboolean blockThread, jboolean blockProcess) {
 
-    jclass resultClass = env->FindClass("com/justnothing/testmodule/command/functions/tests/SandboxTestMain$CloneForkTestResult");
+    jclass resultClass = env->FindClass("com/justnothing/testmodule/command/cli/tests/SandboxTestMain$CloneForkTestResult");
     if (resultClass == nullptr) {
         return nullptr;
     }

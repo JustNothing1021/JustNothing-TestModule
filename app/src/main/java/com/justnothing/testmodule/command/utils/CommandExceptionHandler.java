@@ -17,7 +17,7 @@ public class CommandExceptionHandler {
     public static String handleException(
         String commandName, 
         Throwable e, 
-        CommandExecutor.CmdExecContext ctx
+        CommandExecutor.CmdExecContext<?> ctx
     ) {
         printColoredError(ctx, commandName, e, null, null);
         return null;
@@ -26,7 +26,7 @@ public class CommandExceptionHandler {
     public static String handleException(
         String commandName, 
         Throwable e, 
-        CommandExecutor.CmdExecContext ctx,
+        CommandExecutor.CmdExecContext<?> ctx,
         String errorHint
     ) {
         printColoredError(ctx, commandName, e, errorHint, null);
@@ -36,7 +36,7 @@ public class CommandExceptionHandler {
     public static String handleException(
         String commandName, 
         Throwable e, 
-        CommandExecutor.CmdExecContext ctx,
+        CommandExecutor.CmdExecContext<?> ctx,
         Map<String, Object> context
     ) {
         printColoredError(ctx, commandName, e, null, context);
@@ -48,7 +48,7 @@ public class CommandExceptionHandler {
     public static String handleException(
         String commandName, 
         Throwable e, 
-        CommandExecutor.CmdExecContext ctx,
+        CommandExecutor.CmdExecContext<?> ctx,
         String errorHint,
         Map<?, ?> context
     ) {
@@ -67,7 +67,7 @@ public class CommandExceptionHandler {
     public static String handleException(
         String commandName, 
         Throwable e, 
-        CommandExecutor.CmdExecContext ctx,
+        CommandExecutor.CmdExecContext<?> ctx,
         Map<?, ?> context,
         String errorHint
     ) {
@@ -84,7 +84,7 @@ public class CommandExceptionHandler {
     }
     
     private static void printColoredError(
-        CommandExecutor.CmdExecContext ctx,
+        CommandExecutor.CmdExecContext<?> ctx,
         String commandName, 
         Throwable e, 
         String errorHint, 

@@ -2896,7 +2896,18 @@ public class Parser {
                     return parseArrayInitializerWithSize(genericType.getRuntimeType(), size, location);
                 }
                 
-                return new NewArrayNode(genericType.getRuntimeType(), size, location);
+                NewArrayNode newArray = new NewArrayNode(genericType.getRuntimeType(), size, location);
+                
+                while (check(TokenType.DELIMITER_LEFT_BRACKET)) {
+                    advance();
+                    ASTNode nextDim = parseExpression();
+                    consume(TokenType.DELIMITER_RIGHT_BRACKET, "Expected ']' after array dimension");
+                    Class<?> prevElementType = newArray.getElementType();
+                    Class<?> arrayOfType = Array.newInstance(prevElementType, 0).getClass();
+                    newArray = new NewArrayNode(arrayOfType, nextDim, location);
+                }
+                
+                return newArray;
             }
         }
         

@@ -690,7 +690,7 @@ public class ParserTest {
             sleep(200);
             shared;
             """);
-        assertTrue(((Number) result).intValue() >= 110);
+        assertEquals(111, ((Number) result).intValue());
     }
 
     @Test

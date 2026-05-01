@@ -8,7 +8,9 @@ import android.content.Context;
 import android.os.Debug;
 
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.base.MainCommand;
+import com.justnothing.testmodule.command.base.CommandResult;
+import com.justnothing.testmodule.command.base.CommandRequest;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.io.IOManager;
@@ -24,17 +26,20 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
-public class MemoryMain extends CommandBase {
+import com.justnothing.testmodule.command.base.RegisterCommand;
+
+@RegisterCommand("memory")
+public class MemoryMain extends MainCommand<CommandRequest, CommandResult> {
 
     private final String commandName;
 
     public MemoryMain() {
-        super("Memory");
+        super("Memory", CommandResult.class);
         this.commandName = "memory";
     }
 
     public MemoryMain(String commandName) {
-        super("Memory");
+        super("Memory", CommandResult.class);
         this.commandName = commandName;
     }
 
@@ -136,13 +141,13 @@ public class MemoryMain extends CommandBase {
     }
 
     @Override
-    public void runMain(CommandExecutor.CmdExecContext context) {
+    public CommandResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
         String cmdName = context.cmdName();
         String[] args = context.args();
         
         if (args.length < 1 && !cmdName.equals("minfo") && !cmdName.equals("mgc") && !cmdName.equals("mdump")) {
             context.println(getHelpText(), Colors.WHITE);
-            return;
+            return null;
         }
 
         String subCommand;
@@ -180,6 +185,7 @@ public class MemoryMain extends CommandBase {
         } catch (Exception e) {
             CommandExceptionHandler.handleException("memory", e, context, "执行memory命令失败");
         }
+        return null;
     }
 
     private void handleInfo(String[] args, CommandExecutor.CmdExecContext ctx) {

@@ -1,23 +1,50 @@
 package com.justnothing.testmodule.command.functions.classcmd;
 
 import com.justnothing.testmodule.command.base.AbstractCommand;
-import com.justnothing.testmodule.command.base.CommandContext;
+import com.justnothing.testmodule.command.base.CommandResult;
+import com.justnothing.testmodule.command.CommandExecutor;
+import com.justnothing.testmodule.utils.logging.Logger;
 
-public abstract class AbstractClassCommand extends AbstractCommand implements ClassCommand {
+import java.util.Arrays;
 
-    protected AbstractClassCommand(String commandName) {
-        super(commandName);
+public abstract class AbstractClassCommand<Req extends ClassCommandRequest, Res extends ClassCommandResult>
+        extends AbstractCommand<Req, Res>
+        implements ClassCommand<Req, Res> {
+
+    protected static final Logger logger = Logger.getLoggerForName("AbstractClassCommand");
+    protected AbstractClassCommand(String commandName, Class<Req> requestType, Class<Res> responseType) {
+        super(commandName, requestType, responseType);
     }
 
-    @Override
-    protected void executeInternal(CommandContext context) throws Exception {
-        if (!(context instanceof ClassCommandContext)) {
-            throw new IllegalArgumentException("需要 ClassCommandContext");
+    protected <T extends CommandResult> T createErrorResult(String message, Class<T> type) throws Exception {
+        T result = type.newInstance();
+        result.setSuccess(false);
+        result.setMessage(message);
+        return result;
+    }
+
+    protected <T extends CommandResult> T createErrorResult(String message, Throwable t, Class<T> type) throws Exception {
+        T result = type.newInstance();
+        result.setSuccess(false);
+        result.setError(new CommandResult.ErrorInfo("EXECUTION_FAILED", message, t.toString()));
+        return result;
+    }
+
+    protected Res executeInternal(CommandExecutor.CmdExecContext<Req> context) throws Exception {
+        String[] subArgs;
+        String[] args = context.args();
+        String cmdName = context.cmdName();
+        if (cmdName.equals("class")) {
+            subArgs = Arrays.copyOfRange(args, 1, args.length);
+        } else {
+            subArgs = args;
         }
-        executeInternal((ClassCommandContext) context);
+        ClassCommandContext<Req> ctx = new ClassCommandContext<>
+                (subArgs, context.classLoader(), context.targetPackage(), context, logger);
+        return executeClassCommand(ctx);
+
     }
 
-    protected abstract void executeInternal(ClassCommandContext context) throws Exception;
-
+    protected abstract Res executeClassCommand(ClassCommandContext<Req> context) throws Exception;
 
 }

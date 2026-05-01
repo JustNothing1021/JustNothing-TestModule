@@ -544,4 +544,5 @@
     <string name="analysis_alias_delete_message">确定要删除别名 "%1$s" 吗？</string>
     <string name="analysis_alias_clear_title">清空别名</string>
     <string name="analysis_alias_clear_message">确定要清空所有自定义别名吗？（默认别名会保留）</string>
+    <string name="analysis_execution_failed_format">执行失败: %s</string>
 </resources>

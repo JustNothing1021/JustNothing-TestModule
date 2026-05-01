@@ -4,7 +4,8 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_TRACE_VER;
 
 
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.base.MainCommand;
+import com.justnothing.testmodule.command.base.CommandRequest;
 import com.justnothing.testmodule.command.functions.intercept.TraceInterceptTask;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandArgumentParser;
@@ -15,10 +16,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class TraceMain extends CommandBase {
+import com.justnothing.testmodule.command.base.RegisterCommand;
+
+@RegisterCommand("trace")
+public class TraceMain extends MainCommand<TraceRequest, TraceResult> {
 
     public TraceMain() {
-        super("TraceMain");
+        super("Trace", TraceResult.class);
     }
 
     @Override
@@ -66,7 +70,7 @@ public class TraceMain extends CommandBase {
     }
 
     @Override
-    public void runMain(CommandExecutor.CmdExecContext context) {
+    public TraceResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
         String[] args = context.args();
         ClassLoader classLoader = context.classLoader();
         
@@ -75,7 +79,7 @@ public class TraceMain extends CommandBase {
         if (args.length < 1) {
             logger.warn("参数不足");
             context.println(getHelpText(), Colors.WHITE);
-            return;
+            return null;
         }
 
         String subCommand = args[0];
@@ -96,7 +100,16 @@ public class TraceMain extends CommandBase {
             }
         } catch (Exception e) {
             CommandExceptionHandler.handleException("trace", e, context, "执行trace命令失败");
+
+            if (shouldReturnStructuredData(context)) {
+                return createErrorResult("执行trace命令失败: " + e.getMessage());
+            }
         }
+
+        if (shouldReturnStructuredData(context)) {
+            return createSuccessResult("跟踪命令执行完成");
+        }
+        return null;
     }
 
     private void handleAdd(String[] args, ClassLoader classLoader, TraceManager manager, CommandExecutor.CmdExecContext context) {

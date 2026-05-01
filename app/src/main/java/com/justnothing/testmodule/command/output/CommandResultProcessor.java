@@ -1,8 +1,8 @@
 package com.justnothing.testmodule.command.output;
 
-import com.justnothing.testmodule.protocol.json.model.ClassInfo;
-import com.justnothing.testmodule.protocol.json.model.FieldInfo;
-import com.justnothing.testmodule.protocol.json.model.MethodInfo;
+import com.justnothing.testmodule.command.functions.classcmd.model.ClassInfo;
+import com.justnothing.testmodule.command.functions.classcmd.model.FieldInfo;
+import com.justnothing.testmodule.command.functions.classcmd.model.MethodInfo;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
 

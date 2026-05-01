@@ -1,5 +1,9 @@
 package com.justnothing.testmodule.command.output;
 
+import com.justnothing.javainterpreter.ScriptRunner;
+import com.justnothing.javainterpreter.security.BasicPermissionChecker;
+import com.justnothing.javainterpreter.security.IPermissionChecker;
+import com.justnothing.javainterpreter.security.SandboxGuard;
 import com.justnothing.testmodule.utils.data.DataBridge;
 import com.justnothing.testmodule.utils.io.IOManager;
 import com.justnothing.testmodule.utils.logging.Logger;
@@ -8,6 +12,7 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class DisclaimerManager {
 
@@ -18,6 +23,7 @@ public class DisclaimerManager {
     private static final String KEY_ACCEPTED_AT = "acceptedAt";
     private static final String KEY_VERSION = "version";
     private static final String KEY_SKILL_VERIFIED = "skillVerified";
+    private static IPermissionChecker exprChecker = BasicPermissionChecker.createMinimal();
 
     private static final int DISCLAIMER_VERSION = 2;
 
@@ -174,6 +180,15 @@ public class DisclaimerManager {
         }
     }
 
+
+    private static Object evaluateCode(String expression) {
+        ScriptRunner runner = new ScriptRunner();
+        runner.getExecutionContext().setPermissionChecker(exprChecker);
+        AtomicReference<Object> resultRef = new AtomicReference<>();
+        SandboxGuard.executeMinimal(() -> resultRef.set(runner.executeWithResult(expression)));
+        return resultRef.get();
+    }
+
     public static boolean promptForSkillVerification(ICommandOutputHandler output) {
         if (isSkillVerified()) {
             return true;
@@ -213,7 +228,7 @@ public class DisclaimerManager {
         }
 
         try {
-            Object result = CodeVerifier.evaluateSafely(expression);
+            Object result = evaluateCode(expression);
             
             if (result == null) {
                 output.println("表达式结果为空，验证失败", Colors.RED);

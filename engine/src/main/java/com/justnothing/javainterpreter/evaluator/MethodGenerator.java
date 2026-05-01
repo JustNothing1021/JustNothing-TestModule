@@ -8,6 +8,11 @@ import org.objectweb.asm.MethodVisitor;
 
 import static org.objectweb.asm.Opcodes.*;
 
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * 方法生成器。
  * 
@@ -81,15 +86,20 @@ public class MethodGenerator {
      * @param className 类名
      * @param isInterface 是否为接口
      */
-    public void addMethod(ClassWriter cw, MethodDeclarationNode methodDecl, 
+    public void addMethod(ClassWriter cw, MethodDeclarationNode methodDecl,
             String className, boolean isInterface) {
-        
+        addMethod(cw, methodDecl, className, isInterface, null);
+    }
+
+    public void addMethod(ClassWriter cw, MethodDeclarationNode methodDecl,
+            String className, boolean isInterface, Class<?> parentClass) {
+
         String methodName = methodDecl.getMethodName();
         String returnDescriptor = methodDecl.getReturnType().getDescriptor();
-        
+
         String descriptor = buildMethodDescriptor(methodDecl, returnDescriptor);
-        
-        int modifiers = calculateModifiers(methodDecl, isInterface);
+
+        int modifiers = calculateModifiers(methodDecl, isInterface, parentClass, methodName, descriptor);
         
         if (methodDecl.getBody() == null) {
             if (isInterface) {
@@ -132,14 +142,92 @@ public class MethodGenerator {
     /**
      * 计算方法访问标志。
      */
-    private int calculateModifiers(MethodDeclarationNode methodDecl, boolean isInterface) {
+    private int calculateModifiers(MethodDeclarationNode methodDecl, boolean isInterface,
+                                     Class<?> parentClass, String methodName, String descriptor) {
         int modifiers = methodDecl.getModifiers().toAccessFlags();
-        
+
         if (isInterface) {
             modifiers = modifiers | ACC_PUBLIC;
         }
-        
+
+        if (parentClass != null && !Modifier.isPrivate(modifiers)) {
+            try {
+                String[] interfaceNames = splitDescriptorParams(descriptor);
+                Class<?>[] paramTypes = resolveParamTypes(interfaceNames);
+                Method superMethod = findPublicMethod(parentClass, methodName, paramTypes);
+                if (superMethod != null && Modifier.isPublic(superMethod.getModifiers())) {
+                    modifiers = (modifiers & ~(ACC_PRIVATE | ACC_PROTECTED)) | ACC_PUBLIC;
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
         return modifiers;
+    }
+
+    private static java.lang.reflect.Method findPublicMethod(Class<?> clazz, String name, Class<?>[] paramTypes) {
+        if (clazz == null || clazz == Object.class) return null;
+        try {
+            return clazz.getDeclaredMethod(name, paramTypes);
+        } catch (NoSuchMethodException e) {
+            java.lang.reflect.Method m = findPublicMethod(clazz.getSuperclass(), name, paramTypes);
+            if (m != null) return m;
+            for (Class<?> iface : clazz.getInterfaces()) {
+                m = findPublicMethod(iface, name, paramTypes);
+                if (m != null) return m;
+            }
+            return null;
+        }
+    }
+
+    private static Class<?>[] resolveParamTypes(String[] descriptors) {
+        if (descriptors == null) return new Class<?>[0];
+        Class<?>[] types = new Class<?>[descriptors.length];
+        for (int i = 0; i < descriptors.length; i++) {
+            types[i] = descriptorToClass(descriptors[i]);
+        }
+        return types;
+    }
+
+    private static Class<?> descriptorToClass(String desc) {
+        return switch (desc) {
+            case "Z" -> boolean.class;
+            case "B" -> byte.class;
+            case "C" -> char.class;
+            case "S" -> short.class;
+            case "I" -> int.class;
+            case "J" -> long.class;
+            case "F" -> float.class;
+            case "D" -> double.class;
+            case "V" -> void.class;
+            default -> Object.class;
+        };
+    }
+
+    private static String[] splitDescriptorParams(String methodDescriptor) {
+        int end = methodDescriptor.lastIndexOf(')');
+        if (end <= 1) return new String[0];
+        String params = methodDescriptor.substring(1, end);
+        if (params.isEmpty()) return new String[0];
+        List<String> result = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        for (int i = 0; i < params.length(); i++) {
+            char c = params.charAt(i);
+            if (c == 'L') {
+                int semi = params.indexOf(';', i);
+                current.append(params, i, semi + 1);
+                result.add(current.toString());
+                current.setLength(0);
+                i = semi;
+            } else if (c == '[') {
+                current.append(c);
+            } else {
+                current.append(c);
+                result.add(current.toString());
+                current.setLength(0);
+            }
+        }
+        return result.toArray(new String[0]);
     }
     
     /**

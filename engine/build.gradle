@@ -12,7 +12,7 @@ dependencies {
     implementation libs.asm.v96
     implementation libs.asm.tree
     implementation libs.annotations
-    testImplementation 'junit:junit:4.13.2'
+    testImplementation libs.junit
 }
 
 sourceSets {
@@ -29,7 +29,6 @@ sourceSets {
 }
 
 test {
-    // Java 17+ Module System: 允许访问 java.base 内部实现类
     jvmArgs += [
         '--add-opens', 'java.base/java.util.stream=ALL-UNNAMED',
         '--add-opens', 'java.base/java.lang=ALL-UNNAMED',
@@ -49,7 +48,7 @@ publishing {
     }
 }
 
-task fatJar(type: Jar) {
+tasks.register('fatJar', Jar) {
     archiveBaseName = 'engine-fat'
     archiveExtension = 'jar'
     manifest {

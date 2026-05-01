@@ -2,10 +2,11 @@ package com.justnothing.testmodule.command.functions.tests;
 
 import com.justnothing.javainterpreter.ScriptRunner;
 import com.justnothing.javainterpreter.api.DefaultOutputHandler;
-import com.justnothing.javainterpreter.evaluator.ExecutionContext;
 import com.justnothing.javainterpreter.security.SandboxConfig;
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.base.MainCommand;
+import com.justnothing.testmodule.command.base.CommandResult;
+import com.justnothing.testmodule.command.base.CommandRequest;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 import com.justnothing.testmodule.utils.data.DataBridge;
@@ -21,14 +22,17 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-public class SandboxTestMain extends CommandBase {
+import com.justnothing.testmodule.command.base.RegisterCommand;
+
+@RegisterCommand("sandboxtest")
+public class SandboxTestMain extends MainCommand<CommandRequest, CommandResult> {
 
     private static volatile boolean nativeLoaded = false;
     private static volatile Throwable nativeLoadError = null;
     private static volatile String nativeLibPath = null;
 
     public SandboxTestMain() {
-        super("SandboxTest");
+        super("SandboxTest", CommandResult.class);
     }
 
     @Override
@@ -60,12 +64,15 @@ public class SandboxTestMain extends CommandBase {
     }
 
     @Override
-    public void runMain(CommandExecutor.CmdExecContext context) {
+    public CommandResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
         String[] args = context.args();
         
         if (args.length < 1) {
             context.println(getHelpText());
-            return;
+            if (shouldReturnStructuredData(context)) {
+                return createErrorResult("参数不足，需要指定子命令");
+            }
+            return null;
         }
 
         String subCommand = args[0];
@@ -84,6 +91,10 @@ public class SandboxTestMain extends CommandBase {
                 context.println(getHelpText());
             }
         }
+        if (shouldReturnStructuredData(context)) {
+            return createSuccessResult("沙箱测试命令执行完成");
+        }
+        return null;
     }
 
     private interface TestRunnable {

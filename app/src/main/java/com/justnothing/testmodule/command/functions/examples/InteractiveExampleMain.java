@@ -1,13 +1,18 @@
 package com.justnothing.testmodule.command.functions.examples;
 
+import com.justnothing.testmodule.command.base.MainCommand;
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.functions.CommandBase;
+import com.justnothing.testmodule.command.base.CommandResult;
+import com.justnothing.testmodule.command.base.CommandRequest;
 import com.justnothing.testmodule.command.output.ICommandOutputHandler;
 
-public class InteractiveExampleMain extends CommandBase {
+import com.justnothing.testmodule.command.base.RegisterCommand;
+
+@RegisterCommand("interactive_test")
+public class InteractiveExampleMain extends MainCommand<CommandRequest, CommandResult> {
 
     public InteractiveExampleMain() {
-        super("InteractiveExample");
+        super("InteractiveExample", CommandResult.class);
     }
 
     @Override
@@ -25,7 +30,7 @@ public class InteractiveExampleMain extends CommandBase {
     }
 
     @Override
-    public void runMain(CommandExecutor.CmdExecContext context) {
+    public CommandResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
         ICommandOutputHandler output = context.output();
         output.println("=== 交互式示例 ===");
         String name = context.readLine("请输入你的名字: ");
@@ -40,5 +45,9 @@ public class InteractiveExampleMain extends CommandBase {
         String password = context.readPassword("请输入密码: ");
         output.println("密码长度: " + password.length() + " 个字符");
         output.println("=== 交互完成 ===");
+        if (shouldReturnStructuredData(context)) {
+            return createSuccessResult("交互式测试命令执行完成");
+        }
+        return null;
     }
 }
