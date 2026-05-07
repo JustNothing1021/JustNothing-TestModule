@@ -2,14 +2,14 @@ package com.justnothing.testmodule.command.functions.examples;
 
 import com.justnothing.testmodule.command.base.MainCommand;
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.CommandResult;
-import com.justnothing.testmodule.command.base.CommandRequest;
+import com.justnothing.testmodule.command.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.output.ICommandOutputHandler;
 
-import com.justnothing.testmodule.command.base.RegisterCommand;
+import com.justnothing.testmodule.command.base.command.RegisterCommand;
 
 @RegisterCommand("interactive_test")
-public class InteractiveExampleMain extends MainCommand<CommandRequest, CommandResult> {
+public class InteractiveExampleMain extends MainCommand<CommandResult> {
 
     public InteractiveExampleMain() {
         super("InteractiveExample", CommandResult.class);

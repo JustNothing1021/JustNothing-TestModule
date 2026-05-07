@@ -1,10 +1,14 @@
 package com.justnothing.testmodule.command.functions.memory;
 
-import com.justnothing.testmodule.command.base.CommandResult;
+import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
+import com.justnothing.testmodule.command.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
 
 import org.json.JSONObject;
 import org.json.JSONException;
 
+@SerializeKeyName("MemoryInfo")
+@AutoSerializable
 public class MemoryInfoResult extends CommandResult {
 
     private long timestamp;

@@ -1,6 +1,6 @@
 package com.justnothing.testmodule.command.functions.threads;
 
-import com.justnothing.testmodule.command.base.CommandRequest;
+import com.justnothing.testmodule.command.base.protocol.CommandRequest;
 
 import org.json.JSONObject;
 

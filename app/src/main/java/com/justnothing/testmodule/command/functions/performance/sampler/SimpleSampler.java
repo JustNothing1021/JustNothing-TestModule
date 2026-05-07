@@ -24,7 +24,7 @@ public class SimpleSampler extends AbstractSampler<SimpleSampleData> {
                 continue;
             }
 
-            if (stackTrace == null || stackTrace.length == 0) {
+            if (stackTrace == null) {
                 continue;
             }
 

@@ -1,6 +1,7 @@
 package com.justnothing.testmodule.command.functions.alias.response;
 
-import com.justnothing.testmodule.command.base.CommandResult;
+import com.justnothing.testmodule.command.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
 import com.justnothing.testmodule.command.functions.alias.model.AliasInfo;
 
 import org.json.JSONArray;
@@ -10,6 +11,7 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 
+@SerializeKeyName("Alias")
 public class AliasResult extends CommandResult {
 
     private List<AliasInfo> aliases;

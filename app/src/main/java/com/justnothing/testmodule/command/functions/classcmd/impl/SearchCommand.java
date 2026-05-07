@@ -1,6 +1,6 @@
 package com.justnothing.testmodule.command.functions.classcmd.impl;
 
-
+import com.justnothing.testmodule.command.base.command.SubCommandInfo;
 import com.justnothing.testmodule.command.functions.classcmd.AbstractClassCommand;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandContext;
 import com.justnothing.testmodule.command.functions.classcmd.request.SearchClassRequest;
@@ -16,6 +16,26 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.*;
 
+@SubCommandInfo(
+    description = "搜索类、方法、字段或注解，支持通配符和正则表达式",
+    usage = "class search <type> <pattern>",
+    examples = {
+        "class search class *List*",
+        "class search method toString",
+        "class search annotation Deprecated"
+    },
+    optionsDesc = """
+            搜索类型:
+              class       搜索类名
+              method      搜索方法名
+              field       搜索字段名
+              annotation  搜索注解
+            
+            模式格式:
+              简单匹配:     List (包含即可)
+              通配符:      *List*, get*
+            """
+)
 public class SearchCommand extends AbstractClassCommand<SearchClassRequest, SearchResult> {
 
     public SearchCommand() {
@@ -72,34 +92,7 @@ public class SearchCommand extends AbstractClassCommand<SearchClassRequest, Sear
         return result;
     }
 
-    @Override
-    public String getHelpText() {
-        return """
-            语法: class search <subcmd> <pattern>
 
-            搜索类, 方法, 字段或注解.
-
-            子命令:
-                class <pattern>                - 搜索类名
-                method <pattern>               - 搜索方法名
-                field <pattern>                - 搜索字段名
-                annotation <pattern>           - 搜索注解
-
-            选项:
-                pattern - 搜索模式, 支持通配符(*)
-
-            示例:
-                class search class *Activity
-                class search method onCreate
-                class search field m*
-                class search annotation Override
-
-            注意:
-                - 搜索在已加载的类中进行
-                - 支持通配符*匹配任意字符
-                - 搜索结果包含完整类名和成员信息
-            """;
-    }
 
     private void searchClasses(String pattern, ClassCommandContext<SearchClassRequest> context, SearchResult result) {
         context.execContext().println("===== 搜索类名 =====", Colors.CYAN);

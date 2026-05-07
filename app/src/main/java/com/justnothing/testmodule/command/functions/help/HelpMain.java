@@ -4,14 +4,14 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_HELP_VER;
 
 import com.justnothing.testmodule.command.base.MainCommand;
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.CommandResult;
-import com.justnothing.testmodule.command.base.CommandRequest;
+import com.justnothing.testmodule.command.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.output.Colors;
 
-import com.justnothing.testmodule.command.base.RegisterCommand;
+import com.justnothing.testmodule.command.base.command.RegisterCommand;
 
 @RegisterCommand("help")
-public class HelpMain extends MainCommand<CommandRequest, CommandResult> {
+public class HelpMain extends MainCommand<CommandResult> {
 
     public HelpMain() {
         super("Help", CommandResult.class);

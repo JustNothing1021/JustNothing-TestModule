@@ -1,9 +1,13 @@
 package com.justnothing.testmodule.command.base;
 
 import com.justnothing.testmodule.command.CommandExecutor;
+import com.justnothing.testmodule.command.base.command.Command;
+import com.justnothing.testmodule.command.base.command.SubCommandInfo;
+import com.justnothing.testmodule.command.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.base.protocol.CommandResult;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 
-public abstract class AbstractCommand<Req extends CommandRequest, Res extends CommandResult> implements Command<Req, Res> {
+public abstract class AbstractCommand<Req extends CommandRequest, Res extends CommandResult> implements Command<Res> {
     protected final String commandName;
     protected final Class<Req> requestType;
     protected final Class<Res> returnType;
@@ -20,6 +24,9 @@ public abstract class AbstractCommand<Req extends CommandRequest, Res extends Co
     }
 
     protected boolean acceptable(CommandRequest req) {
+        if (req == null) {
+            return true;
+        }
         return getAcceptableRequestType().isAssignableFrom(req.getClass());
     }
 
@@ -41,7 +48,9 @@ public abstract class AbstractCommand<Req extends CommandRequest, Res extends Co
             try {
                 Res result = returnType.newInstance();
                 result.setSuccess(false);
-                result.setRequestId(context.getRequest().getRequestId());
+                if (context.getRequest() != null) {
+                    result.setRequestId(context.getRequest().getRequestId());
+                }
                 result.setError(
                     new CommandResult.ErrorInfo(
                         "UNEXPECTED_ERROR", "执行" + commandName + "命令失败", e
@@ -59,7 +68,49 @@ public abstract class AbstractCommand<Req extends CommandRequest, Res extends Co
 
     @Override
     public String getHelpText() {
+        SubCommandInfo info = this.getClass().getAnnotation(SubCommandInfo.class);
+        if (info != null) {
+            return generateHelpFromAnnotation(info);
+        }
         return "用法: " + commandName + " <args>\n" +
                "输入 " + commandName + " --help 查看详细帮助";
+    }
+
+
+    public static String generateHelpFromAnnotation(SubCommandInfo info) {
+        StringBuilder help = new StringBuilder();
+        
+        if (!info.usage().isEmpty()) {
+            help.append("用法: ").append(info.usage()).append("\n");
+        }
+        
+        if (!info.description().isEmpty()) {
+            help.append("\n\n").append(info.description());
+        }
+
+        
+        if (!info.optionsDesc().isEmpty()) {
+            if (help.length() > 0) {
+                help.append("\n\n");
+            }
+            help.append(info.optionsDesc());
+        }
+
+
+        if (info.examples().length > 0) {
+            help.append("\n\n示例:");
+            for (String ex : info.examples()) {
+                help.append("\n  ").append(ex);
+            }
+        }
+        
+        if (info.seeAlso().length > 0) {
+            help.append("\n\n相关命令:");
+            for (String see : info.seeAlso()) {
+                help.append("\n  ").append(see);
+            }
+        }
+        
+        return help.toString();
     }
 }

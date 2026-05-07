@@ -1,10 +1,14 @@
 package com.justnothing.testmodule.command.functions.memory;
 
-import com.justnothing.testmodule.command.base.CommandResult;
+import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
+import com.justnothing.testmodule.command.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
+@SerializeKeyName("Gc")
+@AutoSerializable
 public class GcResult extends CommandResult {
 
     private long beforeUsedMemory;

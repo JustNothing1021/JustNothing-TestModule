@@ -1,5 +1,6 @@
 package com.justnothing.testmodule.command.functions.classcmd.impl;
 
+import com.justnothing.testmodule.command.base.command.SubCommandInfo;
 import com.justnothing.testmodule.command.functions.classcmd.AbstractClassCommand;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandContext;
 import com.justnothing.testmodule.command.functions.classcmd.request.ClassGraphRequest;
@@ -13,6 +14,22 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
 
+@SubCommandInfo(
+    description = "生成类的继承关系图.",
+    usage = "class graph [options] <class_name>",
+    examples = {
+        "class graph java.util.ArrayList",
+        "class graph --depth 5 android.view.View",
+        "class graph --compact java.util.HashMap"
+    },
+    optionsDesc = """
+            选项:
+                --no-subclasses    不显示子类
+                --no-interfaces    不显示接口
+                --compact          紧凑模式输出
+                --depth <N>       最大遍历深度 (默认10)
+            """
+)
 public class GraphCommand extends AbstractClassCommand<ClassGraphRequest, ClassGraphResult> {
 
     public GraphCommand() {
@@ -44,26 +61,6 @@ public class GraphCommand extends AbstractClassCommand<ClassGraphRequest, ClassG
                 request.isShowSubclasses(), request.isShowInterfaces(),
                 request.getMaxDepth(), request.isCompactMode());
         return result;
-    }
-
-    @Override
-    public String getHelpText() {
-        return """
-            语法: class graph [options] <class_name>
-
-            生成类继承图.
-
-            选项:
-                --no-subclasses    不显示子类
-                --no-interfaces    不显示接口
-                --compact          紧凑模式输出
-                --depth <N>       最大遍历深度 (默认10)
-
-            示例:
-                class graph java.util.ArrayList
-                class graph --depth 5 android.view.View
-                class graph --compact java.util.HashMap
-            """;
     }
 
     private void generateClassInheritanceGraph(Class<?> clazz, ClassCommandContext<ClassGraphRequest> context, ClassGraphResult result,

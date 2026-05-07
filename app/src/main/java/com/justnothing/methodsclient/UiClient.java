@@ -25,8 +25,7 @@ public class UiClient {
     
     private final ExecutorService executor = Executors.newCachedThreadPool();
     private volatile int port = DEFAULT_PORT;
-    private volatile boolean serverAvailable = false;
-    
+
     private UiClient() {}
     
     public static UiClient getInstance() {
@@ -58,10 +57,8 @@ public class UiClient {
         port = StreamClient.getSocketPort();
         try (Socket socket = new Socket()) {
             socket.connect(new InetSocketAddress("localhost", port), CONNECT_TIMEOUT_MS);
-            serverAvailable = true;
             return true;
         } catch (Exception e) {
-            serverAvailable = false;
             logger.debug("服务端不可用: " + e.getMessage());
             return false;
         }

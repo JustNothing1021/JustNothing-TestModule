@@ -24,7 +24,7 @@ public class ClientRequirements {
     
     public ClientRequirements(boolean supportsInput, boolean isJsonMode) {
         this.isJsonMode = isJsonMode;
-        this.supportsInput = isJsonMode ? false : supportsInput;
+        this.supportsInput = !isJsonMode && supportsInput;
     }
     
     public boolean isSupportsInput() {
@@ -50,9 +50,9 @@ public class ClientRequirements {
     
     @Override
     public String toString() {
-        return "ClientRequirements{" +
+        return "ClientRequirements[" +
                 "supportsInput=" + supportsInput +
                 ", isJsonMode=" + isJsonMode +
-                '}';
+                ']';
     }
 }

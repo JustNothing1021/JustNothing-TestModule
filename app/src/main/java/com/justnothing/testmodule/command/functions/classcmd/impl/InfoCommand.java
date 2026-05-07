@@ -1,6 +1,7 @@
 package com.justnothing.testmodule.command.functions.classcmd.impl;
 
 
+import com.justnothing.testmodule.command.base.command.SubCommandInfo;
 import com.justnothing.testmodule.command.functions.classcmd.AbstractClassCommand;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandContext;
 import com.justnothing.testmodule.command.functions.classcmd.model.ClassInfo;
@@ -19,10 +20,26 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
 
 
+@SubCommandInfo(
+    description = "查看类的详细信息, 包括字段, 方法, 构造函数, 接口等.",
+    usage = "class info [options] <class_name>",
+    examples = {
+        "class info java.lang.String",
+        "class info -v java.lang.Object",
+        "class info --interfaces java.util.ArrayList"
+    },
+    optionsDesc = """
+            选项:
+              -v, --verbose       显示详细信息
+              -i, --interfaces    显示实现的接口
+              -c, --constructors  显示构造函数
+              -s, --super         显示父类信息
+              -m, --modifiers     显示修饰符信息
+              -a, --all           显示所有信息 (默认)
+            """
+)
 public class InfoCommand extends AbstractClassCommand<ClassInfoRequest, ClassInfoResult> {
 
     public InfoCommand() {
@@ -31,9 +48,10 @@ public class InfoCommand extends AbstractClassCommand<ClassInfoRequest, ClassInf
 
     @Override
     protected ClassInfoResult executeClassCommand(ClassCommandContext<ClassInfoRequest> context) throws Exception {
-        String[] args = context.args();
+        ClassInfoRequest request = context.execContext().getCommandRequest();
+        String className = request.getClassName();
 
-        if (args.length < 1) {
+        if (className == null || className.isEmpty()) {
             CommandExceptionHandler.handleException(
                 "class info",
                 new IllegalArgumentException("参数不足, 需要至少1个参数: class info <class_name>"),
@@ -43,14 +61,14 @@ public class InfoCommand extends AbstractClassCommand<ClassInfoRequest, ClassInf
             return null;
         }
 
-        ClassInfoRequest request = context.execContext().getCommandRequest();
         boolean showInterfaces = request.isShowInterfaces();
         boolean showConstructors = request.isShowConstructors();
         boolean showSuper = request.isShowSuper();
         boolean showModifiers = request.isShowModifiers();
+        boolean showFields = request.isShowFields();
+        boolean showMethods = request.isShowMethods();
         boolean showAll = request.isShowAll();
         boolean verbose = request.isVerbose();
-        String className = request.getClassName();
 
         ClassInfoResult result = new ClassInfoResult();
         ClassInfo classInfo = new ClassInfo();
@@ -137,7 +155,7 @@ public class InfoCommand extends AbstractClassCommand<ClassInfoRequest, ClassInf
             classInfo.setConstructors(constructorList);
         }
 
-        if (showAll) {
+        if (showAll || showFields) {
             Field[] fields = targetClass.getDeclaredFields();
             context.execContext().print("字段", Colors.CYAN);
             context.execContext().println(" (" + fields.length + "个):", Colors.CYAN);
@@ -152,7 +170,9 @@ public class InfoCommand extends AbstractClassCommand<ClassInfoRequest, ClassInf
             context.execContext().println("");
 
             classInfo.setFields(fieldList);
+        }
 
+        if (showAll || showMethods) {
             Method[] methods = targetClass.getDeclaredMethods();
             context.execContext().print("方法", Colors.CYAN);
             context.execContext().println(" (" + methods.length + "个):", Colors.CYAN);
@@ -175,26 +195,5 @@ public class InfoCommand extends AbstractClassCommand<ClassInfoRequest, ClassInf
         result.setClassInfo(classInfo);
         context.logger().info("查看类信息: " + className);
         return result;
-    }
-
-    @Override
-    public String getHelpText() {
-        return """
-            语法: class info [options] <class_name>
-
-            查看类的详细信息.
-
-                -v, --verbose        显示详细信息
-                -i, --interfaces     显示实现的接口
-                -c, --constructors   显示构造函数
-                -s, --super          显示父类信息
-                -m, --modifiers      显示修饰符信息
-                -a, --all            显示所有信息 (默认)
-
-            示例:
-                class info java.lang.String
-                class info -i java.util.ArrayList
-                class info -c android.view.View
-            """;
     }
 }

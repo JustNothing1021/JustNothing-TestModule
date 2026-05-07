@@ -6,7 +6,7 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_SCRIPT_VER;
 import com.justnothing.javainterpreter.evaluator.ExecutionContext;
 import com.justnothing.testmodule.command.base.MainCommand;
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.CommandRequest;
+import com.justnothing.testmodule.command.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
@@ -39,10 +39,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
-import com.justnothing.testmodule.command.base.RegisterCommand;
+import com.justnothing.testmodule.command.base.command.RegisterCommand;
 
 @RegisterCommand("script")
-public class ScriptExecutorMain extends MainCommand<ScriptRequest, ScriptResult> {
+public class ScriptExecutorMain extends MainCommand<ScriptResult> {
 
     private static final ConcurrentHashMap<ClassLoader, ScriptRunner>
             scriptRunners = new ConcurrentHashMap<>();

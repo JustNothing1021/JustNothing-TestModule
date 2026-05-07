@@ -1,22 +1,36 @@
 package com.justnothing.testmodule.command.functions.classcmd.response;
 
+import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
+import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
+import com.justnothing.testmodule.command.base.protocol.ResultField;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandResult;
 import com.justnothing.testmodule.command.functions.classcmd.model.FieldInfo;
 import com.justnothing.testmodule.command.functions.classcmd.model.MethodInfo;
 
-import org.json.JSONObject;
-import org.json.JSONException;
-
+@SerializeKeyName("ReflectOperation")
+@AutoSerializable
 public class ReflectOperationResult extends ClassCommandResult {
 
+    @ResultField(name = "className")
     private String className;
-    private String operationType;  // "field", "method", "constructor", "static"
+
+    @ResultField(name = "operationType")
+    private String operationType;
+
+    @ResultField(name = "memberName")
     private String memberName;
+
+    @ResultField(name = "fieldInfo")
     private FieldInfo fieldInfo;
+
+    @ResultField(name = "methodInfo")
     private MethodInfo methodInfo;
+
+    @ResultField(name = "value")
     private Object value;
+
+    @ResultField(name = "valueType")
     private String valueType;
-    private boolean success;
 
     public ReflectOperationResult() {
         super();
@@ -40,32 +54,4 @@ public class ReflectOperationResult extends ClassCommandResult {
     public void setValue(Object value) { this.value = value; }
     public String getValueType() { return valueType; }
     public void setValueType(String valueType) { this.valueType = valueType; }
-    public boolean isSuccess() { return success; }
-    public void setSuccess(boolean success) { this.success = success; }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        obj.put("className", className);
-        obj.put("operationType", operationType);
-        obj.put("memberName", memberName);
-        obj.put("success", success);
-
-        if (fieldInfo != null) {
-            obj.put("fieldInfo", fieldInfo.toJson());
-        }
-
-        if (methodInfo != null) {
-            obj.put("methodInfo", methodInfo.toJson());
-        }
-
-        if (value != null) {
-            obj.put("value", value.toString());
-            obj.put("valueType", valueType != null ? valueType : value.getClass().getName());
-        } else if ("get".equals(operationType) || "invoke".equals(operationType)) {
-            obj.put("value", JSONObject.NULL);
-        }
-
-        return obj;
-    }
 }

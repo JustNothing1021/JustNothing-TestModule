@@ -1,12 +1,18 @@
 package com.justnothing.testmodule.command.functions.exportcontext;
 
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
+import com.justnothing.testmodule.command.base.protocol.ResultField;
 
+@AutoSerializable
 public class ContextFieldInfo {
 
+    @ResultField(name = "category")
     private String category;
+
+    @ResultField(name = "label")
     private String label;
+
+    @ResultField(name = "value")
     private String value;
 
     public ContextFieldInfo() {
@@ -18,43 +24,10 @@ public class ContextFieldInfo {
         this.value = value;
     }
 
-    public static ContextFieldInfo fromJson(JSONObject obj) throws JSONException {
-        ContextFieldInfo info = new ContextFieldInfo();
-        info.setCategory(obj.optString("category"));
-        info.setLabel(obj.optString("label"));
-        info.setValue(obj.optString("value"));
-        return info;
-    }
-
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = new JSONObject();
-        obj.put("category", category);
-        obj.put("label", label);
-        obj.put("value", value != null ? value : "");
-        return obj;
-    }
-
-    public String getCategory() {
-        return category;
-    }
-
-    public void setCategory(String category) {
-        this.category = category;
-    }
-
-    public String getLabel() {
-        return label;
-    }
-
-    public void setLabel(String label) {
-        this.label = label;
-    }
-
-    public String getValue() {
-        return value;
-    }
-
-    public void setValue(String value) {
-        this.value = value;
-    }
+    public String getCategory() { return category; }
+    public void setCategory(String category) { this.category = category; }
+    public String getLabel() { return label; }
+    public void setLabel(String label) { this.label = label; }
+    public String getValue() { return value; }
+    public void setValue(String value) { this.value = value; }
 }

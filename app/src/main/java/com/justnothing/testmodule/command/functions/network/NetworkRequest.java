@@ -1,6 +1,6 @@
 package com.justnothing.testmodule.command.functions.network;
 
-import com.justnothing.testmodule.command.base.CommandRequest;
+import com.justnothing.testmodule.command.base.protocol.CommandRequest;
 
 import org.json.JSONException;
 import org.json.JSONObject;

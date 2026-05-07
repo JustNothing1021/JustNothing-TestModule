@@ -1,8 +1,8 @@
 package com.justnothing.testmodule.command.functions.classcmd.parser;
 
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.CommandLineParser;
-import com.justnothing.testmodule.command.base.CommandRequest;
+import com.justnothing.testmodule.command.base.command.CommandLineParser;
+import com.justnothing.testmodule.command.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandRequest;
 import com.justnothing.testmodule.command.functions.classcmd.request.*;
 import com.justnothing.testmodule.utils.logging.Logger;
@@ -34,6 +34,11 @@ public class ClassCommandParser implements CommandLineParser<ClassCommandRequest
             case "analyze" -> new AnalyzeClassRequest().fromCommandLine(remainingArgs);
             case "reflect" -> new ReflectClassRequest().fromCommandLine(remainingArgs);
             case "graph" -> new ClassGraphRequest().fromCommandLine(remainingArgs);
+
+            // DirectCommands (轻量级命令 — 主要用于 GUI，CLI 支持基础功能)
+            case "hierarchy" -> (ClassCommandRequest) new ClassHierarchyRequest().fromCommandLine(remainingArgs);
+            case "setfield" -> (ClassCommandRequest) new SetFieldValueRequest().fromCommandLine(remainingArgs);
+
             default -> null;
         };
     }

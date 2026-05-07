@@ -1,91 +1,56 @@
 package com.justnothing.testmodule.command.handlers.memory;
 
-import com.justnothing.testmodule.command.proxy.RequestHandler;
 import com.justnothing.testmodule.command.functions.memory.GcRequest;
-import com.justnothing.testmodule.command.base.CommandResult;
 import com.justnothing.testmodule.command.functions.memory.GcResult;
-import com.justnothing.testmodule.utils.logging.Logger;
 
-import org.json.JSONObject;
+public class GcRequestHandler {
 
-import java.util.Locale;
-
-public class GcRequestHandler implements RequestHandler<GcRequest, GcResult> {
-
-    private static final Logger logger = Logger.getLoggerForName("GcRequestHandler");
-
-    @Override
-    public String getCommandType() {
-        return "Gc";
-    }
-
-    @Override
-    public GcRequest parseRequest(JSONObject obj) {
-        return new GcRequest().fromJson(obj);
-    }
-
-    @Override
-    public GcResult createResult(String requestId) {
-        return new GcResult(requestId);
-    }
-
-    @Override
     public GcResult handle(GcRequest request) {
-        boolean fullGc = request.isFullGc();
-        logger.debug("处理GC请求, fullGc=" + fullGc);
+        Runtime runtime = Runtime.getRuntime();
 
-        GcResult result = new GcResult(request.getRequestId());
+        long beforeUsed = runtime.totalMemory() - runtime.freeMemory();
+        long beforeTotal = runtime.totalMemory();
+        long beforeMax = runtime.maxMemory();
 
-        try {
-            Runtime runtime = Runtime.getRuntime();
-
-            long beforeUsed = runtime.totalMemory() - runtime.freeMemory();
-            long beforeTotal = runtime.totalMemory();
-            long beforeMax = runtime.maxMemory();
-
-            double beforePercent = beforeMax > 0 ? (double) beforeUsed / beforeMax * 100 : 0;
-
-            result.setBeforeUsedMemory(beforeUsed);
-            result.setBeforeTotalMemory(beforeTotal);
-            result.setBeforeUsagePercent(beforePercent);
-
-            if (fullGc) {
-                logger.info("执行完整GC");
-                System.gc();
-                System.runFinalization();
+        if (request.isFullGc()) {
+            System.gc();
+            System.runFinalization();
+            try {
                 Thread.sleep(100);
-                System.gc();
-            } else {
-                logger.info("执行标准GC");
-                System.gc();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
             }
-
-            Thread.sleep(100);
-
-            long afterUsed = runtime.totalMemory() - runtime.freeMemory();
-            long afterTotal = runtime.totalMemory();
-            double afterPercent = beforeMax > 0 ? (double) afterUsed / beforeMax * 100 : 0;
-
-            result.setAfterUsedMemory(afterUsed);
-            result.setAfterTotalMemory(afterTotal);
-            result.setAfterUsagePercent(afterPercent);
-            result.setFreedBytes(beforeUsed - afterUsed);
-
-            logger.info("GC完成, 释放: " + formatBytes(result.getFreedBytes()) +
-                    ", 使用率: " + String.format(Locale.US, "%.1f%% -> %.1f%%",
-                            beforePercent, afterPercent));
-
-        } catch (Exception e) {
-            logger.error("GC执行失败", e);
-            result.setError(new CommandResult.ErrorInfo("GC_ERROR", "GC执行失败: " + e.getMessage()));
+            System.gc();
+        } else {
+            System.gc();
         }
 
-        return result;
-    }
+        try {
+            Thread.sleep(100);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
 
-    private static String formatBytes(long bytes) {
-        if (bytes < 1024) return bytes + " B";
-        else if (bytes < 1024 * 1024) return String.format(Locale.getDefault(), "%.2f KB", bytes / 1024.0);
-        else return String.format(Locale.getDefault(), "%.2f MB", bytes / (1024.0 * 1024));
+        long afterUsed = runtime.totalMemory() - runtime.freeMemory();
+        long afterTotal = runtime.totalMemory();
+        long afterMax = runtime.maxMemory();
+
+        GcResult result = new GcResult(request.getRequestId());
+        result.setBeforeUsedMemory(beforeUsed);
+        result.setAfterUsedMemory(afterUsed);
+        result.setFreedBytes(beforeUsed - afterUsed);
+        result.setBeforeTotalMemory(beforeTotal);
+        result.setAfterTotalMemory(afterTotal);
+
+        if (beforeMax > 0) {
+            double beforePercent = (double) beforeUsed / beforeMax * 100;
+            double afterPercent = (double) afterUsed / afterMax * 100;
+            result.setBeforeUsagePercent(beforePercent);
+            result.setAfterUsagePercent(afterPercent);
+        }
+
+        result.setSuccess(true);
+
+        return result;
     }
 }

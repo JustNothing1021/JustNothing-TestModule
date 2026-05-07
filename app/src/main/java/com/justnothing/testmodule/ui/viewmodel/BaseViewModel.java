@@ -10,8 +10,8 @@ import androidx.lifecycle.MutableLiveData;
 import com.justnothing.methodsclient.UiClient;
 import com.justnothing.testmodule.R;
 import com.justnothing.testmodule.command.protocol.JsonProtocol;
-import com.justnothing.testmodule.command.base.CommandRequest;
-import com.justnothing.testmodule.command.base.CommandResult;
+import com.justnothing.testmodule.command.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.base.protocol.CommandResult;
 import com.justnothing.testmodule.utils.logging.Logger;
 
 import java.util.concurrent.ExecutorService;
@@ -20,7 +20,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-public abstract class BaseViewModel<RequestType extends CommandRequest, ResultType extends CommandResult> extends AndroidViewModel {
+public abstract class BaseViewModel<RequestType extends CommandRequest, ResultType extends CommandResult>
+        extends AndroidViewModel {
     protected final Logger logger;
     protected final UiClient client = UiClient.getInstance();
     private final ExecutorService executor = Executors.newSingleThreadExecutor();

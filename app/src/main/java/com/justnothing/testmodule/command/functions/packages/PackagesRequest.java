@@ -1,14 +1,23 @@
 package com.justnothing.testmodule.command.functions.packages;
 
-import com.justnothing.testmodule.command.base.CommandRequest;
+import com.justnothing.testmodule.command.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
+import com.justnothing.testmodule.command.base.command.SubCommand;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
+@SerializeKeyName("Packages")
+@SubCommand("list")
 public class PackagesRequest extends CommandRequest {
 
     public PackagesRequest() {
         super();
+    }
+
+    @Override
+    public String getCommandType() {
+        return "packages";
     }
 
     @Override

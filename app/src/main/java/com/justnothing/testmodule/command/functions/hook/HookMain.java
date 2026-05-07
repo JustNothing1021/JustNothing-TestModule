@@ -5,7 +5,7 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_HOOK_VER;
 import com.justnothing.javainterpreter.evaluator.DynamicClassGenerator;
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.base.MainCommand;
-import com.justnothing.testmodule.command.base.CommandRequest;
+import com.justnothing.testmodule.command.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.command.handlers.hook.HookListRequestHandler;
@@ -13,10 +13,10 @@ import com.justnothing.testmodule.utils.data.DataBridge;
 import com.justnothing.testmodule.utils.reflect.DexClassDefiner;
 
 
-import com.justnothing.testmodule.command.base.RegisterCommand;
+import com.justnothing.testmodule.command.base.command.RegisterCommand;
 
 @RegisterCommand("hook")
-public class HookMain extends MainCommand<CommandRequest, HookListResult> {
+public class HookMain extends MainCommand<HookListResult> {
 
     static {
         DynamicClassGenerator.setDefaultClassDefiner(DexClassDefiner.getInstance());

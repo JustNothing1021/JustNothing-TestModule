@@ -4,9 +4,8 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_BREAKPOINT_
 
 import com.justnothing.testmodule.command.base.MainCommand;
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.CommandRequest;
+import com.justnothing.testmodule.command.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.functions.breakpoint.util.BreakpointManager;
-import com.justnothing.testmodule.command.functions.breakpoint.request.BreakpointRequest;
 import com.justnothing.testmodule.command.functions.breakpoint.response.BreakpointResult;
 import com.justnothing.testmodule.command.functions.intercept.BreakpointInterceptTask;
 import com.justnothing.testmodule.command.output.Colors;
@@ -20,10 +19,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import com.justnothing.testmodule.command.base.RegisterCommand;
+import com.justnothing.testmodule.command.base.command.RegisterCommand;
 
 @RegisterCommand("breakpoint")
-public class BreakpointMain extends MainCommand<BreakpointRequest, BreakpointResult> {
+public class BreakpointMain extends MainCommand<BreakpointResult> {
 
     public BreakpointMain() {
         super("Breakpoint", BreakpointResult.class);

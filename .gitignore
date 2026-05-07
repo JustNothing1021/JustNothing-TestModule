@@ -45,5 +45,8 @@ testmodule-keystore.jks
 # 还有一些神秘的日志文件
 *.log
 
+# 给AI的一些计划文件
+/plans
+
 
 

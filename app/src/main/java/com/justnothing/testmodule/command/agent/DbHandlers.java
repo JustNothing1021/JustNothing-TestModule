@@ -9,6 +9,7 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.util.Arrays;
+import java.util.Collections;
 
 class DbListHandler extends AgentCommandHandler<JSONArray> {
 
@@ -68,10 +69,8 @@ class DbQueryHandler extends AgentCommandHandler<JSONObject> {
             throw new IllegalArgumentException("数据库不存在: " + dbFile.getPath());
         }
 
-        SQLiteDatabase db = null;
-        try {
-            db = SQLiteDatabase.openDatabase(dbFile.getPath(), null,
-                    SQLiteDatabase.OPEN_READONLY);
+        try (SQLiteDatabase db = SQLiteDatabase.openDatabase(dbFile.getPath(), null,
+                SQLiteDatabase.OPEN_READONLY)) {
             Cursor cursor = db.rawQuery(sql, null);
 
             String[] columns = cursor.getColumnNames();
@@ -95,9 +94,6 @@ class DbQueryHandler extends AgentCommandHandler<JSONObject> {
             result.put("rows", rows);
             result.put("rowCount", rowCount);
             return result;
-
-        } finally {
-            if (db != null) db.close();
         }
     }
 
@@ -115,7 +111,7 @@ class DbQueryHandler extends AgentCommandHandler<JSONObject> {
                 break;
             case Cursor.FIELD_TYPE_BLOB:
                 byte[] blob = c.getBlob(idx);
-                row.put(col, new JSONArray(Arrays.asList(blob)));
+                row.put(col, new JSONArray(Collections.singletonList(blob)));
                 break;
             default:
                 row.put(col, c.getString(idx));
@@ -136,10 +132,9 @@ class DbTablesHandler extends AgentCommandHandler<JSONArray> {
         String dbName = params.getString("dbName");
 
         File dbFile = new File(context.getApplicationInfo().dataDir, "databases/" + dbName);
-        SQLiteDatabase db = SQLiteDatabase.openDatabase(dbFile.getPath(), null,
-                SQLiteDatabase.OPEN_READONLY);
 
-        try {
+        try (SQLiteDatabase db = SQLiteDatabase.openDatabase(dbFile.getPath(), null,
+                SQLiteDatabase.OPEN_READONLY)) {
             Cursor cursor = db.rawQuery(
                     "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name", null);
             JSONArray tables = new JSONArray();
@@ -148,8 +143,6 @@ class DbTablesHandler extends AgentCommandHandler<JSONArray> {
             }
             cursor.close();
             return tables;
-        } finally {
-            db.close();
         }
     }
 }

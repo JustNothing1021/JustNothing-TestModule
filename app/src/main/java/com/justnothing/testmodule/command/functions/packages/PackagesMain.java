@@ -1,60 +1,52 @@
 package com.justnothing.testmodule.command.functions.packages;
 
-import static com.justnothing.testmodule.constants.CommandServer.CMD_PACKAGES_VER;
-
-import com.justnothing.testmodule.command.base.CommandRequest;
-import com.justnothing.testmodule.command.base.MainCommand;
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.output.Colors;
-import com.justnothing.testmodule.command.handlers.packages.PackagesRequestHandler;
-import com.justnothing.testmodule.utils.reflect.ClassLoaderManager;
+import com.justnothing.testmodule.command.base.*;
+import com.justnothing.testmodule.command.base.command.CommandInfo;
+import com.justnothing.testmodule.command.base.command.RegisterCommand;
+import com.justnothing.testmodule.command.base.command.SubCommand;
+import com.justnothing.testmodule.command.base.command.SubCommands;
+import com.justnothing.testmodule.command.base.command.SupportsRequests;
+import com.justnothing.testmodule.command.base.protocol.CommandRequest;
+import com.justnothing.testmodule.utils.logging.Logger;
 
-import java.util.List;
-import java.util.Locale;
-
-import com.justnothing.testmodule.command.base.RegisterCommand;
-
+@CommandInfo(
+    name = "packages",
+    group = "general",
+    description = "列出当前进程的所有已知包名",
+    helpText = """
+            语法: packages
+            
+            列出当前进程的所有已知包名。
+            
+            示例:
+                packages
+            """,
+    resultType = PackagesResult.class,
+    defaultSubcommand = "list"
+)
+@SubCommands({
+    @SubCommand(value = "list", request = PackagesRequest.class, description = "列出所有包名")
+})
 @RegisterCommand("packages")
-public class PackagesMain extends MainCommand<PackagesRequest, PackagesResult> {
+@SupportsRequests(PackagesRequest.class)
+public class PackagesMain extends MainCommand<PackagesResult> {
+
+    private final Logger logger = Logger.getLoggerForName("PackagesMain");
 
     public PackagesMain() {
-        super("Packages", PackagesResult.class);
-    }
-
-    @Override
-    public String getHelpText() {
-        return String.format("""
-                语法: packages
-                
-                列出当前进程中所有已知的包名（ClassLoader）.
-                
-                示例:
-                    packages
-                
-                提示: 使用 'methods -cl <package> <command>' 可以指定特定的ClassLoader来执行命令
-                
-                (Submodule packages %s)
-                """, CMD_PACKAGES_VER);
+        super("packages", PackagesResult.class);
     }
 
     @Override
     public PackagesResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
-        List<String> packages = ClassLoaderManager.getAllKnownPackages();
-        context.println(String.format(Locale.getDefault(), "当前进程的ClassLoader (总计%d个):", packages.size()), Colors.CYAN);
-        for (String pkg : packages) {
-            context.println("  " + pkg, Colors.WHITE);
-        }
-        context.println("");
-        context.println("提示: 用 'methods -cl <package> <command>' 可以指定ClassLoader", Colors.GRAY);
+        logger.debug("执行 packages 命令 (使用 @CommandInfo 声明式架构)");
 
-        // GUI/Agent模式：返回结构化数据
-        if (context.isGui() || context.isAgent()) {
-            PackagesRequestHandler handler = new PackagesRequestHandler();
-            PackagesRequest request = new PackagesRequest();
-            request.setRequestId(java.util.UUID.randomUUID().toString());
-            return handler.handle(request);
+        if (context.getRequest() == null) {
+            context.setRequest(new PackagesRequest());
         }
 
-        return null;
+        PackagesCommand command = new PackagesCommand();
+        return command.execute(context);
     }
 }

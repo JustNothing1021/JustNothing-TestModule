@@ -5,8 +5,8 @@ import com.justnothing.javainterpreter.api.DefaultOutputHandler;
 import com.justnothing.javainterpreter.security.SandboxConfig;
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.base.MainCommand;
-import com.justnothing.testmodule.command.base.CommandResult;
-import com.justnothing.testmodule.command.base.CommandRequest;
+import com.justnothing.testmodule.command.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 import com.justnothing.testmodule.utils.data.DataBridge;
@@ -22,10 +22,10 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-import com.justnothing.testmodule.command.base.RegisterCommand;
+import com.justnothing.testmodule.command.base.command.RegisterCommand;
 
 @RegisterCommand("sandboxtest")
-public class SandboxTestMain extends MainCommand<CommandRequest, CommandResult> {
+public class SandboxTestMain extends MainCommand<CommandResult> {
 
     private static volatile boolean nativeLoaded = false;
     private static volatile Throwable nativeLoadError = null;

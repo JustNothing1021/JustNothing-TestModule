@@ -1,11 +1,12 @@
 package com.justnothing.testmodule.command.functions.classcmd.impl;
 
+import com.justnothing.testmodule.command.base.command.SubCommandInfo;
+import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
 import com.justnothing.testmodule.command.functions.classcmd.AbstractClassCommand;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandContext;
 import com.justnothing.testmodule.command.functions.classcmd.request.InvokeConstructorRequest;
-import com.justnothing.testmodule.command.functions.classcmd.response.ConstructorInvokeResult;
+import com.justnothing.testmodule.command.functions.classcmd.response.InvokeConstructorResult;
 import com.justnothing.testmodule.command.functions.classcmd.util.ExpressionParser;
-import com.justnothing.testmodule.command.functions.classcmd.model.MethodInfo;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.reflect.DescriptorColorizer;
@@ -18,14 +19,44 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class ConstructorCommand extends AbstractClassCommand<InvokeConstructorRequest, ConstructorInvokeResult> {
+@SubCommandInfo(
+    description = "创建类的实例, 调用构造函数并返回结果",
+    usage = "class constructor [选项] <class_name> [args...]",
+    examples = {
+        "class constructor java.lang.Integer 114514",
+        "class constructor java.lang.Integer int:114514",
+        "class constructor java.lang.String \"1919810\"",
+        "class constructor java.lang.String String:\"1919810\"",
+        "class constructor java.util.ArrayList",
+        "class constructor java.io.File \"/sdcard/test.txt\""
+    },
+    optionsDesc = """
+            参数支持表达式语法，可以直接写值或使用类型提示。
+
+            参数格式:
+                - 直接表达式: 123, "hello", true, null
+                - 带类型提示: int:123, String:"hello", boolean:true
+
+            表达式支持:
+                - 字面量: 114514, 3.14, "text", true, null
+                - 算术运算: 1 + 2, 10 * 5
+                - 字符串拼接: "Hello " + "World"
+                - 方法调用: Math.abs(-5)
+                - 字段访问: SomeClass.FIELD
+                - 对象创建: new ArrayList()
+
+            选项:
+                -f, --free      自由模式（跳过类型推断）
+            """
+)
+public class ConstructorCommand extends AbstractClassCommand<InvokeConstructorRequest, InvokeConstructorResult> {
 
     public ConstructorCommand() {
-        super("class constructor", InvokeConstructorRequest.class, ConstructorInvokeResult.class);
+        super("class constructor", InvokeConstructorRequest.class, InvokeConstructorResult.class);
     }
 
     @Override
-    protected ConstructorInvokeResult executeClassCommand(ClassCommandContext<InvokeConstructorRequest> context) throws Exception {
+    protected InvokeConstructorResult executeClassCommand(ClassCommandContext<InvokeConstructorRequest> context) throws Exception {
         InvokeConstructorRequest request = context.execContext().getCommandRequest();
         String className = request.getClassName();
         List<String> rawParams = request.getParams();
@@ -44,39 +75,46 @@ public class ConstructorCommand extends AbstractClassCommand<InvokeConstructorRe
 
         List<Object> params = new ArrayList<>();
         List<Class<?>> paramTypes = new ArrayList<>();
+        List<String> imports = new ArrayList<>();
+        imports.add("java.util.*");
+        imports.add("java.lang.*");
+        imports.add(className);
 
-        if (!freeMode) {
-            for (int i = 0; i < rawParams.size(); i++) {
-                String paramStr = rawParams.get(i);
-
-                try {
-                    ExpressionParser.ParseResult result = ExpressionParser.parse(paramStr, context.classLoader());
-                    params.add(result.value());
-                    paramTypes.add(result.type());
-
-                    String typeHint = result.hasTypeHint() ? " (有类型提示)" : "";
-                    String valueStr = result.value() != null ? result.value().toString() : "null";
-                    context.logger().info("参数" + (params.size() - 1) +
-                            ": (" + result.type().getName() + ")" + valueStr + typeHint);
-                } catch (Exception e) {
-                    context.logger().warn("无法解析参数: " + paramStr);
-                    Map<String, Object> errContext = new HashMap<>();
-                    errContext.put("参数索引", i - 1);
-                    errContext.put("参数表达式", paramStr);
-                    CommandExceptionHandler.handleException("class constructor", e, context.execContext(), errContext, "解析参数失败");
-                    return null;
+        for (int i = 0; i < rawParams.size(); i++) {
+            String paramStr = rawParams.get(i);
+            String paramTypeStr = request.getParamTypes().size() > i ? request.getParamTypes().get(i) : "";
+            Class<?> paramType;
+            try {
+                ExpressionParser.ParseResult parseResult;
+                if (!paramTypeStr.isEmpty()) {
+                    paramType = ClassResolver.findClassWithImportsOrFail(
+                            paramTypeStr, context.classLoader(), imports
+                    );
+                    parseResult = ExpressionParser.parse(paramStr, context.classLoader(), paramType);
+                } else {
+                    parseResult = ExpressionParser.parse(paramStr, context.classLoader());
+                    paramType = parseResult.value() == null ? Void.class : parseResult.value().getClass();
                 }
+
+                params.add(parseResult.value());
+                paramTypes.add(paramType);
+
+                String typeHint = parseResult.hasTypeHint() ? " (有类型提示)" : "";
+                String valueStr = parseResult.value() != null ? parseResult.value().toString() : "null";
+                context.logger().info("参数" + (params.size() - 1) +
+                        ": (" + parseResult.type().getName() + ")" + valueStr + typeHint);
+            } catch (Exception e) {
+                context.logger().warn("无法解析参数: " + paramStr);
+                Map<String, Object> errContext = new HashMap<>();
+                errContext.put("参数索引", i);
+                errContext.put("参数表达式", paramStr);
+                CommandExceptionHandler.handleException("class constructor", e, context.execContext(), errContext, "解析参数失败");
+                return null;
             }
-        } else {
-            context.logger().info("自由模式: 跳过类型推断，使用原始字符串参数");
-            params.addAll(rawParams);
-            paramTypes.addAll(rawParams.stream().map(s -> String.class).toList());
         }
 
         Class<?> targetClass = ClassResolver.findClassOrFail(className, context.classLoader());
-        ConstructorInvokeResult result = new ConstructorInvokeResult();
-        result.setClassName(className);
-        result.setSuccess(true);
+        InvokeConstructorResult result = new InvokeConstructorResult();
 
         if (!params.isEmpty()) {
             context.execContext().println("调用参数：", Colors.CYAN);
@@ -146,14 +184,13 @@ public class ConstructorCommand extends AbstractClassCommand<InvokeConstructorRe
         context.execContext().println("");
         context.execContext().println("");
 
-        result.setConstructorInfo(MethodInfo.fromConstructor(constructor));
-
         constructor.setAccessible(true);
         Object instance = constructor.newInstance(params.toArray());
 
-        result.setInstance(instance);
-        result.setInstanceType(instance.getClass().getName());
-        result.setInstanceHashCode(System.identityHashCode(instance));
+        // 映射结果到 InvokeConstructorResult 字段
+        result.setResultString(instance.toString());
+        result.setResultTypeName(instance.getClass().getName());
+        result.setResultHash(System.identityHashCode(instance));
 
         context.logger().info("创建实例成功: " + instance);
         context.execContext().println("创建实例成功", Colors.GREEN);
@@ -165,39 +202,7 @@ public class ConstructorCommand extends AbstractClassCommand<InvokeConstructorRe
         context.execContext().print("Hash: ", Colors.CYAN);
         context.execContext().println(String.valueOf(System.identityHashCode(instance)), Colors.LIGHT_GREEN);
 
+        result.setSuccess(true);
         return result;
-    }
-
-    @Override
-    public String getHelpText() {
-        return """
-            语法: class constructor [options] <class_name> [params...]
-
-            创建类的实例。
-            参数支持表达式语法，可以直接写值或使用类型提示。
-
-            参数格式:
-                - 直接表达式: 123, "hello", true, null
-                - 带类型提示: int:123, String:"hello", boolean:true
-
-            表达式支持:
-                - 字面量: 123, 3.14, "text", true, null
-                - 算术运算: 1 + 2, 10 * 5
-                - 字符串拼接: "Hello " + "World"
-                - 方法调用: Math.abs(-5)
-                - 字段访问: SomeClass.FIELD
-                - 对象创建: new ArrayList()
-
-            选项:
-                -f, --free      自由模式（跳过类型推断）
-
-            示例:
-                class constructor java.lang.Integer 114514
-                class constructor java.lang.Integer int:114514
-                class constructor java.lang.String "1919810"
-                class constructor java.lang.String String:"1919810"
-                class constructor java.util.ArrayList
-                class constructor java.io.File "/sdcard/test.txt"
-            """;
     }
 }

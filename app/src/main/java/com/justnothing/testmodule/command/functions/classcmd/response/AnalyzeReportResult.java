@@ -1,43 +1,48 @@
 package com.justnothing.testmodule.command.functions.classcmd.response;
 
-import com.justnothing.testmodule.command.base.CommandResult;
+import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
+import com.justnothing.testmodule.command.base.protocol.ResultField;
+import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
+import com.justnothing.testmodule.command.base.protocol.ValueSupplier;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandResult;
 import com.justnothing.testmodule.command.functions.classcmd.model.ClassInfo;
 import com.justnothing.testmodule.command.functions.classcmd.model.FieldInfo;
 import com.justnothing.testmodule.command.functions.classcmd.model.MethodInfo;
 
-import org.json.JSONObject;
-import org.json.JSONArray;
-import org.json.JSONException;
-
 import java.util.ArrayList;
 import java.util.List;
 
+@SerializeKeyName("AnalyzeReport")
+@AutoSerializable
 public class AnalyzeReportResult extends ClassCommandResult {
 
+    @ResultField(name = "className")
     private String className;
+
+    @ResultField(name = "classInfo")
     private ClassInfo classInfo;
-    private List<FieldInfo> fields;
-    private List<MethodInfo> methods;
-    private List<MethodInfo> constructors;
-    private List<String> interfaces;
+
+    @ResultField(name = "fields", defaultValue = ValueSupplier.EmptyListSupplier.class)
+    private List<FieldInfo> fields = new ArrayList<>();
+
+    @ResultField(name = "methods", defaultValue = ValueSupplier.EmptyListSupplier.class)
+    private List<MethodInfo> methods = new ArrayList<>();
+
+    @ResultField(name = "constructors", defaultValue = ValueSupplier.EmptyListSupplier.class)
+    private List<MethodInfo> constructors = new ArrayList<>();
+
+    @ResultField(name = "interfaces", defaultValue = ValueSupplier.EmptyListSupplier.class)
+    private List<String> interfaces = new ArrayList<>();
+
+    @ResultField(name = "superClass")
     private String superClass;
-    private boolean success;
 
     public AnalyzeReportResult() {
         super();
-        this.fields = new ArrayList<>();
-        this.methods = new ArrayList<>();
-        this.constructors = new ArrayList<>();
-        this.interfaces = new ArrayList<>();
     }
 
     public AnalyzeReportResult(String requestId) {
         super(requestId);
-        this.fields = new ArrayList<>();
-        this.methods = new ArrayList<>();
-        this.constructors = new ArrayList<>();
-        this.interfaces = new ArrayList<>();
     }
 
     public String getClassName() { return className; }
@@ -54,47 +59,4 @@ public class AnalyzeReportResult extends ClassCommandResult {
     public void setInterfaces(List<String> interfaces) { this.interfaces = interfaces; }
     public String getSuperClass() { return superClass; }
     public void setSuperClass(String superClass) { this.superClass = superClass; }
-    public boolean isSuccess() { return success; }
-    public void setSuccess(boolean success) { this.success = success; }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        obj.put("className", className);
-        obj.put("success", success);
-
-        if (classInfo != null) {
-            obj.put("classInfo", classInfo.toJson());
-        }
-
-        if (!fields.isEmpty()) {
-            JSONArray arr = new JSONArray();
-            for (FieldInfo f : fields) { arr.put(f.toJson()); }
-            obj.put("fields", arr);
-        }
-
-        if (!methods.isEmpty()) {
-            JSONArray arr = new JSONArray();
-            for (MethodInfo m : methods) { arr.put(m.toJson()); }
-            obj.put("methods", arr);
-        }
-
-        if (!constructors.isEmpty()) {
-            JSONArray arr = new JSONArray();
-            for (MethodInfo c : constructors) { arr.put(c.toJson()); }
-            obj.put("constructors", arr);
-        }
-
-        if (!interfaces.isEmpty()) {
-            JSONArray arr = new JSONArray();
-            for (String i : interfaces) { arr.put(i); }
-            obj.put("interfaces", arr);
-        }
-
-        if (superClass != null) {
-            obj.put("superClass", superClass);
-        }
-
-        return obj;
-    }
 }

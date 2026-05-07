@@ -3185,7 +3185,29 @@ public class Parser {
                 }
                 return ClassReferenceNode.of(nestedClassName, resolvedClass, false, location);
             }
-            
+
+            // 修复: 支持通过 import 后的短名称访问内部类
+            // 例如: import android.view.WindowManager; WindowManager.LayoutParams
+            // 需要将 "WindowManager" 补全为 "android.view.WindowManager"，再拼接 "$LayoutParams"
+            Class<?> resolvedOuterClass = classRef.getResolvedClass();
+            if (resolvedOuterClass == null) {
+                // 如果 ClassReferenceNode 还没有解析过，尝试用 imports 解析外层类
+                String outerClassName = resolveClassName(classRef.getTypeName());
+                if (outerClassName != null) {
+                    resolvedOuterClass = context.resolveClass(outerClassName);
+                }
+            }
+
+            if (resolvedOuterClass != null) {
+                // 使用完整类名 + $ + 内部类名
+                String fullInnerClassName = resolvedOuterClass.getName() + "$" + memberName;
+                Class<?> innerClazz = context.resolveClass(fullInnerClassName);
+                if (innerClazz != null) {
+                    String displayName = resolvedOuterClass.getSimpleName() + "." + memberName;
+                    return ClassReferenceNode.of(displayName, innerClazz, false, location);
+                }
+            }
+
             try {
                 String className = classRef.getTypeName();
                 Class<?> clazz = ClassResolver.findClassWithImports(className, classLoader, context.getImports());

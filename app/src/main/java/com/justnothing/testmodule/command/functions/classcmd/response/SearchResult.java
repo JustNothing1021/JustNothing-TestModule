@@ -1,40 +1,47 @@
 package com.justnothing.testmodule.command.functions.classcmd.response;
 
+import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
+import com.justnothing.testmodule.command.base.protocol.ResultField;
+import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
+import com.justnothing.testmodule.command.base.protocol.ValueSupplier;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandResult;
-import com.justnothing.testmodule.command.functions.classcmd.model.MethodInfo;
 import com.justnothing.testmodule.command.functions.classcmd.model.FieldInfo;
-
-import org.json.JSONObject;
-import org.json.JSONArray;
-import org.json.JSONException;
+import com.justnothing.testmodule.command.functions.classcmd.model.MethodInfo;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@SerializeKeyName("Search")
+@AutoSerializable
 public class SearchResult extends ClassCommandResult {
 
-    private String searchType;  // "class", "method", "field", "annotation"
+    @ResultField(name = "searchType")
+    private String searchType;
+
+    @ResultField(name = "pattern")
     private String pattern;
-    private List<String> matchedClasses;
-    private List<MatchedMethod> matchedMethods;
-    private List<FieldInfo> matchedFields;
-    private List<MatchedAnnotation> matchedAnnotations;
+
+    @ResultField(name = "matchedClasses", defaultValue = ValueSupplier.EmptyListSupplier.class)
+    private List<String> matchedClasses = new ArrayList<>();
+
+    @ResultField(name = "matchedMethods", defaultValue = ValueSupplier.EmptyListSupplier.class)
+    private List<MatchedMethod> matchedMethods = new ArrayList<>();
+
+    @ResultField(name = "matchedFields", defaultValue = ValueSupplier.EmptyListSupplier.class)
+    private List<FieldInfo> matchedFields = new ArrayList<>();
+
+    @ResultField(name = "matchedAnnotations", defaultValue = ValueSupplier.EmptyListSupplier.class)
+    private List<MatchedAnnotation> matchedAnnotations = new ArrayList<>();
+
+    @ResultField(name = "totalCount", defaultValue = ValueSupplier.ZeroSupplier.class)
     private int totalCount;
 
     public SearchResult() {
         super();
-        this.matchedClasses = new ArrayList<>();
-        this.matchedMethods = new ArrayList<>();
-        this.matchedFields = new ArrayList<>();
-        this.matchedAnnotations = new ArrayList<>();
     }
 
     public SearchResult(String requestId) {
         super(requestId);
-        this.matchedClasses = new ArrayList<>();
-        this.matchedMethods = new ArrayList<>();
-        this.matchedFields = new ArrayList<>();
-        this.matchedAnnotations = new ArrayList<>();
     }
 
     public String getSearchType() { return searchType; }
@@ -52,74 +59,39 @@ public class SearchResult extends ClassCommandResult {
     public int getTotalCount() { return totalCount; }
     public void setTotalCount(int totalCount) { this.totalCount = totalCount; }
 
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        obj.put("searchType", searchType);
-        obj.put("pattern", pattern);
-        obj.put("totalCount", totalCount);
-
-        if (!matchedClasses.isEmpty()) {
-            JSONArray arr = new JSONArray();
-            for (String cls : matchedClasses) { arr.put(cls); }
-            obj.put("matchedClasses", arr);
-        }
-
-        if (!matchedMethods.isEmpty()) {
-            JSONArray arr = new JSONArray();
-            for (MatchedMethod m : matchedMethods) { arr.put(m.toJson()); }
-            obj.put("matchedMethods", arr);
-        }
-
-        if (!matchedFields.isEmpty()) {
-            JSONArray arr = new JSONArray();
-            for (FieldInfo f : matchedFields) { arr.put(f.toJson()); }
-            obj.put("matchedFields", arr);
-        }
-
-        if (!matchedAnnotations.isEmpty()) {
-            JSONArray arr = new JSONArray();
-            for (MatchedAnnotation a : matchedAnnotations) { arr.put(a.toJson()); }
-            obj.put("matchedAnnotations", arr);
-        }
-
-        return obj;
-    }
-
+    @AutoSerializable
     public static class MatchedMethod {
+        @ResultField(name = "declaringClass")
         public String declaringClass;
+
+        @ResultField(name = "method")
         public MethodInfo method;
+
+        public MatchedMethod() {}
 
         public MatchedMethod(String declaringClass, MethodInfo method) {
             this.declaringClass = declaringClass;
             this.method = method;
         }
-
-        public JSONObject toJson() throws JSONException {
-            JSONObject obj = new JSONObject();
-            obj.put("declaringClass", declaringClass);
-            obj.put("method", method.toJson());
-            return obj;
-        }
     }
 
+    @AutoSerializable
     public static class MatchedAnnotation {
+        @ResultField(name = "declaringClass")
         public String declaringClass;
+
+        @ResultField(name = "memberName")
         public String memberName;
+
+        @ResultField(name = "annotationName")
         public String annotationName;
+
+        public MatchedAnnotation() {}
 
         public MatchedAnnotation(String declaringClass, String memberName, String annotationName) {
             this.declaringClass = declaringClass;
             this.memberName = memberName;
             this.annotationName = annotationName;
-        }
-
-        public JSONObject toJson() throws JSONException {
-            JSONObject obj = new JSONObject();
-            obj.put("declaringClass", declaringClass);
-            obj.put("memberName", memberName);
-            obj.put("annotationName", annotationName);
-            return obj;
         }
     }
 }

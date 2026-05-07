@@ -1,14 +1,23 @@
 package com.justnothing.testmodule.command.functions.alias.request;
 
-import com.justnothing.testmodule.command.base.CommandRequest;
+import com.justnothing.testmodule.command.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
+import com.justnothing.testmodule.command.base.command.SubCommand;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
+@SerializeKeyName("AliasClear")
+@SubCommand("clear")
 public class AliasClearRequest extends CommandRequest {
 
     public AliasClearRequest() {
         super();
+    }
+
+    @Override
+    public String getCommandType() {
+        return "AliasClear";
     }
 
     @Override

@@ -4,10 +4,9 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_BEAN_SHELL_
 
 
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.CommandRequest;
+import com.justnothing.testmodule.command.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.base.MainCommand;
 import com.justnothing.testmodule.command.functions.bsh.util.BeanShellExecutor;
-import com.justnothing.testmodule.command.functions.bsh.request.BeanShellRequest;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.command.functions.bsh.response.BeanShellResult;
@@ -25,10 +24,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.justnothing.testmodule.command.base.RegisterCommand;
+import com.justnothing.testmodule.command.base.command.RegisterCommand;
 
 @RegisterCommand("bsh")
-public class BeanShellExecutorMain extends MainCommand<BeanShellRequest, BeanShellResult> {
+public class BeanShellExecutorMain extends MainCommand<BeanShellResult> {
 
     private static final String TAG = "BeanShellExecutor";
 

@@ -42,6 +42,10 @@ android {
         viewBinding true
     }
 
+    testOptions {
+        unitTests.returnDefaultValues = true
+    }
+
     externalNativeBuild {
         cmake {
             path "src/main/cpp/CMakeLists.txt"

@@ -2,11 +2,10 @@ package com.justnothing.testmodule.command.functions.bytecode.impl;
 
 import static com.justnothing.testmodule.constants.CommandServer.CMD_BYTECODE_VER;
 
-import com.justnothing.testmodule.command.base.CommandRequest;
+import com.justnothing.testmodule.command.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.base.MainCommand;
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.functions.bytecode.util.SystemBytecodeExtractor;
-import com.justnothing.testmodule.command.functions.bytecode.request.BytecodeRequest;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.functions.bytecode.response.BytecodeResult;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
@@ -36,10 +35,10 @@ import java.lang.reflect.Modifier;
 import java.util.Arrays;
 
 
-import com.justnothing.testmodule.command.base.RegisterCommand;
+import com.justnothing.testmodule.command.base.command.RegisterCommand;
 
 @RegisterCommand("bytecode")
-public class BytecodeMain extends MainCommand<BytecodeRequest, BytecodeResult> {
+public class BytecodeMain extends MainCommand<BytecodeResult> {
 
     private final String commandName;
 

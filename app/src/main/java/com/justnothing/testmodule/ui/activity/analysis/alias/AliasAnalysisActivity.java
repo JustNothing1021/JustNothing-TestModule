@@ -27,7 +27,6 @@ public class AliasAnalysisActivity extends AppCompatActivity {
     private View layoutLoading;
     private View layoutEmpty;
     private TextView tvTotalCount;
-    private RecyclerView recyclerAliases;
     private EditText etAliasName;
     private EditText etAliasCommand;
     private Button btnAddAlias;
@@ -53,7 +52,7 @@ public class AliasAnalysisActivity extends AppCompatActivity {
         layoutEmpty = findViewById(R.id.layout_empty);
 
         tvTotalCount = findViewById(R.id.tv_total_count);
-        recyclerAliases = findViewById(R.id.recycler_aliases);
+        RecyclerView recyclerAliases = findViewById(R.id.recycler_aliases);
         etAliasName = findViewById(R.id.et_alias_name);
         etAliasCommand = findViewById(R.id.et_alias_command);
         btnAddAlias = findViewById(R.id.btn_add_alias);

@@ -1,18 +1,12 @@
 package com.justnothing.testmodule.command.handlers.system;
 
-import android.annotation.SuppressLint;
 import android.app.ActivityManager;
 import android.content.Context;
 import android.os.Build;
 
-import com.justnothing.testmodule.command.proxy.RequestHandler;
-import com.justnothing.testmodule.command.functions.system.SystemFieldInfo;
 import com.justnothing.testmodule.command.functions.script.SystemInfoRequest;
-import com.justnothing.testmodule.command.base.CommandResult;
+import com.justnothing.testmodule.command.functions.system.SystemFieldInfo;
 import com.justnothing.testmodule.command.functions.system.SystemInfoResult;
-import com.justnothing.testmodule.utils.logging.Logger;
-
-import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -22,87 +16,48 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-public class SystemInfoRequestHandler implements RequestHandler<SystemInfoRequest, SystemInfoResult> {
+public class SystemInfoRequestHandler {
 
-    private static final Logger logger = Logger.getLoggerForName("SystemInfoHandler");
-
-    @Override
-    public String getCommandType() {
-        return "SystemInfo";
-    }
-
-    @Override
-    public SystemInfoRequest parseRequest(JSONObject obj) {
-        return new SystemInfoRequest().fromJson(obj);
-    }
-
-    @Override
-    public SystemInfoResult createResult(String requestId) {
-        return new SystemInfoResult(requestId);
-    }
-
-    @Override
     public SystemInfoResult handle(SystemInfoRequest request) {
-        logger.debug("处理系统信息请求");
+        SystemInfoResult result = new SystemInfoResult();
+        result.setRequestId(request.getRequestId());
 
-        SystemInfoResult result = new SystemInfoResult(request.getRequestId());
+        List<SystemFieldInfo> fields = new ArrayList<>();
 
-        try {
-            List<SystemFieldInfo> fields = new ArrayList<>();
+        addSection(fields, "操作系统信息");
+        addField(fields, "操作系统", "操作系统", System.getProperty("os.name"));
+        addField(fields, "操作系统", "系统版本", System.getProperty("os.version"));
+        addField(fields, "操作系统", "架构", System.getProperty("os.arch"));
+        addField(fields, "操作系统", "处理器数", String.valueOf(Runtime.getRuntime().availableProcessors()));
 
-            collectOsInfo(fields);
-            collectCpuInfo(fields);
-            collectMemoryInfo(fields);
-            collectSystemProperties(fields);
+        addSection(fields, "Android信息");
+        addField(fields, "Android", "设备制造商", Build.MANUFACTURER);
+        addField(fields, "Android", "设备品牌", Build.BRAND);
+        addField(fields, "Android", "设备型号", Build.MODEL);
+        addField(fields, "Android", "设备名称", Build.DEVICE);
+        addField(fields, "Android", "产品名称", Build.PRODUCT);
+        addField(fields, "Android", "硬件名称", Build.HARDWARE);
+        addField(fields, "Android", "序列号", "需要权限");
+        addField(fields, "Android", "Android版本", Build.VERSION.RELEASE);
+        addField(fields, "Android", "SDK版本", String.valueOf(Build.VERSION.SDK_INT));
+        addField(fields, "Android", "构建版本", Build.DISPLAY);
+        addField(fields, "Android", "构建类型", Build.TYPE);
+        addField(fields, "Android", "构建标签", Build.TAGS);
 
-            result.setFields(fields);
-            logger.info("系统信息收集完成, 共 " + fields.size() + " 个字段");
-        } catch (Exception e) {
-            logger.error("获取系统信息失败", e);
-            result.setError(new CommandResult.ErrorInfo("INTERNAL_ERROR", "获取系统信息失败: " + e.getMessage()));
-        }
+        addSection(fields, "CPU信息");
+        addField(fields, "CPU", "CPU架构", System.getProperty("os.arch"));
+        addField(fields, "CPU", "CPU信息", System.getProperty("ro.product.cpu"));
+        addField(fields, "CPU", "CPU ABI", Build.SUPPORTED_ABIS.length > 0 ? Build.SUPPORTED_ABIS[0] : "unknown");
+        addField(fields, "CPU", "CPU ABI2", Build.SUPPORTED_ABIS.length > 1 ? Build.SUPPORTED_ABIS[1] : "unknown");
+        addField(fields, "CPU", "处理器数", String.valueOf(Runtime.getRuntime().availableProcessors()));
+        addField(fields, "CPU", "CPU详情", readCpuInfo());
 
-        return result;
-    }
-
-    private void collectOsInfo(List<SystemFieldInfo> fields) {
-        addField(fields, "os_info", "OS Name", System.getProperty("os.name"));
-        addField(fields, "os_info", "OS Version", System.getProperty("os.version"));
-        addField(fields, "os_info", "Architecture", System.getProperty("os.arch"));
-        addField(fields, "os_info", "Processor Count", String.valueOf(Runtime.getRuntime().availableProcessors()));
-        addField(fields, "os_info", "Manufacturer", Build.MANUFACTURER);
-        addField(fields, "os_info", "Brand", Build.BRAND);
-        addField(fields, "os_info", "Model", Build.MODEL);
-        addField(fields, "os_info", "Device", Build.DEVICE);
-        addField(fields, "os_info", "Product", Build.PRODUCT);
-        addField(fields, "os_info", "Hardware", Build.HARDWARE);
-        addField(fields, "os_info", "Serial Number", "Requires Permission");
-        addField(fields, "os_info", "Android Version", Build.VERSION.RELEASE);
-        addField(fields, "os_info", "SDK Version", String.valueOf(Build.VERSION.SDK_INT));
-        addField(fields, "os_info", "Build Display", Build.DISPLAY);
-        addField(fields, "os_info", "Build Type", Build.TYPE);
-        addField(fields, "os_info", "Build Tags", Build.TAGS);
-    }
-
-    private void collectCpuInfo(List<SystemFieldInfo> fields) {
-        addField(fields, "cpu_info", "CPU Architecture", System.getProperty("os.arch"));
-        addField(fields, "cpu_info", "CPU Info", System.getProperty("ro.product.cpu"));
-        addField(fields, "cpu_info", "CPU ABI", Build.SUPPORTED_ABIS.length > 0 ? Build.SUPPORTED_ABIS[0] : "unknown");
-        addField(fields, "cpu_info", "CPU ABI2", Build.SUPPORTED_ABIS.length > 1 ? Build.SUPPORTED_ABIS[1] : "unknown");
-        addField(fields, "cpu_info", "Processor Count", String.valueOf(Runtime.getRuntime().availableProcessors()));
-
-        String cpuInfoRaw = readCpuInfo();
-        if (cpuInfoRaw != null && !cpuInfoRaw.isEmpty()) {
-            addField(fields, "cpu_info", "/proc/cpuinfo", cpuInfoRaw.trim());
-        }
-    }
-
-    private void collectMemoryInfo(List<SystemFieldInfo> fields) {
+        addSection(fields, "内存信息");
         Runtime runtime = Runtime.getRuntime();
-        addField(fields, "memory_info", "Java Heap Max", formatBytes(runtime.maxMemory()));
-        addField(fields, "memory_info", "Java Heap Total", formatBytes(runtime.totalMemory()));
-        addField(fields, "memory_info", "Java Heap Free", formatBytes(runtime.freeMemory()));
-        addField(fields, "memory_info", "Java Heap Used", formatBytes(runtime.totalMemory() - runtime.freeMemory()));
+        addField(fields, "Java堆内存", "最大内存", formatBytes(runtime.maxMemory()));
+        addField(fields, "Java堆内存", "已分配内存", formatBytes(runtime.totalMemory()));
+        addField(fields, "Java堆内存", "空闲内存", formatBytes(runtime.freeMemory()));
+        addField(fields, "Java堆内存", "已用内存", formatBytes(runtime.totalMemory() - runtime.freeMemory()));
 
         Context appContext = getApplicationContext();
         if (appContext != null) {
@@ -111,20 +66,16 @@ public class SystemInfoRequestHandler implements RequestHandler<SystemInfoReques
                 ActivityManager.MemoryInfo memoryInfo = new ActivityManager.MemoryInfo();
                 activityManager.getMemoryInfo(memoryInfo);
 
-                addField(fields, "memory_info", "System Memory Available", formatBytes(memoryInfo.availMem));
-                addField(fields, "memory_info", "System Memory Total", formatBytes(memoryInfo.totalMem));
-                addField(fields, "memory_info", "System Memory Threshold", formatBytes(memoryInfo.threshold));
-                addField(fields, "memory_info", "Low Memory", memoryInfo.lowMemory ? "Yes" : "No");
+                addField(fields, "系统内存", "可用内存", formatBytes(memoryInfo.availMem));
+                addField(fields, "系统内存", "总内存", formatBytes(memoryInfo.totalMem));
+                addField(fields, "系统内存", "阈值", formatBytes(memoryInfo.threshold));
+                addField(fields, "系统内存", "低内存", memoryInfo.lowMemory ? "是" : "否");
             }
         }
 
-        String meminfoRaw = readMeminfo();
-        if (meminfoRaw != null && !meminfoRaw.isEmpty()) {
-            addField(fields, "memory_info", "/proc/meminfo", meminfoRaw.trim());
-        }
-    }
+        addField(fields, "内存详细信息", "内存详情", readMeminfo());
 
-    private void collectSystemProperties(List<SystemFieldInfo> fields) {
+        addSection(fields, "系统属性");
         String[] props = {
             "ro.build.version.sdk",
             "ro.build.version.release",
@@ -145,16 +96,23 @@ public class SystemInfoRequestHandler implements RequestHandler<SystemInfoReques
 
         for (String prop : props) {
             String value = System.getProperty(prop);
-            if (value != null && !value.isEmpty()) {
-                addField(fields, "system_props", prop, value);
+            if (value != null) {
+                addField(fields, "系统属性", prop, value);
             }
         }
+
+        result.setFields(fields);
+        result.setSuccess(true);
+
+        return result;
+    }
+
+    private void addSection(List<SystemFieldInfo> fields, String category) {
+        fields.add(new SystemFieldInfo(category, "[SECTION]", category));
     }
 
     private void addField(List<SystemFieldInfo> fields, String category, String label, String value) {
-        if (value != null && !value.isEmpty()) {
-            fields.add(new SystemFieldInfo(category, label, value));
-        }
+        fields.add(new SystemFieldInfo(category, label, value != null ? value : ""));
     }
 
     private static String readCpuInfo() {
@@ -167,7 +125,7 @@ public class SystemInfoRequestHandler implements RequestHandler<SystemInfoReques
                 count++;
             }
         } catch (IOException e) {
-            result.append("Unable to read /proc/cpuinfo: ").append(e.getMessage()).append("\n");
+            result.append("无法读取 /proc/cpuinfo: ").append(e.getMessage()).append("\n");
         }
         return result.toString();
     }
@@ -182,7 +140,7 @@ public class SystemInfoRequestHandler implements RequestHandler<SystemInfoReques
                 count++;
             }
         } catch (IOException e) {
-            result.append("Unable to read /proc/meminfo: ").append(e.getMessage()).append("\n");
+            result.append("无法读取 /proc/meminfo: ").append(e.getMessage()).append("\n");
         }
         return result.toString();
     }
@@ -193,22 +151,21 @@ public class SystemInfoRequestHandler implements RequestHandler<SystemInfoReques
         } else if (bytes < 1024 * 1024) {
             return String.format(Locale.getDefault(), "%.2f KB", bytes / 1024.0);
         } else if (bytes < 1024 * 1024 * 1024) {
-            return String.format(Locale.getDefault(), "%.2f MB", bytes / (1024.0 * 1024.0));
+            return String.format(Locale.getDefault(), "%.2f MB", bytes / (1024.0 * 1024));
         } else {
-            return String.format(Locale.getDefault(), "%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0));
+            return String.format(Locale.getDefault(), "%.2f GB", bytes / (1024.0 * 1024.0 * 1024));
         }
     }
 
     private Context getApplicationContext() {
         try {
-            @SuppressLint("PrivateApi")
             Class<?> activityThreadClass = Class.forName("android.app.ActivityThread");
             Method currentActivityThreadMethod = activityThreadClass.getMethod("currentActivityThread");
             Object activityThread = currentActivityThreadMethod.invoke(null);
+
             Method getApplicationMethod = activityThreadClass.getMethod("getApplication");
             return (Context) getApplicationMethod.invoke(activityThread);
         } catch (Exception e) {
-            logger.error("获取应用上下文失败", e);
             return null;
         }
     }

@@ -1,7 +1,7 @@
 package com.justnothing.testmodule.command.functions.classcmd;
 
 import com.justnothing.testmodule.command.base.AbstractCommand;
-import com.justnothing.testmodule.command.base.CommandResult;
+import com.justnothing.testmodule.command.base.protocol.CommandResult;
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.utils.logging.Logger;
 
@@ -9,7 +9,7 @@ import java.util.Arrays;
 
 public abstract class AbstractClassCommand<Req extends ClassCommandRequest, Res extends ClassCommandResult>
         extends AbstractCommand<Req, Res>
-        implements ClassCommand<Req, Res> {
+        implements ClassCommand<Res> {
 
     protected static final Logger logger = Logger.getLoggerForName("AbstractClassCommand");
     protected AbstractClassCommand(String commandName, Class<Req> requestType, Class<Res> responseType) {
@@ -34,15 +34,21 @@ public abstract class AbstractClassCommand<Req extends ClassCommandRequest, Res 
         String[] subArgs;
         String[] args = context.args();
         String cmdName = context.cmdName();
+
         if (cmdName.equals("class")) {
-            subArgs = Arrays.copyOfRange(args, 1, args.length);
+            if (args != null && args.length >= 1) {
+                subArgs = Arrays.copyOfRange(args, 1, args.length);
+            } else {
+                subArgs = new String[0];
+            }
         } else {
-            subArgs = args;
+            subArgs = args != null ? args : new String[0];
         }
+
         ClassCommandContext<Req> ctx = new ClassCommandContext<>
                 (subArgs, context.classLoader(), context.targetPackage(), context, logger);
-        return executeClassCommand(ctx);
 
+        return executeClassCommand(ctx);
     }
 
     protected abstract Res executeClassCommand(ClassCommandContext<Req> context) throws Exception;

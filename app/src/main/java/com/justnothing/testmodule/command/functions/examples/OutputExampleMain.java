@@ -2,15 +2,15 @@ package com.justnothing.testmodule.command.functions.examples;
 
 import com.justnothing.testmodule.command.base.MainCommand;
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.CommandResult;
-import com.justnothing.testmodule.command.base.CommandRequest;
+import com.justnothing.testmodule.command.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.output.ICommandOutputHandler;
 
-import com.justnothing.testmodule.command.base.RegisterCommand;
+import com.justnothing.testmodule.command.base.command.RegisterCommand;
 
 @RegisterCommand("output_test")
-public class OutputExampleMain extends MainCommand<CommandRequest, CommandResult> {
+public class OutputExampleMain extends MainCommand<CommandResult> {
 
     public OutputExampleMain() {
         super("OutputExample", CommandResult.class);

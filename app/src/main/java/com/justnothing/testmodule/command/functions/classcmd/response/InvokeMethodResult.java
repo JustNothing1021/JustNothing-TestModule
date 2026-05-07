@@ -1,26 +1,38 @@
 package com.justnothing.testmodule.command.functions.classcmd.response;
 
+import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
+import com.justnothing.testmodule.command.base.protocol.ResultField;
+import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
+import com.justnothing.testmodule.command.base.protocol.ValueSupplier;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandResult;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
+@SerializeKeyName("InvokeMethod")
+@AutoSerializable
 public class InvokeMethodResult extends ClassCommandResult {
-    
+
+    @ResultField(name = "resultString")
     private String resultString;
+
+    @ResultField(name = "resultTypeName")
     private String resultTypeName;
+
+    @ResultField(name = "resultHash", defaultValue = ValueSupplier.ZeroSupplier.class)
     private int resultHash;
+
+    @ResultField(name = "instanceAfterInvocation")
     private String instanceAfterInvocation;
+
+    @ResultField(name = "instanceHash", defaultValue = ValueSupplier.ZeroSupplier.class)
     private int instanceHash;
-    
+
     public InvokeMethodResult() {
         super();
     }
-    
+
     public InvokeMethodResult(String requestId) {
         super(requestId);
     }
-    
+
     public String getResultString() { return resultString; }
     public void setResultString(String resultString) { this.resultString = resultString; }
     public String getResultTypeName() { return resultTypeName; }
@@ -31,31 +43,4 @@ public class InvokeMethodResult extends ClassCommandResult {
     public void setInstanceAfterInvocation(String instanceAfterInvocation) { this.instanceAfterInvocation = instanceAfterInvocation; }
     public int getInstanceHash() { return instanceHash; }
     public void setInstanceHash(int instanceHash) { this.instanceHash = instanceHash; }
-    
-    @Override
-    public JSONObject toJson() throws org.json.JSONException {
-        JSONObject obj = super.toJson();
-        if (resultString != null) {
-            obj.put("resultString", resultString);
-        }
-        if (resultTypeName != null) {
-            obj.put("resultTypeName", resultTypeName);
-        }
-        obj.put("resultHash", resultHash);
-        if (instanceAfterInvocation != null) {
-            obj.put("instanceAfterInvocation", instanceAfterInvocation);
-        }
-        obj.put("instanceHash", instanceHash);
-        return obj;
-    }
-    
-    @Override
-    public void fromJson(JSONObject obj) throws JSONException {
-        super.fromJson(obj);
-        resultString = obj.optString("resultString", null);
-        resultTypeName = obj.optString("resultTypeName", null);
-        resultHash = obj.optInt("resultHash", 0);
-        instanceAfterInvocation = obj.optString("instanceAfterInvocation", null);
-        instanceHash = obj.optInt("instanceHash", 0);
-    }
 }

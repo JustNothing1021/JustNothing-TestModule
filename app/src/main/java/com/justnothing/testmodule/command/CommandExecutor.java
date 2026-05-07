@@ -1,12 +1,20 @@
 package com.justnothing.testmodule.command;
 
-import com.justnothing.testmodule.command.base.CommandLineParser;
-import com.justnothing.testmodule.command.base.CommandRequest;
-import com.justnothing.testmodule.command.base.CommandResult;
-import com.justnothing.testmodule.command.base.MainCommand;
-import com.justnothing.testmodule.command.base.RegisterCommand;
-import com.justnothing.testmodule.command.base.SupportsRequests;
-import com.justnothing.testmodule.command.base.RegisterParser;
+import com.justnothing.testmodule.command.base.*;
+import com.justnothing.testmodule.command.base.command.CommandInfo;
+import com.justnothing.testmodule.command.base.command.CommandLineParser;
+import com.justnothing.testmodule.command.base.command.RegisterCommand;
+import com.justnothing.testmodule.command.base.command.RegisterParser;
+import com.justnothing.testmodule.command.base.command.SubCommand;
+import com.justnothing.testmodule.command.base.command.SubCommandInfo;
+import com.justnothing.testmodule.command.base.command.SubCommands;
+import com.justnothing.testmodule.command.base.command.SupportsRequests;
+import com.justnothing.testmodule.command.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.utils.AutoSerializer;
+import com.justnothing.testmodule.command.utils.ParamParser;
+
+import java.util.Arrays;
 import static com.justnothing.testmodule.constants.CommandServer.MAIN_MODULE_VER;
 
 import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
@@ -47,7 +55,6 @@ import org.json.JSONException;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 
@@ -62,7 +69,7 @@ public class CommandExecutor {
 
     private static final CmdExcLogger logger = new CmdExcLogger();
 
-    private static final Map<String, MainCommand<?, ?>> commandRegistry = new ConcurrentHashMap<>();
+    private static final Map<String, MainCommand<?>> commandRegistry = new ConcurrentHashMap<>();
     private static final Map<String, CommandLineParser<? extends CommandRequest>>
                 commandParsers = new ConcurrentHashMap<>();
 
@@ -75,7 +82,6 @@ public class CommandExecutor {
     static {
         autoRegister(
             HelpMain.class,
-            ClassMain.class,
             WatchMain.class,
             TraceMain.class,
             ExportContextMain.class,
@@ -83,7 +89,6 @@ public class CommandExecutor {
             ThreadsMain.class,
             SystemMain.class,
             BreakpointMain.class,
-            PackagesMain.class,
             HookMain.class,
             BytecodeMain.class,
             NativeMain.class,
@@ -97,11 +102,16 @@ public class CommandExecutor {
             SandboxTestMain.class,
             AnonClassTestMain.class
         );
+
+        autoRegisterWithCommandInfo(
+            ClassMain.class,
+            PackagesMain.class
+        );
     }
 
     @SafeVarargs
-    private static void autoRegister(Class<? extends MainCommand<?, ?>>... commandClasses) {
-        for (Class<? extends MainCommand<?, ?>> cmdClass : commandClasses) {
+    private static void autoRegister(Class<? extends MainCommand<?>>... commandClasses) {
+        for (Class<? extends MainCommand<?>> cmdClass : commandClasses) {
             try {
                 RegisterCommand rc = cmdClass.getAnnotation(RegisterCommand.class);
                 if (rc == null) {
@@ -110,7 +120,7 @@ public class CommandExecutor {
                 }
 
                 String commandName = rc.value();
-                MainCommand<?, ?> instance = cmdClass.getDeclaredConstructor().newInstance();
+                MainCommand<?> instance = cmdClass.getDeclaredConstructor().newInstance();
 
                 registerCommand(commandName, instance);
 
@@ -125,25 +135,92 @@ public class CommandExecutor {
                 if (rp != null) {
                     CommandLineParser<?> parser = rp.value().getDeclaredConstructor().newInstance();
                     registerParser(commandName, parser);
+                } else if (!commandParsers.containsKey(commandName)
+                        && cmdClass.isAnnotationPresent(SubCommands.class)) {
+                    try {
+                        CommandLineParser<?> defaultParser = new AnnotationBasedParser(cmdClass);
+                        registerParser(commandName, defaultParser);
+                    } catch (Exception ignored) {}
                 }
             } catch (Exception e) {
-                logger.error("自动注册命令失败: " + cmdClass.getSimpleName(), e);
-                throw new RuntimeException("自动注册命令失败: " + cmdClass.getSimpleName(), e);
+                logger.error("自动注册命令失败 (已跳过): " + cmdClass.getSimpleName()
+                           + " - " + e.getMessage()
+                           + "\n   该命令将不可用，但服务端继续运行");
             }
         }
     }
 
-    private static void registerCommand(String name, MainCommand<?, ?> command) {
+    @SafeVarargs
+    private static void autoRegisterWithCommandInfo(Class<? extends MainCommand<?>>... commandClasses) {
+        for (Class<? extends MainCommand<?>> cmdClass : commandClasses) {
+            try {
+                CommandInfo cmdInfo = cmdClass.getAnnotation(CommandInfo.class);
+                if (cmdInfo == null) {
+                    logger.warn(cmdClass.getSimpleName() + " 缺少 @CommandInfo 注解，跳过");
+                    continue;
+                }
+
+                String commandName = cmdInfo.name();
+                MainCommand<?> instance = cmdClass.getDeclaredConstructor().newInstance();
+
+                registerCommand(commandName, instance);
+
+                SubCommands subCommandsAnnotation = cmdClass.getAnnotation(SubCommands.class);
+                if (subCommandsAnnotation != null) {
+                    for (SubCommand subCmd : subCommandsAnnotation.value()) {
+                        if (subCmd.request() != CommandRequest.class) {
+                            AutoSerializer.registerRequest(subCmd.request());
+                            registerCommand(subCmd.request(), instance);
+                        }
+
+                        if (subCmd.result() != CommandResult.class) {
+                            AutoSerializer.registerResult(subCmd.result());
+                        }
+                    }
+                }
+
+                SupportsRequests supportsReqs = cmdClass.getAnnotation(SupportsRequests.class);
+                if (supportsReqs != null) {
+                    for (Class<? extends CommandRequest> reqType : supportsReqs.value()) {
+                        AutoSerializer.registerRequest(reqType);
+                        registerCommand(reqType, instance);
+                    }
+                }
+
+                CommandLineParser<?> parser = new AnnotationBasedParser(cmdClass);
+                if (!commandParsers.containsKey(commandName)) {
+                    registerParser(commandName, parser);
+                }
+
+                logger.info("通过 @CommandInfo 注册命令: " + commandName + 
+                           " (" + cmdClass.getSimpleName() + ")");
+                
+            } catch (Exception e) {
+                logger.error("⚠️ @CommandInfo 自动注册命令失败 (已跳过): " + cmdClass.getSimpleName()
+                           + " - " + e.getMessage()
+                           + "\n   该命令将不可用，但服务端继续运行");
+            }
+        }
+    }
+
+    private static void registerCommand(String name, MainCommand<?> command) {
         commandRegistry.put(name, command);
     }
 
-    private static void registerCommand(Class<? extends CommandRequest> requestType, MainCommand<?, ?> command)
+    private static void registerCommand(Class<? extends CommandRequest> requestType, MainCommand<?> command)
                 throws RuntimeException {
         try {
             registerCommand(requestType.newInstance().getCommandType(), command);
         } catch (InstantiationException | IllegalAccessException e) {
-            logger.error("注册命令时出错: " + e.getMessage(), e);
-            throw new RuntimeException("注册命令时出错", e);
+            logger.error("注册命令时出错 (已跳过): " + requestType.getSimpleName()
+                       + " - " + e.getMessage()
+                       + "\n   该请求类型将无法路由，但服务端继续运行");
+        } catch (IllegalStateException e) {
+            if (e.getMessage() != null && e.getMessage().contains("@SerializeKeyName")) {
+                logger.error(requestType.getSimpleName() + " 缺少@SerializeKeyName注解 (已跳过)");
+            } else {
+                logger.error("注册命令时状态异常 (已跳过): " + e.getMessage());
+            }
         }
     }
 
@@ -151,11 +228,11 @@ public class CommandExecutor {
         commandParsers.put(name, parser);
     }
 
-    public static MainCommand<? extends CommandRequest, ? extends CommandResult> getCommand(String name) {
+    public static MainCommand<? extends CommandResult> getCommand(String name) {
         return commandRegistry.get(name);
     }
 
-    public static Map<String, MainCommand<?, ?>> getAllCommands() {
+    public static Map<String, MainCommand<?>> getAllCommands() {
         return new HashMap<>(commandRegistry);
     }
 
@@ -369,7 +446,7 @@ public class CommandExecutor {
         context.setExecutionType(executionType);
 
         // 使用命令注册表分发命令
-        dispatchAndExecute(context, executionType);
+        dispatchAndExecute(context, executionType, output);
     }
 
     private void executeCommandInternal(CommandRequest request, ICommandOutputHandler output,
@@ -382,40 +459,78 @@ public class CommandExecutor {
             "",
             getTargetPackage(),
             getClassLoader(),
-            output,
+            executionType == CommandType.COMMAND_LINE ? output : new VoidOutputHandler(),
             ArgumentGroup.parse(""),
             requirements
         );
         context.setRequest(request);
         context.setExecutionType(executionType);
 
-        dispatchAndExecute(context, executionType);
+        dispatchAndExecute(context, executionType, output);
     }
 
-    private void dispatchAndExecute(CmdExecContext<CommandRequest> context, CommandType executionType)
+    private void dispatchAndExecute(CmdExecContext<CommandRequest> context, CommandType executionType,
+                            ICommandOutputHandler origOutput)
             throws Throwable {
         String command = context.cmdName();
         ICommandOutputHandler output = context.output();
-        MainCommand<? extends CommandRequest, ? extends CommandResult> commandObj = getCommand(command);
+        MainCommand<? extends CommandResult> commandObj = getCommand(command);
         if (commandObj != null) {
             try {
                 context.parseRequest();
+            } catch (IllegalCommandLineArgumentException e) {
+                if (executionType == CommandType.COMMAND_LINE) {
+                    output.println("参数错误: " + e.getMessage(), Colors.RED);
+                    
+                    String subCommandHelp = getSubCommandHelp(commandObj, context);
+                    if (subCommandHelp != null && !subCommandHelp.isEmpty()) {
+                        output.println("", Colors.DEFAULT);
+                        output.println(subCommandHelp, Colors.WHITE);
+                    } else {
+                        output.println(commandObj.getHelpText(), Colors.WHITE);
+                    }
+                    return;
+                }
+                throw e;
             } catch (Exception e) {
-                logger.debug("命令 " + command + " 无需参数解析或解析失败（非致命）: " + e.getMessage());
+                logger.debug("命令 " + command + " 无需参数解析或解析失败: " + e.getMessage());
             }
 
             CommandResult result = commandObj.runMain(context);
-            if (executionType != CommandType.COMMAND_LINE) {
-                if (result != null) {
-                    output.println(result.toJson().toString());
-                } else {
-                    throw new RuntimeException("命令执行失败或暂时不支持该命令的非CLI模式");
-                }
-            }
+            if (executionType == CommandType.USER_INTERFACE)
+                origOutput.println(result.toJson().toString());
+
         } else {
+            if (executionType != CommandType.COMMAND_LINE) {
+                logger.error("在非命令行模式下执行未知命令: " + command + ", 将会抛出错误");
+                throw new RuntimeException("未知的命令: " + command + ", 输入help获取帮助");
+            }
             output.println("未知的命令: " + command + ", 输入help获取帮助", Colors.ORANGE);
         }
     }
+
+    private String getSubCommandHelp(MainCommand<?> commandObj, CmdExecContext<?> context) {
+        try {
+            String[] args = context.args();
+            if (args == null || args.length == 0) return null;
+
+            String subCmdName = args[0];
+            SubCommands subCommandsAnnotation = commandObj.getClass().getAnnotation(SubCommands.class);
+            if (subCommandsAnnotation == null) return null;
+
+            for (SubCommand subCmd : subCommandsAnnotation.value()) {
+                if (subCmd.value().equals(subCmdName) && subCmd.command() != AbstractCommand.class) {
+                    SubCommandInfo info = subCmd.command().getAnnotation(SubCommandInfo.class);
+                    if (info != null) return AbstractCommand.generateHelpFromAnnotation(info);
+                    break;
+                }
+            }
+        } catch (Exception e) {
+            logger.debug("获取子命令帮助信息失败: " + e.getMessage());
+        }
+        return null;
+    }
+
 
     public String executeShellCommand(String fullCommand) {
         StringBuilderCollector collector = new StringBuilderCollector();
@@ -450,9 +565,11 @@ public class CommandExecutor {
         public T parseRequest() throws IllegalCommandLineArgumentException {
             if (request != null) return request;
             try {
-                return this.request = (T) Objects.requireNonNull(commandParsers.get(cmdName),
-                        "找不到命令" + cmdName + "对应的命令行参数解析器")
-                            .parse(this);
+                CommandLineParser<?> parser = commandParsers.get(cmdName);
+                if (parser == null) {
+                    return null;
+                }
+                return this.request = (T) parser.parse(this);
             } catch (Exception e) {
                 throw new IllegalCommandLineArgumentException("命令解析异常: " + e.getMessage());
             }
@@ -529,6 +646,89 @@ public class CommandExecutor {
     }
 
 
+    private static class AnnotationBasedParser implements CommandLineParser<CommandRequest> {
+        private final CommandInfo commandInfo;
+        private final SubCommands subCommands;
+
+        AnnotationBasedParser(Class<? extends MainCommand<?>> commandClass) {
+            this.commandInfo = commandClass.getAnnotation(CommandInfo.class);
+            this.subCommands = commandClass.getAnnotation(SubCommands.class);
+        }
+
+        @Override
+        public CommandRequest parse(CmdExecContext<? extends CommandRequest> context) 
+                throws IllegalCommandLineArgumentException {
+            String[] args = context.args();
+            
+            if (args.length < 1) {
+                if (commandInfo != null && !commandInfo.defaultSubcommand().isEmpty()) {
+                    return createDefaultRequest(commandInfo.defaultSubcommand());
+                }
+                return null;
+            }
+
+            String subCommandName = args[0];
+            String[] remainingArgs = Arrays.copyOfRange(args, 1, args.length);
+
+            SubCommand matchingSubCmd = findSubCommand(subCommandName);
+            
+            if (matchingSubCmd == null) {
+                throw new IllegalCommandLineArgumentException(
+                    "未知的命令: " + subCommandName +
+                    ". 可用的有: " + getAvailableSubcommands());
+            }
+
+            try {
+                Class<? extends CommandRequest> requestType = matchingSubCmd.request();
+                CommandRequest requestInstance = ParamParser.parse(requestType, remainingArgs);
+
+                return requestInstance.fromCommandLine(remainingArgs);
+
+            } catch (Exception e) {
+                throw new IllegalCommandLineArgumentException(
+                    "无法给子命令 " + subCommandName + " 创建请求: " + e.getMessage());
+            }
+        }
+
+        private SubCommand findSubCommand(String name) {
+            if (subCommands == null) return null;
+            
+            for (SubCommand subCmd : subCommands.value()) {
+                if (subCmd.value().equals(name)) {
+                    return subCmd;
+                }
+            }
+            return null;
+        }
+
+        private CommandRequest createDefaultRequest(String subCommandName) 
+                throws IllegalCommandLineArgumentException {
+            SubCommand subCmd = findSubCommand(subCommandName);
+            if (subCmd == null) {
+                throw new IllegalCommandLineArgumentException(
+                    "Default subcommand not found: " + subCommandName);
+            }
+            
+            try {
+                return subCmd.request().getDeclaredConstructor().newInstance();
+            } catch (Exception e) {
+                throw new IllegalCommandLineArgumentException(
+                    "Failed to create default request: " + e.getMessage());
+            }
+        }
+
+        private String getAvailableSubcommands() {
+            if (subCommands == null) return "(none)";
+            
+            StringBuilder sb = new StringBuilder();
+            for (SubCommand subCmd : subCommands.value()) {
+                if (sb.length() > 0) sb.append(", ");
+                sb.append(subCmd.value());
+            }
+            return sb.toString();
+        }
+    }
+
     public static String getHelpText() {
         return String.format("""
             Xposed Method CLI (Command Line Interface) Server端 %s
@@ -542,7 +742,7 @@ public class CommandExecutor {
               help                              - 显示所有命令的帮助或特定命令的帮助
               alias                             - 管理命令别名
               packages                          - 列出已知包名
-              export-context                    - 导出设备xtchttp上下文信息
+              export-context                    - 导出设备context上下文信息
               bsh                               - 通过BeanShell执行代码
               script                            - 脚本管理系统
               hook                              - 动态Hook注入器

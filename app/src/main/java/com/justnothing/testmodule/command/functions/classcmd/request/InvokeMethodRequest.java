@@ -1,126 +1,105 @@
 package com.justnothing.testmodule.command.functions.classcmd.request;
 
-import com.justnothing.testmodule.command.base.CommandRequest;
+import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
+import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
+import com.justnothing.testmodule.command.base.parser.FlagParam;
+import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
+import com.justnothing.testmodule.command.base.parser.PositionalParam;
+import com.justnothing.testmodule.command.base.command.SubCommand;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandRequest;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.justnothing.testmodule.command.utils.ParamParser;
+import com.justnothing.testmodule.command.utils.ParamStringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@SerializeKeyName("InvokeMethod")
+@SubCommand("invoke")
+@AutoSerializable
 public class InvokeMethodRequest extends ClassCommandRequest {
-    
+
+    @PositionalParam(order = 1, name = "类名")
     private String className;
+
+    @PositionalParam(order = 2, name = "方法名")
     private String methodName;
+
+    @PositionalParam(order = 3, name = "方法参数", required = false, varArgs = true)
+    private String paramsRaw;
+
+    @FlagParam(names = {"-s"}, description = "静态方法")
+    private boolean isStatic = false;
+
+    @FlagParam(names = {"-f", "--free"}, description = "自由模式")
+    private boolean freeMode = false;
+
+    @FlagParam(names = {"--super"}, description = "访问父类成员")
+    private boolean accessSuper = false;
+
+    @FlagParam(names = {"--interfaces"}, description = "访问接口成员")
+    private boolean accessInterfaces = false;
+
     private String signature;
     private String targetInstance;
     private List<String> params;
     private List<String> paramTypes;
-    private boolean freeMode;
-    private boolean isStatic;
-    private boolean accessSuper;
-    private boolean accessInterfaces;
-    
+
     public InvokeMethodRequest() {
         super();
         this.params = new ArrayList<>();
         this.paramTypes = new ArrayList<>();
     }
-    
+
     public String getClassName() { return className; }
     public void setClassName(String className) { this.className = className; }
+    
     public String getMethodName() { return methodName; }
     public void setMethodName(String methodName) { this.methodName = methodName; }
+    
     public String getSignature() { return signature; }
     public void setSignature(String signature) { this.signature = signature; }
+    
     public String getTargetInstance() { return targetInstance; }
     public void setTargetInstance(String targetInstance) { this.targetInstance = targetInstance; }
-    public List<String> getParams() { return params; }
+    
+    public List<String> getParams() { 
+        if (params == null) params = new ArrayList<>();
+        return params; 
+    }
     public void setParams(List<String> params) { this.params = params; }
-    public List<String> getParamTypes() { return paramTypes; }
+    
+    public List<String> getParamTypes() { 
+        if (paramTypes == null) paramTypes = new ArrayList<>();
+        return paramTypes; 
+    }
     public void setParamTypes(List<String> paramTypes) { this.paramTypes = paramTypes; }
+    
     public boolean isFreeMode() { return freeMode; }
     public void setFreeMode(boolean freeMode) { this.freeMode = freeMode; }
+    
     public boolean isStatic() { return isStatic; }
     public void setStatic(boolean aStatic) { isStatic = aStatic; }
+    
     public boolean isAccessSuper() { return accessSuper; }
     public void setAccessSuper(boolean accessSuper) { this.accessSuper = accessSuper; }
+    
     public boolean isAccessInterfaces() { return accessInterfaces; }
     public void setAccessInterfaces(boolean accessInterfaces) { this.accessInterfaces = accessInterfaces; }
-    
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        obj.put("className", className);
-        obj.put("methodName", methodName);
-        obj.put("signature", signature);
-        obj.put("targetInstance", targetInstance);
-        obj.put("freeMode", freeMode);
-        obj.put("isStatic", isStatic);
-        obj.put("accessSuper", accessSuper);
-        obj.put("accessInterfaces", accessInterfaces);
-        
-        JSONArray paramsArray = new JSONArray();
-        for (String param : params) {
-            paramsArray.put(param);
-        }
-        obj.put("params", paramsArray);
-        
-        JSONArray paramTypesArray = new JSONArray();
-        for (String paramType : paramTypes) {
-            paramTypesArray.put(paramType != null ? paramType : "");
-        }
-        obj.put("paramTypes", paramTypesArray);
-        
-        return obj;
-    }
-    
-    @Override
-    public InvokeMethodRequest fromJson(JSONObject obj) throws JSONException {
-        setRequestId(obj.optString("requestId"));
-        setClassName(obj.optString("className"));
-        setMethodName(obj.optString("methodName"));
-        setSignature(obj.optString("signature"));
-        setTargetInstance(obj.optString("targetInstance", null));
-        setFreeMode(obj.optBoolean("freeMode", false));
-        setStatic(obj.optBoolean("isStatic", false));
-        setAccessSuper(obj.optBoolean("accessSuper", false));
-        setAccessInterfaces(obj.optBoolean("accessInterfaces", false));
 
-        params = new ArrayList<>();
-        if (obj.has("params")) {
-            JSONArray arr = obj.getJSONArray("params");
-            for (int i = 0; i < arr.length(); i++) {
-                params.add(arr.optString(i));
+    @Override
+    public InvokeMethodRequest fromCommandLine(String[] args) throws IllegalCommandLineArgumentException {
+        InvokeMethodRequest parsed = ParamParser.parse(InvokeMethodRequest.class, args);
+
+        if (parsed.paramsRaw != null && !parsed.paramsRaw.isEmpty()) {
+            // ★ 使用ParamStringUtils正确处理引号、转义字符!
+            List<ParamStringUtils.ParamToken> paramTokens = ParamStringUtils.parseParams(parsed.paramsRaw);
+            
+            for (ParamStringUtils.ParamToken token : paramTokens) {
+                parsed.getParams().add(token.value());
+                parsed.getParamTypes().add(token.typeHint());
             }
         }
 
-        paramTypes = new ArrayList<>();
-        if (obj.has("paramTypes")) {
-            JSONArray arr = obj.getJSONArray("paramTypes");
-            for (int i = 0; i < arr.length(); i++) {
-                String type = arr.optString(i, "");
-                paramTypes.add(type.isEmpty() ? null : type);
-            }
-        }
-
-        return this;
-    }
-
-    @Override
-    public InvokeMethodRequest fromCommandLine(String[] args) {
-        if (args.length > 0) className = args[0];
-        if (args.length > 1) methodName = args[1];
-        for (int i = 2; i < args.length; i++) {
-            String arg = args[i];
-            if ("-s".equals(arg)) isStatic = true;
-            else if ("-f".equals(arg) || "--free".equals(arg)) freeMode = true;
-            else if ("--super".equals(arg)) accessSuper = true;
-            else if ("--interfaces".equals(arg)) accessInterfaces = true;
-            else if (!arg.startsWith("-")) params.add(arg);
-        }
-        return this;
+        return parsed;
     }
 }

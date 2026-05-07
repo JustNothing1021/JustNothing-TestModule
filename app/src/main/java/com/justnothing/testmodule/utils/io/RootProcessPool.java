@@ -56,7 +56,7 @@ public class RootProcessPool extends Logger {
         this.availableNonRootProcesses = new LinkedBlockingQueue<>(MAX_POOL_SIZE);
         initializePool();
         startMaintenanceTask();
-        info("RootProcessPool初始化完成");
+        // info("RootProcessPool初始化完成");
     }
 
     @Override
@@ -180,7 +180,7 @@ public class RootProcessPool extends Logger {
                     iterator.remove();
                     process.close();
                     totalProcesses.decrementAndGet();
-                    debug("移除空闲Root进程");
+                    // debug("移除空闲Root进程");
                 }
             }
         } finally {

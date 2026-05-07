@@ -51,8 +51,8 @@ public class MemoryAnalysisViewModel extends BaseViewModel<MemoryInfoRequest, Me
     }
 
     private void queryMemoryInfo(String detailLevel) {
-        isLoading.setValue(true);
-        error.setValue(null);
+        isLoading.postValue(true);
+        error.postValue(null);
 
         getExecutor().execute(() -> {
             MemoryInfoResult result = execute(new MemoryInfoRequest(detailLevel));
@@ -68,8 +68,8 @@ public class MemoryAnalysisViewModel extends BaseViewModel<MemoryInfoRequest, Me
     }
 
     public void triggerGc(boolean fullGc) {
-        isLoading.setValue(true);
-        error.setValue(null);
+        isLoading.postValue(true);
+        error.postValue(null);
 
         getExecutor().execute(() -> {
             GcResult result = executeAny(new GcRequest(fullGc), GcResult.class);

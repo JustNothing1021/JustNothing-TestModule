@@ -4,7 +4,7 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_NETWORK_VER
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.base.MainCommand;
-import com.justnothing.testmodule.command.base.CommandRequest;
+import com.justnothing.testmodule.command.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.io.IOManager;
@@ -21,10 +21,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import com.justnothing.testmodule.command.base.RegisterCommand;
+import com.justnothing.testmodule.command.base.command.RegisterCommand;
 
 @RegisterCommand("network")
-public class NetworkMain extends MainCommand<NetworkRequest, NetworkResult> {
+public class NetworkMain extends MainCommand<NetworkResult> {
 
     public NetworkMain() {
         super("Network", NetworkResult.class);

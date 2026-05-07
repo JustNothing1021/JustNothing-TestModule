@@ -1,18 +1,40 @@
 package com.justnothing.testmodule.command.functions.performance;
 
-import com.justnothing.testmodule.command.base.CommandResult;
+import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
+import com.justnothing.testmodule.command.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.base.protocol.ResultField;
+import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
+import com.justnothing.testmodule.command.base.protocol.ValueSupplier;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
+@SerializeKeyName("PerformanceResult")
+@AutoSerializable
 public class PerformanceResult extends CommandResult {
 
+    @ResultField(name = "subCommand", defaultValue = ValueSupplier.EmptyStringSupplier.class)
     private String subCommand;
+
+    @ResultField(name = "output", defaultValue = ValueSupplier.EmptyStringSupplier.class)
     private String output;
+
+    @ResultField(name = "subResult", defaultValue = ValueSupplier.EmptyStringSupplier.class)
+    private String subResult;
+
+    @ResultField(name = "durationMs")
     private Long durationMs;
+
+    @ResultField(name = "sampleDuration")
     private Long sampleDuration;
+
+    @ResultField(name = "threadCount")
     private Integer threadCount;
+
+    @ResultField(name = "memoryUsed")
     private Long memoryUsed;
+
+    @ResultField(name = "cpuTimeMs")
     private Long cpuTimeMs;
 
     public PerformanceResult() { super(); }
@@ -23,6 +45,9 @@ public class PerformanceResult extends CommandResult {
 
     public String getOutput() { return output; }
     public void setOutput(String output) { this.output = output; }
+
+    public String getSubResult() { return subResult; }
+    public void setSubResult(String subResult) { this.subResult = subResult; }
 
     public Long getDurationMs() { return durationMs; }
     public void setDurationMs(Long durationMs) { this.durationMs = durationMs; }
@@ -38,29 +63,4 @@ public class PerformanceResult extends CommandResult {
 
     public Long getCpuTimeMs() { return cpuTimeMs; }
     public void setCpuTimeMs(Long cpuTimeMs) { this.cpuTimeMs = cpuTimeMs; }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        if (subCommand != null) obj.put("subCommand", subCommand);
-        if (output != null) obj.put("output", output);
-        if (durationMs != null) obj.put("durationMs", durationMs);
-        if (sampleDuration != null) obj.put("sampleDuration", sampleDuration);
-        if (threadCount != null) obj.put("threadCount", threadCount);
-        if (memoryUsed != null) obj.put("memoryUsed", memoryUsed);
-        if (cpuTimeMs != null) obj.put("cpuTimeMs", cpuTimeMs);
-        return obj;
-    }
-
-    @Override
-    public void fromJson(JSONObject obj) throws JSONException {
-        super.fromJson(obj);
-        subCommand = obj.optString("subCommand", null);
-        output = obj.optString("output", null);
-        durationMs = obj.has("durationMs") ? obj.getLong("durationMs") : null;
-        sampleDuration = obj.has("sampleDuration") ? obj.getLong("sampleDuration") : null;
-        threadCount = obj.has("threadCount") ? obj.getInt("threadCount") : null;
-        memoryUsed = obj.has("memoryUsed") ? obj.getLong("memoryUsed") : null;
-        cpuTimeMs = obj.has("cpuTimeMs") ? obj.getLong("cpuTimeMs") : null;
-    }
 }

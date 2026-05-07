@@ -8,7 +8,7 @@ import android.content.Context;
 import android.os.Build;
 
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.CommandRequest;
+import com.justnothing.testmodule.command.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.base.MainCommand;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.functions.script.SystemInfoRequest;
@@ -19,11 +19,12 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.Locale;
+import java.util.UUID;
 
-import com.justnothing.testmodule.command.base.RegisterCommand;
+import com.justnothing.testmodule.command.base.command.RegisterCommand;
 
 @RegisterCommand("system")
-public class SystemMain extends MainCommand<SystemInfoRequest, SystemInfoResult> {
+public class SystemMain extends MainCommand<SystemInfoResult> {
 
     public SystemMain() {
         super("System", SystemInfoResult.class);
@@ -186,14 +187,14 @@ public class SystemMain extends MainCommand<SystemInfoRequest, SystemInfoResult>
         if (context.isGui() || context.isAgent()) {
             SystemInfoRequestHandler handler = new SystemInfoRequestHandler();
             SystemInfoRequest request = new SystemInfoRequest();
-            request.setRequestId(java.util.UUID.randomUUID().toString());
+            request.setRequestId(UUID.randomUUID().toString());
             return handler.handle(request);
         }
 
         return null;
     }
     
-    private void printInfoLine(CommandExecutor.CmdExecContext context, String label, String value) {
+    private void printInfoLine(CommandExecutor.CmdExecContext<?> context, String label, String value) {
         context.print(label, Colors.CYAN);
         context.println(value, Colors.YELLOW);
     }

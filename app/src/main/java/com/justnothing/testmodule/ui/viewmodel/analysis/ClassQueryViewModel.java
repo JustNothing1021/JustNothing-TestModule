@@ -11,7 +11,7 @@ import com.justnothing.methodsclient.UiClient;
 import com.justnothing.testmodule.R;
 import com.justnothing.testmodule.command.protocol.JsonProtocol;
 import com.justnothing.testmodule.command.functions.classcmd.request.ClassInfoRequest;
-import com.justnothing.testmodule.command.base.CommandResult;
+import com.justnothing.testmodule.command.base.protocol.CommandResult;
 import com.justnothing.testmodule.command.functions.classcmd.response.ClassInfoResult;
 import com.justnothing.testmodule.command.functions.classcmd.model.ClassInfo;
 import com.justnothing.testmodule.utils.logging.Logger;

@@ -1,15 +1,23 @@
 package com.justnothing.testmodule.command.functions.classcmd.request;
 
-import com.justnothing.testmodule.command.base.CommandRequest;
+import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
+import com.justnothing.testmodule.command.base.parser.FlagParam;
 import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
+import com.justnothing.testmodule.command.base.parser.PositionalParam;
+import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
+import com.justnothing.testmodule.command.base.command.SubCommand;
+import com.justnothing.testmodule.command.utils.ParamParser;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandRequest;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
+@SerializeKeyName("MethodList")
+@SubCommand("list")
+@AutoSerializable
 public class MethodListRequest extends ClassCommandRequest {
 
+    @PositionalParam(order = 1, name = "类名", required = true)
     private String className;
+
+    @FlagParam(names = {"-v", "--verbose"}, description = "显示详细信息（参数、异常等）")
     private boolean verbose;
 
     public MethodListRequest() {
@@ -20,40 +28,8 @@ public class MethodListRequest extends ClassCommandRequest {
     public void setClassName(String className) { this.className = className; }
     public boolean isVerbose() { return verbose; }
     public void setVerbose(boolean verbose) { this.verbose = verbose; }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        obj.put("className", className);
-        obj.put("verbose", verbose);
-        return obj;
-    }
-
-    @Override
-    public MethodListRequest fromJson(JSONObject obj) throws JSONException {
-        setRequestId(obj.optString("requestId"));
-        setClassName(obj.optString("className"));
-        setVerbose(obj.optBoolean("verbose", false));
-        return this;
-    }
-
     @Override
     public MethodListRequest fromCommandLine(String[] args) throws IllegalCommandLineArgumentException {
-        if (args.length < 1) {
-            throw new IllegalCommandLineArgumentException("参数不足: class list [options] <class>");
-        }
-
-        int startIdx = 0;
-        if ("-v".equals(args[0]) || "--verbose".equals(args[0])) {
-            verbose = true;
-            startIdx = 1;
-        }
-
-        if (args.length <= startIdx) {
-            throw new IllegalCommandLineArgumentException("详细模式需要指定类名: class list -v <class>");
-        }
-
-        className = args[args.length - 1];
-        return this;
+        return ParamParser.parse(MethodListRequest.class, args);
     }
 }

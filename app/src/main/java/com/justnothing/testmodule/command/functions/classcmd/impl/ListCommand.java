@@ -1,5 +1,6 @@
 package com.justnothing.testmodule.command.functions.classcmd.impl;
 
+import com.justnothing.testmodule.command.base.command.SubCommandInfo;
 import com.justnothing.testmodule.command.functions.classcmd.AbstractClassCommand;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandContext;
 import com.justnothing.testmodule.command.functions.classcmd.request.MethodListRequest;
@@ -15,6 +16,18 @@ import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.Comparator;
 
+@SubCommandInfo(
+    description = "列出一个类的所有方法，支持按修饰符、返回类型等筛选",
+    usage = "class list [options] <class_name>",
+    examples = {
+        "class list java.lang.String",
+        "class list -v java.util.ArrayList",
+    },
+    optionsDesc = """
+            选项:
+              -v, --verbose       显示详细信息（参数、异常等）
+            """
+)
 public class ListCommand extends AbstractClassCommand<MethodListRequest, MethodListResult> {
 
     public ListCommand() {
@@ -96,21 +109,5 @@ public class ListCommand extends AbstractClassCommand<MethodListRequest, MethodL
 
         context.logger().info("执行成功，找到 " + methods.length + " 个方法 (静态: " + staticCount + ", 实例: " + instanceCount + ")");
         return result;
-    }
-
-    @Override
-    public String getHelpText() {
-        return """
-            语法: class list [options] <class>
-
-            列出一个类的所有方法.
-
-            可选项:
-                -v, --verbose      详细输出完整类名
-
-            示例:
-                class list -v java.lang.String
-                class list com.android.server.am.ActivityManagerService
-            """;
     }
 }

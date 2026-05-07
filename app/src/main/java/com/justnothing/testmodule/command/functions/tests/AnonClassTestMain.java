@@ -4,18 +4,18 @@ import com.justnothing.javainterpreter.ScriptRunner;
 import com.justnothing.javainterpreter.api.DefaultOutputHandler;
 import com.justnothing.testmodule.command.base.MainCommand;
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.CommandResult;
-import com.justnothing.testmodule.command.base.CommandRequest;
+import com.justnothing.testmodule.command.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.utils.reflect.DexClassDefiner;
 import com.justnothing.javainterpreter.evaluator.DynamicClassGenerator;
 
 import java.util.concurrent.atomic.AtomicReference;
 
-import com.justnothing.testmodule.command.base.RegisterCommand;
+import com.justnothing.testmodule.command.base.command.RegisterCommand;
 
 @RegisterCommand("anonclasstest")
-public class AnonClassTestMain extends MainCommand<CommandRequest, CommandResult> {
+public class AnonClassTestMain extends MainCommand<CommandResult> {
 
     public AnonClassTestMain() {
         super("AnonClassTest", CommandResult.class);

@@ -1,21 +1,14 @@
 package com.justnothing.testmodule.command.functions.performance.sampler;
 
 public interface SampleData {
-
     int id();
-
     int sampleRate();
-
     long startTime();
-
     long stopTime();
-
     int totalSamples();
-
     default long getDuration() {
         return stopTime() - startTime();
     }
-
     default String getDurationString() {
         long duration = getDuration();
         if (duration < 1000) {

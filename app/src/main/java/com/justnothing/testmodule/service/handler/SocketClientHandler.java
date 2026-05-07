@@ -4,14 +4,13 @@ import android.util.Log;
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.CommandType;
+import com.justnothing.testmodule.command.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.base.protocol.CommandResult;
 import com.justnothing.testmodule.command.output.ClientRequirements;
 import com.justnothing.testmodule.command.output.ICommandOutputHandler;
 import com.justnothing.testmodule.command.output.InteractiveOutputHandler;
-import com.justnothing.testmodule.command.output.GuiOutputHandler;
 import com.justnothing.testmodule.command.protocol.InteractiveProtocol;
 import com.justnothing.testmodule.command.protocol.JsonProtocol;
-import com.justnothing.testmodule.command.base.CommandRequest;
-import com.justnothing.testmodule.command.base.CommandResult;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
@@ -475,7 +474,6 @@ public class SocketClientHandler {
             String jsonRequest = new String(data, StandardCharsets.UTF_8);
             logger.info("命令请求: " + jsonRequest);
 
-            // 解析请求
             CommandRequest request = JsonProtocol.parseRequest(jsonRequest);
 
             if (request == null) {
@@ -483,87 +481,17 @@ public class SocketClientHandler {
                 errorResult.setError(new CommandResult.ErrorInfo(
                     "INVALID_REQUEST", "无法解析请求"
                 ));
-                sendCommandResponse(output, errorResult);
+                sendErrorResponse(output, errorResult);
                 return;
             }
 
-            // 使用GuiOutputHandler吞掉CLI输出，只保留result.toJson()
-            ICommandOutputHandler socketOutput = new ICommandOutputHandler() {
-                @Override
-                public void print(String text) {
-                    try {
-                        output.write(text.getBytes(StandardCharsets.UTF_8));
-                    } catch (IOException e) {
-                        logger.error("写入输出失败", e);
-                    }
-                }
-
-                @Override
-                public void println(String line) {
-                    print(line + "\n");
-                }
-
-                @Override
-                public void printf(String format, Object... args) {
-                    print(String.format(format, args));
-                }
-
-                @Override
-                public void printError(String text) {
-                    print(text);
-                }
-
-                @Override
-                public void printlnError(String text) {
-                    println(text);
-                }
-
-                @Override
-                public void printStackTrace(Throwable t) {
-                    println(t.toString());
-                }
-
-                @Override
-                public void flush() {
-                    try {
-                        output.flush();
-                    } catch (IOException ignored) {}
-                }
-
-                @Override
-                public void close() {
-                    try {
-                        output.close();
-                    } catch (IOException ignored) {}
-                }
-
-                @Override
-                public boolean isClosed() {
-                    return false;
-                }
-
-                @Override
-                public void clear() {}
-
-                @Override
-                public String getString() {
-                    return "";
-                }
-
-                @Override
-                public boolean isInteractive() {
-                    return false;
-                }
-            };
-
-            GuiOutputHandler guiOutput = new GuiOutputHandler(socketOutput);
-
+            ClientRequirements requirements = new ClientRequirements(false, true);
+            InteractiveOutputHandler outputHandler = new InteractiveOutputHandler(output);
+            outputHandler.setSupportsInput(requirements.isSupportsInput());
+            outputHandler.setJsonMode(requirements.isJsonMode());
             commandExecutor.execute(
-                request,
-                guiOutput,
-                null,
-                CommandType.USER_INTERFACE
-            );
+                    request, outputHandler, requirements, CommandType.USER_INTERFACE
+            ); // 这里不用再管了, commandExecutor会自己判断模式然后给输出写进InteractiveOutputHandler
 
         } catch (Exception e) {
             logger.error("处理命令请求失败", e);
@@ -572,15 +500,15 @@ public class SocketClientHandler {
                 "INTERNAL_ERROR", "处理请求失败: " + e.getMessage()
             ));
             try {
-                sendCommandResponse(output, errorResult);
+                sendErrorResponse(output, errorResult);
             } catch (Exception ignored) {}
         }
     }
     
-    private void sendCommandResponse(OutputStream output, 
+    private void sendErrorResponse(OutputStream output,
                                    CommandResult result) throws Exception {
         String jsonResponse = JsonProtocol.toJson(result);
-        logger.info("命令响应: resultType=" + result.getResultType() + ", class=" + result.getClass().getSimpleName() + ", json=" + jsonResponse);
+        logger.info("返回错误响应: resultType=" + result.getResultType() + ", class=" + result.getClass().getSimpleName() + ", json=" + jsonResponse);
         
         byte[] data = InteractiveProtocol.encodeColoredOutput((byte) 0, jsonResponse);
         InteractiveProtocol.writeMessage(output, 

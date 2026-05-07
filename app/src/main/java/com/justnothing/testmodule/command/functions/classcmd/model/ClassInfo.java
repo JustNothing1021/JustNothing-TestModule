@@ -1,28 +1,57 @@
 package com.justnothing.testmodule.command.functions.classcmd.model;
 
-import org.json.JSONObject;
-import org.json.JSONArray;
-import org.json.JSONException;
+import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
+import com.justnothing.testmodule.command.base.protocol.ResultField;
+import com.justnothing.testmodule.command.base.protocol.ValueSupplier;
+import com.justnothing.testmodule.command.utils.AutoSerializer;
 
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.json.JSONObject;
 
+
+@AutoSerializable
 public class ClassInfo {
-    
+
+    @ResultField(name = "name", description = "类名", required = true)
     private String name;
+
+    @ResultField(name = "superClass", description = "父类", defaultValue = ValueSupplier.EmptyStringSupplier.class)
     private String superClass;
+
+    @ResultField(name = "interfaces", description = "接口列表")
     private List<String> interfaces;
+
+    @ResultField(name = "methods", description = "方法列表")
     private List<MethodInfo> methods;
+
+    @ResultField(name = "constructors", description = "构造函数列表")
     private List<MethodInfo> constructors;
+
+    @ResultField(name = "fields", description = "字段列表")
     private List<FieldInfo> fields;
+
+    @ResultField(name = "modifiers", description = "修饰符", defaultValue = ValueSupplier.ZeroSupplier.class)
     private int modifiers;
+
+    @ResultField(name = "classLoader", description = "类加载器", defaultValue = ValueSupplier.EmptyStringSupplier.class)
     private String classLoader;
+
+    @ResultField(name = "isInterface", description = "是否为接口", defaultValue = ValueSupplier.FalseSupplier.class)
     private boolean isInterface;
+
+    @ResultField(name = "isAnnotation", description = "是否为注解", defaultValue = ValueSupplier.FalseSupplier.class)
     private boolean isAnnotation;
+
+    @ResultField(name = "isEnum", description = "是否为枚举", defaultValue = ValueSupplier.FalseSupplier.class)
     private boolean isEnum;
+
+    @ResultField(name = "isAbstract", description = "是否为抽象类", defaultValue = ValueSupplier.FalseSupplier.class)
     private boolean isAbstract;
+
+    @ResultField(name = "isFinal", description = "是否为final类", defaultValue = ValueSupplier.FalseSupplier.class)
     private boolean isFinal;
     
     public ClassInfo() {
@@ -155,44 +184,13 @@ public class ClassInfo {
     public void setFinal(boolean aFinal) {
         isFinal = aFinal;
     }
-    
 
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = new JSONObject();
-        obj.put("name", name);
-        obj.put("superClass", superClass);
-        obj.put("modifiers", modifiers);
-        obj.put("classLoader", classLoader);
-        obj.put("isInterface", isInterface);
-        obj.put("isAnnotation", isAnnotation);
-        obj.put("isEnum", isEnum);
-        obj.put("isAbstract", isAbstract);
-        obj.put("isFinal", isFinal);
-        
-        JSONArray interfacesArray = new JSONArray();
-        for (String _interface : interfaces) {
-            interfacesArray.put(_interface);
+    public JSONObject toJson() {
+        try {
+            String jsonStr = AutoSerializer.toJson(this);
+            return new org.json.JSONObject(jsonStr);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to serialize ClassInfo", e);
         }
-        obj.put("interfaces", interfacesArray);
-        
-        JSONArray methodsArray = new JSONArray();
-        for (MethodInfo method : methods) {
-            methodsArray.put(method.toJson());
-        }
-        obj.put("methods", methodsArray);
-        
-        JSONArray constructorsArray = new JSONArray();
-        for (MethodInfo constructor : constructors) {
-            constructorsArray.put(constructor.toJson());
-        }
-        obj.put("constructors", constructorsArray);
-        
-        JSONArray fieldsArray = new JSONArray();
-        for (FieldInfo field : fields) {
-            fieldsArray.put(field.toJson());
-        }
-        obj.put("fields", fieldsArray);
-        
-        return obj;
     }
 }

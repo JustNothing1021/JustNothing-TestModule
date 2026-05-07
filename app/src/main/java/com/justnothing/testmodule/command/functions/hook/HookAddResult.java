@@ -1,6 +1,6 @@
 package com.justnothing.testmodule.command.functions.hook;
 
-import com.justnothing.testmodule.command.base.CommandResult;
+import com.justnothing.testmodule.command.base.protocol.CommandResult;
 
 import org.json.JSONObject;
 import org.json.JSONException;

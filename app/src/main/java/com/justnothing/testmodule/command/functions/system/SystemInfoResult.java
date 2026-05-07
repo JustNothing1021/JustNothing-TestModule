@@ -1,7 +1,6 @@
 package com.justnothing.testmodule.command.functions.system;
 
-import com.justnothing.testmodule.command.base.CommandResult;
-import com.justnothing.testmodule.command.functions.system.SystemFieldInfo;
+import com.justnothing.testmodule.command.base.protocol.CommandResult;
 
 import org.json.JSONArray;
 import org.json.JSONException;

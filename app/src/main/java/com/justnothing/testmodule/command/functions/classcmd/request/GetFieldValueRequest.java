@@ -1,44 +1,67 @@
 package com.justnothing.testmodule.command.functions.classcmd.request;
 
-import com.justnothing.testmodule.command.base.CommandRequest;
+import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
+import com.justnothing.testmodule.command.base.parser.FlagParam;
+import com.justnothing.testmodule.command.base.parser.PositionalParam;
+import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
+import com.justnothing.testmodule.command.base.command.SubCommand;
 import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
+import com.justnothing.testmodule.command.utils.CustomCommandLineParser;
+import com.justnothing.testmodule.command.utils.ParamParser;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandRequest;
 
-import org.json.JSONException;
-import org.json.JSONObject;
+import java.util.ArrayList;
+import java.util.List;
 
-public class GetFieldValueRequest extends ClassCommandRequest {
+@SerializeKeyName("Field")
+@SubCommand("field")
+@AutoSerializable
+public class GetFieldValueRequest extends ClassCommandRequest 
+        implements CustomCommandLineParser {
 
+    @PositionalParam(order = 1, name = "类名", required = false)
     private String className;
+
+    @PositionalParam(order = 2, name = "字段名", required = false)
     private String fieldName;
-    private String targetInstance;
-    private boolean isStatic;
-    private String operation;  // "list", "get", "set", "info"
-    private String valueToSet;
+
+    @FlagParam(names = {"-v", "--value"}, description = "显示字段值")
     private boolean showValue;
+
+    @FlagParam(names = {"-t", "--type"}, description = "显示字段类型")
     private boolean showType;
+
+    @FlagParam(names = {"-m", "--modifiers"}, description = "显示修饰符")
     private boolean showModifiers;
-    private boolean showAll = true;
+
+    @FlagParam(names = {"-a", "--all"}, defaultValue = true, description = "显示所有信息")
+    private boolean showAll;
+
+    @FlagParam(names = {"--super"}, description = "访问父类字段")
     private boolean accessSuper;
+
+    @FlagParam(names = {"--interfaces"}, description = "访问接口字段")
     private boolean accessInterfaces;
+
+    @FlagParam(names = {"-s", "--static"}, description = "静态字段")
+    private boolean isStatic;
+
+    // ★ 复杂字段: 由customParse()处理!
+    private String operation;       // "list"/"get"/"set"/"info"
+    private String valueToSet;      // 设置操作时的目标值
+    private String targetInstance;  // 目标实例表达式 (GUI用)
 
     public GetFieldValueRequest() {
         super();
-        this.operation = "info";
+        this.showAll = true;
+        this.operation = "list";
     }
 
+    // Getters & Setters
     public String getClassName() { return className; }
     public void setClassName(String className) { this.className = className; }
     public String getFieldName() { return fieldName; }
     public void setFieldName(String fieldName) { this.fieldName = fieldName; }
-    public String getTargetInstance() { return targetInstance; }
-    public void setTargetInstance(String targetInstance) { this.targetInstance = targetInstance; }
-    public boolean isStatic() { return isStatic; }
-    public void setStatic(boolean aStatic) { isStatic = aStatic; }
-    public String getOperation() { return operation; }
-    public void setOperation(String operation) { this.operation = operation; }
-    public String getValueToSet() { return valueToSet; }
-    public void setValueToSet(String valueToSet) { this.valueToSet = valueToSet; }
     public boolean isShowValue() { return showValue; }
     public void setShowValue(boolean showValue) { this.showValue = showValue; }
     public boolean isShowType() { return showType; }
@@ -51,53 +74,24 @@ public class GetFieldValueRequest extends ClassCommandRequest {
     public void setAccessSuper(boolean accessSuper) { this.accessSuper = accessSuper; }
     public boolean isAccessInterfaces() { return accessInterfaces; }
     public void setAccessInterfaces(boolean accessInterfaces) { this.accessInterfaces = accessInterfaces; }
+    public boolean isStatic() { return isStatic; }
+    public void setStatic(boolean aStatic) { isStatic = aStatic; }
+    public String getOperation() { return operation; }
+    public void setOperation(String operation) { this.operation = operation; }
+    public String getValueToSet() { return valueToSet; }
+    public void setValueToSet(String valueToSet) { this.valueToSet = valueToSet; }
+    public String getTargetInstance() { return targetInstance; }
+    public void setTargetInstance(String targetInstance) { this.targetInstance = targetInstance; }
 
+    /**
+     * ★ 自定义解析: 处理 -s/-g 操作符及其参数消费
+     */
     @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        obj.put("className", className);
-        obj.put("fieldName", fieldName);
-        obj.put("targetInstance", targetInstance);
-        obj.put("isStatic", isStatic);
-        obj.put("operation", operation);
-        if (valueToSet != null) obj.put("valueToSet", valueToSet);
-        obj.put("showValue", showValue);
-        obj.put("showType", showType);
-        obj.put("showModifiers", showModifiers);
-        obj.put("showAll", showAll);
-        obj.put("accessSuper", accessSuper);
-        obj.put("accessInterfaces", accessInterfaces);
-        return obj;
-    }
-
-    @Override
-    public GetFieldValueRequest fromJson(JSONObject obj) throws JSONException {
-        setRequestId(obj.optString("requestId"));
-        setClassName(obj.optString("className"));
-        setFieldName(obj.optString("fieldName"));
-        setTargetInstance(obj.optString("targetInstance", null));
-        setStatic(obj.optBoolean("isStatic", false));
-        setOperation(obj.optString("operation", "info"));
-        setValueToSet(obj.optString("valueToSet", null));
-        setShowValue(obj.optBoolean("showValue", false));
-        setShowType(obj.optBoolean("showType", false));
-        setShowModifiers(obj.optBoolean("showModifiers", false));
-        setShowAll(obj.optBoolean("showAll", true));
-        setAccessSuper(obj.optBoolean("accessSuper", false));
-        setAccessInterfaces(obj.optBoolean("accessInterfaces", false));
-        return this;
-    }
-
-    @Override
-    public GetFieldValueRequest fromCommandLine(String[] args) throws IllegalCommandLineArgumentException {
-        if (args.length < 1) {
-            throw new IllegalCommandLineArgumentException(
-                "参数不足: class field <class_name> [field_name] [options]");
-        }
-
-        for (int i = 0; i < args.length - 1; i++) {
-            String arg = args[i];
-            switch (arg) {
+    public GetFieldValueRequest customParse(ParseContext ctx) throws IllegalCommandLineArgumentException {
+        List<String> args = ctx.remainingArgs();
+        
+        for (int i = 0; i < args.size(); i++) {
+            switch (args.get(i)) {
                 case "-g", "--get" -> {
                     operation = "get";
                     showAll = false;
@@ -105,42 +99,31 @@ public class GetFieldValueRequest extends ClassCommandRequest {
                 case "-s", "--set" -> {
                     operation = "set";
                     showAll = false;
-                    if (i + 3 < args.length - 1) {
-                        className = args[i + 1];
-                        fieldName = args[i + 2];
-                        valueToSet = args[i + 3];
+                    if (i + 3 < args.size()) {
+                        className = args.get(i + 1);
+                        fieldName = args.get(i + 2);
+                        valueToSet = args.get(i + 3);
                         i += 3;
                     } else {
                         throw new IllegalCommandLineArgumentException(
-                            "提供给-s的参数不足: class field -s <class> <field> <value>");
+                            "-s/--set 需要三个参数: <类名> <字段名> <值>");
                     }
                 }
-                case "-v", "--value" -> {
-                    showValue = true;
-                    showAll = false;
-                }
-                case "-t", "--type" -> {
-                    showType = true;
-                    showAll = false;
-                }
-                case "-m", "--modifiers" -> {
-                    showModifiers = true;
-                    showAll = false;
-                }
-                case "-a", "--all" -> showAll = true;
-                case "--super" -> accessSuper = true;
-                case "--interfaces" -> accessInterfaces = true;
             }
         }
-
-        if (className == null) {
-            className = args[args.length - 1];
+        
+        if (className == null && !args.isEmpty()) {
+            className = args.get(args.size() - 1);
         }
-
-        if (fieldName == null && args.length >= 2 && !args[args.length - 2].startsWith("-")) {
-            fieldName = args[args.length - 2];
+        if (fieldName == null && args.size() >= 2) {
+            fieldName = args.get(args.size() - 2);
         }
-
+        
         return this;
+    }
+
+    @Override
+    public GetFieldValueRequest fromCommandLine(String[] args) throws IllegalCommandLineArgumentException {
+        return ParamParser.parse(GetFieldValueRequest.class, args);
     }
 }

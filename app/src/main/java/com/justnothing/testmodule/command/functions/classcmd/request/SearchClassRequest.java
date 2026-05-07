@@ -1,15 +1,22 @@
 package com.justnothing.testmodule.command.functions.classcmd.request;
 
-import com.justnothing.testmodule.command.base.CommandRequest;
+import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
 import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
+import com.justnothing.testmodule.command.base.parser.PositionalParam;
+import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
+import com.justnothing.testmodule.command.base.command.SubCommand;
+import com.justnothing.testmodule.command.utils.ParamParser;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandRequest;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
+@SerializeKeyName("SearchClass")
+@SubCommand("search")
+@AutoSerializable
 public class SearchClassRequest extends ClassCommandRequest {
 
+    @PositionalParam(order = 1, name = "搜索类型", required = true, description = "class/method/field/annotation")
     private String searchType;
+
+    @PositionalParam(order = 2, name = "搜索模式", required = true)
     private String pattern;
 
     public SearchClassRequest() {
@@ -22,29 +29,7 @@ public class SearchClassRequest extends ClassCommandRequest {
     public void setPattern(String pattern) { this.pattern = pattern; }
 
     @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        obj.put("searchType", searchType);
-        obj.put("pattern", pattern);
-        return obj;
-    }
-
-    @Override
-    public SearchClassRequest fromJson(JSONObject obj) throws JSONException {
-        setRequestId(obj.optString("requestId"));
-        setSearchType(obj.optString("searchType"));
-        setPattern(obj.optString("pattern"));
-        return this;
-    }
-
-    @Override
     public SearchClassRequest fromCommandLine(String[] args) throws IllegalCommandLineArgumentException {
-        if (args.length < 2) {
-            throw new IllegalCommandLineArgumentException("参数不足: class search <subcmd> <pattern>");
-        }
-
-        searchType = args[0];
-        pattern = args[1];
-        return this;
+        return ParamParser.parse(SearchClassRequest.class, args);
     }
 }

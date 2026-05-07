@@ -1,5 +1,6 @@
 package com.justnothing.testmodule.command.functions.classcmd.impl;
 
+import com.justnothing.testmodule.command.base.command.SubCommandInfo;
 import com.justnothing.testmodule.command.functions.classcmd.AbstractClassCommand;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandContext;
 import com.justnothing.testmodule.command.functions.classcmd.request.AnalyzeClassRequest;
@@ -24,19 +25,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class AnalyzeCommand extends AbstractClassCommand<AnalyzeClassRequest, AnalyzeReportResult> {
-
-    public AnalyzeCommand() {
-        super("class analyze", AnalyzeClassRequest.class, AnalyzeReportResult.class);
-    }
-
-    @Override
-    public String getHelpText() {
-        return """
-            语法: class analyze [options] <class_name>
-
-            分析类的字段和方法.
-
+@SubCommandInfo(
+    description = "深度分析类的结构, 生成详细的字段和方法报告, 比如继承和实现性之类的",
+    usage = "class analyze [options] <class_name>",
+    examples = {
+        "class analyze java.lang.String",
+        "class analyze --fields-only java.util.HashMap"
+    },
+    optionsDesc = """
             选项:
                 -v, --verbose        显示详细信息
                 -f, --fields         只显示字段
@@ -49,13 +45,12 @@ public class AnalyzeCommand extends AbstractClassCommand<AnalyzeClassRequest, An
                 --stats              显示统计信息
                 --raw                原始输出 (JSON格式)
                 -a, --all            显示所有信息 (默认)
+            """
+)
+public class AnalyzeCommand extends AbstractClassCommand<AnalyzeClassRequest, AnalyzeReportResult> {
 
-            示例:
-                class analyze java.lang.String
-                class analyze -f com.android.server.am.ActivityManagerService
-                class analyze -a java.util.ArrayList
-                class analyze --raw java.lang.String
-            """;
+    public AnalyzeCommand() {
+        super("class analyze", AnalyzeClassRequest.class, AnalyzeReportResult.class);
     }
 
     @Override
@@ -151,14 +146,18 @@ public class AnalyzeCommand extends AbstractClassCommand<AnalyzeClassRequest, An
             } else {
                 for (MethodInfo methodInfo : methodMap.values()) {
                     Method method = findDeclaredMethod(targetClass, methodInfo.getName(), methodInfo.getParameterTypes());
+                    if (method == null) continue;
+
                     cmd.print("  ", Colors.GRAY);
                     DescriptorColorizer.printColoredDescriptor(cmd, method, !verbose);
-                    cmd.println("");
 
                     String signature = methodInfo.getSignature();
                     List<String> interfaceSources = methodInterfaceMap.get(signature);
+                    boolean hasExtraInfo = false;
+
                     if (showHierarchy && interfaceSources != null && !interfaceSources.isEmpty()) {
-                        cmd.print("    └─> 实现接口 ", Colors.GRAY);
+                        cmd.println("");
+                        cmd.print("      └─> 实现接口: ", Colors.CYAN);
                         boolean first = true;
                         for (String iface : interfaceSources) {
                             if (!first) {
@@ -167,13 +166,20 @@ public class AnalyzeCommand extends AbstractClassCommand<AnalyzeClassRequest, An
                             cmd.print(iface, Colors.GREEN);
                             first = false;
                         }
-                        cmd.println("");
+                        hasExtraInfo = true;
                     }
 
                     if (showHierarchy && methodInfo.getDeclaringClass() != null && !methodInfo.getDeclaringClass().equals(targetClass.getName())) {
-                        cmd.print("    └─> 继承自 ", Colors.GRAY);
+                        if (hasExtraInfo) {
+                            cmd.println("");
+                        }
+                        cmd.println("");
+                        cmd.print("      └─> 继承自: ", Colors.CYAN);
                         cmd.println(methodInfo.getDeclaringClass(), Colors.GREEN);
+                        hasExtraInfo = true;
                     }
+
+                    cmd.println("");
                 }
             }
             cmd.print("方法总数: ", Colors.CYAN);
@@ -250,16 +256,16 @@ public class AnalyzeCommand extends AbstractClassCommand<AnalyzeClassRequest, An
             cmd.print(" (静态: ", Colors.GRAY);
             cmd.print(staticFieldCount, Colors.GREEN);
             cmd.print(", 实例: ", Colors.GRAY);
-            cmd.print(")", Colors.GRAY);
-            cmd.println(instanceFieldCount, Colors.GREEN);
+            cmd.print(instanceFieldCount, Colors.GREEN);
+            cmd.println(")", Colors.GRAY);
 
             cmd.print("方法: ", Colors.CYAN);
             cmd.print(methodMap.size() + " 个", Colors.YELLOW);
             cmd.print(" (静态: ", Colors.GRAY);
             cmd.print(staticMethodCount, Colors.GREEN);
             cmd.print(", 实例: ", Colors.GRAY);
-            cmd.print(")", Colors.GRAY);
-            cmd.println(instanceMethodCount, Colors.GREEN);
+            cmd.print(instanceMethodCount, Colors.GREEN);
+            cmd.println(")", Colors.GRAY);
 
             cmd.print("构造函数: ", Colors.CYAN);
             cmd.println(constructors.length + " 个", Colors.YELLOW);

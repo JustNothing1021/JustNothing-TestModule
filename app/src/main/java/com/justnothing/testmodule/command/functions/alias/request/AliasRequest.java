@@ -1,10 +1,12 @@
 package com.justnothing.testmodule.command.functions.alias.request;
 
-import com.justnothing.testmodule.command.base.CommandRequest;
+import com.justnothing.testmodule.command.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
+@SerializeKeyName("Alias")
 public class AliasRequest extends CommandRequest {
 
     public static final String ACTION_LIST = "list";
@@ -18,15 +20,18 @@ public class AliasRequest extends CommandRequest {
 
     public AliasRequest() {
         super();
+        setCommandType("alias");
     }
 
     public AliasRequest(String action) {
         super();
+        setCommandType("alias");
         this.action = action;
     }
 
     public AliasRequest(String action, String name, String command) {
         super();
+        setCommandType("alias");
         this.action = action;
         this.name = name;
         this.command = command;

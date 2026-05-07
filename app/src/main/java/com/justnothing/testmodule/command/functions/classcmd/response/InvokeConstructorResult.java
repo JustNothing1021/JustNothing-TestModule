@@ -1,49 +1,36 @@
 package com.justnothing.testmodule.command.functions.classcmd.response;
 
+import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
+import com.justnothing.testmodule.command.base.protocol.ResultField;
+import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
+import com.justnothing.testmodule.command.base.protocol.ValueSupplier;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandResult;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
+@SerializeKeyName("InvokeConstructor")
+@AutoSerializable
 public class InvokeConstructorResult extends ClassCommandResult {
-    
+
+    @ResultField(name = "resultString")
     private String resultString;
+
+    @ResultField(name = "resultTypeName")
     private String resultTypeName;
+
+    @ResultField(name = "resultHash", defaultValue = ValueSupplier.ZeroSupplier.class)
     private int resultHash;
-    
+
     public InvokeConstructorResult() {
         super();
     }
-    
+
     public InvokeConstructorResult(String requestId) {
         super(requestId);
     }
-    
+
     public String getResultString() { return resultString; }
     public void setResultString(String resultString) { this.resultString = resultString; }
     public String getResultTypeName() { return resultTypeName; }
     public void setResultTypeName(String resultTypeName) { this.resultTypeName = resultTypeName; }
     public int getResultHash() { return resultHash; }
     public void setResultHash(int resultHash) { this.resultHash = resultHash; }
-    
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        if (resultString != null) {
-            obj.put("resultString", resultString);
-        }
-        if (resultTypeName != null) {
-            obj.put("resultTypeName", resultTypeName);
-        }
-        obj.put("resultHash", resultHash);
-        return obj;
-    }
-    
-    @Override
-    public void fromJson(JSONObject obj) throws JSONException {
-        super.fromJson(obj);
-        resultString = obj.optString("resultString", null);
-        resultTypeName = obj.optString("resultTypeName", null);
-        resultHash = obj.optInt("resultHash", 0);
-    }
 }

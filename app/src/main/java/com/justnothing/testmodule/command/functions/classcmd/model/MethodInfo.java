@@ -1,10 +1,13 @@
 package com.justnothing.testmodule.command.functions.classcmd.model;
 
-import org.json.JSONObject;
-import org.json.JSONArray;
-import org.json.JSONException;
+import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
+import com.justnothing.testmodule.command.base.protocol.ResultField;
+import com.justnothing.testmodule.command.base.protocol.ValueSupplier;
+import com.justnothing.testmodule.command.utils.AutoSerializer;
 
 import com.justnothing.testmodule.utils.reflect.DescriptorColorizer;
+
+import org.json.JSONObject;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Constructor;
@@ -14,16 +17,34 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 
+@AutoSerializable
 public class MethodInfo {
 
+    @ResultField(name = "name", description = "方法名", required = true)
     private String name;
+
+    @ResultField(name = "returnType", description = "返回类型", required = true, defaultValue = ValueSupplier.EmptyStringSupplier.class)
     private String returnType;
+
+    @ResultField(name = "genericReturnType", description = "泛型返回类型", defaultValue = ValueSupplier.EmptyStringSupplier.class)
     private String genericReturnType;
+
+    @ResultField(name = "parameters", description = "参数名列表")
     private List<String> parameters;
+
+    @ResultField(name = "parameterTypes", description = "参数类型列表")
     private List<String> parameterTypes;
+
+    @ResultField(name = "genericParameterTypes", description = "泛型参数类型列表")
     private List<String> genericParameterTypes;
+
+    @ResultField(name = "modifiers", description = "修饰符", defaultValue = ValueSupplier.ZeroSupplier.class)
     private int modifiers;
+
+    @ResultField(name = "declaringClass", description = "声明类", defaultValue = ValueSupplier.EmptyStringSupplier.class)
     private String declaringClass;
+
+    @ResultField(name = "declaringClassIsInterface", description = "声明类是否为接口", defaultValue = ValueSupplier.FalseSupplier.class)
     private boolean declaringClassIsInterface;
 
     public MethodInfo() {
@@ -119,68 +140,22 @@ public class MethodInfo {
         return sb.toString();
     }
 
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = new JSONObject();
-        obj.put("name", name);
-        obj.put("returnType", returnType);
-        obj.put("genericReturnType", genericReturnType);
-        obj.put("modifiers", getModifiersString());
-        obj.put("signature", getSignature());
-        obj.put("declaringClass", declaringClass);
-        obj.put("declaringClassIsInterface", declaringClassIsInterface);
-
-        JSONArray parametersArray = new JSONArray();
-        for (String param : parameters) {
-            parametersArray.put(param);
+    public JSONObject toJson() {
+        try {
+            String jsonStr = AutoSerializer.toJson(this);
+            return new JSONObject(jsonStr);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to serialize MethodInfo", e);
         }
-        obj.put("parameters", parametersArray);
-
-        JSONArray parameterTypesArray = new JSONArray();
-        for (String paramType : parameterTypes) {
-            parameterTypesArray.put(paramType);
-        }
-        obj.put("parameterTypes", parameterTypesArray);
-
-        JSONArray genericParameterTypesArray = new JSONArray();
-        for (String genericParamType : genericParameterTypes) {
-            genericParameterTypesArray.put(genericParamType);
-        }
-        obj.put("genericParameterTypes", genericParameterTypesArray);
-
-        return obj;
     }
 
-    public static MethodInfo fromJson(JSONObject json) throws JSONException {
-        MethodInfo methodInfo = new MethodInfo();
-        methodInfo.setName(json.getString("name"));
-        methodInfo.setReturnType(json.getString("returnType"));
-        methodInfo.setGenericReturnType(json.optString("genericReturnType", methodInfo.getReturnType()));
-        methodInfo.setModifiers(parseModifiers(json.optString("modifiers", "")));
-        methodInfo.setDeclaringClass(json.optString("declaringClass", ""));
-        methodInfo.setDeclaringClassIsInterface(json.optBoolean("declaringClassIsInterface", false));
-
-        JSONArray parametersArray = json.optJSONArray("parameters");
-        if (parametersArray != null) {
-            for (int i = 0; i < parametersArray.length(); i++) {
-                methodInfo.getParameters().add(parametersArray.getString(i));
-            }
+    public static MethodInfo fromJson(JSONObject json) {
+        try {
+            String jsonStr = json.toString();
+            return AutoSerializer.fromJson(jsonStr, MethodInfo.class);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to deserialize MethodInfo", e);
         }
-
-        JSONArray parameterTypesArray = json.optJSONArray("parameterTypes");
-        if (parameterTypesArray != null) {
-            for (int i = 0; i < parameterTypesArray.length(); i++) {
-                methodInfo.getParameterTypes().add(parameterTypesArray.getString(i));
-            }
-        }
-
-        JSONArray genericParameterTypesArray = json.optJSONArray("genericParameterTypes");
-        if (genericParameterTypesArray != null) {
-            for (int i = 0; i < genericParameterTypesArray.length(); i++) {
-                methodInfo.getGenericParameterTypes().add(genericParameterTypesArray.getString(i));
-            }
-        }
-
-        return methodInfo;
     }
 
     private static int parseModifiers(String modifiersStr) {

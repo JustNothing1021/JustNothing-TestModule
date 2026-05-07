@@ -1,25 +1,53 @@
 package com.justnothing.testmodule.command.functions.classcmd.request;
 
-import com.justnothing.testmodule.command.base.CommandRequest;
+import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
+import com.justnothing.testmodule.command.base.parser.FlagParam;
+import com.justnothing.testmodule.command.base.parser.PositionalParam;
+import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
+import com.justnothing.testmodule.command.base.command.SubCommand;
 import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
+import com.justnothing.testmodule.command.utils.ParamParser;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandRequest;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
+@SerializeKeyName("AnalyzeClass")
+@SubCommand("analyze")
+@AutoSerializable
 public class AnalyzeClassRequest extends ClassCommandRequest {
 
+    @PositionalParam(order = 1, name = "类名", required = true)
     private String className;
+
+    @FlagParam(names = {"-f", "--fields"}, description = "显示字段", defaultValue = true)
     private boolean showFields = true;
+
+    @FlagParam(names = {"-m", "--methods"}, description = "显示方法", defaultValue = true)
     private boolean showMethods = true;
+
+    @FlagParam(names = {"-c", "--constructors"}, description = "显示构造函数", defaultValue = true)
     private boolean showConstructors = true;
+
+    @FlagParam(names = {"-i", "--interfaces"}, description = "显示实现的接口", defaultValue = true)
     private boolean showInterfaces = true;
+
+    @FlagParam(names = {"-s", "--super"}, description = "显示父类信息", defaultValue = true)
     private boolean showSuper = true;
+
+    @FlagParam(names = {"--modifiers"}, description = "显示修饰符信息", defaultValue = true)
     private boolean showModifiers = true;
+
+    @FlagParam(names = {"-a", "--all"}, description = "显示所有信息 (默认)", defaultValue = true)
     private boolean showAll = true;
+
+    @FlagParam(names = {"-v", "--verbose"}, description = "显示详细信息")
     private boolean isVerbose = false;
+
+    @FlagParam(names = {"--hierarchy"}, description = "显示继承层次", defaultValue = true)
     private boolean showHierarchy = true;
+
+    @FlagParam(names = {"--stats"}, description = "显示统计信息", defaultValue = true)
     private boolean showStats = true;
+
+    @FlagParam(names = {"--raw"}, description = "原始输出格式")
     private boolean rawOutput = false;
 
     public AnalyzeClassRequest() {
@@ -50,66 +78,8 @@ public class AnalyzeClassRequest extends ClassCommandRequest {
     public void setShowStats(boolean showStats) { this.showStats = showStats; }
     public boolean isRawOutput() { return rawOutput; }
     public void setRawOutput(boolean rawOutput) { this.rawOutput = rawOutput; }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        obj.put("className", className);
-        obj.put("showFields", showFields);
-        obj.put("showMethods", showMethods);
-        obj.put("showConstructors", showConstructors);
-        obj.put("showInterfaces", showInterfaces);
-        obj.put("showSuper", showSuper);
-        obj.put("showModifiers", showModifiers);
-        obj.put("showAll", showAll);
-        obj.put("isVerbose", isVerbose);
-        obj.put("showHierarchy", showHierarchy);
-        obj.put("showStats", showStats);
-        obj.put("rawOutput", rawOutput);
-        return obj;
-    }
-
-    @Override
-    public AnalyzeClassRequest fromJson(JSONObject obj) throws JSONException {
-        setRequestId(obj.optString("requestId"));
-        setClassName(obj.optString("className"));
-        setShowFields(obj.optBoolean("showFields", true));
-        setShowMethods(obj.optBoolean("showMethods", true));
-        setShowConstructors(obj.optBoolean("showConstructors", true));
-        setShowInterfaces(obj.optBoolean("showInterfaces", true));
-        setShowSuper(obj.optBoolean("showSuper", true));
-        setShowModifiers(obj.optBoolean("showModifiers", true));
-        setShowAll(obj.optBoolean("showAll", true));
-        setVerbose(obj.optBoolean("isVerbose", false));
-        setShowHierarchy(obj.optBoolean("showHierarchy", true));
-        setShowStats(obj.optBoolean("showStats", true));
-        setRawOutput(obj.optBoolean("rawOutput", false));
-        return this;
-    }
-
     @Override
     public AnalyzeClassRequest fromCommandLine(String[] args) throws IllegalCommandLineArgumentException {
-        if (args.length < 1) {
-            throw new IllegalCommandLineArgumentException("参数不足: class analyze [options] <class>");
-        }
-
-        for (int i = 0; i < args.length - 1; i++) {
-            switch (args[i]) {
-                case "-v", "--verbose" -> isVerbose = true;
-                case "-f", "--fields" -> { showFields = true; showAll = false; }
-                case "-m", "--methods" -> { showMethods = true; showAll = false; }
-                case "-c", "--constructors" -> { showConstructors = true; showAll = false; }
-                case "-i", "--interfaces" -> { showInterfaces = true; showAll = false; }
-                case "-s", "--super" -> { showSuper = true; showAll = false; }
-                case "--modifiers" -> { showModifiers = true; showAll = false; }
-                case "--hierarchy" -> showHierarchy = true;
-                case "--stats" -> showStats = true;
-                case "--raw" -> rawOutput = true;
-                case "-a", "--all" -> showAll = true;
-            }
-        }
-
-        className = args[args.length - 1];
-        return this;
+        return ParamParser.parse(AnalyzeClassRequest.class, args);
     }
 }

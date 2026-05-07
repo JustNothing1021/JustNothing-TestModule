@@ -3,7 +3,7 @@ package com.justnothing.testmodule.command.functions.threads;
 import static com.justnothing.testmodule.constants.CommandServer.CMD_THREADS_VER;
 
 
-import com.justnothing.testmodule.command.base.CommandRequest;
+import com.justnothing.testmodule.command.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.base.MainCommand;
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.output.Colors;
@@ -18,10 +18,10 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
-import com.justnothing.testmodule.command.base.RegisterCommand;
+import com.justnothing.testmodule.command.base.command.RegisterCommand;
 
 @RegisterCommand("threads")
-public class ThreadsMain extends MainCommand<ThreadInfoRequest, ThreadInfoResult> {
+public class ThreadsMain extends MainCommand<ThreadInfoResult> {
 
     public ThreadsMain() {
         super("Threads", ThreadInfoResult.class);

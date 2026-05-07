@@ -9,15 +9,15 @@ import java.util.Map;
 
 import com.justnothing.testmodule.command.base.MainCommand;
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.CommandRequest;
+import com.justnothing.testmodule.command.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandArgumentParser;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 
-import com.justnothing.testmodule.command.base.RegisterCommand;
+import com.justnothing.testmodule.command.base.command.RegisterCommand;
 
 @RegisterCommand("watch")
-public class WatchMain extends MainCommand<WatchRequest, WatchResult> {
+public class WatchMain extends MainCommand<WatchResult> {
 
     public WatchMain() {
         super("Watch", WatchResult.class);

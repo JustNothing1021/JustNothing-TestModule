@@ -1,254 +1,59 @@
 package com.justnothing.testmodule.command.functions.exportcontext;
 
-import static com.justnothing.testmodule.constants.CommandServer.CMD_EXPORT_CONTEXT_VER;
-
-import android.annotation.SuppressLint;
-import android.content.ContentResolver;
-import android.content.Context;
-import android.database.Cursor;
-import android.net.Uri;
-import android.os.Build;
-import android.text.TextUtils;
-
+import com.justnothing.testmodule.command.base.*;
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.MainCommand;
-import com.justnothing.testmodule.command.base.CommandRequest;
-import com.justnothing.testmodule.command.output.Colors;
-import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
-import com.justnothing.testmodule.command.handlers.exportcontext.ExportContextRequestHandler;
-import com.justnothing.xtchttplib.ContextManager;
-import com.xtc.sync.elt;
-import com.xtc.sync.byw;
-
-import java.lang.reflect.Method;
-import java.net.NetworkInterface;
-import java.util.Locale;
-
-import com.justnothing.testmodule.command.base.RegisterCommand;
+import com.justnothing.testmodule.command.base.command.CommandInfo;
+import com.justnothing.testmodule.command.base.command.RegisterCommand;
+import com.justnothing.testmodule.command.base.command.SubCommand;
+import com.justnothing.testmodule.command.base.command.SubCommands;
+import com.justnothing.testmodule.command.base.protocol.CommandRequest;
 
 @RegisterCommand("export-context")
-public class ExportContextMain extends MainCommand<CommandRequest, ExportContextResult> {
+@CommandInfo(
+    name = "export-context",
+    group = "system",
+    description = "导出设备上下文信息, 包括HTTP配置, 设备标识等",
+    helpText = "语法: export-context [options]\n\n" +
+              "导出当前设备上下文信息, 包括设备信息、应用信息、系统状态等.\n\n" +
+              "选项:\n" +
+              "  -p, --pretty-printing   以表格格式输出 (默认为JSON原始数据)\n\n" +
+              "输出格式:\n" +
+              "  默认: JSON格式的结构化数据 (兼容 xtc-httplib)\n" +
+              "  -p:   带边框的表格格式 (人类可读)\n\n" +
+              "示例:\n" +
+              "  export-context                    输出JSON数据\n" +
+              "  export-context -p                 输出表格格式\n" +
+              "  export-context --pretty-printing  同上\n\n" +
+              "注意: \n" +
+              "  - 默认输出JSON是为了兼容外部工具 (如 xtc-httplib) 直接解析\n" +
+              "  使用 -p 参数可获得更易读的表格输出\n\n" +
+              "(Submodule export-context %s)",
+    version = "1.0.0",
+    resultType = ExportContextResult.class
+)
+@SubCommands({
+    @SubCommand(request = ExportContextRequest.class, result = ExportContextResult.class, command = ExportContextCommand.class, description = "导出设备上下文信息")
+})
+public class ExportContextMain extends MainCommand<ExportContextResult> {
 
     public ExportContextMain() {
-        super("ExportContext", ExportContextResult.class);
-    }
-
-    private static final String CONTENT_URI = "content://com.xtc.initservice/item";
-    private static final String WATCH_ID_URI = "content://com.xtc.provider/BaseDataProvider/watchId/1";
-
-    @Override
-    public String getHelpText() {
-        return String.format(Locale.getDefault(), """
-                语法: export-context
-                
-                导出设备上下文信息为JSON格式，包括：
-                - HTTP配置信息 (从ContentProvider读取)
-                - 设备信息 (从系统属性读取)
-                
-                示例:
-                    export-context
-                
-                (Submodule export-context %s)
-                """, CMD_EXPORT_CONTEXT_VER);
+        super("export-context", ExportContextResult.class);
     }
 
     @Override
     public ExportContextResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
-        logger.debug("执行export-context命令");
-        
-        Context appContext = getApplicationContext();
-        if (appContext == null) {
-            logger.error("无法获取应用上下文");
-            context.println("错误: 无法获取应用上下文", Colors.RED);
-            return null;
+        if (context.getRequest() == null) {
+            context.setRequest(new ExportContextRequest());
         }
 
-        try {
-            ContextManager ctx = new ContextManager();
-            
-            logger.info("开始收集设备上下文信息");
-            
-            Cursor cursor = null;
-            try {
-                ContentResolver resolver = appContext.getContentResolver();
-                Uri uri = Uri.parse(CONTENT_URI);
-                
-                cursor = resolver.query(uri, null, null, null, null);
-                
-                if (cursor != null && cursor.moveToFirst()) {
-                    ctx.setGrey(getCursorStringValue(cursor, "grey"));
-                    ctx.setTs(getCursorIntValue(cursor, "ts"));
-                    ctx.setAe(getCursorStringValue(cursor, "ae"));
-                    ctx.setRsaPublicKey(getCursorStringValue(cursor, "rsaPublicKey"));
-                    ctx.setSelfRsaPublicKey(getCursorStringValue(cursor, "selfRsaPublicKey"));
-                    ctx.setHttpHeadParam(getCursorStringValue(cursor, "httpHeadParam"));
-                    ctx.setEncSwitch(getCursorStringValue(cursor, "encSwitch"));
-                    
-                    logger.debug("HTTP配置信息收集完成");
-                } else {
-                    logger.warn("无法从ContentProvider读取HTTP配置");
-                }
-            } catch (Exception e) {
-                logger.error("收集HTTP配置信息失败", e);
-            } finally {
-                if (cursor != null) {
-                    cursor.close();
-                }
-            }
-            
-            try {
-                ContentResolver resolver = appContext.getContentResolver();
-                Uri uri = Uri.parse(WATCH_ID_URI);
-                String watchId = resolver.getType(uri);
-                if (!TextUtils.isEmpty(watchId)) {
-                    ctx.setWatchId(watchId);
-                    logger.debug("watchId: " + watchId);
-                }
-            } catch (Exception e) {
-                logger.error("收集watchId失败", e);
-            }
-            
-            ctx.setMacAddr(getMacAddress());
-            ctx.setBindNumber(getSystemProperty("ro.boot.bindnumber"));
-            ctx.setInnerModel(getSystemProperty("ro.product.innermodel", "IB"));
-            ctx.setServerInner(getSystemProperty("persist.sys.serverinner"));
-            ctx.setLocale(getSystemProperty("ro.product.locale"));
-            ctx.setRegion(getSystemProperty("ro.product.locale.region"));
-            ctx.setLanguage(Locale.getDefault().getLanguage());
-            ctx.setInnerModelEx(getSystemProperty("ro.product.innermodel.ex"));
-            ctx.setWatchModel(getSystemProperty("ro.product.model", "Z3"));
-            ctx.setWatchPriModel(getSystemProperty("ro.product.pri.model"));
-            String buildType = getSystemProperty("ro.build.type", "user");
-            if ("userdebug".equals(buildType)) {
-                buildType = "user";
-            }
-            ctx.setBuildType(buildType);
-            ctx.setHardware(getSystemProperty("ro.hardware", "qcom"));
-            ctx.setCaremeOsVersion(getSystemProperty("ro.product.careme.version"));
-            ctx.setShowModel(getSystemProperty("ro.product.showmodel"));
-            ctx.setTimeZone(elt.a());
-            ctx.setDataCenterCode(new byw().mo2771a());
-            ctx.setChipId(getSystemProperty("ro.boot.xtc.chipid"));
-            ctx.setBuildRelease(getSystemProperty("ro.build.version.release"));
-            ctx.setSoftVersion(getSystemProperty("ro.product.current.softversion"));
-            ctx.setPackageName(null);
-            ctx.setPackageVersionCode(null);
-            ctx.setPackageVersionName(null);
-            ctx.setAndroidSdk(Build.VERSION.SDK_INT);
-            
-            String json = ctx.toJson();
-            
-            logger.info("成功导出设备上下文信息");
-            logger.debug("导出的JSON:\n" + json);
-            
-            context.println(json);
-            
-        } catch (Exception e) {
-            logger.error("导出设备上下文信息失败", e);
-            CommandExceptionHandler.handleException("export-context", e, context, "导出设备上下文信息失败");
-
-            if (shouldReturnStructuredData(context)) {
-                return createErrorResult("导出上下文失败: " + e.getMessage());
-            }
+        AbstractCommand<?, ?> command = resolveSubCommandFromRequest(context.getRequest());
+        if (command != null) {
+            @SuppressWarnings("unchecked")
+            AbstractCommand<ExportContextRequest, ExportContextResult> typedCommand =
+                (AbstractCommand<ExportContextRequest, ExportContextResult>) command;
+            return typedCommand.execute(context);
         }
 
-        if (shouldReturnStructuredData(context)) {
-            ExportContextRequestHandler handler = new ExportContextRequestHandler();
-            ExportContextRequest request = new ExportContextRequest();
-            request.setRequestId(java.util.UUID.randomUUID().toString());
-            return handler.handle(request);
-        }
-        return null;
-    }
-
-    private Context getApplicationContext() {
-        try {
-            @SuppressLint("PrivateApi")
-            Class<?> activityThreadClass = Class.forName("android.app.ActivityThread");
-            Method currentActivityThreadMethod = activityThreadClass.getMethod("currentActivityThread");
-            Object activityThread = currentActivityThreadMethod.invoke(null);
-
-            Method getApplicationMethod = activityThreadClass.getMethod("getApplication");
-            return (Context) getApplicationMethod.invoke(activityThread);
-        } catch (Exception e) {
-            logger.error("获取Application Context失败", e);
-            return null;
-        }
-    }
-
-    private String getSystemProperty(String key) {
-        return getSystemProperty(key, null);
-    }
-
-    private String getSystemProperty(String key, String defaultValue) {
-        try {
-            @SuppressLint("PrivateApi")
-            Class<?> c = Class.forName("android.os.SystemProperties");
-            Method get = c.getMethod("get", String.class, String.class);
-            return (String) get.invoke(c, key, defaultValue);
-        } catch (Exception e) {
-            logger.error("读取系统属性失败: " + key, e);
-            return defaultValue;
-        }
-    }
-
-    private String getCursorStringValue(Cursor cursor, String columnName) {
-        if (cursor == null || TextUtils.isEmpty(columnName)) {
-            return null;
-        }
-
-        try {
-            int columnIndex = cursor.getColumnIndex(columnName);
-            if (columnIndex < 0) {
-                return null;
-            }
-            return cursor.getString(columnIndex);
-        } catch (Exception e) {
-            logger.error("getCursorStringValue error: " + columnName, e);
-            return null;
-        }
-    }
-
-    @SuppressWarnings("SameParameterValue")
-    private int getCursorIntValue(Cursor cursor, String columnName) {
-        if (cursor == null || TextUtils.isEmpty(columnName)) {
-            return 0;
-        }
-
-        try {
-            int columnIndex = cursor.getColumnIndex(columnName);
-            if (columnIndex < 0) {
-                return 0;
-            }
-            return cursor.getInt(columnIndex);
-        } catch (Exception e) {
-            logger.error("getCursorIntValue error: " + columnName, e);
-            return 0;
-        }
-    }
-
-    private String getMacAddress() {
-        try {
-            NetworkInterface networkInterface = NetworkInterface.getByName("wlan0");
-            if (networkInterface == null) {
-                networkInterface = NetworkInterface.getByName("eth0");
-            }
-            if (networkInterface != null) {
-                byte[] macBytes = networkInterface.getHardwareAddress();
-                if (macBytes != null) {
-                    StringBuilder sb = new StringBuilder();
-                    for (int i = 0; i < macBytes.length; i++) {
-                        sb.append(String.format("%02x", macBytes[i]));
-                        if (i < macBytes.length - 1) {
-                            sb.append(":");
-                        }
-                    }
-                    return sb.toString();
-                }
-            }
-        } catch (Exception e) {
-            logger.error("获取MAC地址失败", e);
-        }
-        return null;
+        return createErrorResult("无法解析子命令");
     }
 }

@@ -5,7 +5,7 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_TRACE_VER;
 
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.base.MainCommand;
-import com.justnothing.testmodule.command.base.CommandRequest;
+import com.justnothing.testmodule.command.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.functions.intercept.TraceInterceptTask;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandArgumentParser;
@@ -16,10 +16,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.justnothing.testmodule.command.base.RegisterCommand;
+import com.justnothing.testmodule.command.base.command.RegisterCommand;
 
 @RegisterCommand("trace")
-public class TraceMain extends MainCommand<TraceRequest, TraceResult> {
+public class TraceMain extends MainCommand<TraceResult> {
 
     public TraceMain() {
         super("Trace", TraceResult.class);

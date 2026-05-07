@@ -1,121 +1,75 @@
 package com.justnothing.testmodule.command.handlers.threads;
 
-import com.justnothing.testmodule.command.proxy.RequestHandler;
 import com.justnothing.testmodule.command.functions.threads.ThreadInfoRequest;
-import com.justnothing.testmodule.command.base.CommandResult;
 import com.justnothing.testmodule.command.functions.threads.ThreadInfoResult;
-import com.justnothing.testmodule.utils.logging.Logger;
 
-import org.json.JSONObject;
-
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
-public class ThreadInfoRequestHandler implements RequestHandler<ThreadInfoRequest, ThreadInfoResult> {
+public class ThreadInfoRequestHandler {
 
-    private static final Logger logger = Logger.getLoggerForName("ThreadInfoReqHandler");
-
-    @Override
-    public String getCommandType() {
-        return "ThreadInfo";
-    }
-
-    @Override
-    public ThreadInfoRequest parseRequest(JSONObject obj) {
-        return new ThreadInfoRequest().fromJson(obj);
-    }
-
-    @Override
-    public ThreadInfoResult createResult(String requestId) {
-        return new ThreadInfoResult(requestId);
-    }
-
-    @Override
     public ThreadInfoResult handle(ThreadInfoRequest request) {
-        logger.debug("处理线程信息请求, detailLevel=" + request.getDetailLevel());
-
-        ThreadInfoResult result = new ThreadInfoResult(request.getRequestId());
+        ThreadInfoResult result = new ThreadInfoResult();
+        result.setRequestId(request.getRequestId());
         result.setTimestamp(System.currentTimeMillis());
 
-        try {
-            Map<Thread, StackTraceElement[]> allStackTraces = Thread.getAllStackTraces();
-            String filterState = request.getFilterState();
+        Map<Thread, StackTraceElement[]> allStackTraces = Thread.getAllStackTraces();
 
-            int runnableCount = 0;
-            int blockedCount = 0;
-            int waitingCount = 0;
-            int timedWaitingCount = 0;
-            int terminatedCount = 0;
-            int newCount = 0;
+        int totalThreadCount = allStackTraces.size();
+        int runnableCount = 0;
+        int blockedCount = 0;
+        int waitingCount = 0;
+        int timedWaitingCount = 0;
+        int terminatedCount = 0;
+        int newCount = 0;
 
-            for (Thread thread : allStackTraces.keySet()) {
-                Thread.State state = thread.getState();
+        List<ThreadInfoResult.ThreadDetail> threadDetails = new ArrayList<>();
 
-                if (filterState != null && !filterState.isEmpty() && !state.name().equals(filterState)) {
-                    continue;
-                }
-
-                switch (state) {
-                    case RUNNABLE -> runnableCount++;
-                    case BLOCKED -> blockedCount++;
-                    case WAITING -> waitingCount++;
-                    case TIMED_WAITING -> timedWaitingCount++;
-                    case TERMINATED -> terminatedCount++;
-                    case NEW -> newCount++;
-                }
-            }
-
-            result.setTotalThreadCount(allStackTraces.size());
-            result.setRunnableCount(runnableCount);
-            result.setBlockedCount(blockedCount);
-            result.setWaitingCount(waitingCount);
-            result.setTimedWaitingCount(timedWaitingCount);
-            result.setTerminatedCount(terminatedCount);
-            result.setNewCount(newCount);
-
-            boolean detailed = !ThreadInfoRequest.LEVEL_BASIC.equals(request.getDetailLevel());
-            if (detailed) {
-                fillThreadDetails(result, allStackTraces, filterState);
-            }
-
-            logger.info("线程信息查询成功, 总数: " + allStackTraces.size() + ", BLOCKED: " + blockedCount);
-
-        } catch (Exception e) {
-            logger.error("获取线程信息失败", e);
-            result.setError(new CommandResult.ErrorInfo("INTERNAL_ERROR", "获取线程信息失败: " + e.getMessage()));
-        }
-
-        return result;
-    }
-
-    private void fillThreadDetails(ThreadInfoResult result, Map<Thread, StackTraceElement[]> allStackTraces, String filterState) {
         for (Map.Entry<Thread, StackTraceElement[]> entry : allStackTraces.entrySet()) {
             Thread thread = entry.getKey();
             StackTraceElement[] stackTrace = entry.getValue();
 
-            if (filterState != null && !filterState.isEmpty() && !thread.getState().name().equals(filterState)) {
-                continue;
+            Thread.State state = thread.getState();
+            switch (state) {
+                case BLOCKED -> blockedCount++;
+                case WAITING -> waitingCount++;
+                case TIMED_WAITING -> timedWaitingCount++;
+                case RUNNABLE -> runnableCount++;
+                case TERMINATED -> terminatedCount++;
+                case NEW -> newCount++;
             }
 
             ThreadInfoResult.ThreadDetail detail = new ThreadInfoResult.ThreadDetail();
             detail.setThreadId(thread.getId());
             detail.setName(thread.getName());
-            detail.setState(thread.getState().name());
+            detail.setState(state.name());
             detail.setPriority(thread.getPriority());
             detail.setDaemon(thread.isDaemon());
             detail.setInterrupted(thread.isInterrupted());
             detail.setAlive(thread.isAlive());
 
             if (stackTrace != null && stackTrace.length > 0) {
-                int maxFrames = Math.min(stackTrace.length, 50);
-                for (int i = 0; i < maxFrames; i++) {
-                    detail.addStackFrame("    at " + stackTrace[i].toString());
+                List<String> stackTraceList = new ArrayList<>();
+                for (StackTraceElement element : stackTrace) {
+                    stackTraceList.add(element.toString());
                 }
-                if (stackTrace.length > 50) {
-                    detail.addStackFrame("    ... " + (stackTrace.length - 50) + " more");
-                }
+                detail.setStackTrace(stackTraceList);
             }
 
-            result.addThreadDetail(detail);
+            threadDetails.add(detail);
         }
+
+        result.setTotalThreadCount(totalThreadCount);
+        result.setRunnableCount(runnableCount);
+        result.setBlockedCount(blockedCount);
+        result.setWaitingCount(waitingCount);
+        result.setTimedWaitingCount(timedWaitingCount);
+        result.setTerminatedCount(terminatedCount);
+        result.setNewCount(newCount);
+        result.setThreadDetails(threadDetails);
+        result.setSuccess(true);
+
+        return result;
     }
 }

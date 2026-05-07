@@ -4,7 +4,7 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_NATIVE_VER;
 
 import com.justnothing.testmodule.command.base.MainCommand;
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.CommandRequest;
+import com.justnothing.testmodule.command.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
@@ -23,10 +23,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.justnothing.testmodule.command.base.RegisterCommand;
+import com.justnothing.testmodule.command.base.command.RegisterCommand;
 
 @RegisterCommand("native")
-public class NativeMain extends MainCommand<NativeRequest, NativeResult> {
+public class NativeMain extends MainCommand<NativeResult> {
 
     public NativeMain() {
         super("Native", NativeResult.class);

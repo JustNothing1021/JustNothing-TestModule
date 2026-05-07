@@ -1,5 +1,6 @@
 package com.justnothing.testmodule.command.functions.classcmd.impl;
 
+import com.justnothing.testmodule.command.base.command.SubCommandInfo;
 import com.justnothing.testmodule.command.functions.classcmd.AbstractClassCommand;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandContext;
 import com.justnothing.testmodule.command.functions.classcmd.model.FieldInfo;
@@ -19,6 +20,30 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Map;
 
+@SubCommandInfo(
+    description = "使用统一的反射接口访问和操作类的私有成员.",
+    usage = "class reflect <class> <type> <name> [options]",
+    examples = {
+        "class reflect java.lang.System field out",
+        "class reflect java.lang.Integer method parseInt -p \"String:\\\"525113244\\\"",
+        "class reflect java.lang.String constructor -p \"String:\\\"bruh\\\"",
+        "class reflect java.lang.System static out"
+    },
+    optionsDesc = """
+            类型 (type参数) 说明:
+                field        - 获取/设置字段值
+                method       - 调用方法
+                constructor  - 创建实例
+                static       - 访问静态成员
+            
+            选项:
+                -v, --value <value>      设置字段值
+                -p, --params <args>      方法参数（空格分隔）
+                -s, --super             访问父类成员
+                -i, --interfaces         访问接口成员
+                -r, --raw                原始输出（不格式化）
+            """
+)
 public class ReflectCommand extends AbstractClassCommand<ReflectClassRequest, ReflectOperationResult> {
 
     public ReflectCommand() {
@@ -72,34 +97,6 @@ public class ReflectCommand extends AbstractClassCommand<ReflectClassRequest, Re
             }
         }
         return result;
-    }
-
-    @Override
-    public String getHelpText() {
-        return """
-            语法: class reflect <class> <type> <name> [options]
-            
-            使用统一的反射接口访问和操作类的私有成员。
-            
-            类型 (type参数) 说明:
-                field        - 获取/设置字段值
-                method       - 调用方法
-                constructor  - 创建实例
-                static       - 访问静态成员
-            
-            选项:
-                -v, --value <value>      设置字段值
-                -p, --params <args>      方法参数（空格分隔）
-                -s, --super             访问父类成员
-                -i, --interfaces         访问接口成员
-                -r, --raw                原始输出（不格式化）
-            
-            示例:
-                class reflect java.lang.System field out
-                class reflect java.lang.Integer method parseInt -p "String:\\"525113244\\""
-                class reflect java.lang.String constructor -p "String:\\"bruh\\""
-                class reflect java.lang.System static out
-            """;
     }
 
     private void handleReflectField(Class<?> targetClass, String fieldName, String valueToSet,
