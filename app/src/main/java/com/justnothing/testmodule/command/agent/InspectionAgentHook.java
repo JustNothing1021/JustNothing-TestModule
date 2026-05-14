@@ -24,6 +24,9 @@ public class InspectionAgentHook extends PackageHook {
     private static final String ACTIVATION_DIR = "/data/local/tmp/methods/agent/activated";
     private static final long SENTINEL_INTERVAL_MS = 3000;
     private static final Set<String> activePackages = ConcurrentHashMap.newKeySet();
+    
+    // ✅ 新增：去重机制，防止为同一个包创建多个哨兵线程
+    private static final ConcurrentHashMap<String, Thread> sentinelThreads = new ConcurrentHashMap<>();
 
     public static boolean requestActivation(String packageName) {
         if (activePackages.contains(packageName)) return true;
@@ -65,8 +68,17 @@ public class InspectionAgentHook extends PackageHook {
 
     @Override
     protected void hookImplements() {
+        setHookDisplayName("Agent sentinel");
         hookCallback(param -> {
-            startSentinelThread(param.packageName, param);
+            String packageName = param.packageName;
+            
+            // ✅ 去重检查：如果已经为该包创建了哨兵线程，跳过
+            if (sentinelThreads.containsKey(packageName)) {
+                debug("Sentinel thread already exists for package: " + packageName + ", skipping");
+                return true;
+            }
+            
+            startSentinelThread(packageName, param);
             return true;
         });
     }
@@ -77,7 +89,7 @@ public class InspectionAgentHook extends PackageHook {
                 while (!Thread.currentThread().isInterrupted()) {
                     Thread.sleep(SENTINEL_INTERVAL_MS);
                     if (isActivatedViaFile(packageName)) {
-                        logger.info(packageName + " 收到激活信号, 准备注入 Agent");
+                        logger.info(packageName + " received activation signal, preparing to inject Agent");
                         break;
                     }
                 }
@@ -93,28 +105,32 @@ public class InspectionAgentHook extends PackageHook {
                     Application app = (Application) activityThread.getClass()
                             .getMethod("getApplication").invoke(activityThread);
                     if (app != null) {
-                        logger.info("正在为 " + packageName + " 注入 InspectionAgent (直接初始化)");
+                        logger.info("Injecting InspectionAgent for " + packageName + " (direct init)");
                         boolean success = InspectionAgent.ensureInitialized(app.getApplicationContext());
                         if (success) {
-                            info("InspectionAgent 已注入 " + packageName);
+                            info("InspectionAgent injected into " + packageName);
                         } else {
-                            warn("InspectionAgent 注入失败 " + packageName);
+                            warn("InspectionAgent injection failed for " + packageName);
                         }
                     } else {
-                        logger.info("Application 尚未就绪, 回退到 Hook Application.onCreate");
+                        logger.info("Application not ready, fallback to Hook Application.onCreate");
                         hookApplicationOnCreate(packageName);
                     }
                 } else {
-                    logger.info("ActivityThread 为空, 回退到 Hook");
+                    logger.info("ActivityThread is null, fallback to Hook");
                     hookApplicationOnCreate(packageName);
                 }
             } catch (Throwable e) {
-                logger.warn("直接获取 Context 失败, 回退到 Hook: " + e.getMessage());
+                logger.warn("Failed to get Context directly, fallback to Hook: " + e.getMessage());
                 hookApplicationOnCreate(packageName);
             }
         }, "AgentSentinel-" + packageName);
         sentinel.setPriority(Thread.MIN_PRIORITY);
         sentinel.setDaemon(true);
+        
+        // ✅ 记录已创建的哨兵线程（去重关键！）
+        sentinelThreads.put(packageName, sentinel);
+        
         sentinel.start();
     }
 

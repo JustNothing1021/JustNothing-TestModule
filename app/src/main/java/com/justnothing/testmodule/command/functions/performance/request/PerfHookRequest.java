@@ -5,6 +5,8 @@ import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
 import com.justnothing.testmodule.command.base.command.SubCommand;
 import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.base.parser.PositionalParam;
+import com.justnothing.testmodule.command.base.validator.AllowedValues;
+import com.justnothing.testmodule.command.base.validator.Pattern;
 import com.justnothing.testmodule.command.functions.performance.PerformanceRequest;
 import com.justnothing.testmodule.command.utils.ParamParser;
 
@@ -16,22 +18,21 @@ import org.json.JSONObject;
 @AutoSerializable
 public class PerfHookRequest extends PerformanceRequest {
 
-    @PositionalParam(name = "action", order = 1, required = true)
+    @AllowedValues({"start", "stop", "report", "export"})
+    @PositionalParam(name = "action", order = 1)
     private String action;
 
+    @Pattern(regex = "^[a-zA-Z_$][a-zA-Z0-9_$.]*$", description = "Java类名")
     @PositionalParam(name = "className", order = 2, required = false)
     private String className;
 
     @PositionalParam(name = "methodName", order = 3, required = false)
     private String methodName;
 
-    @PositionalParam(name = "signature", order = 4, required = false)
+    @PositionalParam(name = "signature", order = 4, required = false, varArgs = true)
     private String signature;
 
-    @PositionalParam(name = "taskId", order = 5, required = false)
     private Integer taskId;
-
-    @PositionalParam(name = "filePath", order = 6, required = false)
     private String filePath;
 
     public PerfHookRequest() {}

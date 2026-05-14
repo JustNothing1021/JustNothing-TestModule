@@ -7,7 +7,6 @@ import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.protocol.InteractiveProtocol;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -16,11 +15,10 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+
 
 public class SocketStreamReader {
 
@@ -28,9 +26,9 @@ public class SocketStreamReader {
     private static final int SERVER_RESPONSE_TIMEOUT_MS = 30000;
     private static final long PING_SERVER_INTERVAL_MS = 5000;
 
+
     private static final StreamClient.ClientLogger logger = new StreamClient.ClientLogger();
 
-    // ==================== 公共工具方法 ====================
 
     private static boolean isServerTimeout(AtomicLong lastResponseTime) {
         long elapsed = System.currentTimeMillis() - lastResponseTime.get();
@@ -63,31 +61,12 @@ public class SocketStreamReader {
         }
     }
 
-    private static void startConsoleReaderThread(AtomicBoolean reading, BlockingQueue<String> inputQueue) {
-        ThreadPoolManager.submitSocketRunnable(() -> {
-            BufferedReader consoleReader = new BufferedReader(
-                    new InputStreamReader(System.in, StandardCharsets.UTF_8));
 
-            try {
-                while (reading.get() && !Thread.currentThread().isInterrupted()) {
-                    if (consoleReader.ready()) {
-                        String line = consoleReader.readLine();
-                        if (line != null) {
-                            inputQueue.offer(line);
-                        }
-                    } else {
-                        Thread.sleep(100);
-                    }
-                }
-            } catch (Exception ignored) {
-            }
-        });
-    }
 
-    private static void startPingThread(OutputStream output, AtomicLong lastResponseTime, Object writeLock) {
-        ThreadPoolManager.submitSocketRunnable(() -> {
-            while (!Thread.currentThread().isInterrupted() &&
-                    (System.currentTimeMillis() - lastResponseTime.get()) < SERVER_RESPONSE_TIMEOUT_MS) {
+    private static void startPingThread(OutputStream output, AtomicLong lastResponseTime, Object writeLock,
+                                        AtomicBoolean reading) {
+        ThreadPoolManager.scheduleWithFixedDelayUntil(
+            () -> {
                 try {
                     Thread.sleep(PING_SERVER_INTERVAL_MS);
                     synchronized (writeLock) {
@@ -99,13 +78,15 @@ public class SocketStreamReader {
 
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
-                    break;
                 } catch (IOException e) {
                     logger.warn("发送CLIENT_PING失败", e);
-                    break;
                 }
-            }
-        });
+            },
+            0, PING_SERVER_INTERVAL_MS, TimeUnit.MILLISECONDS,
+            () -> Thread.currentThread().isInterrupted()
+                || System.currentTimeMillis() - lastResponseTime.get() < SERVER_RESPONSE_TIMEOUT_MS
+                || !reading.get()
+        );
     }
 
     // ==================== 文本协议读取 ====================
@@ -184,21 +165,17 @@ public class SocketStreamReader {
         }
     }
 
-    // ==================== 交互式协议读取 ====================
-
     public static boolean readInteractiveStream(InputStream input, OutputStream output,
                                                 AtomicBoolean reading, AtomicLong bytesRead,
                                                 Socket socket) {
         try {
             AtomicLong lastResponseTime = new AtomicLong(System.currentTimeMillis());
-            BlockingQueue<String> inputQueue = new LinkedBlockingQueue<>();
             Object writeLock = new Object();
 
-            startConsoleReaderThread(reading, inputQueue);
-            startPingThread(output, lastResponseTime, writeLock);
+            startPingThread(output, lastResponseTime, writeLock, reading);
 
             return runInteractiveMainLoop(input, output, reading, bytesRead, socket, 
-                                        lastResponseTime, inputQueue, writeLock, null);
+                                        lastResponseTime, writeLock, null);
 
         } catch (IOException e) {
             logger.error("读取流失败", e);
@@ -214,14 +191,12 @@ public class SocketStreamReader {
                                                        Socket socket, List<ColoredSegment> segments) {
         try {
             AtomicLong lastResponseTime = new AtomicLong(System.currentTimeMillis());
-            BlockingQueue<String> inputQueue = new LinkedBlockingQueue<>();
             Object writeLock = new Object();
 
-            startConsoleReaderThread(reading, inputQueue);
-            startPingThread(output, lastResponseTime, writeLock);
+            startPingThread(output, lastResponseTime, writeLock, reading);
 
             return runInteractiveMainLoop(input, output, reading, bytesRead, socket, 
-                                        lastResponseTime, inputQueue, writeLock, segments);
+                                        lastResponseTime, writeLock, segments);
 
         } catch (IOException e) {
             logger.error("读取流失败", e);
@@ -233,9 +208,8 @@ public class SocketStreamReader {
 
     private static boolean runInteractiveMainLoop(InputStream input, OutputStream output, 
                                                 AtomicBoolean reading, AtomicLong bytesRead, 
-                                                Socket socket, AtomicLong lastResponseTime, 
-                                                BlockingQueue<String> inputQueue, 
-                                                Object writeLock, List<ColoredSegment> segments) throws IOException {
+                                                Socket socket, AtomicLong lastResponseTime,
+                                                  Object writeLock, List<ColoredSegment> segments) throws IOException {
         while (reading.get() && !Thread.currentThread().isInterrupted()) {
             try {
                 socket.setSoTimeout(1000);
@@ -254,8 +228,8 @@ public class SocketStreamReader {
                 byte[] data = (byte[]) packet[1];
                 lastResponseTime.set(System.currentTimeMillis());
 //                logger.debug("处理包: " + InteractiveProtocol.getMessageTypeName(type));
-                Boolean result = handleInteractivePacket(type, data, output, bytesRead, 
-                                                      inputQueue, reading, writeLock, segments);
+                Boolean result = handleInteractivePacket(type, data, output, bytesRead,
+                        reading, writeLock, segments);
                 if (result != null) {
                     return result;
                 }
@@ -276,8 +250,7 @@ public class SocketStreamReader {
     }
 
     private static Boolean handleInteractivePacket(byte type, byte[] data, OutputStream output, 
-                                                 AtomicLong bytesRead, BlockingQueue<String> inputQueue, 
-                                                 AtomicBoolean reading, Object writeLock, 
+                                                 AtomicLong bytesRead, AtomicBoolean reading, Object writeLock,
                                                  List<ColoredSegment> segments) {
         switch (type) {
             case InteractiveProtocol.TYPE_SERVER_OUTPUT:
@@ -293,11 +266,7 @@ public class SocketStreamReader {
                 return null;
 
             case InteractiveProtocol.TYPE_SERVER_INPUT_REQUEST:
-                if (inputQueue != null) {
-                    handleInputRequest(data, output, inputQueue, reading);
-                } else {
-                    throw new RuntimeException("在inputQueue == null的时候尝试申请读取输入");
-                }
+                handleInputRequest(data, output);
                 return null;
 
             case InteractiveProtocol.TYPE_SERVER_PING:
@@ -419,8 +388,8 @@ public class SocketStreamReader {
 
     // ==================== 输入处理 ====================
 
-    private static void handleInputRequest(byte[] data, OutputStream output, 
-                                         BlockingQueue<String> inputQueue, AtomicBoolean reading) {
+
+    private static void handleInputRequest(byte[] data, OutputStream output) {
         ThreadPoolManager.submitFastRunnable(() -> {
             logger.debug("尝试调起用户输入");
             if (data == null) {
@@ -434,42 +403,29 @@ public class SocketStreamReader {
             }
             String requestId = parts[0];
             String prompt = parts[1];
+            boolean isPassword = prompt.startsWith("PASSWORD:");
+            if (isPassword) {
+                prompt = prompt.substring(9);
+            }
             try {
 
-                boolean isPassword = prompt.startsWith("PASSWORD:");
+                String userInput;
                 if (isPassword) {
-                    prompt = prompt.substring(9);
+                    userInput = StreamConsoleReader.readLine(prompt, '*');
+                } else {
+                    userInput = StreamConsoleReader.readLine(prompt);
                 }
 
-                System.out.print(prompt);
-                System.out.flush();
 
-                String userInput = waitForUserInput(inputQueue, reading);
-                if (userInput == null) {
-                    userInput = "";
-                }
-
-                String response = requestId + ":" + userInput;
+                String response = requestId + ":" + (userInput == null ? "" : userInput);
                 InteractiveProtocol.writeMessage(output,
                         InteractiveProtocol.TYPE_INPUT_RESPONSE,
                         response.getBytes(StandardCharsets.UTF_8));
-
             } catch (Exception e) {
                 logger.error("处理输入请求时出错", e);
-                System.err.println("处理输入请求时出错: " + e);
             }
         });
     }
 
-    private static String waitForUserInput(BlockingQueue<String> inputQueue, AtomicBoolean reading) 
-            throws InterruptedException {
-        String userInput = null;
-        logger.debug("等待用户的输入");
-        while (reading.get()) {
-            userInput = inputQueue.poll(100, TimeUnit.MILLISECONDS);
-            if (userInput != null) break;
-        }
-        return userInput;
-    }
 
 }

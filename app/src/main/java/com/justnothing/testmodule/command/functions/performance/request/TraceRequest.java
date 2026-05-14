@@ -5,6 +5,7 @@ import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
 import com.justnothing.testmodule.command.base.command.SubCommand;
 import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.base.parser.PositionalParam;
+import com.justnothing.testmodule.command.base.validator.AllowedValues;
 import com.justnothing.testmodule.command.functions.performance.PerformanceRequest;
 import com.justnothing.testmodule.command.utils.ParamParser;
 
@@ -16,13 +17,11 @@ import org.json.JSONObject;
 @AutoSerializable
 public class TraceRequest extends PerformanceRequest {
 
-    @PositionalParam(name = "action", order = 1, required = true)
+    @AllowedValues({"start", "stop", "report", "export"})
+    @PositionalParam(name = "action", order = 1)
     private String action;
 
-    @PositionalParam(name = "taskId", order = 2, required = false)
     private Integer taskId;
-
-    @PositionalParam(name = "filePath", order = 3, required = false)
     private String filePath;
 
     public TraceRequest() {}
@@ -45,6 +44,7 @@ public class TraceRequest extends PerformanceRequest {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public TraceRequest fromJson(JSONObject obj) throws JSONException {
         setRequestId(obj.optString("requestId"));
         setAction(obj.optString("action", ""));

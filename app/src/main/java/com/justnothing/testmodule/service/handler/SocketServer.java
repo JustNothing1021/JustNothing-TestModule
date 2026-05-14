@@ -8,6 +8,9 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class SocketServer {
@@ -16,7 +19,19 @@ public class SocketServer {
     private final ServerPortManager serverPortManager;
     private final SocketClientHandler clientHandler;
     private ServerSocket socketServer;
-    private final ExecutorService socketExecutor = Executors.newCachedThreadPool();
+    
+    // ✅ 优化：使用有界线程池替代 CachedThreadPool（防止线程爆炸！）
+    private static final int MAX_SOCKET_THREADS = 4;  // 最大同时处理4个连接
+    private static final int SOCKET_QUEUE_CAPACITY = 10;  // 等待队列容量
+    private final ExecutorService socketExecutor = new ThreadPoolExecutor(
+        2,                                              // 核心线程数
+        MAX_SOCKET_THREADS,                             // 最大线程数
+        60L, TimeUnit.SECONDS,                          // 空闲线程存活时间
+        new LinkedBlockingQueue<>(SOCKET_QUEUE_CAPACITY),// 有界工作队列
+        java.util.concurrent.Executors.defaultThreadFactory(),
+        new ThreadPoolExecutor.CallerRunsPolicy()         // 拒绝策略：调用线程执行
+    );
+    
     private final AtomicBoolean socketServerRunning = new AtomicBoolean(false);
     private final AtomicBoolean restartingSocketServer = new AtomicBoolean(false);
 

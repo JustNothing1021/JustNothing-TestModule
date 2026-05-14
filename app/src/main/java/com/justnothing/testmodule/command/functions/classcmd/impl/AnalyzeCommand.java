@@ -389,7 +389,7 @@ public class AnalyzeCommand extends AbstractClassCommand<AnalyzeClassRequest, An
         Map<String, FieldInfo> fieldMap = new LinkedHashMap<>();
 
         Class<?> current = targetClass;
-        while (current != null && current != Object.class) {
+        while (current != null) {
             try {
                 Field[] fields = current.getDeclaredFields();
                 for (Field field : fields) {
@@ -412,7 +412,7 @@ public class AnalyzeCommand extends AbstractClassCommand<AnalyzeClassRequest, An
         Map<String, MethodInfo> methodMap = new LinkedHashMap<>();
 
         Class<?> current = targetClass;
-        while (current != null && current != Object.class) {
+        while (current != null) {
             try {
                 Method[] methods = current.getDeclaredMethods();
                 for (Method method : methods) {

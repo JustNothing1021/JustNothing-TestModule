@@ -16,7 +16,7 @@ import java.util.Locale;
 
 public abstract class AbstractPerfCommand<Req extends PerformanceRequest, Res extends CommandResult>
         extends AbstractCommand<Req, Res>
-        implements PerformanceCommand<Req, Res> {
+        implements PerformanceCommand<Res> {
 
     protected static final Logger logger = Logger.getLoggerForName("Performance");
     protected CommandExecutor.CmdExecContext<Req> context;

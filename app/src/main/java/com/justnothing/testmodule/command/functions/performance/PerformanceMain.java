@@ -170,7 +170,7 @@ public class PerformanceMain extends MainCommand<PerformanceResult> {
         AbstractPerfCommand<? extends PerformanceRequest, ? extends CommandResult> command;
 
         if (args.length >= 1) {
-            String subCmdName = args[0];
+            String subCmdName = cmdName != null ? cmdName : args[0];
             logger.debug("CLI模式: 从args获取子命令: " + subCmdName);
             command = findSubCommandByName(subCmdName);
             if (command == null) {
@@ -230,7 +230,8 @@ public class PerformanceMain extends MainCommand<PerformanceResult> {
         }
     }
 
-    private AbstractPerfCommand<? extends PerformanceRequest, ? extends CommandResult> findSubCommandByName(String name) {
+    private AbstractPerfCommand<? extends PerformanceRequest, ? extends CommandResult>
+                findSubCommandByName(String name) {
         SubCommands subCommandsAnnotation = this.getClass().getAnnotation(SubCommands.class);
         if (subCommandsAnnotation != null) {
             for (SubCommand subCmd : subCommandsAnnotation.value()) {
@@ -249,7 +250,8 @@ public class PerformanceMain extends MainCommand<PerformanceResult> {
     }
 
     @Override
-    protected AbstractPerfCommand<? extends PerformanceRequest, ? extends CommandResult> resolveSubCommandFromRequest(CommandRequest request) {
+    protected AbstractPerfCommand<? extends PerformanceRequest, ? extends CommandResult>
+                resolveSubCommandFromRequest(CommandRequest request) {
         SubCommands subCommandsAnnotation = this.getClass().getAnnotation(SubCommands.class);
         if (subCommandsAnnotation != null) {
             for (SubCommand subCmd : subCommandsAnnotation.value()) {
@@ -312,7 +314,8 @@ public class PerformanceMain extends MainCommand<PerformanceResult> {
         if (!running.isEmpty()) {
             ctx.println("运行中的" + label + "器:", Colors.CYAN);
             for (Map.Entry<Integer, ?> e : running.entrySet()) {
-                ctx.print("  ID: ", Colors.CYAN); ctx.println(String.valueOf(e.getKey()), Colors.YELLOW);
+                ctx.print("  ID: ", Colors.CYAN);
+                ctx.println(String.valueOf(e.getKey()), Colors.YELLOW);
                 ctx.println("    类型: " + label, Colors.WHITE);
                 ctx.println("    状态: 运行中", Colors.GREEN);
             }
@@ -321,7 +324,8 @@ public class PerformanceMain extends MainCommand<PerformanceResult> {
         if (!completed.isEmpty()) {
             ctx.println("已完成的" + label + "数据:", Colors.CYAN);
             for (Map.Entry<?, ?> e : completed.entrySet()) {
-                ctx.print("  ID: ", Colors.CYAN); ctx.println(String.valueOf(e.getKey()), Colors.YELLOW);
+                ctx.print("  ID: ", Colors.CYAN);
+                ctx.println(String.valueOf(e.getKey()), Colors.YELLOW);
                 ctx.println("    状态: 已完成", Colors.GRAY);
             }
             ctx.println("", Colors.WHITE);
@@ -334,8 +338,10 @@ public class PerformanceMain extends MainCommand<PerformanceResult> {
         if (!running.isEmpty()) {
             ctx.println("运行中的分层采样器:", Colors.CYAN);
             for (var e : running.entrySet()) {
-                ctx.print("  ID: ", Colors.CYAN); ctx.println(String.valueOf(e.getKey()), Colors.YELLOW);
-                ctx.print("    方法数: ", Colors.CYAN); ctx.println(String.valueOf(e.getValue().getMethodCount()), Colors.YELLOW);
+                ctx.print("  ID: ", Colors.CYAN);
+                ctx.println(String.valueOf(e.getKey()), Colors.YELLOW);
+                ctx.print("    方法数: ", Colors.CYAN);
+                ctx.println(String.valueOf(e.getValue().getMethodCount()), Colors.YELLOW);
             }
             ctx.println("", Colors.WHITE);
         }
@@ -353,16 +359,20 @@ public class PerformanceMain extends MainCommand<PerformanceResult> {
         if (!running.isEmpty()) {
             ctx.println("运行中的 Tracer:", Colors.CYAN);
             for (var e : running.entrySet()) {
-                ctx.print("  ID: ", Colors.CYAN); ctx.println(String.valueOf(e.getKey()), Colors.YELLOW);
-                ctx.print("    Trace数: ", Colors.CYAN); ctx.println(String.valueOf(e.getValue().getSectionCount()), Colors.YELLOW);
+                ctx.print("  ID: ", Colors.CYAN);
+                ctx.println(String.valueOf(e.getKey()), Colors.YELLOW);
+                ctx.print("    Trace数: ", Colors.CYAN);
+                ctx.println(String.valueOf(e.getValue().getSectionCount()), Colors.YELLOW);
             }
             ctx.println("", Colors.WHITE);
         }
         if (!completed.isEmpty()) {
             ctx.println("已完成的 Trace:", Colors.CYAN);
             for (var e : completed.entrySet()) {
-                ctx.print("  ID: ", Colors.CYAN); ctx.println(String.valueOf(e.getKey()), Colors.YELLOW);
-                ctx.print("    数量: ", Colors.CYAN); ctx.println(String.valueOf(e.getValue().size()), Colors.YELLOW);
+                ctx.print("  ID: ", Colors.CYAN);
+                ctx.println(String.valueOf(e.getKey()), Colors.YELLOW);
+                ctx.print("    数量: ", Colors.CYAN);
+                ctx.println(String.valueOf(e.getValue().size()), Colors.YELLOW);
             }
             ctx.println("", Colors.WHITE);
         }
@@ -412,6 +422,6 @@ public class PerformanceMain extends MainCommand<PerformanceResult> {
 
         staticLogger.info("已清除所有性能分析任务 (" + total + " 个)");
         ctx.println("已清除所有性能分析任务", Colors.GREEN);
-        ctx.print("共清除: ", Colors.CYAN); ctx.println(String.valueOf(total) + " 个", Colors.YELLOW);
+        ctx.print("共清除: ", Colors.CYAN); ctx.println(total + " 个", Colors.YELLOW);
     }
 }

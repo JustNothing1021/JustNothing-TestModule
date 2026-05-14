@@ -8,4 +8,4 @@ MODDIR=${0%/*}
 mount -o rw,remount /
 
 mkdir -p /data/local/tmp/methods
-chmod 755 /data/local/tmp/methods
+chmod 777 /data/local/tmp/methods

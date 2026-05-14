@@ -26,6 +26,7 @@ import com.justnothing.javainterpreter.evaluator.DynamicClassGenerator;
 import java.io.File;
 import java.lang.reflect.Array;
 import java.util.Date;
+import java.util.HashSet;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +34,7 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -441,7 +443,7 @@ public class ScriptExecutorMain extends MainCommand<ScriptResult> {
         return null;
     }
 
-    private void executeScriptCode(CommandExecutor.CmdExecContext context) {
+    private void executeScriptCode(CommandExecutor.CmdExecContext<?> context) {
         String code = context.origCommand();
         context.println("[脚本执行] 在独立线程中执行...", Colors.CYAN);
         context.println("", Colors.WHITE);
@@ -501,7 +503,7 @@ public class ScriptExecutorMain extends MainCommand<ScriptResult> {
         }
     }
 
-    private void handleScriptManagerCommand(CommandExecutor.CmdExecContext context) throws IOException {
+    private void handleScriptManagerCommand(CommandExecutor.CmdExecContext<?> context) throws IOException {
         String[] args = context.args();
         
         logger.debug("执行script命令，参数: " + Arrays.toString(args));
@@ -576,7 +578,7 @@ public class ScriptExecutorMain extends MainCommand<ScriptResult> {
         return scriptRunners.computeIfAbsent(cl, ScriptRunner::new);
     }
 
-    public void clearExecutorVariables(CommandExecutor.CmdExecContext context) {
+    public void clearExecutorVariables(CommandExecutor.CmdExecContext<?> context) {
         getScriptExecutor(context.classLoader()).clearVariables();
         context.println("已清空所有执行器的变量", Colors.GREEN);
         context.print("提示: ", Colors.CYAN);
@@ -585,7 +587,7 @@ public class ScriptExecutorMain extends MainCommand<ScriptResult> {
         context.println("的ClassLoader的执行器的变量，其他ClassLoader的并没有被清空", Colors.GRAY);
     }
 
-    public void listExecutorVariables(CommandExecutor.CmdExecContext context) {
+    public void listExecutorVariables(CommandExecutor.CmdExecContext<?> context) {
         ClassLoader classLoader = context.classLoader();
         String targetPackage = context.targetPackage();
 
@@ -608,7 +610,7 @@ public class ScriptExecutorMain extends MainCommand<ScriptResult> {
 
     }
 
-    private void handleCreate(String[] args, CommandExecutor.CmdExecContext context) throws IOException {
+    private void handleCreate(String[] args, CommandExecutor.CmdExecContext<?> context) throws IOException {
         if (args.length < 2) {
             context.println("错误: 需要指定脚本名称", Colors.RED);
             context.println("用法: script create <name>", Colors.GRAY);
@@ -647,7 +649,7 @@ public class ScriptExecutorMain extends MainCommand<ScriptResult> {
         context.println(scriptFile.getAbsolutePath(), Colors.GREEN);
     }
 
-    private void handleList(CommandExecutor.CmdExecContext context) {
+    private void handleList(CommandExecutor.CmdExecContext<?> context) {
         File scriptsDir = DataBridge.getScriptsDirectory();
         
         if (!scriptsDir.exists()) {
@@ -685,7 +687,7 @@ public class ScriptExecutorMain extends MainCommand<ScriptResult> {
         context.println(" 个脚本", Colors.CYAN);
     }
 
-    private void handleShow(String[] args, CommandExecutor.CmdExecContext context) throws IOException {
+    private void handleShow(String[] args, CommandExecutor.CmdExecContext<?> context) throws IOException {
         if (args.length < 2) {
             context.println("错误: 需要指定文件名称", Colors.RED);
             context.println("用法: script show <name>", Colors.GRAY);
@@ -711,7 +713,7 @@ public class ScriptExecutorMain extends MainCommand<ScriptResult> {
         context.println(content, Colors.WHITE);
     }
 
-    private void handleDelete(String[] args, CommandExecutor.CmdExecContext context) {
+    private void handleDelete(String[] args, CommandExecutor.CmdExecContext<?> context) {
         if (args.length < 2) {
             context.println("错误: 需要指定文件名称", Colors.RED);
             context.println("用法: script delete <name>", Colors.GRAY);
@@ -740,7 +742,7 @@ public class ScriptExecutorMain extends MainCommand<ScriptResult> {
         }
     }
 
-    private void handleRun(String[] args, CommandExecutor.CmdExecContext context) throws IOException {
+    private void handleRun(String[] args, CommandExecutor.CmdExecContext<?> context) throws IOException {
         if (args.length < 2) {
             context.println("错误: 需要指定文件名称", Colors.RED);
             context.println("用法: script [-p preset] run <name>", Colors.GRAY);
@@ -823,7 +825,7 @@ public class ScriptExecutorMain extends MainCommand<ScriptResult> {
         }
     }
 
-    private void handleRunCode(CommandExecutor.CmdExecContext context) {
+    private void handleRunCode(CommandExecutor.CmdExecContext<?> context) {
         String origCommand = context.origCommand();
         
         if (origCommand == null || origCommand.isEmpty()) {
@@ -885,7 +887,7 @@ public class ScriptExecutorMain extends MainCommand<ScriptResult> {
         return command.substring(startIndex);
     }
 
-    private void handleImport(String[] args, CommandExecutor.CmdExecContext context) throws IOException {
+    private void handleImport(String[] args, CommandExecutor.CmdExecContext<?> context) throws IOException {
         if (args.length < 2) {
             context.println("错误: 需要指定文件路径", Colors.RED);
             context.println("用法: script import <file>", Colors.GRAY);
@@ -930,7 +932,7 @@ public class ScriptExecutorMain extends MainCommand<ScriptResult> {
         context.println(destFile.getAbsolutePath(), Colors.GREEN);
     }
 
-    private void handleExport(String[] args, CommandExecutor.CmdExecContext context) throws IOException {
+    private void handleExport(String[] args, CommandExecutor.CmdExecContext<?> context) throws IOException {
         if (args.length < 3) {
             context.println("错误: 需要指定文件名称和导出路径", Colors.RED);
             context.println("用法: script export <name> <file>", Colors.GRAY);
@@ -975,7 +977,7 @@ public class ScriptExecutorMain extends MainCommand<ScriptResult> {
         context.println(exportFile.getAbsolutePath(), Colors.GREEN);
     }
 
-    private void handleManage(CommandExecutor.CmdExecContext context) {
+    private void handleManage(CommandExecutor.CmdExecContext<?> context) {
         context.println("===== 交互式脚本管理器 =====", Colors.CYAN);
         context.println("输入 'help' 查看可用命令, 'exit' 或 'quit' 退出", Colors.GRAY);
         context.println("", Colors.WHITE);
@@ -1010,7 +1012,7 @@ public class ScriptExecutorMain extends MainCommand<ScriptResult> {
         context.println("脚本管理器已退出", Colors.GREEN);
     }
     
-    private void showManageHelp(CommandExecutor.CmdExecContext context) {
+    private void showManageHelp(CommandExecutor.CmdExecContext<?> context) {
         context.println("", Colors.WHITE);
         context.println("可用命令:", Colors.CYAN);
         context.print("  create <name>        ", Colors.YELLOW);
@@ -1038,7 +1040,7 @@ public class ScriptExecutorMain extends MainCommand<ScriptResult> {
         context.println("", Colors.WHITE);
     }
     
-    private void handleManageCommand(String input, CommandExecutor.CmdExecContext context) {
+    private void handleManageCommand(String input, CommandExecutor.CmdExecContext<?> context) {
         String[] parts = input.split("\\s+", 3);
         String cmd = parts[0].toLowerCase();
         
@@ -1107,7 +1109,7 @@ public class ScriptExecutorMain extends MainCommand<ScriptResult> {
         }
     }
     
-    private void handleEdit(String name, CommandExecutor.CmdExecContext context) throws IOException {
+    private void handleEdit(String name, CommandExecutor.CmdExecContext<?> context) throws IOException {
         File scriptFile = DataBridge.getScriptFile(name);
         
         if (!scriptFile.exists()) {
@@ -1145,7 +1147,7 @@ public class ScriptExecutorMain extends MainCommand<ScriptResult> {
         }
     }
     
-    private void handlePermission(String[] args, CommandExecutor.CmdExecContext context) {
+    private void handlePermission(String[] args, CommandExecutor.CmdExecContext<?> context) {
         if (args.length < 2) {
             showPermissionStatus(context);
             return;
@@ -1206,7 +1208,7 @@ public class ScriptExecutorMain extends MainCommand<ScriptResult> {
         }
     }
 
-    private void showPermissionStatus(CommandExecutor.CmdExecContext context) {
+    private void showPermissionStatus(CommandExecutor.CmdExecContext<?> context) {
         SandboxConfig config = currentPermissionConfig.get();
         
         context.println("===== 当前权限配置 =====", Colors.CYAN);
@@ -1241,7 +1243,7 @@ public class ScriptExecutorMain extends MainCommand<ScriptResult> {
         context.println("使用 'script permission preset <name>' 应用预设", Colors.GRAY);
     }
 
-    private void modifyPermissions(String permList, boolean grant, CommandExecutor.CmdExecContext context) {
+    private void modifyPermissions(String permList, boolean grant, CommandExecutor.CmdExecContext<?> context) {
         SandboxConfig current = currentPermissionConfig.get();
         SandboxConfig.Builder builder = SandboxConfig.builder();
 
@@ -1288,7 +1290,7 @@ public class ScriptExecutorMain extends MainCommand<ScriptResult> {
         context.println(" (" + permList + ")", Colors.GRAY);
     }
 
-    private void applyPreset(String preset, CommandExecutor.CmdExecContext context) {
+    private void applyPreset(String preset, CommandExecutor.CmdExecContext<?> context) {
         SandboxConfig config;
 
         switch (preset.toLowerCase()) {
@@ -1328,7 +1330,7 @@ public class ScriptExecutorMain extends MainCommand<ScriptResult> {
         return sb.toString();
     }
 
-    private SandboxConfig resolvePreset(String preset, CommandExecutor.CmdExecContext context) {
+    private SandboxConfig resolvePreset(String preset, CommandExecutor.CmdExecContext<?> context) {
         switch (preset.toLowerCase()) {
             case "sandbox" -> { return SandboxConfig.SANDBOX; }
             case "expression" -> { return SandboxConfig.EXPRESSION_ONLY; }
@@ -1343,7 +1345,7 @@ public class ScriptExecutorMain extends MainCommand<ScriptResult> {
         }
     }
 
-    private void handleCodebaseList(CommandExecutor.CmdExecContext context) {
+    private void handleCodebaseList(CommandExecutor.CmdExecContext<?> context) {
         File codebaseDir = DataBridge.getScriptsDirectory();
         
         if (!codebaseDir.exists()) {
@@ -1398,29 +1400,38 @@ public class ScriptExecutorMain extends MainCommand<ScriptResult> {
         return sdf.format(new Date(timestamp));
     }
 
-    private static String formatValue(Object value) {
+    private static String formatValue(Object value, Set<Object> seen) {
+        if (seen == null) seen = new HashSet<>();
+
         if (value == null) {
             return "null";
         }
-        if (value.getClass().isArray()) {
-            StringBuilder sb = new StringBuilder("[");
-            int length = Array.getLength(value);
-            for (int i = 0; i < length; i++) {
-                if (i > 0) sb.append(", ");
-                Object elem = Array.get(value, i);
-                if (elem == value) {
-                    sb.append("~");
-                } else {
-                    sb.append(formatValue(elem));
-                }
-            }
-            sb.append("]");
-            return sb.toString();
+
+        if (!value.getClass().isArray()) {
+            return String.valueOf(value);
         }
-        return String.valueOf(value);
+
+        if (seen.contains(value)) {
+            return "~";
+        }
+        seen.add(value);
+
+        value.getClass().isArray();
+        StringBuilder sb = new StringBuilder("[");
+        int length = Array.getLength(value);
+        for (int i = 0; i < length; i++) {
+            if (i > 0) sb.append(", ");
+            Object elem = Array.get(value, i);
+            sb.append(formatValue(elem, seen));
+        }
+        sb.append("]");
+        return sb.toString();
+
     }
 
-    private void runInteractiveMode(CommandExecutor.CmdExecContext context) {
+
+
+    private void runInteractiveMode(CommandExecutor.CmdExecContext<?> context) {
         ClassLoader classLoader = context.classLoader();
         ScriptRunner runner = getScriptExecutor(classLoader);
         
@@ -1517,7 +1528,7 @@ public class ScriptExecutorMain extends MainCommand<ScriptResult> {
         context.println("交互式模式已退出", Colors.GREEN);
     }
     
-    private void executeCode(ScriptRunner runner, String code, CommandExecutor.CmdExecContext context) {
+    private void executeCode(ScriptRunner runner, String code, CommandExecutor.CmdExecContext<?> context) {
         SandboxConfig config = currentPermissionConfig.get();
         
         if (config != null) {
@@ -1528,7 +1539,7 @@ public class ScriptExecutorMain extends MainCommand<ScriptResult> {
                 BlockGuardSandbox.execute(config, () -> {
                     Object result = runner.executeWithResult(code, context.output(), context.output());
                     if (result != null) {
-                        context.println(String.valueOf(result), Colors.GRAY);
+                        context.println(formatValue(result, new HashSet<>()), Colors.GRAY);
                     }
                 });
             } catch (Throwable e) {
@@ -1539,7 +1550,7 @@ public class ScriptExecutorMain extends MainCommand<ScriptResult> {
             try {
                 Object result = runner.executeWithResult(code, context.output(), context.output());
                 if (result != null) {
-                    context.println(formatValue(result), Colors.GRAY);
+                    context.println(formatValue(result, new HashSet<>()), Colors.GRAY);
                 }
             } catch (Throwable e) {
                 handleExecutionException(e, context, runner.getExecutionContext());
@@ -1547,7 +1558,7 @@ public class ScriptExecutorMain extends MainCommand<ScriptResult> {
         }
     }
     
-    private void handleExecutionException(Throwable e, CommandExecutor.CmdExecContext context, ExecutionContext executionContext) {
+    private void handleExecutionException(Throwable e, CommandExecutor.CmdExecContext<?> context, ExecutionContext executionContext) {
         Throwable cause = e.getCause();
         String message = e.getMessage();
         boolean isParseError = message != null && message.startsWith("Parse error:");

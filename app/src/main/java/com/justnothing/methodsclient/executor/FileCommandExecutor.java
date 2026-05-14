@@ -212,7 +212,7 @@ public class FileCommandExecutor {
 
         boolean success = outputContent != null;
         if (success) System.out.print(outputContent);
-        else System.err.println("执行失败");
+        else System.err.println("文件模式执行失败");
 
         if (ctx != null) cleanupTempDir(ctx.tmpDir);
 

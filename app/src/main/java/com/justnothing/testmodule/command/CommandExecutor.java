@@ -196,7 +196,7 @@ public class CommandExecutor {
                            " (" + cmdClass.getSimpleName() + ")");
                 
             } catch (Exception e) {
-                logger.error("⚠️ @CommandInfo 自动注册命令失败 (已跳过): " + cmdClass.getSimpleName()
+                logger.error("@CommandInfo 自动注册命令失败 (已跳过): " + cmdClass.getSimpleName()
                            + " - " + e.getMessage()
                            + "\n   该命令将不可用，但服务端继续运行");
             }
@@ -706,14 +706,14 @@ public class CommandExecutor {
             SubCommand subCmd = findSubCommand(subCommandName);
             if (subCmd == null) {
                 throw new IllegalCommandLineArgumentException(
-                    "Default subcommand not found: " + subCommandName);
+                    "没有找到子命令: " + subCommandName);
             }
             
             try {
                 return subCmd.request().getDeclaredConstructor().newInstance();
             } catch (Exception e) {
                 throw new IllegalCommandLineArgumentException(
-                    "Failed to create default request: " + e.getMessage());
+                    "无法创建默认请求: " + e.getMessage());
             }
         }
 
@@ -768,22 +768,6 @@ public class CommandExecutor {
             
             可选项:
               -cl, --classloader <package>      - 指定类加载器（软件包名，没找到会是默认的类加载器）
-            
-            示例:
-              methods class graph java.util.ArrayList
-              methods -cl android clist com.android.server.am.ActivityManagerService
-              methods minfo -h
-              methods mgc --full
-              methods mdump --heap /sdcard/heap_only.txt
-              methods script for (int i = 0; i < 114; i++) println(i); // 命令行记得加引号
-              methods watch add field java.lang.System out 1000
-              methods hook add com.example.MainActivity onCreate before 'println("onCreate called")'
-              methods reflect java.lang.String constructor
-              methods reflect -s java.lang.String field value
-              methods binfo -v java.util.ArrayList
-              methods native list libart.so
-            
-            (MainModule: 让AI给我写了一堆新功能, 再也不用担心自己研究不透系统了)
             """, MAIN_MODULE_VER);
     }
 }

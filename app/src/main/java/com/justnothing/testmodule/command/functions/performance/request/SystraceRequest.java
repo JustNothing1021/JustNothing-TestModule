@@ -5,6 +5,8 @@ import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
 import com.justnothing.testmodule.command.base.command.SubCommand;
 import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.base.parser.PositionalParam;
+import com.justnothing.testmodule.command.base.validator.AllowedValues;
+import com.justnothing.testmodule.command.base.validator.Range;
 import com.justnothing.testmodule.command.functions.performance.PerformanceRequest;
 import com.justnothing.testmodule.command.utils.ParamParser;
 
@@ -16,19 +18,18 @@ import org.json.JSONObject;
 @AutoSerializable
 public class SystraceRequest extends PerformanceRequest {
 
+    @AllowedValues({"start", "stop", "report", "export"})
     @PositionalParam(name = "action", order = 1, required = true)
     private String action;
 
-    @PositionalParam(name = "taskId", order = 2, required = false)
-    private Integer taskId;
-
-    @PositionalParam(name = "duration", order = 3, required = false)
+    @Range(min = 100, max = 600000)
+    @PositionalParam(name = "duration", order = 2, required = false)
     private Integer duration;
 
-    @PositionalParam(name = "categories", order = 4, required = false)
+    @PositionalParam(name = "categories", order = 3, required = false)
     private String categories;
 
-    @PositionalParam(name = "filePath", order = 5, required = false)
+    private Integer taskId;
     private String filePath;
 
     public SystraceRequest() {}

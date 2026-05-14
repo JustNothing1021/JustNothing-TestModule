@@ -8,6 +8,8 @@ import com.justnothing.methodsclient.monitor.ClientPortManager;
 import com.justnothing.methodsclient.monitor.PerformanceMonitor;
 import com.justnothing.testmodule.utils.logging.Logger;
 
+import org.jline.jansi.io.AnsiOutputStream;
+
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.concurrent.ExecutorService;
@@ -138,6 +140,7 @@ public class StreamClient {
         }
 
         if (!success) {
+
             System.exit(1);
         }
     }
@@ -206,7 +209,7 @@ public class StreamClient {
      */
     public static void main(String[] args) {
         FileCommandExecutor.isInAppProcess = true;
-        
+
         System.setOut(origOut);
         System.setErr(origErr);
         if (args.length > 0 && args[0].equals("--perf-stats")) {
@@ -249,63 +252,69 @@ public class StreamClient {
 
         String firstArg = args[0];
 
-        switch (firstArg) {
-            case "--check-socket" -> {
-                boolean running = checkSocketServer();
-                System.err.println("Socket模式服务器状态: " + (running ? "运行中" : "未运行"));
-                System.exit(running ? 0 : 1);
-            }
-            case "--help" -> System.err.println(getHelpText());
-            case "--text", "-t" -> {
-                if (args.length < 2) {
-                    System.err.println("错误: 需要提供命令");
-                    System.exit(1);
+        try {
+            switch (firstArg) {
+                case "--check-socket" -> {
+                    boolean running = checkSocketServer();
+                    System.err.println("Socket模式服务器状态: " + (running ? "运行中" : "未运行"));
+                    System.exit(running ? 0 : 1);
                 }
-                String command = joinArgs(args, 1);
-                executeTextMode(command);
-            }
-            case "--interactive", "-i" -> {
-                if (args.length < 2) {
-                    System.err.println("错误: 需要提供命令");
-                    System.exit(1);
+                case "--help" -> System.err.println(getHelpText());
+                case "--text", "-t" -> {
+                    if (args.length < 2) {
+                        System.err.println("错误: 需要提供命令");
+                        System.exit(1);
+                    }
+                    String command = joinArgs(args, 1);
+                    executeTextMode(command);
                 }
-                String command = joinArgs(args, 1);
-                boolean success = new StreamClient().executeColoredInteractiveMode(command);
-                System.exit(success ? 0 : 1);
-            }
-            case "--interactive-plain", "-ip" -> {
-                if (args.length < 2) {
-                    System.err.println("错误: 需要提供命令");
-                    System.exit(1);
+                case "--interactive", "-i" -> {
+                    if (args.length < 2) {
+                        System.err.println("错误: 需要提供命令");
+                        System.exit(1);
+                    }
+                    String command = joinArgs(args, 1);
+                    boolean success = new StreamClient().executeColoredInteractiveMode(command);
+                    System.exit(success ? 0 : 1);
                 }
-                String command = joinArgs(args, 1);
-                boolean success = new StreamClient().executeInteractiveMode(command);
-                System.exit(success ? 0 : 1);
-            }
-            case "--auto" -> {
-                if (args.length < 2) {
-                    System.err.println("错误: 需要提供命令");
-                    System.exit(1);
+                case "--interactive-plain", "-ip" -> {
+                    if (args.length < 2) {
+                        System.err.println("错误: 需要提供命令");
+                        System.exit(1);
+                    }
+                    String command = joinArgs(args, 1);
+                    boolean success = new StreamClient().executeInteractiveMode(command);
+                    System.exit(success ? 0 : 1);
                 }
-                String command = joinArgs(args, 1);
-                executeAuto(command);
-            }
-            case "--file", "-f" -> {
-                if (args.length < 2) {
-                    System.err.println("错误: 需要提供命令");
-                    System.exit(1);
+                case "--auto" -> {
+                    if (args.length < 2) {
+                        System.err.println("错误: 需要提供命令");
+                        System.exit(1);
+                    }
+                    String command = joinArgs(args, 1);
+                    executeAuto(command);
                 }
-                String command = joinArgs(args, 1);
-                boolean success = executeFileMode(command);
-                if (!success) {
-                    System.exit(1);
+                case "--file", "-f" -> {
+                    if (args.length < 2) {
+                        System.err.println("错误: 需要提供命令");
+                        System.exit(1);
+                    }
+                    String command = joinArgs(args, 1);
+                    boolean success = executeFileMode(command);
+                    if (!success) {
+                        System.exit(1);
+                    }
                 }
-            }
 
-            default -> {
-                String command = joinArgs(args, 0);
-                executeAuto(command);
+                default -> {
+                    String command = joinArgs(args, 0);
+                    executeAuto(command);
+                }
             }
+        } catch (Throwable e) {
+            System.err.println("执行出现未知错误: " + e.getMessage());
+            e.printStackTrace();
+            System.exit(1);
         }
     }
 

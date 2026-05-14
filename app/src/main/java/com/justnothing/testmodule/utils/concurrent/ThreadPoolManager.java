@@ -26,13 +26,14 @@ public class ThreadPoolManager {
     private static volatile ThreadPoolManager instance = null;
     private static final int CPU_CORES = Runtime.getRuntime().availableProcessors();
     private static final boolean IS_LOW_END_DEVICE = CPU_CORES <= 4 || Runtime.getRuntime().maxMemory() < 128 * 1024 * 1024;
-    private static final int IO_POOL_SIZE = Math.max(2, IS_LOW_END_DEVICE ? 2 : Math.max(4, CPU_CORES * 2));
-    private static final int FAST_POOL_SIZE = Math.max(4, IS_LOW_END_DEVICE ? 4 : Math.max(6, CPU_CORES * 2));
-    private static final int SOCKET_POOL_SIZE = Math.max(4, IS_LOW_END_DEVICE ? 4 : Math.max(6, CPU_CORES * 2));
+    
+    private static final int IO_POOL_SIZE = IS_LOW_END_DEVICE ? 3 : 6;
+    private static final int FAST_POOL_SIZE = IS_LOW_END_DEVICE ? 4 : 10;
+    private static final int SOCKET_POOL_SIZE = IS_LOW_END_DEVICE ? 3 : 5;
 
-    private static final int IO_QUEUE_CAPACITY = IS_LOW_END_DEVICE ? 100 : 500;
-    private static final int FAST_QUEUE_CAPACITY = IS_LOW_END_DEVICE ? 100 : 300;
-    private static final int SOCKET_QUEUE_CAPACITY = IS_LOW_END_DEVICE ? 200 : 1000;
+    private static final int IO_QUEUE_CAPACITY = IS_LOW_END_DEVICE ? 50 : 200;
+    private static final int FAST_QUEUE_CAPACITY = IS_LOW_END_DEVICE ? 50 : 150;
+    private static final int SOCKET_QUEUE_CAPACITY = IS_LOW_END_DEVICE ? 100 : 500;
 
     private static final long KEEP_ALIVE_TIME = 60L;
 
@@ -59,7 +60,7 @@ public class ThreadPoolManager {
 
         ioExecutor = new ThreadPoolExecutor(
                 IO_POOL_SIZE,
-                IO_POOL_SIZE * 2,
+                IO_POOL_SIZE + 1,
                 KEEP_ALIVE_TIME, TimeUnit.SECONDS,
                 new LinkedBlockingQueue<>(IO_QUEUE_CAPACITY),
                 ioThreadFactory,
@@ -68,7 +69,7 @@ public class ThreadPoolManager {
 
         fastExecutor = new ThreadPoolExecutor(
                 FAST_POOL_SIZE,
-                FAST_POOL_SIZE * 2,
+                FAST_POOL_SIZE + 1,
                 30L, TimeUnit.SECONDS,
                 new LinkedBlockingQueue<>(FAST_QUEUE_CAPACITY),
                 fastThreadFactory,
@@ -77,7 +78,7 @@ public class ThreadPoolManager {
 
         socketExecutor = new ThreadPoolExecutor(
                 SOCKET_POOL_SIZE,
-                SOCKET_POOL_SIZE * 2,
+                SOCKET_POOL_SIZE + 1,
                 KEEP_ALIVE_TIME, TimeUnit.SECONDS,
                 new LinkedBlockingQueue<>(SOCKET_QUEUE_CAPACITY),
                 socketThreadFactory,
@@ -85,17 +86,11 @@ public class ThreadPoolManager {
         );
 
         scheduledExecutor = Executors.newScheduledThreadPool(
-                Math.max(2, CPU_CORES / 2),
+                IS_LOW_END_DEVICE ? 20 : Math.max(30, (int) (CPU_CORES / 1.5)),
                 scheduledThreadFactory
         );
 
         logger.info("ThreadPoolManager初始化完成");
-        logger.info("设备信息: CPU核心数: " + CPU_CORES +
-                ", 低端设备: " + IS_LOW_END_DEVICE +
-                ", 最大内存: " + (Runtime.getRuntime().maxMemory() / 1024 / 1024) + "MB");
-        logger.info("线程池配置: IO池: " + IO_POOL_SIZE + "/" + IO_QUEUE_CAPACITY +
-                ", 快速池: " + FAST_POOL_SIZE + "/" + FAST_QUEUE_CAPACITY +
-                ", Socket池: " + SOCKET_POOL_SIZE + "/" + SOCKET_QUEUE_CAPACITY);
     }
 
 

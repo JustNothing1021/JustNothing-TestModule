@@ -1,3 +1,4 @@
+import com.android.build.gradle.AppExtension
 
 
 plugins {
@@ -31,6 +32,7 @@ android {
         debug {
             minifyEnabled false
         }
+
     }
 
     compileOptions {
@@ -56,6 +58,22 @@ android {
     configurations {
         all*.exclude group: 'androidx.lifecycle', module: 'lifecycle-viewmodel-ktx'
     }
+
+
+    sourceSets {
+        main {
+            resources {
+                srcDirs = ['src/main/resources']
+            }
+        }
+
+        getByName("main") {
+            jniLibs.srcDirs("src/main/jniLibs")
+        }
+    }
+
+
+
     buildToolsVersion '36.1.0'
     ndkVersion '29.0.14206865'
 }
@@ -77,6 +95,7 @@ dependencies {
     implementation libs.cfr
     implementation libs.r8
     implementation libs.mpandroidchart
+    implementation 'org.jline:jline:3.30.3:jdk8'
     implementation project(':engine')
     implementation files("libs/NCW-Logger-1.0.3-hotfix3.jar")
 
@@ -96,223 +115,92 @@ configurations.configureEach {
     }
 }
 
-def clientSourceDir = layout.buildDirectory.dir('libs/source')
-def clientJarDir = layout.buildDirectory.dir('libs/client')
-
-
-tasks.register('createClientSourceJar', Jar) {
+tasks.register('prepareMagiskFiles', Task) {
     group = 'build'
-    description = '创建客户端源代码的Jar (还不能直接用, app_process认不出来)'
-    archiveBaseName = 'methods-client'
-    destinationDirectory = clientSourceDir
-
-    def javaClassesDir = project.objects.directoryProperty()
-    javaClassesDir.set(tasks.named('compileDebugJavaWithJavac').flatMap { it.destinationDirectory })
-
-    from(javaClassesDir) {
-        include 'com/justnothing/methodsclient/**'
-        include 'com/justnothing/testmodule/**'
-        exclude 'com/justnothing/testmodule/ui'     // 因为没必要其实
-        exclude 'com/justnothing/testmodule/databinding'
-        exclude '**/*.java'
-    }
-
-    manifest {
-        attributes(
-                'Main-Class': 'com.justnothing.methodsclient.StreamClient',
-                'Created-By': "Gradle ${gradle.gradleVersion}"
-        )
-    }
-
-    dependsOn tasks.named('compileDebugJavaWithJavac')
-}
-
-tasks.register('dexifyClientSourceJar') {
-    group = 'build'
-    description = '将客户端源代码Jar转换为dex'
-    dependsOn tasks.named('createClientSourceJar')
-    doLast {
-        def inputJarFile = tasks.named('createClientSourceJar').get().archiveFile.get().asFile
-        def outputDir = new File(clientSourceDir.get().toString())
-        outputDir.mkdirs()
-        for (File oldFile : outputDir.listFiles({file -> file.name.endsWith(".dex")} as FileFilter))
-            oldFile.delete()
-        logger.lifecycle("开始将 ${inputJarFile.absolutePath} 转换为dex格式...")
-        logger.lifecycle("输出目录: ${outputDir.absolutePath}")
-        def androidSdkDir = android.sdkDirectory
-        def xposedLibPath = "${project.projectDir}/libs/XposedBridgeApi.jar"
-        def androidLibPath = "${project.projectDir}/libs/android.jar" // 没招了
-        if (androidSdkDir != null) {
-            def d8BatTool = new File(androidSdkDir, "build-tools/${android.buildToolsVersion}/d8.bat")
-            def d8Tool = new File(androidSdkDir, "build-tools/${android.buildToolsVersion}/d8")
-
-            def d8Executable
-            if (d8BatTool.exists()) {
-                d8Executable = d8BatTool.absolutePath
-                logger.lifecycle("使用d8.bat: ${d8Executable}")
-            } else if (d8Tool.exists()) {
-                d8Executable = d8Tool.absolutePath
-                logger.lifecycle("使用d8: ${d8Executable}")
-            } else {
-                throw new GradleException("无法找到d8，请检查Android SDK build-tools目录")
-            }
-            ExecOutput result = null
-            try {
-                def command = [d8Executable, '--release', '--lib', androidLibPath, '--lib', xposedLibPath, inputJarFile.absolutePath, '--output', outputDir.absolutePath] as String[]
-                def process = new ProcessBuilder(command)
-                        .directory(project.projectDir)
-                        .redirectErrorStream(false)  // 分开stdout和stderr
-                        .start()
-                
-                def stdout = new StringBuilder()
-                def stderr = new StringBuilder()
-                
-                Thread.start { process.inputStream.eachLine { stdout.append(it).append('\n') } }
-                Thread.start { process.errorStream.eachLine { stderr.append(it).append('\n') } }
-                
-                def exitCode = process.waitFor()
-                
-                logger.lifecycle("d8执行完成，退出码: " + exitCode)
-                if (stdout.length() > 0) {
-                    logger.lifecycle("stdout: " + stdout.toString().trim())
-                }
-                if (stderr.length() > 0) {
-                    logger.lifecycle("stderr: " + stderr.toString().trim())
-                }
-                
-                if (exitCode != 0) {
-                    throw new GradleException("d8执行失败，退出码: " + exitCode)
-                }
-            } catch (Exception e) {
-                logger.lifecycle("d8命令执行失败，错误信息: " + e.message)
-                logger.lifecycle("执行的d8命令: " + d8Executable + " --release --lib " + androidLibPath + " --lib " + xposedLibPath + " " + inputJarFile.absolutePath + " --output " + outputDir.absolutePath)
-                throw e
-            }
-        } else {
-            throw new GradleException("无法找到Android SDK路径")
-        }
-
-        def dexFiles = outputDir.listFiles({ file -> file.name.endsWith('.dex') } as FileFilter)
-        if (dexFiles && dexFiles.length > 0) {
-            logger.lifecycle("转换成功, 文件列表: ")
-            dexFiles.each { file ->
-                logger.lifecycle("${file.absolutePath} (大小${file.length()} bytes)")
-            }
-        } else {
-            throw new GradleException("未生成预期的dex文件")
-        }
-    }
-}
-
-tasks.register('createClientJar', Jar) {
-    group = 'build'
-    description = '创建methods的Java客户端Jar文件'
-    archiveBaseName = 'methods-client'
-    destinationDirectory = clientJarDir
-
-    dependsOn tasks.named('dexifyClientSourceJar')
-
-    from (clientSourceDir) {
-        include '*.dex'
-    }
-
-    manifest {
-        attributes(
-                'Dex-Main-Class': 'com.justnothing.methodsclient.StreamClient',
-                'Created-By': "Gradle ${gradle.gradleVersion}",
-                'Build-Time': new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
-        )
-    }
-}
-
-tasks.register('packageMagiskModule', Task) {
-    group = 'build'
-    description = '打包Magisk模块'
-    
-    dependsOn tasks.named('createClientJar')
-
-    def magiskDir = file('build/magisk')
-    def systemBinDir = file("${magiskDir}/system/bin")
-    def systemFrameworkDir = file("${magiskDir}/system/framework")
-    def commonBinaryDir = file("${magiskDir}/common/binary")
-    def commonDir = file("${magiskDir}/common")
+    description = '准备Magisk模块的所有文件'
+    dependsOn 'assembleDebug'
 
     doLast {
+        def magiskDir = file('build/magisk')
         delete magiskDir
         magiskDir.mkdirs()
-        systemBinDir.mkdirs()
-        systemFrameworkDir.mkdirs()
-        commonBinaryDir.mkdirs()
-        commonDir.mkdirs()
 
-        def moduleProp = file("${magiskDir}/module.prop")
-        moduleProp.text = """
+        // 子目录
+        file("${magiskDir}/system/bin").mkdirs()
+        file("${magiskDir}/system/framework").mkdirs()
+        file("${magiskDir}/common/binary").mkdirs()
+        file("${magiskDir}/common").mkdirs()
+
+        file("${magiskDir}/module.prop").text = """
 id=JustNothing-module
 name=啥也不是的模块
 version=${android.defaultConfig.versionName}
 versionCode=${android.defaultConfig.versionCode}
 author=JustNothing1021
-description=一个用来调试安卓开发千奇百怪的诡异问题的Xposed模块/命令行工具
+description=一个用来调试安卓开发千奇百怪的诡异问题的Xposed模块/命令行工具, 这个是配套的magisk模块, 会给busybox也顺手装上
 """
 
-        project.copy {
+        copy {
             from file('magisk/install.sh')
             into magiskDir
         }
 
-        project.copy {
-            from file('magisk/common/post-fs-data.sh')
-            into commonDir
+        copy {
+            from fileTree(dir: 'magisk/common')
+            into file("${magiskDir}/common")
+        }
+        copy {
+            from fileTree(dir: 'magisk/system')
+            into file("${magiskDir}/system")
         }
 
-        project.copy {
-            from file('magisk/common/service.sh')
-            into commonDir
+        def android = project.extensions.getByType(AppExtension)
+        android.applicationVariants.all { variant ->
+            if (variant.buildType.name == 'debug') {
+                variant.outputs.all { output ->
+                    def apkFile = output.outputFile
+                    if (apkFile != null && apkFile.exists()) {
+                        copy {
+                            from apkFile
+                            into file("${magiskDir}/system/framework")
+                            rename { 'methods-client.jar' }
+                        }
+                    }
+                }
+            }
         }
 
-        project.copy {
-            from file('build/libs/client/methods-client.jar')
-            into systemFrameworkDir
-            rename { 'methods-client.jar' }
-        }
-
-        project.copy {
+        copy {
             from file('src/main/assets')
-            into commonBinaryDir
+            into file("${magiskDir}/common/binary")
             include 'arm64-v8a/methods_client_arm64-v8a'
             include 'armeabi-v7a/methods_client_armeabi-v7a'
             include 'x86_64/methods_client_x86_64'
             include 'x86/methods_client_x86'
         }
-
-        project.copy {
+        copy {
             from file('magisk/scripts')
-            into systemBinDir
+            into file("${magiskDir}/system/bin")
         }
     }
 }
 
+
 tasks.register('createMagiskZip', Zip) {
     group = 'build'
-    description = '创建Magisk模块'
+    description = '创建Magisk模块压缩包'
 
-    dependsOn tasks.named('packageMagiskModule')
+    dependsOn 'assembleDebug'
+    dependsOn 'prepareMagiskFiles'
 
-    def magiskDir = file('build/magisk')
-    
-    archiveFileName = "magisk-module.zip"
+    archiveFileName = 'magisk-module.zip'
     destinationDirectory = file('build/outputs')
-    
-    from magiskDir
+
+    from file('build/magisk')
 }
 
 afterEvaluate {
-    tasks.named('assembleDebug').configure {
-        dependsOn tasks.named('createMagiskZip')
-    }
-
-    tasks.named('assembleRelease').configure {
-        dependsOn tasks.named('createMagiskZip')
+    tasks.named('assembleDebug') {
+        finalizedBy 'createMagiskZip'
     }
 }
-

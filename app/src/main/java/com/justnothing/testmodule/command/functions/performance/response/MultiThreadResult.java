@@ -6,7 +6,6 @@ import com.justnothing.testmodule.command.base.protocol.ResultField;
 import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
 import com.justnothing.testmodule.command.base.protocol.ValueSupplier;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @SerializeKeyName("MultiThreadResult")

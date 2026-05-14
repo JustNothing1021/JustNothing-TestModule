@@ -5,6 +5,7 @@ import com.justnothing.testmodule.command.base.parser.FlagParam;
 import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.base.parser.KeywordParam;
 import com.justnothing.testmodule.command.base.parser.PositionalParam;
+import com.justnothing.testmodule.command.base.validator.ValidatorFactory;
 import com.justnothing.testmodule.utils.logging.Logger;
 
 import java.lang.reflect.Field;
@@ -121,6 +122,8 @@ public class ParamParser {
                     Field field = keywordFields.get(paramName);
                     if (field != null) {
                         setFieldValue(request, field, paramValue);
+                        KeywordParam kwAnno = field.getAnnotation(KeywordParam.class);
+                        ValidatorFactory.validateField(kwAnno != null ? kwAnno.name() : paramName, paramValue, field);
                         parsedValues.put(field.getName(), paramValue);
                         iterator.remove();
                     }
@@ -147,6 +150,7 @@ public class ParamParser {
                             if (!nextArg.startsWith("-")) {
                                 // 下一个参数不是选项，作为值消费
                                 setFieldValue(request, kwField, nextArg);
+                                ValidatorFactory.validateField(arg, nextArg, kwField);
                                 parsedValues.put(kwField.getName(), nextArg);
                                 iterator.remove();  // 移除被消费的值
                             } else {
@@ -162,7 +166,11 @@ public class ParamParser {
                         iterator.remove();  // 移除--key本身
                         
                     } else {
-                        logger.warn("未知的选项: " + arg);
+                        String availableOptions = getAvailableOptions(flagFields, keywordFields);
+                        throw new IllegalCommandLineArgumentException(
+                            "未识别的命令行选项: '" + arg + "'\n" +
+                            "可用选项: " + availableOptions + "\n" +
+                            "提示: 请检查参数名称是否正确输入");
                     }
                 }
                 
@@ -176,6 +184,12 @@ public class ParamParser {
                     explicitlySetFlags.add(flagField.getName());
                     parsedValues.put(flagField.getName(), valueToSet);
                     iterator.remove();
+                } else {
+                    String availableFlags = getAvailableFlags(flagFields);
+                    throw new IllegalCommandLineArgumentException(
+                        "未识别的命令行选项: '" + arg + "'\n" +
+                        "可用的短选项: " + availableFlags + "\n" +
+                        "提示: 请检查选项名称是否正确");
                 }
             }
         }
@@ -203,11 +217,13 @@ public class ParamParser {
                 if (annotation.varArgs()) {
                     String value = String.join(" ", args);
                     setFieldValue(request, fp.field, value);
+                    ValidatorFactory.validateField(annotation.name(), value, fp.field);
                     parsedValues.put(fp.field.getName(), value);
                     args.clear();
                 } else {
                     String value = args.remove(0);
                     setFieldValue(request, fp.field, value);
+                    ValidatorFactory.validateField(annotation.name(), value, fp.field);
                     parsedValues.put(fp.field.getName(), value);
                 }
             } else {
@@ -319,6 +335,56 @@ public class ParamParser {
         } catch (NoSuchFieldException e) {
             return null;
         }
+    }
+
+    /**
+     * 生成所有可用选项的帮助信息
+     */
+    private static String getAvailableOptions(Map<String, Field> flagFields, Map<String, Field> keywordFields) {
+        List<String> options = new ArrayList<>();
+
+        // 收集所有flag选项
+        Set<String> addedFlags = new HashSet<>();
+        for (Map.Entry<String, Field> entry : flagFields.entrySet()) {
+            String optionName = entry.getKey();
+            Field field = entry.getValue();
+            if (!addedFlags.contains(field.getName())) {
+                FlagParam annotation = field.getAnnotation(FlagParam.class);
+                if (annotation != null) {
+                    options.add(optionName + (annotation.negated() ? " [negated]" : ""));
+                    addedFlags.add(field.getName());
+                }
+            }
+        }
+
+        // 收集所有keyword选项
+        Set<String> addedKeywords = new HashSet<>();
+        for (Map.Entry<String, Field> entry : keywordFields.entrySet()) {
+            String optionName = entry.getKey();
+            Field field = entry.getValue();
+            if (!addedKeywords.contains(field.getName())) {
+                KeywordParam annotation = field.getAnnotation(KeywordParam.class);
+                if (annotation != null) {
+                    options.add(optionName + " <value>");
+                    addedKeywords.add(field.getName());
+                }
+            }
+        }
+
+        return String.join(", ", options);
+    }
+
+    /**
+     * 生成所有可用短选项的帮助信息
+     */
+    private static String getAvailableFlags(Map<String, Field> flagFields) {
+        List<String> flags = new ArrayList<>();
+        for (String flagName : flagFields.keySet()) {
+            if (flagName.startsWith("-") && flagName.length() == 2) {
+                flags.add(flagName);
+            }
+        }
+        return flags.isEmpty() ? "(无短选项)" : String.join(" ", flags);
     }
 
     private record FieldPosition(Field field, int order) {}

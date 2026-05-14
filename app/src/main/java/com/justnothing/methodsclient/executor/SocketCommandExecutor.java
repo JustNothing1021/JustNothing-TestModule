@@ -83,6 +83,8 @@ public class SocketCommandExecutor {
             logger.error("命令执行异常", e);
             readingFlag.set(false);
             future.cancel(true);
+            System.out.println("命令执行出现错误");
+            e.printStackTrace(System.out);
             return false;
         }
     }
@@ -263,7 +265,6 @@ public class SocketCommandExecutor {
             InteractiveProtocol.writeMessage(socket.getOutputStream(), InteractiveProtocol.TYPE_CLIENT_COMMAND,
                     command.getBytes(StandardCharsets.UTF_8));
 
-
             logger.info("命令已发送，开始读取响应...");
 
             Socket finalSocket = socket;
@@ -325,7 +326,4 @@ public class SocketCommandExecutor {
             closeSocketQuietly(socket);
         }
     }
-
-
-
 }

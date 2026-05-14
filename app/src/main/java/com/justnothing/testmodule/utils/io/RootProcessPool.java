@@ -21,10 +21,11 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class RootProcessPool extends Logger {
     private static final String TAG = "RootProcessPool";
+    private static final Logger logger = Logger.getLoggerForName(TAG);
     private static volatile RootProcessPool instance = null;
 
-    private static final int MIN_POOL_SIZE = 2;
-    private static final int MAX_POOL_SIZE = 5;
+    private static final int MIN_POOL_SIZE = 3;
+    private static final int MAX_POOL_SIZE = 6;
     private static final long PROCESS_IDLE_TIMEOUT = 30000;
     private static final long COMMAND_TIMEOUT_MS = 30000;
 
@@ -171,15 +172,21 @@ public class RootProcessPool extends Logger {
                 info("维护任务：移除了 " + toRemove + " 个Root进程");
             }
 
-            // [优化] 移除所有超时空闲进程，而不仅仅是第一个
+            // [优化] 移除所有不健康或超时空闲的进程
             long currentTime = System.currentTimeMillis();
             Iterator<RootProcess> iterator = availableProcesses.iterator();
             while (iterator.hasNext()) {
                 RootProcess process = iterator.next();
-                if (currentTime - process.getLastUsedTime() > PROCESS_IDLE_TIMEOUT) {
+
+                // ✅ 新增：检查进程是否不健康或超时空闲
+                if (!process.isHealthy() || currentTime - process.getLastUsedTime() > PROCESS_IDLE_TIMEOUT) {
                     iterator.remove();
                     process.close();
                     totalProcesses.decrementAndGet();
+
+                    if (!process.isHealthy()) {
+                        warn("维护任务：发现并移除不健康的Root进程（防止资源泄漏）");
+                    }
                     // debug("移除空闲Root进程");
                 }
             }
@@ -322,8 +329,17 @@ public class RootProcessPool extends Logger {
 
         // 1. 快速从队列获取
         RootProcess process = queue.poll(ACQUIRE_POLL_TIMEOUT_MS, TimeUnit.MILLISECONDS);
-        if (process != null && process.isHealthy()) {
-            return process;
+
+        // ✅ 修复：检查并清理不健康的进程（防止资源泄漏！）
+        if (process != null) {
+            if (process.isHealthy()) {
+                return process;
+            } else {
+                // 关键修复：关闭不健康的进程，防止 su 进程、流对象等资源泄漏！
+                warn("发现不健康的" + processType + "进程，正在关闭以防止资源泄漏");
+                process.close();
+                totalCounter.decrementAndGet();
+            }
         }
 
         // 2. 尝试创建新进程（不在锁内做重 IO）
@@ -364,10 +380,15 @@ public class RootProcessPool extends Logger {
             }
         }
 
-        // 4. 最后再尝试从队列获取一次
-        process = queue.poll(ACQUIRE_POLL_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        // 4. 最后再尝试从队列获取一次（带健康检查）
+        process = queue.poll(timeoutMs, TimeUnit.MILLISECONDS);
         if (process != null && process.isHealthy()) {
             return process;
+        } else if (process != null && !process.isHealthy()) {
+            // ✅ 同样需要清理不健康的进程
+            warn("最后获取时发现不健康的" + processType + "进程，正在关闭");
+            process.close();
+            totalCounter.decrementAndGet();
         }
 
         throw new IOException("没有可用的" + processType + "进程，请稍后重试");
@@ -534,7 +555,6 @@ public class RootProcessPool extends Logger {
             }
         }
 
-        // [优化] 简化 IO 读取，去掉 ready() + sleep 轮询，改为两个 Future 同时等待
         IOManager.ProcessResult executeCommand(String command, long timeoutMs) throws IOException, InterruptedException {
             long startTime = System.currentTimeMillis();
             updateLastUsedTime();
@@ -583,14 +603,26 @@ public class RootProcessPool extends Logger {
                 }
             });
 
-            // 等待 stdout 完成（超时则取消两个任务）
+            // 等待 stdout 完成（超时则强制杀掉进程）
             try {
                 stdoutFuture.get(timeoutMs, TimeUnit.MILLISECONDS);
             } catch (TimeoutException e) {
+                // ⚠️ 关键修复：cancel() 无法中断 I/O 阻塞的 readLine()，必须直接销毁底层进程！
                 stdoutFuture.cancel(true);
                 stderrFuture.cancel(true);
+
+                // ✅ 核心修复：强制终止 su 进程以实现真正的超时！
+                try {
+                    if (process != null && process.isAlive()) {
+                         process.destroyForcibly();
+                        logger.debug("Root command timeout (" + timeoutMs + "ms), forcibly terminated");
+                    }
+                } catch (Exception ex) {
+                    logger.warn("Failed to force terminate process: " + ex.getMessage());
+                }
+
                 healthy = false;
-                throw new InterruptedException("Root命令执行超时");
+                throw new InterruptedException("Root命令执行超时 (" + timeoutMs + "ms)");
             } catch (ExecutionException e) {
                 healthy = false;
                 throw new IOException("I/O线程执行失败: " + e.getCause());

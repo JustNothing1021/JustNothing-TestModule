@@ -5,8 +5,10 @@ import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
 import com.justnothing.testmodule.command.base.command.SubCommand;
 import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.base.parser.FlagParam;
-import com.justnothing.testmodule.command.base.parser.PositionalParam;
 import com.justnothing.testmodule.command.base.parser.KeywordParam;
+import com.justnothing.testmodule.command.base.parser.PositionalParam;
+import com.justnothing.testmodule.command.base.validator.AllowedValues;
+import com.justnothing.testmodule.command.base.validator.Range;
 import com.justnothing.testmodule.command.functions.performance.PerformanceRequest;
 import com.justnothing.testmodule.command.utils.ParamParser;
 
@@ -18,20 +20,19 @@ import org.json.JSONObject;
 @AutoSerializable
 public class SampleRequest extends PerformanceRequest {
 
+    @AllowedValues({"start", "stop", "report", "export"})
     @PositionalParam(name = "action", order = 1, required = true)
     private String action;
 
-    @PositionalParam(name = "taskId", order = 2, required = false)
-    private Integer taskId;
-
-    @PositionalParam(name = "sampleRate", order = 3, required = false)
+    @Range(min = 1, max = 100000)
+    @PositionalParam(name = "rate", order = 2, required = false)
     private Integer sampleRate;
-
-    @PositionalParam(name = "filePath", order = 4, required = false)
-    private String filePath;
 
     @KeywordParam(name = "exclude", names = {"-e"})
     private String exclude;
+
+    private Integer taskId;
+    private String filePath;
 
     @FlagParam(names = {"--help", "-h"})
     private boolean help;

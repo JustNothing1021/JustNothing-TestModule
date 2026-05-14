@@ -25,7 +25,6 @@ public class SystraceRunner {
     private String outputFile;
     private final String outputDir;
     private long startTime;
-    private int duration;
 
     public SystraceRunner(String outputDir) {
         this.outputDir = outputDir;
@@ -38,8 +37,7 @@ public class SystraceRunner {
 
         try {
             startTime = System.currentTimeMillis();
-            this.duration = duration;
-            
+
             String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
             outputFile = outputDir + File.separator + "systrace_" + timestamp + ".html";
             
@@ -61,7 +59,7 @@ public class SystraceRunner {
                 }
             }
 
-            Log.i(TAG, "启动 Systrace: " + command.toString());
+            Log.i(TAG, "启动 Systrace: " + command);
             
             ProcessBuilder processBuilder = new ProcessBuilder("sh", "-c", command.toString());
             processBuilder.redirectErrorStream(true);

@@ -123,6 +123,7 @@ public class ClassMain extends MainCommand<ClassCommandResult> {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public ClassCommandResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
         String cmdName = context.cmdName();
         String[] args = context.args();
@@ -143,7 +144,6 @@ public class ClassMain extends MainCommand<ClassCommandResult> {
                 return createErrorResult("未知子命令: " + subCmdName);
             }
             
-            // ★ 关键修复: CLI模式下必须调用parseRequest()设置正确的Request!
             try {
                 CommandRequest parsedRequest = context.parseRequest();
                 if (parsedRequest != null) {
@@ -186,6 +186,7 @@ public class ClassMain extends MainCommand<ClassCommandResult> {
         }
     }
 
+    @SuppressWarnings("unchecked")
     private ClassCommand<? extends ClassCommandResult> findSubCommandByName(String name) {
         SubCommands subCommandsAnnotation = this.getClass().getAnnotation(SubCommands.class);
         if (subCommandsAnnotation != null) {

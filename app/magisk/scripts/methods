@@ -1,8 +1,10 @@
 #!/system/bin/sh
 
 
+
+
 # 常量定义
-VERSION="0.4.1"
+VERSION="0.4.2"
 SERVICE_NAME="justnothing_xposed_method_cli"
 METHODS_WORKDIR="/data/local/tmp/methods"
 JAVA_CLIENT_JAR="/system/framework/methods-client.jar"
@@ -15,10 +17,18 @@ TRANSACTION_UPDATE_PORT="5"
 TRANSACTION_EXPORT_CONTEXT="6"
 
 
+# 全局变量定义
+export TERMINFO="$METHODS_WORKDIR/terminfo"
+export TERM="xterm-256color"
+
 SERVER_PORT_FILE="$METHODS_WORKDIR/methods_port"
 LOG_FILE="$METHODS_WORKDIR/methods.log"
 FILE_SESSION_WORKDIR="$METHODS_WORKDIR/execute_sessions"
 PORT_UPDATE_SESSION_WORKDIR="$METHODS_WORKDIR/port_update_sessions"
+
+# app_process参数
+classpath="/system/framework/core-oj.jar:/system/framework/core-libart.jar:/system/framework/framework.jar:$JAVA_CLIENT_JAR"
+jvm_args="-Dorg.jline.terminal.type=xterm-256color"
 
 
 # 颜色定义
@@ -56,6 +66,12 @@ log() {
             *) color_blue "[调试] $message" ;;
         esac
     fi
+}
+
+
+create_test_executable() {
+  echo "#!/system/bin/sh\nexit 0" > /system/bin/test # 我真求你了
+  chmod 0777 /system/bin/test
 }
 
 # 检查服务
@@ -175,12 +191,11 @@ execute_java_client_direct() {
     fi
     
     # 设置类路径
-    local classpath="/system/framework/core-oj.jar:/system/framework/core-libart.jar:/system/framework/framework.jar:$JAVA_CLIENT_JAR"
-    
-    log "DEBUG" "执行Java命令: app_process -cp $classpath /system/bin $CLASS_NAME " "$@"
+
+    log "DEBUG" "执行Java命令: app_process $jvm_args -cp $classpath /system/bin $CLASS_NAME " "$@"
     
     # 执行Java客户端，直接传递所有参数
-    /system/bin/app_process -cp "$classpath" /system/bin $CLASS_NAME "$@"
+    /system/bin/app_process $jvm_args -cp "$classpath" /system/bin $CLASS_NAME "$@"
     return $?
 }
 
@@ -234,10 +249,10 @@ execute_java_client() {
         java_args="--file"
     fi
     
-    log "DEBUG" "执行Java命令: app_process -cp $classpath /system/bin $CLASS_NAME $java_args \"$command\""
+    log "DEBUG" "执行Java命令: app_process $jvm_args -cp $classpath /system/bin $CLASS_NAME $java_args \"$command\""
     
     # 执行Java客户端
-    /system/bin/app_process -cp "$classpath" /system/bin $CLASS_NAME $java_args "$command"
+    /system/bin/app_process $jvm_args -cp "$classpath" /system/bin $CLASS_NAME $java_args "$command"
     return $?
 }
 
@@ -852,7 +867,9 @@ main() {
         show_help
         return 0
     fi
-    
+
+    create_test_executable
+
     # 解析参数
     while [ $# -gt 0 ]; do
         case "$1" in

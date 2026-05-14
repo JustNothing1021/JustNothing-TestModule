@@ -72,6 +72,9 @@ on_install() {
   else
     ui_print "  警告: 找不到C++客户端 ($CLIENT_ARCH)"
   fi
+
+  ui_print "- 安装Busybox..."
+  magisk --install-module "$MODPATH/common/busybox.zip"
 }
 
 ##########################################################################################

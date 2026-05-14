@@ -14,6 +14,7 @@ import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.logging.Logger;
+import com.justnothing.xtchttplib.ContextManager;
 import com.xtc.sync.elt;
 import com.xtc.sync.byw;
 
@@ -22,6 +23,7 @@ import java.net.NetworkInterface;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
 @SubCommandInfo(
     description = "导出当前运行环境信息，包括系统属性、网络配置、HTTP 配置等",
@@ -64,6 +66,7 @@ public class ExportContextCommand extends AbstractCommand<ExportContextRequest, 
         logger.debug("执行 export-context 命令");
 
         ExportContextResult result = new ExportContextResult(context.getRequest().getRequestId());
+        ContextManager ctxManager = new ContextManager();
 
         try {
             Context appContext = getApplicationContext();
@@ -77,18 +80,19 @@ public class ExportContextCommand extends AbstractCommand<ExportContextRequest, 
 
             List<ContextFieldInfo> fields = new ArrayList<>();
 
-            collectHttpConfig(appContext, fields);
-            collectWatchId(appContext, fields);
-            collectSystemProperties(fields);
+            collectHttpConfig(appContext, fields, ctxManager);
+            collectWatchId(appContext, fields, ctxManager);
+            collectSystemProperties(fields, ctxManager, appContext);
 
             result.setFields(fields);
             result.setSuccess(true);
+
+            ContextManager.setInstance(ctxManager);
 
             logger.info("上下文导出成功, 共 " + fields.size() + " 个字段");
 
             if (context.isCli()) {
                 if (context.getRequest().isPrettyPrinting()) {
-                    // -p 模式: 表格化输出
                     StringBuilder sb = new StringBuilder();
                     sb.append("╔══════════════════════════════════════════╗\n");
                     sb.append("║       设备上下文信息                       ║\n");
@@ -107,9 +111,8 @@ public class ExportContextCommand extends AbstractCommand<ExportContextRequest, 
                     sb.append("╚══════════════════════════════════════════╝\n");
                     context.println(sb.toString());
                 } else {
-                    // 默认模式: 输出原始JSON数据（兼容xtc-httplib）
                     try {
-                        String jsonOutput = result.toJson().toString(2);
+                        String jsonOutput = ctxManager.toJson();
                         context.println(jsonOutput);
                     } catch (Exception e) {
                         logger.error("JSON序列化失败", e);
@@ -129,7 +132,7 @@ public class ExportContextCommand extends AbstractCommand<ExportContextRequest, 
         return result;
     }
 
-    private void collectHttpConfig(Context appContext, List<ContextFieldInfo> fields) {
+    private void collectHttpConfig(Context appContext, List<ContextFieldInfo> fields, ContextManager ctx) {
         Cursor cursor = null;
         try {
             ContentResolver resolver = appContext.getContentResolver();
@@ -137,13 +140,33 @@ public class ExportContextCommand extends AbstractCommand<ExportContextRequest, 
             cursor = resolver.query(uri, null, null, null, null);
 
             if (cursor != null && cursor.moveToFirst()) {
-                addField(fields, "http_config", "Grey", getCursorStringValue(cursor, "grey"));
-                addField(fields, "http_config", "Timestamp", String.valueOf(getCursorIntValue(cursor, "ts")));
-                addField(fields, "http_config", "AE", getCursorStringValue(cursor, "ae"));
-                addField(fields, "http_config", "RSA Public Key", maskKey(getCursorStringValue(cursor, "rsaPublicKey")));
-                addField(fields, "http_config", "Self-signed RSA Key", maskKey(getCursorStringValue(cursor, "selfRsaPublicKey")));
-                addField(fields, "http_config", "HTTP Header Params", getCursorStringValue(cursor, "httpHeadParam"));
-                addField(fields, "http_config", "Encryption Switch", getCursorStringValue(cursor, "encSwitch"));
+                String grey = getCursorStringValue(cursor, "grey");
+                String ae = getCursorStringValue(cursor, "ae");
+                addField(fields, "http_config", "Grey", grey);
+                ctx.setGrey(grey);
+
+                int ts = getCursorIntValue(cursor, "ts");
+                addField(fields, "http_config", "Timestamp", String.valueOf(ts));
+                ctx.setTs(ts);
+
+                addField(fields, "http_config", "AE", ae);
+                ctx.setAe(ae);
+
+                String rsaPublicKey = getCursorStringValue(cursor, "rsaPublicKey");
+                addField(fields, "http_config", "RSA Public Key", maskKey(rsaPublicKey));
+                ctx.setRsaPublicKey(rsaPublicKey);
+
+                String selfRsaPublicKey = getCursorStringValue(cursor, "selfRsaPublicKey");
+                addField(fields, "http_config", "Self-signed RSA Key", maskKey(selfRsaPublicKey));
+                ctx.setSelfRsaPublicKey(selfRsaPublicKey);
+
+                String httpHeadParam = getCursorStringValue(cursor, "httpHeadParam");
+                addField(fields, "http_config", "HTTP Header Params", httpHeadParam);
+                ctx.setHttpHeadParam(httpHeadParam);
+
+                String encSwitch = getCursorStringValue(cursor, "encSwitch");
+                addField(fields, "http_config", "Encryption Switch", encSwitch);
+                ctx.setEncSwitch(encSwitch);
                 logger.debug("HTTP配置信息收集完成");
             } else {
                 logger.warn("无法从ContentProvider读取HTTP配置");
@@ -155,47 +178,110 @@ public class ExportContextCommand extends AbstractCommand<ExportContextRequest, 
         }
     }
 
-    private void collectWatchId(Context appContext, List<ContextFieldInfo> fields) {
+    private void collectWatchId(Context appContext, List<ContextFieldInfo> fields, ContextManager ctx) {
         try {
             ContentResolver resolver = appContext.getContentResolver();
             Uri uri = Uri.parse(WATCH_ID_URI);
             String watchId = resolver.getType(uri);
             if (!TextUtils.isEmpty(watchId)) {
                 addField(fields, "device_identity", "WatchID", watchId);
+                ctx.setWatchId(watchId);
             }
         } catch (Exception e) {
             logger.error("收集watchId失败", e);
         }
     }
 
-    private void collectSystemProperties(List<ContextFieldInfo> fields) {
-        addField(fields, "device_identity", "MAC Address", getMacAddress());
-        addField(fields, "device_identity", "Bind Number", getSystemProperty("ro.boot.bindnumber"));
-        addField(fields, "device_identity", "Inner Model", getSystemProperty("ro.product.innermodel", "IB"));
-        addField(fields, "device_identity", "Server Inner ID", getSystemProperty("persist.sys.serverinner"));
-        addField(fields, "device_identity", "ChipID", getSystemProperty("ro.boot.xtc.chipid"));
+    private void collectSystemProperties(List<ContextFieldInfo> fields, ContextManager ctx, Context appContext) {
+        String macAddr = getMacAddress();
+        addField(fields, "device_identity", "MAC Address", macAddr);
+        ctx.setMacAddr(macAddr);
 
-        addField(fields, "device_info", "Watch Model", getSystemProperty("ro.product.model", "Z3"));
-        addField(fields, "device_info", "Show Model", getSystemProperty("ro.product.showmodel"));
-        addField(fields, "device_info", "Primary Model", getSystemProperty("ro.product.pri.model"));
-        addField(fields, "device_info", "Extended Model", getSystemProperty("ro.product.innermodel.ex"));
-        addField(fields, "device_info", "Hardware Platform", getSystemProperty("ro.hardware", "qcom"));
+        String bindNumber = getSystemProperty("ro.boot.bindnumber");
+        addField(fields, "device_identity", "Bind Number", bindNumber);
+        ctx.setBindNumber(bindNumber);
+
+        String innerModel = getSystemProperty("ro.product.innermodel", "IB");
+        addField(fields, "device_identity", "Inner Model", innerModel);
+        ctx.setInnerModel(innerModel);
+
+        String serverInner = getSystemProperty("persist.sys.serverinner");
+        addField(fields, "device_identity", "Server Inner ID", serverInner);
+        ctx.setServerInner(serverInner);
+
+        String chipId = getSystemProperty("ro.boot.xtc.chipid");
+        addField(fields, "device_identity", "ChipID", chipId);
+        ctx.setChipId(chipId);
+
+        String watchModel = getSystemProperty("ro.product.model", "Z3");
+        addField(fields, "device_info", "Watch Model", watchModel);
+        ctx.setWatchModel(watchModel);
+
+        String showModel = getSystemProperty("ro.product.showmodel");
+        addField(fields, "device_info", "Show Model", showModel);
+        ctx.setShowModel(showModel);
+
+        String priModel = getSystemProperty("ro.product.pri.model");
+        addField(fields, "device_info", "Primary Model", priModel);
+        ctx.setWatchPriModel(priModel);
+
+        String innerModelEx = getSystemProperty("ro.product.innermodel.ex");
+        addField(fields, "device_info", "Extended Model", innerModelEx);
+        ctx.setInnerModelEx(innerModelEx);
+
+        String hardware = getSystemProperty("ro.hardware", "qcom");
+        addField(fields, "device_info", "Hardware Platform", hardware);
+        ctx.setHardware(hardware);
 
         String buildType = getSystemProperty("ro.build.type", "user");
         if ("userdebug".equals(buildType)) buildType = "user";
         addField(fields, "system_info", "Build Type", buildType);
-        addField(fields, "system_info", "Android Version", Build.VERSION.RELEASE);
-        addField(fields, "system_info", "Android SDK", String.valueOf(Build.VERSION.SDK_INT));
-        addField(fields, "system_info", "Build Version", getSystemProperty("ro.build.version.release"));
-        addField(fields, "system_info", "Software Version", getSystemProperty("ro.product.current.softversion"));
-        addField(fields, "system_info", "CaremeOS Version", getSystemProperty("ro.product.careme.version"));
+        ctx.setBuildType(buildType);
 
-        addField(fields, "locale_info", "System Locale", getSystemProperty("ro.product.locale"));
-        addField(fields, "locale_info", "Region", getSystemProperty("ro.product.locale.region"));
-        addField(fields, "locale_info", "Current Language", Locale.getDefault().getLanguage());
-        addField(fields, "locale_info", "Timezone", elt.a());
+        String androidVersion = Build.VERSION.RELEASE;
+        addField(fields, "system_info", "Android Version", androidVersion);
 
-        addField(fields, "network_service", "Data Center Code", new byw().mo2771a());
+        int sdkInt = Build.VERSION.SDK_INT;
+        addField(fields, "system_info", "Android SDK", String.valueOf(sdkInt));
+        ctx.setAndroidSdk(sdkInt);
+
+        String buildRelease = getSystemProperty("ro.build.version.release");
+        addField(fields, "system_info", "Build Version", buildRelease);
+        ctx.setBuildRelease(buildRelease);
+
+        String softVersion = getSystemProperty("ro.product.current.softversion");
+        addField(fields, "system_info", "Software Version", softVersion);
+        ctx.setSoftVersion(softVersion);
+
+        String caremeOsVersion = getSystemProperty("ro.product.careme.version");
+        addField(fields, "system_info", "CaremeOS Version", caremeOsVersion);
+        ctx.setCaremeOsVersion(caremeOsVersion);
+
+        String locale = getSystemProperty("ro.product.locale");
+        addField(fields, "locale_info", "System Locale", locale);
+        ctx.setLocale(locale);
+
+        String region = getSystemProperty("ro.product.locale.region");
+        addField(fields, "locale_info", "Region", region);
+        ctx.setRegion(region);
+
+        String language = Locale.getDefault().getLanguage();
+        addField(fields, "locale_info", "Current Language", language);
+        ctx.setLanguage(language);
+
+        String timeZone = elt.a();
+        addField(fields, "locale_info", "Timezone", timeZone);
+        ctx.setTimeZone(timeZone);
+
+        String dataCenterCode = new byw().mo2771a();
+        addField(fields, "network_service", "Data Center Code", dataCenterCode);
+        ctx.setDataCenterCode(dataCenterCode);
+
+        try {
+            ctx.setPackageVersionCode(appContext.getPackageManager().getPackageInfo(appContext.getPackageName(), 0).versionCode);
+            ctx.setPackageVersionName(appContext.getPackageManager().getPackageInfo(appContext.getPackageName(), 0).versionName);
+            ctx.setPackageName(appContext.getPackageName());
+        } catch (Exception ignored) {}
     }
 
     private void addField(List<ContextFieldInfo> fields, String category, String label, String value) {
