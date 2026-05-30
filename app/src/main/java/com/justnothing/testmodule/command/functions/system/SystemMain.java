@@ -10,6 +10,8 @@ import android.os.Build;
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.base.MainCommand;
+import com.justnothing.testmodule.command.base.command.Cmd;
+import com.justnothing.testmodule.command.base.command.CmdParamProcessor;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.functions.script.SystemInfoRequest;
 import com.justnothing.testmodule.command.handlers.system.SystemInfoRequestHandler;
@@ -21,9 +23,12 @@ import java.lang.reflect.Method;
 import java.util.Locale;
 import java.util.UUID;
 
-import com.justnothing.testmodule.command.base.command.RegisterCommand;
-
-@RegisterCommand("system")
+@Cmd(
+    name = "system",
+    description = "显示系统信息 (CPU, 内存, OS, 属性)",
+    version = CMD_SYSTEM_VER,
+    defaultResultType = SystemInfoResult.class
+)
 public class SystemMain extends MainCommand<SystemInfoResult> {
 
     public SystemMain() {
@@ -32,62 +37,23 @@ public class SystemMain extends MainCommand<SystemInfoResult> {
 
     @Override
     public String getHelpText() {
-        return String.format("""
-                语法: system [--cpu] [--memory] [--os] [--props] [--all]
-                
-                显示系统信息。
-                
-                选项:
-                  --cpu      - 显示CPU信息
-                  --memory   - 显示内存信息
-                  --os       - 显示操作系统信息
-                  --props    - 显示系统属性
-                  --all      - 显示所有信息（默认）
-                
-                示例:
-                  system
-                  system --cpu
-                  system --memory
-                  system --os
-                  system --props
-                
-                (Submodule system %s)
-                """, CMD_SYSTEM_VER);
+        return CmdParamProcessor.generateHelpText(this.getClass());
     }
 
     @Override
     public SystemInfoResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
         String[] args = context.args();
-        
-        boolean showCpu = false;
-        boolean showMemory = false;
-        boolean showOs = false;
-        boolean showProps = false;
-        boolean showAll = true;
-        
-        for (String arg : args) {
-            switch (arg) {
-                case "--cpu" -> {
-                    showCpu = true;
-                    showAll = false;
-                }
-                case "--memory" -> {
-                    showMemory = true;
-                    showAll = false;
-                }
-                case "--os" -> {
-                    showOs = true;
-                    showAll = false;
-                }
-                case "--props" -> {
-                    showProps = true;
-                    showAll = false;
-                }
-                case "--all" -> showAll = true;
-            }
-        }
-        
+
         try {
+            SystemInfoRequest request = new SystemInfoRequest();
+            CmdParamProcessor.parseCommandLineArgs(request, args);
+
+            boolean showCpu = request.isShowCpu();
+            boolean showMemory = request.isShowMemory();
+            boolean showOs = request.isShowOs();
+            boolean showProps = request.isShowProps();
+            boolean showAll = request.isShowAll() && !showCpu && !showMemory && !showOs && !showProps;
+
             if (showAll || showOs) {
                 context.println("=== 操作系统信息 ===", Colors.CYAN);
                 context.println("", Colors.WHITE);
@@ -96,7 +62,7 @@ public class SystemMain extends MainCommand<SystemInfoResult> {
                 printInfoLine(context, "架构: ", System.getProperty("os.arch"));
                 printInfoLine(context, "处理器数: ", String.valueOf(Runtime.getRuntime().availableProcessors()));
                 context.println("", Colors.WHITE);
-                
+
                 context.println("=== Android信息 ===", Colors.CYAN);
                 context.println("", Colors.WHITE);
                 printInfoLine(context, "设备制造商: ", Build.MANUFACTURER);
@@ -113,7 +79,7 @@ public class SystemMain extends MainCommand<SystemInfoResult> {
                 printInfoLine(context, "构建标签: ", Build.TAGS);
                 context.println("", Colors.WHITE);
             }
-            
+
             if (showAll || showCpu) {
                 context.println("=== CPU信息 ===", Colors.CYAN);
                 context.println("", Colors.WHITE);
@@ -123,13 +89,13 @@ public class SystemMain extends MainCommand<SystemInfoResult> {
                 printInfoLine(context, "CPU ABI2: ", Build.SUPPORTED_ABIS.length > 1 ? Build.SUPPORTED_ABIS[1] : "unknown");
                 printInfoLine(context, "处理器数: ", String.valueOf(Runtime.getRuntime().availableProcessors()));
                 context.println("", Colors.WHITE);
-                
+
                 context.println("=== CPU使用率 ===", Colors.CYAN);
                 context.println("", Colors.WHITE);
                 String cpuInfo = readCpuInfo();
                 context.println(cpuInfo, Colors.GRAY);
             }
-            
+
             if (showAll || showMemory) {
                 context.println("=== 内存信息 ===", Colors.CYAN);
                 context.println("", Colors.WHITE);
@@ -140,14 +106,14 @@ public class SystemMain extends MainCommand<SystemInfoResult> {
                 printInfoLine(context, "  空闲: ", formatBytes(runtime.freeMemory()));
                 printInfoLine(context, "  已用: ", formatBytes(runtime.totalMemory() - runtime.freeMemory()));
                 context.println("", Colors.WHITE);
-                
+
                 Context appContext = getApplicationContext();
                 if (appContext != null) {
                     ActivityManager activityManager = (ActivityManager) appContext.getSystemService(Context.ACTIVITY_SERVICE);
                     if (activityManager != null) {
                         ActivityManager.MemoryInfo memoryInfo = new ActivityManager.MemoryInfo();
                         activityManager.getMemoryInfo(memoryInfo);
-                        
+
                         context.println("系统内存:", Colors.GREEN);
                         printInfoLine(context, "  可用: ", formatBytes(memoryInfo.availMem));
                         printInfoLine(context, "  总计: ", formatBytes(memoryInfo.totalMem));
@@ -157,20 +123,20 @@ public class SystemMain extends MainCommand<SystemInfoResult> {
                         context.println("", Colors.WHITE);
                     }
                 }
-                
+
                 context.println("=== 内存详细信息 ===", Colors.CYAN);
                 context.println("", Colors.WHITE);
                 String memInfo = readMeminfo();
                 context.println(memInfo, Colors.GRAY);
             }
-            
+
             if (showAll || showProps) {
                 context.println("=== 系统属性 ===", Colors.CYAN);
                 context.println("", Colors.WHITE);
                 String props = readSystemProperties();
                 context.println(props, Colors.GRAY);
             }
-            
+
             logger.info("系统信息查询完成");
 
         } catch (Exception e) {
@@ -193,12 +159,12 @@ public class SystemMain extends MainCommand<SystemInfoResult> {
 
         return null;
     }
-    
+
     private void printInfoLine(CommandExecutor.CmdExecContext<?> context, String label, String value) {
         context.print(label, Colors.CYAN);
         context.println(value, Colors.YELLOW);
     }
-    
+
     private static String readCpuInfo() {
         StringBuilder result = new StringBuilder();
         try (BufferedReader reader = new BufferedReader(new FileReader("/proc/cpuinfo"))) {
@@ -213,7 +179,7 @@ public class SystemMain extends MainCommand<SystemInfoResult> {
         }
         return result.toString();
     }
-    
+
     private static String readMeminfo() {
         StringBuilder result = new StringBuilder();
         try (BufferedReader reader = new BufferedReader(new FileReader("/proc/meminfo"))) {
@@ -228,7 +194,7 @@ public class SystemMain extends MainCommand<SystemInfoResult> {
         }
         return result.toString();
     }
-    
+
     private static String readSystemProperties() {
         StringBuilder result = new StringBuilder();
         String[] props = {
@@ -248,17 +214,17 @@ public class SystemMain extends MainCommand<SystemInfoResult> {
             "ro.sf.lcd_density",
             "ro.debuggable"
         };
-        
+
         for (String prop : props) {
             String value = System.getProperty(prop);
             if (value != null) {
                 result.append(prop).append(": ").append(value).append("\n");
             }
         }
-        
+
         return result.toString();
     }
-    
+
     private static String formatBytes(long bytes) {
         if (bytes < 1024) {
             return bytes + " B";
@@ -270,13 +236,13 @@ public class SystemMain extends MainCommand<SystemInfoResult> {
             return String.format(Locale.getDefault(), "%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0));
         }
     }
-    
+
     private Context getApplicationContext() {
         try {
             @SuppressLint("PrivateApi") Class<?> activityThreadClass = Class.forName("android.app.ActivityThread");
             Method currentActivityThreadMethod = activityThreadClass.getMethod("currentActivityThread");
             Object activityThread = currentActivityThreadMethod.invoke(null);
-            
+
             Method getApplicationMethod = activityThreadClass.getMethod("getApplication");
             return (Context) getApplicationMethod.invoke(activityThread);
         } catch (Exception e) {

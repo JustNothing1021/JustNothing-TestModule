@@ -32,7 +32,7 @@ public class AppInfoProviderHook extends PackageHook {
                     try {
                         String callingPackage = (String) ReflectionUtils.callMethod(param.thisObject,
                                 "getCallingPackage");
-                        info(callingPackage + "尝试访问" + param.args[0].toString());
+                        info(callingPackage + " 尝试访问 " + param.args[0].toString());
                         if (ADB_PKG_NAME.equals(callingPackage)) {
                             info("此次为shell访问，准备绕过...");
 
@@ -42,7 +42,7 @@ public class AppInfoProviderHook extends PackageHook {
                                 String targetPackageName = context.getPackageName();
                                 HookAPI.setObjectField(param.thisObject,
                                         "callingPackage", targetPackageName);
-                                info("已将包名从" + ADB_PKG_NAME + "修改为" + targetPackageName);
+                                info("已将包名从 " + ADB_PKG_NAME + " 修改为 " + targetPackageName);
                             }
                         }
                     } catch (Exception e) {

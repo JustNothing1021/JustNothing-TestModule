@@ -1,19 +1,21 @@
 package com.justnothing.testmodule.command.functions.hook;
 
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 import com.justnothing.testmodule.command.base.protocol.CommandResult;
-
-import org.json.JSONObject;
-import org.json.JSONException;
-import org.json.JSONArray;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class HookListResult extends CommandResult {
 
+    @Expose @SerializedName("timestamp")
     private long timestamp;
+    @Expose @SerializedName("totalHookCount")
     private int totalHookCount;
+    @Expose @SerializedName("activeCount")
     private int activeCount;
+    @Expose @SerializedName("hooks")
     private List<HookItem> hooks;
 
     public HookListResult() {
@@ -39,56 +41,34 @@ public class HookListResult extends CommandResult {
     public void setHooks(List<HookItem> hooks) { this.hooks = hooks; }
     public void addHook(HookItem item) { this.hooks.add(item); }
 
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        obj.put("timestamp", timestamp);
-        obj.put("totalHookCount", totalHookCount);
-        obj.put("activeCount", activeCount);
-
-        if (hooks != null && !hooks.isEmpty()) {
-            JSONArray arr = new JSONArray();
-            for (HookItem item : hooks) {
-                arr.put(item.toJson());
-            }
-            obj.put("hooks", arr);
-        }
-
-        return obj;
-    }
-
-    @Override
-    public void fromJson(JSONObject obj) throws JSONException {
-        super.fromJson(obj);
-        timestamp = obj.optLong("timestamp", 0);
-        totalHookCount = obj.optInt("totalHookCount", 0);
-        activeCount = obj.optInt("activeCount", 0);
-
-        hooks = new ArrayList<>();
-        if (obj.has("hooks")) {
-            JSONArray arr = obj.getJSONArray("hooks");
-            for (int i = 0; i < arr.length(); i++) {
-                HookItem item = new HookItem();
-                item.fromJson(arr.getJSONObject(i));
-                hooks.add(item);
-            }
-        }
-    }
-
     public static class HookItem {
+        @Expose @SerializedName("id")
         private String id;
+        @Expose @SerializedName("className")
         private String className;
+        @Expose @SerializedName("methodName")
         private String methodName;
+        @Expose @SerializedName("signature")
         private String signature;
+        @Expose @SerializedName("hasBefore")
         private boolean hasBefore;
+        @Expose @SerializedName("hasAfter")
         private boolean hasAfter;
+        @Expose @SerializedName("hasReplace")
         private boolean hasReplace;
+        @Expose @SerializedName("callCount")
         private int callCount;
+        @Expose @SerializedName("active")
         private boolean active;
+        @Expose @SerializedName("enabled")
         private boolean enabled;
+        @Expose @SerializedName("createTime")
         private long createTime;
+        @Expose @SerializedName("beforeCodePreview")
         private String beforeCodePreview;
+        @Expose @SerializedName("afterCodePreview")
         private String afterCodePreview;
+        @Expose @SerializedName("replaceCodePreview")
         private String replaceCodePreview;
 
         public HookItem() {}
@@ -134,41 +114,5 @@ public class HookListResult extends CommandResult {
 
         public String getReplaceCodePreview() { return replaceCodePreview; }
         public void setReplaceCodePreview(String replaceCodePreview) { this.replaceCodePreview = replaceCodePreview; }
-
-        public JSONObject toJson() throws JSONException {
-            JSONObject obj = new JSONObject();
-            obj.put("id", id);
-            obj.put("className", className);
-            obj.put("methodName", methodName);
-            if (signature != null && !signature.isEmpty()) obj.put("signature", signature);
-            obj.put("hasBefore", hasBefore);
-            obj.put("hasAfter", hasAfter);
-            obj.put("hasReplace", hasReplace);
-            obj.put("callCount", callCount);
-            obj.put("active", active);
-            obj.put("enabled", enabled);
-            obj.put("createTime", createTime);
-            if (beforeCodePreview != null) obj.put("beforeCodePreview", beforeCodePreview);
-            if (afterCodePreview != null) obj.put("afterCodePreview", afterCodePreview);
-            if (replaceCodePreview != null) obj.put("replaceCodePreview", replaceCodePreview);
-            return obj;
-        }
-
-        public void fromJson(JSONObject obj) throws JSONException {
-            id = obj.optString("id", "");
-            className = obj.optString("className", "");
-            methodName = obj.optString("methodName", "");
-            signature = obj.optString("signature", null);
-            hasBefore = obj.optBoolean("hasBefore", false);
-            hasAfter = obj.optBoolean("hasAfter", false);
-            hasReplace = obj.optBoolean("hasReplace", false);
-            callCount = obj.optInt("callCount", 0);
-            active = obj.optBoolean("active", false);
-            enabled = obj.optBoolean("enabled", true);
-            createTime = obj.optLong("createTime", 0);
-            beforeCodePreview = obj.optString("beforeCodePreview", null);
-            afterCodePreview = obj.optString("afterCodePreview", null);
-            replaceCodePreview = obj.optString("replaceCodePreview", null);
-        }
     }
 }

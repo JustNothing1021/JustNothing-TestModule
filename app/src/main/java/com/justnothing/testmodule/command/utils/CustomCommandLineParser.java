@@ -22,23 +22,11 @@ import java.util.Map;
 public interface CustomCommandLineParser {
     
     CommandRequest customParse(ParseContext context) throws IllegalCommandLineArgumentException;
-    
+
     /**
-     * 解析上下文 (传递给自定义解析器)
-     */
-    class ParseContext {
-        private final String[] originalArgs;
-        private final List<String> remainingArgs;
-        private final Map<String, Object> parsedValues;
-        
-        public ParseContext(String[] originalArgs, List<String> remainingArgs, Map<String, Object> parsedValues) {
-            this.originalArgs = originalArgs;
-            this.remainingArgs = remainingArgs;
-            this.parsedValues = parsedValues;
-        }
-        
-        public String[] originalArgs() { return originalArgs; }
-        public List<String> remainingArgs() { return remainingArgs; }
-        public Map<String, Object> parsedValues() { return parsedValues; }
+         * 解析上下文 (传递给自定义解析器)
+         */
+        record ParseContext(String[] originalArgs, List<String> remainingArgs,
+                            Map<String, Object> parsedValues) {
     }
 }

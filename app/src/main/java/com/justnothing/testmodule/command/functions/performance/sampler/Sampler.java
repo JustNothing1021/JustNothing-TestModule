@@ -1,7 +1,5 @@
 package com.justnothing.testmodule.command.functions.performance.sampler;
 
-import java.util.Locale;
-
 public interface Sampler<T extends SampleData> {
     void start();
     void stop();
@@ -16,16 +14,4 @@ public interface Sampler<T extends SampleData> {
         return getStopTime() - getStartTime();
     }
 
-    default String getDurationString() {
-        long duration = getDuration();
-        if (duration < 1000) {
-            return duration + " ms";
-        } else if (duration < 60000) {
-            return String.format(Locale.getDefault(), "%.2f 秒", duration / 1000.0);
-        } else {
-            long minutes = duration / 60000;
-            long seconds = (duration % 60000) / 1000;
-            return minutes + " 分 " + seconds + " 秒";
-        }
-    }
 }

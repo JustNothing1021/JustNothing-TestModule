@@ -428,8 +428,12 @@ public class ReflectionUtils {
 
         logger.debug("查找实例方法: " + clazz.getName() + "." + methodName + ", 参数类型: " + paramTypes);
 
-        Method method = ClassResolver.findMethod(clazz.getName(), methodName, paramTypes.toArray(new Class[0]));
-
+        Method method = findMethodInClassHierarchy(clazz, methodName, paramTypes);
+        
+        if (method == null) {
+            method = ClassResolver.findMethod(clazz.getName(), methodName, paramTypes.toArray(new Class[0]));
+        }
+        
         if (method == null) {
             Method[] methods = clazz.getDeclaredMethods();
             for (Method m : methods) {
@@ -439,6 +443,10 @@ public class ReflectionUtils {
                         break;
                     }
                 }
+            }
+            
+            if (method == null) {
+                method = findMethodInParentClasses(clazz, methodName, paramTypes);
             }
         }
 
@@ -466,6 +474,64 @@ public class ReflectionUtils {
                 throw new Exception(cause);
             }
         }
+    }
+
+    private static Method findMethodInClassHierarchy(Class<?> clazz, String methodName, List<Class<?>> paramTypes) {
+        // 先在当前类中查找
+        Method method = findMethodInSingleClass(clazz, methodName, paramTypes);
+        if (method != null) return method;
+        
+        // 递归在父类中查找
+        return findMethodInParentClasses(clazz, methodName, paramTypes);
+    }
+    
+    /**
+     * 在单个类中查找方法
+     */
+    private static Method findMethodInSingleClass(Class<?> clazz, String methodName, List<Class<?>> paramTypes) {
+        try {
+            Class<?>[] paramArray = paramTypes.toArray(new Class[0]);
+            return clazz.getDeclaredMethod(methodName, paramArray);
+        } catch (NoSuchMethodException e1) {
+            try {
+                for (Method m : clazz.getDeclaredMethods()) {
+                    if (m.getName().equals(methodName)) {
+                        if (ClassResolver.isApplicableArgs(m.getParameterTypes(), paramTypes, m.isVarArgs())) {
+                            return m;
+                        }
+                    }
+                }
+            } catch (Exception e2) {
+                logger.debug("遍历方法失败: " + e2.getMessage());
+            }
+        }
+        return null;
+    }
+    
+
+    private static Method findMethodInParentClasses(Class<?> clazz, String methodName, List<Class<?>> paramTypes) {
+        Class<?> superClass = clazz.getSuperclass();
+        
+        while (superClass != null && superClass != Object.class) {
+            Method method = findMethodInSingleClass(superClass, methodName, paramTypes);
+            if (method != null) {
+                logger.debug("在父类 " + superClass.getName() + " 中找到方法: " + methodName);
+                return method;
+            }
+            
+            // 同时检查接口
+            for (Class<?> iface : superClass.getInterfaces()) {
+                method = findMethodInSingleClass(iface, methodName, paramTypes);
+                if (method != null) {
+                    logger.debug("在接口 " + iface.getName() + " 中找到方法: " + methodName);
+                    return method;
+                }
+            }
+            
+            superClass = superClass.getSuperclass();
+        }
+        
+        return null;
     }
 
 

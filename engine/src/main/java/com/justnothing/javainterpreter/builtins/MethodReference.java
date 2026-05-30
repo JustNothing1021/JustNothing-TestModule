@@ -113,32 +113,106 @@ public class MethodReference {
             }
         }
         
+        Method bestMatch = null;
+        int bestScore = Integer.MAX_VALUE;
+        
         for (Method method : clazz.getMethods()) {
-            if (method.getName().equals(methodName)) {
-                Class<?>[] paramTypes = method.getParameterTypes();
-                if (paramTypes.length == argTypes.length) {
-                    if (argTypes.length == 0) {
-                        return method;
-                    }
-                    boolean match = true;
-                    for (int i = 0; i < paramTypes.length; i++) {
-                        if (argTypes[i] != null && !TypeUtils.isAssignable(paramTypes[i], argTypes[i])) {
-                            match = false;
-                            break;
-                        }
-                    }
-                    if (match) {
-                        return method;
-                    }
+            if (!method.getName().equals(methodName)) continue;
+            
+            Class<?>[] paramTypes = method.getParameterTypes();
+            if (paramTypes.length != argTypes.length) continue;
+            
+            if (argTypes.length == 0) return method;
+            
+            boolean match = true;
+            int score = 0;
+            for (int i = 0; i < paramTypes.length; i++) {
+                if (argTypes[i] == null) continue;
+                int paramScore = computeMatchScore(paramTypes[i], argTypes[i]);
+                if (paramScore < 0) {
+                    match = false;
+                    break;
                 }
+                score += paramScore;
+            }
+            if (match && score < bestScore) {
+                bestScore = score;
+                bestMatch = method;
             }
         }
         
+        if (bestMatch != null) return bestMatch;
         throw new NoSuchMethodException(methodName + Arrays.toString(argTypes));
     }
-    
 
-    
+    private static int computeMatchScore(Class<?> targetType, Class<?> sourceType) {
+        if (targetType.isAssignableFrom(sourceType)) {
+            if (targetType == sourceType) return 0;
+            if (targetType == Object.class) return 100;
+            int depth = getInheritanceDepth(sourceType, targetType);
+            return Math.min(depth * 10, 90);
+        }
+        if (targetType.isPrimitive()) {
+            Class<?> wrapper = TypeUtils.getWrapperType(targetType);
+            if (wrapper != null && wrapper == sourceType) return 1;
+            Class<?> primitive = TypeUtils.getPrimitiveType(sourceType);
+            if (primitive != null && isWideningConversion(primitive, targetType)) {
+                return getWideningDistance(primitive, targetType) + 1;
+            }
+        }
+        Class<?> targetPrim = TypeUtils.getPrimitiveType(targetType);
+        Class<?> sourcePrim = TypeUtils.getPrimitiveType(sourceType);
+        if (targetPrim != null && sourcePrim != null && isWideningConversion(sourcePrim, targetPrim)) {
+            return getWideningDistance(sourcePrim, targetPrim) + 1;
+        }
+        return -1;
+    }
+
+    private static int getInheritanceDepth(Class<?> from, Class<?> to) {
+        int depth = 0;
+        Class<?> current = from.getSuperclass();
+        while (current != null && current != to) {
+            depth++;
+            current = current.getSuperclass();
+        }
+        return depth;
+    }
+
+    private static final Class<?>[][] WIDENING_CHAINS = {
+        {byte.class, short.class, int.class, long.class, float.class, double.class},
+        {short.class, int.class, long.class, float.class, double.class},
+        {char.class, int.class, long.class, float.class, double.class},
+        {int.class, long.class, float.class, double.class},
+        {long.class, float.class, double.class},
+        {float.class, double.class}
+    };
+
+    private static boolean isWideningConversion(Class<?> from, Class<?> to) {
+        if (from == to) return true;
+        for (Class<?>[] chain : WIDENING_CHAINS) {
+            int fromIdx = -1, toIdx = -1;
+            for (int i = 0; i < chain.length; i++) {
+                if (chain[i] == from) fromIdx = i;
+                if (chain[i] == to) toIdx = i;
+            }
+            if (fromIdx >= 0 && toIdx > fromIdx) return true;
+        }
+        return false;
+    }
+
+    private static int getWideningDistance(Class<?> from, Class<?> to) {
+        if (from == to) return 0;
+        for (Class<?>[] chain : WIDENING_CHAINS) {
+            int fromIdx = -1, toIdx = -1;
+            for (int i = 0; i < chain.length; i++) {
+                if (chain[i] == from) fromIdx = i;
+                if (chain[i] == to) toIdx = i;
+            }
+            if (fromIdx >= 0 && toIdx > fromIdx) return toIdx - fromIdx;
+        }
+        return 50;
+    }
+
     @SuppressWarnings("unchecked")
     public <T> T asInterface(Class<T> interfaceClass) {
         if (!interfaceClass.isInterface()) {

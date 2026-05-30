@@ -56,10 +56,6 @@ public class HelpMain extends MainCommand<CommandResult> {
             context.println(CommandExecutor.getHelpText(), Colors.WHITE);
         }
 
-        if (shouldReturnStructuredData(context)) {
-            return createSuccessResult("帮助信息已显示");
-        }
-
-        return null;
+        return createSuccessResult("帮助信息已显示");
     }
 }

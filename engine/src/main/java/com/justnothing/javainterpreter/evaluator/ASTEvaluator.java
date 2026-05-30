@@ -644,11 +644,6 @@ public class ASTEvaluator {
             args[i] = evaluate(node.getArguments().get(i), context);
         }
 
-        if (context.hasBuiltin(functionName)) {
-            List<Object> argList = new ArrayList<>(Arrays.asList(args));
-            return context.callBuiltin(functionName, argList);
-        }
-
         if (context.getScopeManager().hasVariable(functionName)) {
             Object func = context.getScopeManager().getVariable(functionName, node).getValue();
             if (func instanceof Lambda) {
@@ -685,6 +680,11 @@ public class ASTEvaluator {
                 } catch (Exception ignored) {
                 }
             }
+        }
+
+        if (context.hasBuiltin(functionName)) {
+            List<Object> argList = new ArrayList<>(Arrays.asList(args));
+            return context.callBuiltin(functionName, argList);
         }
 
         Object currentInstance = MethodBodyExecutor.getCurrentInstanceContext();
@@ -1132,7 +1132,11 @@ public class ASTEvaluator {
             // 如果解析失败，再尝试其他方法
             String className = node.getTypeName();
 
-            // 首先尝试从自定义类中查找
+            String aliasedName = context.resolveTypeAlias(className);
+            if (aliasedName != null) {
+                className = aliasedName;
+            }
+
             if (context.hasCustomClass(className)) {
                 return context.getCustomClass(className);
             }
@@ -1396,15 +1400,21 @@ public class ASTEvaluator {
 
             while (node.getCondition() == null || TypeUtils.toBoolean(evaluate(node.getCondition(), context))) {
                 try {
-                    evaluate(node.getBody(), context);
-                } catch (ContinueException ignored) {
+                    context.getScopeManager().enterScope();
+                    try {
+                        evaluate(node.getBody(), context);
+                    } catch (ContinueException ignored) {
+                    } finally {
+                        context.getScopeManager().exitScope();
+                    }
+                } catch (BreakException e) {
+                    break;
                 }
 
                 if (node.getUpdate() != null) {
                     evaluate(node.getUpdate(), context);
                 }
             }
-        } catch (BreakException ignored) {
         } finally {
             context.decrementLoopDepth();
             context.getScopeManager().exitScope();

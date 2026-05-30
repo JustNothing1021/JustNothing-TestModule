@@ -2,6 +2,8 @@ package com.justnothing.testmodule.command;
 
 import com.justnothing.testmodule.command.base.*;
 import com.justnothing.testmodule.command.base.command.CommandInfo;
+import com.justnothing.testmodule.command.base.command.Cmd;                          // ← 新增：新架构注解
+import com.justnothing.testmodule.command.base.command.CommandRouter;              // ← 新增：新架构路由器
 import com.justnothing.testmodule.command.base.command.CommandLineParser;
 import com.justnothing.testmodule.command.base.command.RegisterCommand;
 import com.justnothing.testmodule.command.base.command.RegisterParser;
@@ -12,6 +14,7 @@ import com.justnothing.testmodule.command.base.command.SupportsRequests;
 import com.justnothing.testmodule.command.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.base.protocol.CommandResult;
 import com.justnothing.testmodule.command.utils.AutoSerializer;
+import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.command.utils.ParamParser;
 
 import java.util.Arrays;
@@ -26,7 +29,7 @@ import com.justnothing.testmodule.command.functions.examples.InteractiveExampleM
 import com.justnothing.testmodule.command.functions.examples.OutputExampleMain;
 import com.justnothing.testmodule.command.functions.exportcontext.ExportContextMain;
 import com.justnothing.testmodule.command.functions.help.HelpMain;
-import com.justnothing.testmodule.command.functions.alias.impl.AliasMain;
+import com.justnothing.testmodule.command.functions.alias.AliasMain;
 import com.justnothing.testmodule.command.functions.hook.HookMain;
 import com.justnothing.testmodule.command.functions.memory.MemoryMain;
 import com.justnothing.testmodule.command.functions.nativecmd.NativeMain;
@@ -55,6 +58,7 @@ import org.json.JSONException;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.ConcurrentHashMap;
 
 
@@ -114,12 +118,19 @@ public class CommandExecutor {
         for (Class<? extends MainCommand<?>> cmdClass : commandClasses) {
             try {
                 RegisterCommand rc = cmdClass.getAnnotation(RegisterCommand.class);
-                if (rc == null) {
-                    logger.warn(cmdClass.getSimpleName() + " 缺少 @RegisterCommand 注解，跳过");
+                Cmd cmdAnnotation = cmdClass.getAnnotation(Cmd.class);
+
+                String commandName;
+                if (rc != null) {
+                    commandName = rc.value();
+                } else if (cmdAnnotation != null) {
+                    commandName = cmdAnnotation.name();
+                    CommandRouter.getInstance().registerCommand(cmdClass);
+                } else {
+                    logger.warn(cmdClass.getSimpleName() + " 缺少 @RegisterCommand 或 @Cmd 注解，跳过");
                     continue;
                 }
 
-                String commandName = rc.value();
                 MainCommand<?> instance = cmdClass.getDeclaredConstructor().newInstance();
 
                 registerCommand(commandName, instance);
@@ -475,7 +486,58 @@ public class CommandExecutor {
         String command = context.cmdName();
         ICommandOutputHandler output = context.output();
         MainCommand<? extends CommandResult> commandObj = getCommand(command);
+        
+        if (commandObj != null && commandObj.getClass().isAnnotationPresent(Cmd.class)) {
+            logger.info("🚀 [新架构] 使用 CommandRouter 执行命令: " + command);
+            
+            try {
+                CommandResult result = CommandRouter.getInstance().dispatch(context);
+                
+                if (executionType == CommandType.USER_INTERFACE) {
+                    origOutput.println(result.toJson().toString());
+                }
+                
+                logger.info("✅ [新架构] 命令执行成功: " + command);
+                return;  // 新路径完成，直接返回
+                
+            } catch (IllegalArgumentException e) {
+                if (executionType == CommandType.COMMAND_LINE) {
+                    output.println("参数错误: " + e.getMessage(), Colors.RED);
+                    output.println("", Colors.DEFAULT);
+
+                    // 使用子命令级帮助（如果匹配到子命令则只显示该子命令的帮助）
+                    String helpText = CommandRouter.getInstance().generateHelpForRoute(command, context.args());
+                    if (helpText != null && !helpText.isEmpty()) {
+                        output.println(helpText, Colors.WHITE);
+                    } else {
+                        output.println(commandObj.getHelpText(), Colors.WHITE);
+                    }
+                    return;
+                }
+                
+                logger.warn("⚠️ [新架构] 执行失败: " + e.getMessage() + ", 尝试回退到旧路径...");
+
+            } catch (Exception e) {
+                Exception exception = e;
+                if (exception instanceof InvocationTargetException invokeExc) {
+                    Throwable target = invokeExc.getTargetException();
+                    if (target instanceof Exception) {
+                        exception = (Exception) target;
+                    }
+                }
+
+                if (exception instanceof IllegalArgumentException) throw exception;
+                logger.error("❌ [新架构] 严重错误: " + exception.getClass().getSimpleName() +
+                           " - " + exception.getMessage() + "\n   回退到旧路径执行", exception);
+
+                // 继续走旧路径作为 fallback
+            }
+        }
+        
+        // ========== 📦 旧架构分发（fallback / 兼容其他命令）==========
         if (commandObj != null) {
+            logger.debug("[旧架构] 使用传统方式执行命令: " + command);
+            
             try {
                 context.parseRequest();
             } catch (IllegalCommandLineArgumentException e) {
@@ -496,9 +558,28 @@ public class CommandExecutor {
                 logger.debug("命令 " + command + " 无需参数解析或解析失败: " + e.getMessage());
             }
 
-            CommandResult result = commandObj.runMain(context);
-            if (executionType == CommandType.USER_INTERFACE)
-                origOutput.println(result.toJson().toString());
+            try {
+                CommandResult result = commandObj.runMain(context);
+                if (executionType == CommandType.USER_INTERFACE)
+                    origOutput.println(result.toJson().toString());
+            } catch (IllegalCommandLineArgumentException e) {
+                if (executionType == CommandType.COMMAND_LINE) {
+                    output.println("参数错误: " + e.getMessage(), Colors.RED);
+                    output.println("", Colors.DEFAULT);
+
+                    String helpText = CommandRouter.getInstance().generateHelpForRoute(command, context.args());
+                    if (helpText != null && !helpText.isEmpty()) {
+                        output.println(helpText, Colors.WHITE);
+                    } else {
+                        output.println(commandObj.getHelpText(), Colors.WHITE);
+                    }
+                    return;
+                }
+                throw e;
+            } catch (Exception e) {
+                logger.error("命令执行失败: " + e.getClass().getSimpleName() + " - " + e.getMessage());
+                CommandExceptionHandler.handleException(command, e, context, "执行命令失败");
+            }
 
         } else {
             if (executionType != CommandType.COMMAND_LINE) {

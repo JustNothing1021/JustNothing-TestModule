@@ -8,7 +8,6 @@ import com.justnothing.methodsclient.monitor.ClientPortManager;
 import com.justnothing.methodsclient.monitor.PerformanceMonitor;
 import com.justnothing.testmodule.utils.logging.Logger;
 
-import org.jline.jansi.io.AnsiOutputStream;
 
 import java.io.OutputStream;
 import java.io.PrintStream;
@@ -313,7 +312,7 @@ public class StreamClient {
             }
         } catch (Throwable e) {
             System.err.println("执行出现未知错误: " + e.getMessage());
-            e.printStackTrace();
+            e.printStackTrace(System.out);
             System.exit(1);
         }
     }

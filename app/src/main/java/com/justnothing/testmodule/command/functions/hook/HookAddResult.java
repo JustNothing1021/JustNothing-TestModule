@@ -1,19 +1,21 @@
 package com.justnothing.testmodule.command.functions.hook;
 
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 import com.justnothing.testmodule.command.base.protocol.CommandResult;
-
-import org.json.JSONObject;
-import org.json.JSONException;
-import org.json.JSONArray;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class HookAddResult extends CommandResult {
 
+    @Expose @SerializedName("hookId")
     private String hookId;
+    @Expose @SerializedName("successAction")
     private boolean successAction;
+    @Expose @SerializedName("message")
     private String message;
+    @Expose @SerializedName("detail")
     private List<HookDetailInfo> detail;
 
     public HookAddResult() {
@@ -38,44 +40,10 @@ public class HookAddResult extends CommandResult {
     public List<HookDetailInfo> getDetail() { return detail; }
     public void setDetail(List<HookDetailInfo> detail) { this.detail = detail; }
 
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        if (hookId != null) obj.put("hookId", hookId);
-        obj.put("successAction", successAction);
-        if (message != null) obj.put("message", message);
-
-        if (detail != null && !detail.isEmpty()) {
-            JSONArray arr = new JSONArray();
-            for (HookDetailInfo info : detail) {
-                arr.put(info.toJson());
-            }
-            obj.put("detail", arr);
-        }
-
-        return obj;
-    }
-
-    @Override
-    public void fromJson(JSONObject obj) throws JSONException {
-        super.fromJson(obj);
-        hookId = obj.optString("hookId", null);
-        successAction = obj.optBoolean("successAction", false);
-        message = obj.optString("message", null);
-
-        detail = new ArrayList<>();
-        if (obj.has("detail")) {
-            JSONArray arr = obj.getJSONArray("detail");
-            for (int i = 0; i < arr.length(); i++) {
-                HookDetailInfo info = new HookDetailInfo();
-                info.fromJson(arr.getJSONObject(i));
-                detail.add(info);
-            }
-        }
-    }
-
     public static class HookDetailInfo {
+        @Expose @SerializedName("key")
         private String key;
+        @Expose @SerializedName("value")
         private String value;
 
         public HookDetailInfo() {}
@@ -90,17 +58,5 @@ public class HookAddResult extends CommandResult {
 
         public String getValue() { return value; }
         public void setValue(String value) { this.value = value; }
-
-        public JSONObject toJson() throws JSONException {
-            JSONObject obj = new JSONObject();
-            obj.put("key", key);
-            obj.put("value", value);
-            return obj;
-        }
-
-        public void fromJson(JSONObject obj) throws JSONException {
-            key = obj.optString("key", "");
-            value = obj.optString("value", "");
-        }
     }
 }

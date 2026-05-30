@@ -2,80 +2,61 @@ package com.justnothing.testmodule.command.functions.trace;
 
 import static com.justnothing.testmodule.constants.CommandServer.CMD_TRACE_VER;
 
-
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.base.MainCommand;
 import com.justnothing.testmodule.command.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.functions.intercept.TraceInterceptTask;
+import com.justnothing.testmodule.command.base.command.Cmd;
+import com.justnothing.testmodule.command.base.command.CmdRoutes;
+import com.justnothing.testmodule.command.base.command.CommandRouter;
+import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
+import com.justnothing.testmodule.command.base.command.CmdParamProcessor;
 import com.justnothing.testmodule.command.output.Colors;
-import com.justnothing.testmodule.command.utils.CommandArgumentParser;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
+import com.justnothing.testmodule.command.functions.intercept.TraceInterceptTask;
+import com.justnothing.testmodule.utils.logging.Logger;
 
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
-import com.justnothing.testmodule.command.base.command.RegisterCommand;
+import com.justnothing.testmodule.command.functions.trace.request.TraceAddRequest;
+import com.justnothing.testmodule.command.functions.trace.request.TraceListRequest;
+import com.justnothing.testmodule.command.functions.trace.request.TraceShowRequest;
+import com.justnothing.testmodule.command.functions.trace.request.TraceExportRequest;
+import com.justnothing.testmodule.command.functions.trace.request.TraceStopRequest;
+import com.justnothing.testmodule.command.functions.trace.request.TraceClearRequest;
 
-@RegisterCommand("trace")
+@Cmd(
+    name = "trace",
+    description = "跟踪方法调用链，生成调用树",
+    defaultResultType = TraceResult.class
+)
+@CmdRoutes({
+    @CmdRoutes.Route(path = "add", request = TraceAddRequest.class, handler = TraceMain.class, description = "添加跟踪任务"),
+    @CmdRoutes.Route(path = "list", request = TraceListRequest.class, handler = TraceMain.class, description = "列出所有跟踪任务"),
+    @CmdRoutes.Route(path = "show", request = TraceShowRequest.class, handler = TraceMain.class, description = "显示调用树"),
+    @CmdRoutes.Route(path = "export", request = TraceExportRequest.class, handler = TraceMain.class, description = "导出调用链到文件"),
+    @CmdRoutes.Route(path = "stop", request = TraceStopRequest.class, handler = TraceMain.class, description = "停止指定跟踪"),
+    @CmdRoutes.Route(path = "clear", request = TraceClearRequest.class, handler = TraceMain.class, description = "清除所有跟踪")
+})
 public class TraceMain extends MainCommand<TraceResult> {
 
+    private static final Logger logger = Logger.getLoggerForName("TraceMain");
+
     public TraceMain() {
-        super("Trace", TraceResult.class);
+        super("trace", TraceResult.class);
     }
 
     @Override
     public String getHelpText() {
-        return String.format("""
-                语法: trace <subcmd> [args...]
-                
-                跟踪方法调用链，生成调用树，非阻塞执行.
-                
-                子命令:
-                    add <class_name> <method_name> [sig/signature <signature>]  - 添加跟踪任务
-                    list                                                 - 列出所有跟踪任务
-                    show <id>                                            - 显示调用树
-                    export <id> <file>                                   - 导出调用链到文件
-                    stop <id>                                            - 停止指定跟踪
-                    clear                                                - 清除所有跟踪
-                
-                选项:
-                    sig, signature   - 指定方法签名
-                    可以是用逗号分割的类名列表，如 "String,int" 表示(String, int)参数的方法
-                    也可以是JVM内部格式的签名，如 "(Ljava/lang/String;I;)V" 也是一样
-                    （不过因为理论上不会有同参数列表不同返回类型的情况，所以返回类型的解析不会有实际作用）
-                
-                示例:
-                    trace add com.example.MyClass myMethod
-                    trace add com.example.MyClass myMethod signature String,int
-                    trace list
-                    trace show 1
-                    trace export 1 /sdcard/trace_1.txt
-                    trace stop 1
-                    trace clear
-                
-                注意:
-                    - 跟踪会记录完整调用链，包括调用深度和调用次数
-                    - 方法跟踪可能会影响性能
-                    - sig的类名之间用逗号隔开即可，不要有空格
-                    - sig可以指定完整类名或者 java.lang.* 和 java.util.* 下的类名
-                    - 不指定sig时，会跟踪所有同名方法（包括重载），否则只跟踪匹配签名的特定方法
-                    - 跟踪任务在后台运行，不会阻塞其他命令执行
-                    - 每个跟踪最多保留最近1000条调用记录
-
-                
-                (Submodule trace %s)
-                """, CMD_TRACE_VER);
+        return CommandRouter.getInstance().generateHelpForCommand("trace");
     }
 
     @Override
     public TraceResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
         String[] args = context.args();
         ClassLoader classLoader = context.classLoader();
-        
-        logger.debug("执行trace命令，参数: " + Arrays.toString(args));
-        
+
+        logger.debug("执行 trace 命令，参数: %s", java.util.Arrays.toString(args));
+
         if (args.length < 1) {
             logger.warn("参数不足");
             context.println(getHelpText(), Colors.WHITE);
@@ -83,72 +64,70 @@ public class TraceMain extends MainCommand<TraceResult> {
         }
 
         String subCommand = args[0];
+        String[] subArgs = new String[args.length - 1];
+        System.arraycopy(args, 1, subArgs, 0, subArgs.length);
+
         TraceManager manager = TraceManager.getInstance();
 
         try {
             switch (subCommand) {
-                case "add" -> handleAdd(args, classLoader, manager, context);
+                case "add" -> handleAdd(subArgs, classLoader, manager, context);
                 case "list" -> handleList(manager, context);
-                case "show" -> handleShow(args, manager, context);
-                case "export" -> handleExport(args, manager, context);
-                case "stop" -> handleStop(args, manager, context);
+                case "show" -> handleShow(subArgs, manager, context);
+                case "export" -> handleExport(subArgs, manager, context);
+                case "stop" -> handleStop(subArgs, manager, context);
                 case "clear" -> handleClear(manager, context);
                 default -> {
-                    context.println("未知子命令: " + subCommand, Colors.RED);
+                    context.print("未知子命令: ", Colors.RED);
+                    context.println(subCommand, Colors.YELLOW);
                     context.println(getHelpText(), Colors.WHITE);
                 }
             }
+        } catch (IllegalCommandLineArgumentException e) {
+            throw e;
         } catch (Exception e) {
-            CommandExceptionHandler.handleException("trace", e, context, "执行trace命令失败");
-
-            if (shouldReturnStructuredData(context)) {
-                return createErrorResult("执行trace命令失败: " + e.getMessage());
-            }
+            CommandExceptionHandler.handleException("trace " + subCommand, e, context, "执行trace命令失败");
+            return createErrorResult("执行trace命令失败: " + e.getMessage());
         }
 
-        if (shouldReturnStructuredData(context)) {
-            return createSuccessResult("跟踪命令执行完成");
-        }
-        return null;
+        return createSuccessResult("跟踪命令执行完成");
     }
 
-    private void handleAdd(String[] args, ClassLoader classLoader, TraceManager manager, CommandExecutor.CmdExecContext context) {
-        try {
-            CommandArgumentParser.requireArgsLength(args, 3);
-        } catch (IllegalArgumentException e) {
-            context.println("错误: " + e.getMessage(), Colors.RED);
-            context.println("用法: trace add <class_name> <method_name> [sig/signature <signature>]", Colors.GRAY);
-            return;
-        }
+    private void handleAdd(String[] args, ClassLoader classLoader, TraceManager manager, CommandExecutor.CmdExecContext context) throws Exception {
+        TraceAddRequest request = new TraceAddRequest();
+        CmdParamProcessor.parseCommandLineArgs(request, args);
 
-        String className = args[1];
-        String methodName = args[2];
-        String signature = CommandArgumentParser.getOptionValue(args, "sig", "signature");
+        logger.info("添加 trace 任务: class=%s, method=%s, sig=%s",
+                   request.getClassName(), request.getMethodName(),
+                   request.getSignature() != null ? request.getSignature() : "所有");
 
         try {
-            int id = manager.addTraceTask(className, methodName, signature, classLoader);
+            int id = manager.addTraceTask(request.getClassName(), request.getMethodName(), request.getSignature(), classLoader);
             context.println("添加trace任务成功", Colors.GREEN);
             context.print("ID: ", Colors.CYAN);
             context.println(String.valueOf(id), Colors.YELLOW);
+
+            logger.debug("Trace 任务创建成功: id=%d", id);
         } catch (Exception e) {
-            Map<String, Object> errorContext = new HashMap<>();
-            errorContext.put("类名", className);
-            errorContext.put("方法名", methodName);
-            errorContext.put("签名", signature != null ? signature : "无");
-            CommandExceptionHandler.handleException("trace add", e, context, errorContext, "添加trace任务失败");
+            logger.error("添加 trace 任务失败: %s - %s", e.getClass().getSimpleName(), e.getMessage());
+            throw e;
         }
     }
 
     private void handleList(TraceManager manager, CommandExecutor.CmdExecContext context) {
         List<TraceInterceptTask> tasks = manager.listTasks();
+
         if (tasks.isEmpty()) {
             context.println("没有活跃的trace任务", Colors.GRAY);
             return;
         }
 
+        logger.debug("列出 %d 个活跃的 trace 任务", tasks.size());
+
         context.println("活跃的trace任务:", Colors.CYAN);
         context.println("ID\t类名\t方法名\t签名\t状态\t调用次数", Colors.GRAY);
         context.println("--------------------------------------------------", Colors.GRAY);
+
         for (TraceInterceptTask task : tasks) {
             context.print(String.valueOf(task.getId()), Colors.YELLOW);
             context.print("\t", Colors.WHITE);
@@ -164,84 +143,60 @@ public class TraceMain extends MainCommand<TraceResult> {
         }
     }
 
-    private void handleShow(String[] args, TraceManager manager, CommandExecutor.CmdExecContext context) {
-        if (args.length < 2) {
-            context.println("错误: 参数不足", Colors.RED);
-            context.println("用法: trace show <id>", Colors.GRAY);
-            return;
+    private void handleShow(String[] args, TraceManager manager, CommandExecutor.CmdExecContext context) throws Exception {
+        TraceShowRequest request = new TraceShowRequest();
+        CmdParamProcessor.parseCommandLineArgs(request, args);
+
+        logger.info("显示 trace 调用树: id=%d", request.getTraceId());
+
+        TraceInterceptTask task = manager.getTask(request.getTraceId());
+        if (task == null) {
+            throw new IllegalCommandLineArgumentException("未找到trace任务 (ID: " + request.getTraceId() + ")");
         }
 
-        try {
-            int id = Integer.parseInt(args[1]);
-            TraceInterceptTask task = manager.getTask(id);
-            if (task == null) {
-                context.println("错误: 未找到trace任务", Colors.RED);
-                context.print("ID: ", Colors.CYAN);
-                context.println(String.valueOf(id), Colors.YELLOW);
-                return;
-            }
+        String result = task.getCallTree();
+        context.println(result, Colors.WHITE);
+    }
 
-            String result = task.getCallTree();
-            context.println(result, Colors.WHITE);
-        } catch (NumberFormatException e) {
-            context.println("错误: 无效的ID: " + args[1], Colors.RED);
+    private void handleExport(String[] args, TraceManager manager, CommandExecutor.CmdExecContext context) throws Exception {
+        TraceExportRequest request = new TraceExportRequest();
+        CmdParamProcessor.parseCommandLineArgs(request, args);
+
+        logger.info("导出 trace 结果: id=%d, file=%s", request.getTraceId(), request.getFilePath());
+
+        TraceInterceptTask task = manager.getTask(request.getTraceId());
+        if (task == null) {
+            throw new IllegalCommandLineArgumentException("未找到trace任务 (ID: " + request.getTraceId() + ")");
+        }
+
+        boolean success = task.exportToFile(request.getFilePath());
+        if (success) {
+            context.println("导出trace任务成功", Colors.GREEN);
+            context.print("文件路径: ", Colors.CYAN);
+            context.println(request.getFilePath(), Colors.GRAY);
+            logger.debug("导出成功: file=%s", request.getFilePath());
+        } else {
+            throw new RuntimeException("导出trace任务失败");
         }
     }
 
-    private void handleExport(String[] args, TraceManager manager, CommandExecutor.CmdExecContext context) {
-        if (args.length < 3) {
-            context.println("错误: 参数不足", Colors.RED);
-            context.println("用法: trace export <id> <file>", Colors.GRAY);
-            return;
-        }
+    private void handleStop(String[] args, TraceManager manager, CommandExecutor.CmdExecContext context) throws Exception {
+        TraceStopRequest request = new TraceStopRequest();
+        CmdParamProcessor.parseCommandLineArgs(request, args);
 
-        try {
-            int id = Integer.parseInt(args[1]);
-            String filePath = args[2];
-            TraceInterceptTask task = manager.getTask(id);
-            if (task == null) {
-                context.println("错误: 未找到trace任务", Colors.RED);
-                context.print("ID: ", Colors.CYAN);
-                context.println(String.valueOf(id), Colors.YELLOW);
-                return;
-            }
+        logger.info("停止 trace 任务: id=%d", request.getTraceId());
 
-            boolean success = task.exportToFile(filePath);
-            if (success) {
-                context.println("导出trace任务成功", Colors.GREEN);
-                context.print("文件路径: ", Colors.CYAN);
-                context.println(filePath, Colors.GRAY);
-            } else {
-                context.println("导出trace任务失败", Colors.RED);
-            }
-        } catch (NumberFormatException e) {
-            context.println("错误: 无效的ID: " + args[1], Colors.RED);
-        }
-    }
-
-    private void handleStop(String[] args, TraceManager manager, CommandExecutor.CmdExecContext context) {
-        if (args.length < 2) {
-            context.println("错误: 参数不足", Colors.RED);
-            context.println("用法: trace stop <id>", Colors.GRAY);
-            return;
-        }
-
-        try {
-            int id = Integer.parseInt(args[1]);
-            boolean success = manager.removeTask(id);
-            if (success) {
-                context.println("停止trace任务成功", Colors.GREEN);
-            } else {
-                context.println("错误: 未找到trace任务", Colors.RED);
-            }
-            context.print("ID: ", Colors.CYAN);
-            context.println(String.valueOf(id), Colors.YELLOW);
-        } catch (NumberFormatException e) {
-            context.println("错误: 无效的ID: " + args[1], Colors.RED);
+        boolean success = manager.removeTask(request.getTraceId());
+        if (success) {
+            context.println("停止trace任务成功", Colors.GREEN);
+            logger.debug("Trace 任务已停止: id=%d", request.getTraceId());
+        } else {
+            throw new IllegalCommandLineArgumentException("未找到trace任务 (ID: " + request.getTraceId() + ")");
         }
     }
 
     private void handleClear(TraceManager manager, CommandExecutor.CmdExecContext context) {
+        logger.warn("清除所有 trace 任务");
         manager.clearAll();
         context.println("清除所有trace任务成功", Colors.GREEN);
     }

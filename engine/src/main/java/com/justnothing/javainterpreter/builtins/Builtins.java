@@ -4,6 +4,7 @@ import com.justnothing.javainterpreter.api.ClassResolver;
 import com.justnothing.javainterpreter.api.DefaultOutputHandler;
 import com.justnothing.javainterpreter.api.IOutputHandler;
 import com.justnothing.javainterpreter.evaluator.ExecutionContext;
+import com.justnothing.javainterpreter.utils.NumberUtils;
 
 import java.io.InputStream;
 import java.lang.reflect.Field;
@@ -110,10 +111,10 @@ public class Builtins {
             return outputHandler.readLine(prompt);
         });
         
-        // cli.put("readPassword", args -> {
-        //     String prompt = args.isEmpty() ? "" : args.get(0).toString();
-        //     return outputHandler.readPassword(prompt);
-        // });
+        functions.put("readPassword", args -> {
+            String prompt = args.isEmpty() ? "" : args.get(0).toString();
+            return outputHandler.readPassword(prompt);
+        });
     }
     
     private String formatValue(Object value) {
@@ -582,22 +583,14 @@ public class Builtins {
             if (args.isEmpty()) {
                 throw new RuntimeException("min() requires at least 1 argument");
             }
-            double min = Double.POSITIVE_INFINITY;
-            for (Object arg : args) {
-                min = Math.min(min, ((Number) arg).doubleValue());
-            }
-            return min;
+            return NumberUtils.computeMinMax(args, true);
         });
         
         functions.put("max", args -> {
             if (args.isEmpty()) {
                 throw new RuntimeException("max() requires at least 1 argument");
             }
-            double max = Double.NEGATIVE_INFINITY;
-            for (Object arg : args) {
-                max = Math.max(max, ((Number) arg).doubleValue());
-            }
-            return max;
+            return NumberUtils.computeMinMax(args, false);
         });
         
         functions.put("clamp", args -> {
@@ -715,14 +708,19 @@ public class Builtins {
         
         functions.put("setupInteractiveInput", args -> {
             InputStream interactiveInputStream = new InputStream() {
-                private byte[] buffer = null; // 保留给不读取一整行的情况
+                private byte[] buffer = null;
                 private int pos = 0;
+                private boolean eof = false;
                 
                 @Override
                 public int read() {
+                    if (eof) {
+                        return -1;
+                    }
                     if (buffer == null || pos >= buffer.length) {
                         String line = outputHandler.readLine("");
                         if (line == null) {
+                            eof = true;
                             return -1;
                         }
                         buffer = (line + "\n").getBytes();
@@ -741,21 +739,34 @@ public class Builtins {
                         return 0;
                     }
                     
-                    int c = read();
-                    if (c == -1) {
-                        return -1;
-                    }
-                    b[off] = (byte) c;
+                    int totalRead = 0;
                     
-                    int i = 1;
-                    for (; i < len; i++) {
-                        c = read();
-                        if (c == -1) {
+                    while (totalRead < len) {
+                        if (eof) {
                             break;
                         }
-                        b[off + i] = (byte) c;
+                        
+                        if (buffer == null || pos >= buffer.length) {
+                            String line = outputHandler.readLine("");
+                            if (line == null) {
+                                eof = true;
+                                break;
+                            }
+                            buffer = (line + "\n").getBytes();
+                            pos = 0;
+                        }
+                        
+                        int available = Math.min(buffer.length - pos, len - totalRead);
+                        System.arraycopy(buffer, pos, b, off + totalRead, available);
+                        pos += available;
+                        totalRead += available;
+                        
+                        if (pos >= buffer.length) {
+                            break;
+                        }
                     }
-                    return i;
+                    
+                    return totalRead > 0 ? totalRead : -1;
                 }
             };
             

@@ -1,43 +1,65 @@
 package com.justnothing.testmodule.command.functions.memory;
 
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
 import com.justnothing.testmodule.command.base.protocol.CommandResult;
 import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
-
-import org.json.JSONObject;
-import org.json.JSONException;
 
 @SerializeKeyName("MemoryInfo")
 @AutoSerializable
 public class MemoryInfoResult extends CommandResult {
 
+    @Expose @SerializedName("timestamp")
     private long timestamp;
 
+    @Expose @SerializedName("javaMaxMemory")
     private long javaMaxMemory;
+    @Expose @SerializedName("javaTotalMemory")
     private long javaTotalMemory;
+    @Expose @SerializedName("javaFreeMemory")
     private long javaFreeMemory;
+    @Expose @SerializedName("javaUsedMemory")
     private long javaUsedMemory;
+    @Expose @SerializedName("javaUsagePercent")
     private double javaUsagePercent;
 
+    @Expose @SerializedName("nativeAllocatedSize")
     private long nativeAllocatedSize;
+    @Expose @SerializedName("nativeHeapSize")
     private long nativeHeapSize;
+    @Expose @SerializedName("nativeFreeSize")
     private long nativeFreeSize;
 
+    @Expose @SerializedName("processPss")
     private long processPss;
+    @Expose @SerializedName("processUss")
     private long processUss;
+    @Expose @SerializedName("processRss")
     private long processRss;
 
+    @Expose @SerializedName("systemAvailMem")
     private long systemAvailMem;
+    @Expose @SerializedName("systemTotalMem")
     private long systemTotalMem;
+    @Expose @SerializedName("systemThreshold")
     private long systemThreshold;
+    @Expose @SerializedName("systemLowMemory")
     private boolean systemLowMemory;
 
+    @Expose @SerializedName("threadCount")
     private int threadCount;
+    @Expose @SerializedName("threadStackTotalBytes")
     private long threadStackTotalBytes;
+    @Expose @SerializedName("loadedClassCount")
     private int loadedClassCount;
+    @Expose @SerializedName("totalClassCount")
     private int totalClassCount;
+    @Expose @SerializedName("bitmapTotalBytes")
     private long bitmapTotalBytes;
+    @Expose @SerializedName("bitmapCount")
     private int bitmapCount;
+    @Expose @SerializedName("databaseTotalBytes")
     private long databaseTotalBytes;
 
     public MemoryInfoResult() {
@@ -99,94 +121,4 @@ public class MemoryInfoResult extends CommandResult {
     public void setBitmapCount(int bitmapCount) { this.bitmapCount = bitmapCount; }
     public long getDatabaseTotalBytes() { return databaseTotalBytes; }
     public void setDatabaseTotalBytes(long databaseTotalBytes) { this.databaseTotalBytes = databaseTotalBytes; }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        obj.put("timestamp", timestamp);
-        obj.put("javaMaxMemory", javaMaxMemory);
-        obj.put("javaTotalMemory", javaTotalMemory);
-        obj.put("javaFreeMemory", javaFreeMemory);
-        obj.put("javaUsedMemory", javaUsedMemory);
-        obj.put("javaUsagePercent", javaUsagePercent);
-
-        JSONObject nativeObj = new JSONObject();
-        nativeObj.put("allocatedSize", nativeAllocatedSize);
-        nativeObj.put("heapSize", nativeHeapSize);
-        nativeObj.put("freeSize", nativeFreeSize);
-        obj.put("nativeHeap", nativeObj);
-
-        if (processPss > 0 || processUss > 0 || processRss > 0) {
-            JSONObject procObj = new JSONObject();
-            procObj.put("pss", processPss);
-            procObj.put("uss", processUss);
-            procObj.put("rss", processRss);
-            obj.put("processMemory", procObj);
-        }
-
-        if (systemTotalMem > 0) {
-            JSONObject sysObj = new JSONObject();
-            sysObj.put("availMem", systemAvailMem);
-            sysObj.put("totalMem", systemTotalMem);
-            sysObj.put("threshold", systemThreshold);
-            sysObj.put("lowMemory", systemLowMemory);
-            obj.put("systemMemory", sysObj);
-        }
-
-        JSONObject vmObj = new JSONObject();
-        vmObj.put("threadCount", threadCount);
-        vmObj.put("threadStackTotalBytes", threadStackTotalBytes);
-        vmObj.put("loadedClassCount", loadedClassCount);
-        vmObj.put("totalClassCount", totalClassCount);
-        vmObj.put("bitmapTotalBytes", bitmapTotalBytes);
-        vmObj.put("bitmapCount", bitmapCount);
-        vmObj.put("databaseTotalBytes", databaseTotalBytes);
-        obj.put("vmDetails", vmObj);
-
-        return obj;
-    }
-
-    @Override
-    public void fromJson(JSONObject obj) throws JSONException {
-        super.fromJson(obj);
-        timestamp = obj.optLong("timestamp", 0);
-        javaMaxMemory = obj.optLong("javaMaxMemory", 0);
-        javaTotalMemory = obj.optLong("javaTotalMemory", 0);
-        javaFreeMemory = obj.optLong("javaFreeMemory", 0);
-        javaUsedMemory = obj.optLong("javaUsedMemory", 0);
-        javaUsagePercent = obj.optDouble("javaUsagePercent", 0);
-
-        if (obj.has("nativeHeap")) {
-            JSONObject nativeObj = obj.getJSONObject("nativeHeap");
-            nativeAllocatedSize = nativeObj.optLong("allocatedSize", 0);
-            nativeHeapSize = nativeObj.optLong("heapSize", 0);
-            nativeFreeSize = nativeObj.optLong("freeSize", 0);
-        }
-
-        if (obj.has("processMemory")) {
-            JSONObject procObj = obj.getJSONObject("processMemory");
-            processPss = procObj.optLong("pss", 0);
-            processUss = procObj.optLong("uss", 0);
-            processRss = procObj.optLong("rss", 0);
-        }
-
-        if (obj.has("systemMemory")) {
-            JSONObject sysObj = obj.getJSONObject("systemMemory");
-            systemAvailMem = sysObj.optLong("availMem", 0);
-            systemTotalMem = sysObj.optLong("totalMem", 0);
-            systemThreshold = sysObj.optLong("threshold", 0);
-            systemLowMemory = sysObj.optBoolean("lowMemory", false);
-        }
-
-        if (obj.has("vmDetails")) {
-            JSONObject vmObj = obj.getJSONObject("vmDetails");
-            threadCount = vmObj.optInt("threadCount", 0);
-            threadStackTotalBytes = vmObj.optLong("threadStackTotalBytes", 0);
-            loadedClassCount = vmObj.optInt("loadedClassCount", 0);
-            totalClassCount = vmObj.optInt("totalClassCount", 0);
-            bitmapTotalBytes = vmObj.optLong("bitmapTotalBytes", 0);
-            bitmapCount = vmObj.optInt("bitmapCount", 0);
-            databaseTotalBytes = vmObj.optLong("databaseTotalBytes", 0);
-        }
-    }
 }

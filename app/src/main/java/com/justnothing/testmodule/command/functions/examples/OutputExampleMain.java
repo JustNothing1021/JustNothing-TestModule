@@ -148,9 +148,6 @@ public class OutputExampleMain extends MainCommand<CommandResult> {
 
         output.println("");
         output.println("===== 测试完成 =====");
-        if (shouldReturnStructuredData(context)) {
-            return createSuccessResult("输出测试命令执行完成");
-        }
-        return null;
+        return createSuccessResult("输出测试命令执行完成");
     }
 }

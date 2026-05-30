@@ -400,8 +400,13 @@ public class Lexer {
                             sb.append((char) octal);
                             break;
                         }
-                        default: sb.append(next); break;
+                        default:
+                            sb.append('\\');
+                            sb.append(next);
+                            break;
                     }
+                } else {
+                    throw error("Unexpected end of input in escape sequence");
                 }
             } else {
                 sb.append(c);
@@ -481,8 +486,13 @@ public class Lexer {
                         case '\'': sb.append('\''); break;
                         case '\"': sb.append('\"'); break;
                         case '$': sb.append('$'); break;
-                        default: sb.append(next); break;
+                        default:
+                            sb.append('\\');
+                            sb.append(next);
+                            break;
                     }
+                } else {
+                    throw error("Unexpected end of input in escape sequence");
                 }
             } else {
                 sb.append(c);

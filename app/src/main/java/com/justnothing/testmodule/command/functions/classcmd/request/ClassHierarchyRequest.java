@@ -1,23 +1,18 @@
 package com.justnothing.testmodule.command.functions.classcmd.request;
 
-import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
-import com.justnothing.testmodule.command.base.parser.PositionalParam;
-import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
-import com.justnothing.testmodule.command.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.base.command.CmdParam;
 import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
-import com.justnothing.testmodule.command.base.command.SubCommand;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandRequest;
-import com.justnothing.testmodule.command.utils.ParamParser;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
-@SerializeKeyName("ClassHierarchy")
-@SubCommand("hierarchy")
-@AutoSerializable
+@SerializeKeyName("class:hierarchy")
 public class ClassHierarchyRequest extends ClassCommandRequest {
 
-    @PositionalParam(order = 1, name = "类名")
+    @CmdParam(
+        name = "--class",
+        description = "类名",
+        position = 1,
+        serializedName = "className"
+    )
     private String className;
 
     public ClassHierarchyRequest() {

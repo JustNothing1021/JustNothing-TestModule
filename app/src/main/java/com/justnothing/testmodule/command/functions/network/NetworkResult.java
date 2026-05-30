@@ -1,18 +1,24 @@
 package com.justnothing.testmodule.command.functions.network;
 
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 import com.justnothing.testmodule.command.base.protocol.CommandResult;
-
-import org.json.JSONException;
-import org.json.JSONObject;
 
 public class NetworkResult extends CommandResult {
 
+    @Expose @SerializedName("subCommand")
     private String subCommand;
+    @Expose @SerializedName("output")
     private String output;
+    @Expose @SerializedName("hostname")
     private String hostname;
+    @Expose @SerializedName("ipAddress")
     private String ipAddress;
+    @Expose @SerializedName("port")
     private Integer port;
+    @Expose @SerializedName("reachable")
     private Boolean reachable;
+    @Expose @SerializedName("latencyMs")
     private Long latencyMs;
 
     public NetworkResult() { super(); }
@@ -38,29 +44,4 @@ public class NetworkResult extends CommandResult {
 
     public Long getLatencyMs() { return latencyMs; }
     public void setLatencyMs(Long latencyMs) { this.latencyMs = latencyMs; }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        if (subCommand != null) obj.put("subCommand", subCommand);
-        if (output != null) obj.put("output", output);
-        if (hostname != null) obj.put("hostname", hostname);
-        if (ipAddress != null) obj.put("ipAddress", ipAddress);
-        if (port != null) obj.put("port", port);
-        if (reachable != null) obj.put("reachable", reachable);
-        if (latencyMs != null) obj.put("latencyMs", latencyMs);
-        return obj;
-    }
-
-    @Override
-    public void fromJson(JSONObject obj) throws JSONException {
-        super.fromJson(obj);
-        subCommand = obj.optString("subCommand", null);
-        output = obj.optString("output", null);
-        hostname = obj.optString("hostname", null);
-        ipAddress = obj.optString("ipAddress", null);
-        port = obj.has("port") ? obj.getInt("port") : null;
-        reachable = obj.has("reachable") ? obj.getBoolean("reachable") : null;
-        latencyMs = obj.has("latencyMs") ? obj.getLong("latencyMs") : null;
-    }
 }

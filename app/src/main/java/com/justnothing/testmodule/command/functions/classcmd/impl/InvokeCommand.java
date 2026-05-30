@@ -1,5 +1,6 @@
 package com.justnothing.testmodule.command.functions.classcmd.impl;
 
+import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.base.command.SubCommandInfo;
 import com.justnothing.testmodule.command.functions.classcmd.AbstractClassCommand;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandContext;
@@ -69,19 +70,12 @@ public class InvokeCommand extends AbstractClassCommand<InvokeMethodRequest, Inv
         List<String> rawParamTypes = request.getParamTypes();
 
         if (className == null || className.isEmpty() || methodName == null || methodName.isEmpty()) {
-            CommandExceptionHandler.handleException(
-                "class invoke",
-                new IllegalArgumentException("参数不足, 需要至少2个参数: class invoke <class> <method> [params...]"),
-                context.execContext(),
-                "参数错误"
-            );
-            return null;
+            throw new IllegalCommandLineArgumentException("参数不足, 需要至少2个参数: class invoke <class> <method> [params...]");
         }
 
         boolean accessSuper = request.isAccessSuper();
         boolean accessInterfaces = request.isAccessInterfaces();
         boolean isStaticMode = request.isStatic();
-        boolean freeMode = request.isFreeMode();
 
         InvokeMethodResult result = new InvokeMethodResult();
 
@@ -220,7 +214,7 @@ public class InvokeCommand extends AbstractClassCommand<InvokeMethodRequest, Inv
             }
 
             String targetInstanceStr = request.getTargetInstance();
-            Object targetInstance = null;
+            Object targetInstance;
 
             if (targetInstanceStr != null && !targetInstanceStr.isEmpty()) {
                 targetInstance = context.parseValue(targetInstanceStr, targetClass);
@@ -247,10 +241,8 @@ public class InvokeCommand extends AbstractClassCommand<InvokeMethodRequest, Inv
             returnValue = ReflectionUtils.callMethod(targetInstance, methodName, params);
             
             // 设置实例信息（用于调试）
-            if (targetInstance != null) {
-                result.setInstanceAfterInvocation(targetInstance.getClass().getName() + "@" + System.identityHashCode(targetInstance));
-                result.setInstanceHash(System.identityHashCode(targetInstance));
-            }
+            result.setInstanceAfterInvocation(targetInstance.getClass().getName() + "@" + System.identityHashCode(targetInstance));
+            result.setInstanceHash(System.identityHashCode(targetInstance));
         }
 
         // 映射结果到 InvokeMethodResult 字段

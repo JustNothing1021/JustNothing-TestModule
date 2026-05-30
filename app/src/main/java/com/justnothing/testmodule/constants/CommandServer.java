@@ -5,8 +5,8 @@ public class CommandServer {
     public static final String CMD_BEAN_SHELL_VER = "v0.1.0";
     public static final String CMD_CLASS_VER = "v0.1.3";
     public static final String CMD_WATCH_VER = "v0.1.1";
-    public static final String CMD_TRACE_VER = "v0.1.0";
-    public static final String CMD_SCRIPT_VER = "v0.3.4";
+    public static final String CMD_TRACE_VER = "v0.1.1";
+    public static final String CMD_SCRIPT_VER = "v0.4.0";
     public static final String CMD_EXPORT_CONTEXT_VER = "v0.1.0";
     public static final String CMD_MEMORY_VER = "v0.1.1";
     public static final String CMD_THREADS_VER = "v0.1.1";
@@ -17,7 +17,7 @@ public class CommandServer {
     public static final String CMD_HOOK_VER = "v0.1.2";
     public static final String CMD_BYTECODE_VER = "v0.1.1";
     public static final String CMD_NATIVE_VER = "v0.1.0";
-    public static final String CMD_PERFORMANCE_VER = "v0.1.0";
+    public static final String CMD_PERFORMANCE_VER = "v0.1.1";
     public static final String CMD_ALIAS_VER = "v0.1.0";
     public static final String CMD_NETWORK_VER = "v0.1.0";
     public static final int DEFAULT_SOCKET_PORT = 11451;

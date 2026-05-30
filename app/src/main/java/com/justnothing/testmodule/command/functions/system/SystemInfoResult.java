@@ -1,16 +1,15 @@
 package com.justnothing.testmodule.command.functions.system;
 
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 import com.justnothing.testmodule.command.base.protocol.CommandResult;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class SystemInfoResult extends CommandResult {
 
+    @Expose @SerializedName("fields")
     private List<SystemFieldInfo> fields;
 
     public SystemInfoResult() {
@@ -27,30 +26,5 @@ public class SystemInfoResult extends CommandResult {
 
     public void setFields(List<SystemFieldInfo> fields) {
         this.fields = fields;
-    }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        if (fields != null) {
-            JSONArray arr = new JSONArray();
-            for (SystemFieldInfo field : fields) {
-                arr.put(field.toJson());
-            }
-            obj.put("fields", arr);
-        }
-        return obj;
-    }
-
-    @Override
-    public void fromJson(JSONObject obj) throws JSONException {
-        super.fromJson(obj);
-        if (obj.has("fields")) {
-            JSONArray arr = obj.getJSONArray("fields");
-            fields = new ArrayList<>();
-            for (int i = 0; i < arr.length(); i++) {
-                fields.add(SystemFieldInfo.fromJson(arr.getJSONObject(i)));
-            }
-        }
     }
 }

@@ -1,38 +1,69 @@
 package com.justnothing.testmodule.command.functions.classcmd.request;
 
-import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
-import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
-import com.justnothing.testmodule.command.base.command.SubCommand;
-import com.justnothing.testmodule.command.base.parser.FlagParam;
+import com.justnothing.testmodule.command.base.command.CmdParam;
 import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
-import com.justnothing.testmodule.command.base.parser.PositionalParam;
-import com.justnothing.testmodule.command.functions.classcmd.ClassCommandRequest;
+import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
 import com.justnothing.testmodule.command.utils.ParamParser;
+import com.justnothing.testmodule.command.functions.classcmd.ClassCommandRequest;
 
-@SerializeKeyName("ClassInfo")
-@SubCommand("info")
-@AutoSerializable
+@SerializeKeyName("class:info")
 public class ClassInfoRequest extends ClassCommandRequest {
 
-    @PositionalParam(order = 1, name = "类名")
+    @CmdParam(
+        name = "--class",
+        description = "类名",
+        required = true,
+        position = 1,
+        serializedName = "className"
+    )
     private String className;
 
-    @FlagParam(names = {"-v", "--verbose"}, description = "显示详细信息")
+    @CmdParam(
+        name = "--verbose",
+        description = "显示详细信息",
+        aliases = {"-v"},
+        serializedName = "verbose"
+    )
     private boolean isVerbose = false;
 
-    @FlagParam(names = {"-i", "--interfaces"}, description = "显示实现的接口")
+    @CmdParam(
+        name = "--interfaces",
+        description = "显示实现的接口",
+        aliases = {"-i"},
+        serializedName = "showInterfaces"
+    )
     private boolean showInterfaces = false;
 
-    @FlagParam(names = {"-c", "--constructors"}, description = "显示构造函数")
+    @CmdParam(
+        name = "--constructors",
+        description = "显示构造函数",
+        aliases = {"-c"},
+        serializedName = "showConstructors"
+    )
     private boolean showConstructors = false;
 
-    @FlagParam(names = {"-s", "--super"}, description = "显示父类信息")
+    @CmdParam(
+        name = "--super",
+        description = "显示父类信息",
+        aliases = {"-s"},
+        serializedName = "showSuper"
+    )
     private boolean showSuper = false;
 
-    @FlagParam(names = {"-m", "--modifiers"}, description = "显示修饰符信息")
+    @CmdParam(
+        name = "--modifiers",
+        description = "显示修饰符信息",
+        aliases = {"-m"},
+        serializedName = "showModifiers"
+    )
     private boolean showModifiers = false;
 
-    @FlagParam(names = {"-a", "--all"}, description = "显示所有信息 (默认)")
+    @CmdParam(
+        name = "--all",
+        description = "显示所有信息 (默认)",
+        aliases = {"-a"},
+        serializedName = "showAll"
+    )
     private boolean showAll = true;
 
     private boolean showMethods;
@@ -53,26 +84,26 @@ public class ClassInfoRequest extends ClassCommandRequest {
     public void setClassName(String className) { this.className = className; }
 
     public boolean isShowInterfaces() { return showInterfaces; }
-    public void setShowInterfaces(boolean showInterfaces) { 
-        this.showInterfaces = showInterfaces; 
+    public void setShowInterfaces(boolean showInterfaces) {
+        this.showInterfaces = showInterfaces;
         if (showInterfaces) this.showAll = false;
     }
 
     public boolean isShowConstructors() { return showConstructors; }
-    public void setShowConstructors(boolean showConstructors) { 
-        this.showConstructors = showConstructors; 
+    public void setShowConstructors(boolean showConstructors) {
+        this.showConstructors = showConstructors;
         if (showConstructors) this.showAll = false;
     }
 
     public boolean isShowSuper() { return showSuper; }
-    public void setShowSuper(boolean showSuper) { 
-        this.showSuper = showSuper; 
+    public void setShowSuper(boolean showSuper) {
+        this.showSuper = showSuper;
         if (showSuper) this.showAll = false;
     }
 
     public boolean isShowModifiers() { return showModifiers; }
-    public void setShowModifiers(boolean showModifiers) { 
-        this.showModifiers = showModifiers; 
+    public void setShowModifiers(boolean showModifiers) {
+        this.showModifiers = showModifiers;
         if (showModifiers) this.showAll = false;
     }
 

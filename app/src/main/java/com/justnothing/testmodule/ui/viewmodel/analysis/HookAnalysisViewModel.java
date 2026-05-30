@@ -8,9 +8,15 @@ import androidx.lifecycle.MutableLiveData;
 
 import com.justnothing.testmodule.ui.viewmodel.BaseViewModel;
 import com.justnothing.testmodule.R;
-import com.justnothing.testmodule.command.functions.hook.HookActionRequest;
-import com.justnothing.testmodule.command.functions.hook.HookAddRequest;
-import com.justnothing.testmodule.command.functions.hook.HookListRequest;
+import com.justnothing.testmodule.command.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.functions.hook.request.HookAddRequest;
+import com.justnothing.testmodule.command.functions.hook.request.HookListRequest;
+import com.justnothing.testmodule.command.functions.hook.request.HookRemoveRequest;
+import com.justnothing.testmodule.command.functions.hook.request.HookInfoRequest;
+import com.justnothing.testmodule.command.functions.hook.request.HookOutputRequest;
+import com.justnothing.testmodule.command.functions.hook.request.HookEnableRequest;
+import com.justnothing.testmodule.command.functions.hook.request.HookDisableRequest;
+import com.justnothing.testmodule.command.functions.hook.request.HookClearRequest;
 import com.justnothing.testmodule.command.functions.hook.HookAddResult;
 import com.justnothing.testmodule.command.functions.hook.HookListResult;
 import com.justnothing.testmodule.ui.activity.analysis.hook.HookSnapshot;
@@ -82,16 +88,41 @@ public class HookAnalysisViewModel extends BaseViewModel<HookListRequest, HookLi
         error.postValue(null);
 
         getExecutor().execute(() -> {
-            HookActionRequest request = new HookActionRequest();
-            request.setAction(action);
-            if (hookId != null) request.setHookId(hookId);
-            request.setOutputCount(outputCount);
+            CommandRequest request = switch (action) {
+                case "remove" -> {
+                    HookRemoveRequest req = new HookRemoveRequest();
+                    req.setHookId(hookId);
+                    yield req;
+                }
+                case "info" -> {
+                    HookInfoRequest req = new HookInfoRequest();
+                    req.setHookId(hookId);
+                    yield req;
+                }
+                case "output" -> {
+                    HookOutputRequest req = new HookOutputRequest();
+                    req.setHookId(hookId);
+                    req.setOutputCount(outputCount);
+                    yield req;
+                }
+                case "enable" -> {
+                    HookEnableRequest req = new HookEnableRequest();
+                    req.setHookId(hookId);
+                    yield req;
+                }
+                case "disable" -> {
+                    HookDisableRequest req = new HookDisableRequest();
+                    req.setHookId(hookId);
+                    yield req;
+                }
+                case "clear" -> new HookClearRequest();
+                default -> throw new IllegalArgumentException("Unknown action: " + action);
+            };
 
             HookAddResult actionResult = executeAny(request, HookAddResult.class);
             if (actionResult != null) {
                 this.actionResult.postValue(actionResult);
-                if (!HookActionRequest.ACTION_INFO.equals(action)
-                        && !HookActionRequest.ACTION_OUTPUT.equals(action)) {
+                if (!"info".equals(action) && !"output".equals(action)) {
                     queryHookList();
                 }
             }

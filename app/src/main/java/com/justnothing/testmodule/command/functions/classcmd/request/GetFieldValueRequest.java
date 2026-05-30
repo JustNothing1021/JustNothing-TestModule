@@ -1,11 +1,8 @@
 package com.justnothing.testmodule.command.functions.classcmd.request;
 
-import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
-import com.justnothing.testmodule.command.base.parser.FlagParam;
-import com.justnothing.testmodule.command.base.parser.PositionalParam;
-import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
-import com.justnothing.testmodule.command.base.command.SubCommand;
 import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
+import com.justnothing.testmodule.command.base.command.CmdParam;
+import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
 import com.justnothing.testmodule.command.utils.CustomCommandLineParser;
 import com.justnothing.testmodule.command.utils.ParamParser;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandRequest;
@@ -13,37 +10,78 @@ import com.justnothing.testmodule.command.functions.classcmd.ClassCommandRequest
 import java.util.ArrayList;
 import java.util.List;
 
-@SerializeKeyName("Field")
-@SubCommand("field")
-@AutoSerializable
+@SerializeKeyName("class:getfield")
 public class GetFieldValueRequest extends ClassCommandRequest 
         implements CustomCommandLineParser {
 
-    @PositionalParam(order = 1, name = "类名", required = false)
+    @CmdParam(
+        name = "--class",
+        description = "类名",
+        position = 1,
+        serializedName = "className"
+    )
     private String className;
 
-    @PositionalParam(order = 2, name = "字段名", required = false)
+    @CmdParam(
+        name = "--field",
+        description = "字段名",
+        position = 2,
+        serializedName = "fieldName"
+    )
     private String fieldName;
 
-    @FlagParam(names = {"-v", "--value"}, description = "显示字段值")
+    @CmdParam(
+        name = "--value",
+        description = "显示字段值",
+        aliases = {"-v"},
+        serializedName = "showValue"
+    )
     private boolean showValue;
 
-    @FlagParam(names = {"-t", "--type"}, description = "显示字段类型")
+    @CmdParam(
+        name = "--type",
+        description = "显示字段类型",
+        aliases = {"-t"},
+        serializedName = "showType"
+    )
     private boolean showType;
 
-    @FlagParam(names = {"-m", "--modifiers"}, description = "显示修饰符")
+    @CmdParam(
+        name = "--modifiers",
+        description = "显示修饰符",
+        aliases = {"-m"},
+        serializedName = "showModifiers"
+    )
     private boolean showModifiers;
 
-    @FlagParam(names = {"-a", "--all"}, defaultValue = true, description = "显示所有信息")
+    @CmdParam(
+        name = "--all",
+        description = "显示所有信息",
+        aliases = {"-a"},
+        serializedName = "showAll"
+    )
     private boolean showAll;
 
-    @FlagParam(names = {"--super"}, description = "访问父类字段")
+    @CmdParam(
+        name = "--super",
+        description = "访问父类字段",
+        serializedName = "accessSuper"
+    )
     private boolean accessSuper;
 
-    @FlagParam(names = {"--interfaces"}, description = "访问接口字段")
+    @CmdParam(
+        name = "--interfaces",
+        description = "访问接口字段",
+        serializedName = "accessInterfaces"
+    )
     private boolean accessInterfaces;
 
-    @FlagParam(names = {"-s", "--static"}, description = "静态字段")
+    @CmdParam(
+        name = "--static",
+        description = "静态字段",
+        aliases = {"-s"},
+        serializedName = "static"
+    )
     private boolean isStatic;
 
     // ★ 复杂字段: 由customParse()处理!

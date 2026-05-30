@@ -21,7 +21,7 @@ import com.justnothing.javainterpreter.preprocessor.Preprocessor;
 import com.justnothing.javainterpreter.preprocessor.PreprocessorException;
 
 public class REPL {
-    
+
     public static void main(String[] args) {
         ExecutionContext context = new ExecutionContext(REPL.class.getClassLoader());
         ParseContext parseContext = new ParseContext();
@@ -259,7 +259,7 @@ public class REPL {
                 System.out.println("出错的AST:");
                 System.out.println(e.getNode().formatString());
             }
-            e.printStackTrace();
+            e.printStackTrace(System.out);
         } catch (PreprocessorException e) {
             System.out.println("预处理器错误: " + e.getMessage());
         }
@@ -313,10 +313,10 @@ public class REPL {
             System.out.println("解析错误: " + e.getMessage());
         } catch (EvaluationException e) {
             System.out.println("执行错误: " + e.getMessage());
-            e.printStackTrace();
+            e.printStackTrace(System.out);
         } catch (Exception e) {
             System.out.println("错误: " + e.getMessage());
-            e.printStackTrace();
+            e.printStackTrace(System.out);
         }
         
     }

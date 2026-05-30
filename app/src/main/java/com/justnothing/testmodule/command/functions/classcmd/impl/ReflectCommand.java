@@ -1,5 +1,6 @@
 package com.justnothing.testmodule.command.functions.classcmd.impl;
 
+import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.base.command.SubCommandInfo;
 import com.justnothing.testmodule.command.functions.classcmd.AbstractClassCommand;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandContext;
@@ -58,13 +59,7 @@ public class ReflectCommand extends AbstractClassCommand<ReflectClassRequest, Re
         String memberName = request.getMemberName();
 
         if (className == null || type == null || memberName == null) {
-            CommandExceptionHandler.handleException(
-                "class reflect",
-                new IllegalArgumentException("参数不足, 需要至少3个参数: class reflect <class> <type> <name> [options]"),
-                context.execContext(),
-                "参数错误"
-            );
-            return null;
+            throw new IllegalCommandLineArgumentException("参数不足, 需要至少3个参数: class reflect <class> <type> <name> [options]");
         }
 
         ReflectOperationResult result = new ReflectOperationResult();
@@ -86,15 +81,7 @@ public class ReflectCommand extends AbstractClassCommand<ReflectClassRequest, Re
             case "method" -> handleReflectMethod(targetClass, memberName, methodParams, accessSuper, accessInterfaces, rawOutput, context, result);
             case "constructor" -> handleReflectConstructor(targetClass, methodParams, rawOutput, context, result);
             case "static" -> handleReflectStatic(targetClass, memberName, valueToSet, rawOutput, context, result);
-            default -> {
-                CommandExceptionHandler.handleException(
-                    "class reflect",
-                    new IllegalArgumentException("未知类型: " + type),
-                    context.execContext(),
-                    "参数错误"
-                );
-                result.setSuccess(false);
-            }
+            default -> throw new IllegalCommandLineArgumentException("未知类型: " + type);
         }
         return result;
     }
@@ -238,7 +225,7 @@ public class ReflectCommand extends AbstractClassCommand<ReflectClassRequest, Re
             context.execContext().println(context.formatValue(instance, rawOutput), Colors.LIGHT_GREEN);
 
             result.setValue(instance);
-            result.setValueType(instance != null ? instance.getClass().getName() : null);
+            result.setValueType(instance.getClass().getName());
 
         } catch (Exception e) {
             CommandExceptionHandler.handleException("class reflect constructor", e, context.execContext(), "创建实例失败");

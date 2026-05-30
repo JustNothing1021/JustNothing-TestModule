@@ -1,16 +1,15 @@
 package com.justnothing.testmodule.command.functions.packages;
 
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 import com.justnothing.testmodule.command.base.protocol.CommandResult;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class PackagesResult extends CommandResult {
 
+    @Expose @SerializedName("packages")
     private List<String> packages;
 
     public PackagesResult() {
@@ -27,30 +26,5 @@ public class PackagesResult extends CommandResult {
 
     public void setPackages(List<String> packages) {
         this.packages = packages;
-    }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        if (packages != null) {
-            JSONArray arr = new JSONArray();
-            for (String pkg : packages) {
-                arr.put(pkg);
-            }
-            obj.put("packages", arr);
-        }
-        return obj;
-    }
-
-    @Override
-    public void fromJson(JSONObject obj) throws JSONException {
-        super.fromJson(obj);
-        if (obj.has("packages")) {
-            JSONArray arr = obj.getJSONArray("packages");
-            packages = new ArrayList<>();
-            for (int i = 0; i < arr.length(); i++) {
-                packages.add(arr.getString(i));
-            }
-        }
     }
 }

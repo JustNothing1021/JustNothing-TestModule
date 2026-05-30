@@ -1,11 +1,8 @@
 package com.justnothing.testmodule.command.functions.classcmd.request;
 
-import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
-import com.justnothing.testmodule.command.base.parser.FlagParam;
-import com.justnothing.testmodule.command.base.parser.PositionalParam;
-import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
-import com.justnothing.testmodule.command.base.command.SubCommand;
+import com.justnothing.testmodule.command.base.command.CmdParam;
 import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
+import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandRequest;
 import com.justnothing.testmodule.command.utils.ParamParser;
 import com.justnothing.testmodule.command.utils.ParamStringUtils;
@@ -13,24 +10,38 @@ import com.justnothing.testmodule.command.utils.ParamStringUtils;
 import java.util.ArrayList;
 import java.util.List;
 
-@SerializeKeyName("InvokeConstructor")
-@SubCommand("constructor")
-@AutoSerializable
+@SerializeKeyName("class:constructor")
 public class InvokeConstructorRequest extends ClassCommandRequest {
 
-    @PositionalParam(order = 1, name = "类名", required = true)
+    @CmdParam(
+        name = "--class",
+        description = "类名",
+        required = true,
+        position = 1,
+        serializedName = "className"
+    )
     private String className;
 
     private String signature;
 
-    @PositionalParam(order = 2, name = "构造函数参数", required = false, varArgs = true)
+    @CmdParam(
+        name = "--params",
+        description = "构造函数参数",
+        position = 2,
+        serializedName = "paramsRaw"
+    )
     private String paramsRaw;
 
     private List<String> params;
 
     private List<String> paramTypes;
 
-    @FlagParam(names = {"-f", "--free"}, description = "自由模式（使用表达式语法）")
+    @CmdParam(
+        name = "--free",
+        description = "自由模式（使用表达式语法）",
+        aliases = {"-f"},
+        serializedName = "freeMode"
+    )
     private boolean freeMode = false;
     
     public InvokeConstructorRequest() {

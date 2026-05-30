@@ -1,5 +1,7 @@
 package com.justnothing.testmodule.command.functions.classcmd.model;
 
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
 import com.justnothing.testmodule.command.base.protocol.ResultField;
 import com.justnothing.testmodule.command.base.protocol.ValueSupplier;
@@ -15,42 +17,55 @@ import org.json.JSONObject;
 @AutoSerializable
 public class ClassInfo {
 
+    @Expose @SerializedName("name")
     @ResultField(name = "name", description = "类名", required = true)
     private String name;
 
+    @Expose @SerializedName("superClass")
     @ResultField(name = "superClass", description = "父类", defaultValue = ValueSupplier.EmptyStringSupplier.class)
     private String superClass;
 
+    @Expose @SerializedName("interfaces")
     @ResultField(name = "interfaces", description = "接口列表")
     private List<String> interfaces;
 
+    @Expose @SerializedName("methods")
     @ResultField(name = "methods", description = "方法列表")
     private List<MethodInfo> methods;
 
+    @Expose @SerializedName("constructors")
     @ResultField(name = "constructors", description = "构造函数列表")
     private List<MethodInfo> constructors;
 
+    @Expose @SerializedName("fields")
     @ResultField(name = "fields", description = "字段列表")
     private List<FieldInfo> fields;
 
+    @Expose @SerializedName("modifiers")
     @ResultField(name = "modifiers", description = "修饰符", defaultValue = ValueSupplier.ZeroSupplier.class)
     private int modifiers;
 
+    @Expose @SerializedName("classLoader")
     @ResultField(name = "classLoader", description = "类加载器", defaultValue = ValueSupplier.EmptyStringSupplier.class)
     private String classLoader;
 
+    @Expose @SerializedName("isInterface")
     @ResultField(name = "isInterface", description = "是否为接口", defaultValue = ValueSupplier.FalseSupplier.class)
     private boolean isInterface;
 
+    @Expose @SerializedName("isAnnotation")
     @ResultField(name = "isAnnotation", description = "是否为注解", defaultValue = ValueSupplier.FalseSupplier.class)
     private boolean isAnnotation;
 
+    @Expose @SerializedName("isEnum")
     @ResultField(name = "isEnum", description = "是否为枚举", defaultValue = ValueSupplier.FalseSupplier.class)
     private boolean isEnum;
 
+    @Expose @SerializedName("isAbstract")
     @ResultField(name = "isAbstract", description = "是否为抽象类", defaultValue = ValueSupplier.FalseSupplier.class)
     private boolean isAbstract;
 
+    @Expose @SerializedName("isFinal")
     @ResultField(name = "isFinal", description = "是否为final类", defaultValue = ValueSupplier.FalseSupplier.class)
     private boolean isFinal;
     

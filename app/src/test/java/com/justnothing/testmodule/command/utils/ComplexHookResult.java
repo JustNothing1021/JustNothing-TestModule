@@ -1,22 +1,28 @@
 package com.justnothing.testmodule.command.utils;
 
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
 import com.justnothing.testmodule.command.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@SerializeKeyName("ComplexHookResult")
 @AutoSerializable
 public class ComplexHookResult extends CommandResult {
 
+    @Expose @SerializedName("hookId")
     private String hookId;
+
+    @Expose @SerializedName("hookedClasses")
     private List<String> hookedClasses;
+
+    @Expose @SerializedName("statistics")
     private Map<String, Object> statistics;
+
+    @Expose @SerializedName("originalRequest")
     private ComplexHookRequest originalRequest;
 
     public String getHookId() { return hookId; }
@@ -33,32 +39,6 @@ public class ComplexHookResult extends CommandResult {
     public String getResultType() {
         return "complex-hook";
     }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject json = super.toJson();
-        if (hookId != null) json.put("hookId", hookId);
-        
-        if (hookedClasses != null && !hookedClasses.isEmpty()) {
-            org.json.JSONArray arr = new org.json.JSONArray();
-            for (String cls : hookedClasses) {
-                arr.put(cls);
-            }
-            json.put("hookedClasses", arr);
-        }
-        
-        if (statistics != null && !statistics.isEmpty()) {
-            JSONObject statsObj = new JSONObject(statistics);
-            json.put("statistics", statsObj);
-        }
-        
-        if (originalRequest != null) {
-            json.put("originalRequest", originalRequest.toJson());
-        }
-        
-        return json;
-    }
-
 
     @Override
     public boolean equals(Object obj) {

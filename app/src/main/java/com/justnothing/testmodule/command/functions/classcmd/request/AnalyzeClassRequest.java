@@ -1,53 +1,104 @@
 package com.justnothing.testmodule.command.functions.classcmd.request;
 
-import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
-import com.justnothing.testmodule.command.base.parser.FlagParam;
-import com.justnothing.testmodule.command.base.parser.PositionalParam;
-import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
-import com.justnothing.testmodule.command.base.command.SubCommand;
+import com.justnothing.testmodule.command.base.command.CmdParam;
 import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
+import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
 import com.justnothing.testmodule.command.utils.ParamParser;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandRequest;
 
-@SerializeKeyName("AnalyzeClass")
-@SubCommand("analyze")
-@AutoSerializable
+@SerializeKeyName("class:analyze")
 public class AnalyzeClassRequest extends ClassCommandRequest {
 
-    @PositionalParam(order = 1, name = "类名", required = true)
+    @CmdParam(
+        name = "--class",
+        description = "类名",
+        position = 1,
+        serializedName = "className"
+    )
     private String className;
 
-    @FlagParam(names = {"-f", "--fields"}, description = "显示字段", defaultValue = true)
+    @CmdParam(
+        name = "--fields",
+        description = "显示字段",
+        aliases = {"-f"},
+        serializedName = "showFields"
+    )
     private boolean showFields = true;
 
-    @FlagParam(names = {"-m", "--methods"}, description = "显示方法", defaultValue = true)
+    @CmdParam(
+        name = "--methods",
+        description = "显示方法",
+        aliases = {"-m"},
+        serializedName = "showMethods"
+    )
     private boolean showMethods = true;
 
-    @FlagParam(names = {"-c", "--constructors"}, description = "显示构造函数", defaultValue = true)
+    @CmdParam(
+        name = "--constructors",
+        description = "显示构造函数",
+        aliases = {"-c"},
+        serializedName = "showConstructors"
+    )
     private boolean showConstructors = true;
 
-    @FlagParam(names = {"-i", "--interfaces"}, description = "显示实现的接口", defaultValue = true)
+    @CmdParam(
+        name = "--interfaces",
+        description = "显示实现的接口",
+        aliases = {"-i"},
+        serializedName = "showInterfaces"
+    )
     private boolean showInterfaces = true;
 
-    @FlagParam(names = {"-s", "--super"}, description = "显示父类信息", defaultValue = true)
+    @CmdParam(
+        name = "--super",
+        description = "显示父类信息",
+        aliases = {"-s"},
+        serializedName = "showSuper"
+    )
     private boolean showSuper = true;
 
-    @FlagParam(names = {"--modifiers"}, description = "显示修饰符信息", defaultValue = true)
+    @CmdParam(
+        name = "--modifiers",
+        description = "显示修饰符信息",
+        serializedName = "showModifiers"
+    )
     private boolean showModifiers = true;
 
-    @FlagParam(names = {"-a", "--all"}, description = "显示所有信息 (默认)", defaultValue = true)
+    @CmdParam(
+        name = "--all",
+        description = "显示所有信息 (默认)",
+        aliases = {"-a"},
+        serializedName = "showAll"
+    )
     private boolean showAll = true;
 
-    @FlagParam(names = {"-v", "--verbose"}, description = "显示详细信息")
+    @CmdParam(
+        name = "--verbose",
+        description = "显示详细信息",
+        aliases = {"-v"},
+        serializedName = "verbose"
+    )
     private boolean isVerbose = false;
 
-    @FlagParam(names = {"--hierarchy"}, description = "显示继承层次", defaultValue = true)
+    @CmdParam(
+        name = "--hierarchy",
+        description = "显示继承层次",
+        serializedName = "showHierarchy"
+    )
     private boolean showHierarchy = true;
 
-    @FlagParam(names = {"--stats"}, description = "显示统计信息", defaultValue = true)
+    @CmdParam(
+        name = "--stats",
+        description = "显示统计信息",
+        serializedName = "showStats"
+    )
     private boolean showStats = true;
 
-    @FlagParam(names = {"--raw"}, description = "原始输出格式")
+    @CmdParam(
+        name = "--raw",
+        description = "原始输出格式",
+        serializedName = "rawOutput"
+    )
     private boolean rawOutput = false;
 
     public AnalyzeClassRequest() {

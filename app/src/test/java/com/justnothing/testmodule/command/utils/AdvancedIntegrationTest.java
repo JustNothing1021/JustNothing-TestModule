@@ -137,17 +137,24 @@ public class AdvancedIntegrationTest {
         original.setOutputPath("/sdcard/test.log");
         original.setRequestId("req-12345");
 
-        JSONObject json = original.toJson();
-        ComplexHookRequest restored = new ComplexHookRequest();
-        restored.fromJson(json);
+        String jsonStr = original.toJsonString();
+        assertNotNull("toJsonString() should not return null", jsonStr);
+        assertFalse("toJsonString() should not be empty", jsonStr.trim().isEmpty());
 
-        assertEquals("targetClass should survive round-trip", 
+        ComplexHookRequest restored = new ComplexHookRequest();
+        restored.fromJsonString(jsonStr);
+
+        assertNotNull("targetClass should survive round-trip", restored.getTargetClass());
+        assertEquals("targetClass should survive round-trip",
                      original.getTargetClass(), restored.getTargetClass());
-        assertEquals("targetMethod should survive round-trip", 
+        assertNotNull("targetMethod should survive round-trip", restored.getTargetMethod());
+        assertEquals("targetMethod should survive round-trip",
                      original.getTargetMethod(), restored.getTargetMethod());
-        assertEquals("hookType should survive round-trip", 
+        assertNotNull("hookType should survive round-trip", restored.getHookType());
+        assertEquals("hookType should survive round-trip",
                      original.getHookType(), restored.getHookType());
-        assertEquals("requestId should survive round-trip", 
+        assertNotNull("requestId should survive round-trip", restored.getRequestId());
+        assertEquals("requestId should survive round-trip",
                      original.getRequestId(), restored.getRequestId());
     }
 
@@ -161,9 +168,13 @@ public class AdvancedIntegrationTest {
         original.setTimeout(9999);
         original.setMaxRetries(42);
 
-        JSONObject json = original.toJson();
+        String jsonStr = original.toJsonString();
+        assertNotNull("toJsonString() should not return null", jsonStr);
+        assertFalse("toJsonString() should not be empty", jsonStr.trim().isEmpty());
+        System.out.println("Boolean/Int JSON: " + jsonStr);
+
         ComplexHookRequest restored = new ComplexHookRequest();
-        restored.fromJson(json);
+        restored.fromJsonString(jsonStr);
 
         assertTrue("debugMode boolean should survive JSON", restored.isDebugMode());
         assertTrue("threadSafe boolean should survive JSON", restored.isThreadSafe());
@@ -195,20 +206,25 @@ public class AdvancedIntegrationTest {
         original.setDescription("Test with \"quotes\" and 'apostrophes' & <html> tags");
         original.setTags("tag1,tag2,tag with spaces,tag=equals");
 
-        JSONObject json = original.toJson();
-        String jsonString = json.toString();
-        System.out.println("JSON output: " + jsonString);
+        String jsonStr = original.toJsonString();
+        assertNotNull("toJsonString() should not return null", jsonStr);
+        assertFalse("toJsonString() should not be empty", jsonStr.trim().isEmpty());
+        System.out.println("JSON output: " + jsonStr);
 
         ComplexHookRequest restored = new ComplexHookRequest();
-        restored.fromJson(json);
+        restored.fromJsonString(jsonStr);
 
-        assertEquals("Special chars in targetClass should survive", 
+        assertNotNull("targetClass should not be null after round-trip", restored.getTargetClass());
+        assertEquals("Special chars in targetClass should survive",
                      original.getTargetClass(), restored.getTargetClass());
-        assertEquals("Special chars in method name should survive", 
+        assertNotNull("targetMethod should not be null after round-trip", restored.getTargetMethod());
+        assertEquals("Special chars in method name should survive",
                      original.getTargetMethod(), restored.getTargetMethod());
-        assertEquals("Special chars in description should survive", 
+        assertNotNull("description should not be null after round-trip", restored.getDescription());
+        assertEquals("Special chars in description should survive",
                      original.getDescription(), restored.getDescription());
-        assertEquals("Special chars in tags should survive", 
+        assertNotNull("tags should not be null after round-trip", restored.getTags());
+        assertEquals("Special chars in tags should survive",
                      original.getTags(), restored.getTags());
     }
 
@@ -224,11 +240,14 @@ public class AdvancedIntegrationTest {
         result.setMessage("Hook installed successfully");
         result.setRequestId("req-001");
 
-        JSONObject json = result.toJson();
+        String jsonStr = result.toJsonString();
+        assertNotNull("toJsonString() should not return null", jsonStr);
+        assertFalse("toJsonString() should not be empty", jsonStr.trim().isEmpty());
+        System.out.println("Basic Result JSON: " + jsonStr);
 
-        assertTrue("success field should be true", json.optBoolean("success"));
-        assertEquals("hookId should match", "hook-001", json.optString("hookId"));
-        assertEquals("message should match", "Hook installed successfully", json.optString("message"));
+        assertTrue("JSON should contain success field", jsonStr.contains("\"success\":true"));
+        assertTrue("JSON should contain hookId", jsonStr.contains("\"hookId\":\"hook-001\""));
+        assertTrue("JSON should contain message", jsonStr.contains("\"message\":\"Hook installed successfully\""));
     }
 
     @Test
@@ -241,21 +260,22 @@ public class AdvancedIntegrationTest {
             "com.example.Service"
         ));
 
-        JSONObject json = result.toJson();
-        org.json.JSONArray classesArray = json.optJSONArray("hookedClasses");
+        String jsonStr = result.toJsonString();
+        assertNotNull("toJsonString() should not return null", jsonStr);
+        assertFalse("toJsonString() should not be empty", jsonStr.trim().isEmpty());
+        System.out.println("List Result JSON: " + jsonStr);
 
-        assertNotNull("hookedClasses array should exist", classesArray);
-        assertEquals("Should have 3 hooked classes", 3, classesArray.length());
-        assertEquals("First class should match", "com.example.Activity", classesArray.getString(0));
-        assertEquals("Second class should match", "com.example.Fragment", classesArray.getString(1));
-        assertEquals("Third class should match", "com.example.Service", classesArray.getString(2));
+        assertTrue("JSON should contain hookedClasses array", jsonStr.contains("\"hookedClasses\""));
+        assertTrue("JSON should contain first class", jsonStr.contains("com.example.Activity"));
+        assertTrue("JSON should contain second class", jsonStr.contains("com.example.Fragment"));
+        assertTrue("JSON should contain third class", jsonStr.contains("com.example.Service"));
     }
 
     @Test
     public void testResultSerialization_WithMap() throws JSONException {
         ComplexHookResult result = new ComplexHookResult();
         result.setSuccess(true);
-        
+
         Map<String, Object> stats = new java.util.HashMap<>();
         stats.put("totalHooks", 5);
         stats.put("activeHooks", 3);
@@ -263,14 +283,16 @@ public class AdvancedIntegrationTest {
         stats.put("avgLatency", 15.7);
         result.setStatistics(stats);
 
-        JSONObject json = result.toJson();
-        JSONObject statsJson = json.optJSONObject("statistics");
+        String jsonStr = result.toJsonString();
+        assertNotNull("toJsonString() should not return null", jsonStr);
+        assertFalse("toJsonString() should not be empty", jsonStr.trim().isEmpty());
+        System.out.println("Map Result JSON: " + jsonStr);
 
-        assertNotNull("statistics object should exist", statsJson);
-        assertEquals("totalHooks should match", 5, statsJson.optInt("totalHooks"));
-        assertEquals("activeHooks should match", 3, statsJson.optInt("activeHooks"));
-        assertEquals("memoryUsage should match", "2.5MB", statsJson.optString("memoryUsage"));
-        assertEquals("avgLatency should match (as double)", 15.7, statsJson.optDouble("avgLatency"), 0.01);
+        assertTrue("JSON should contain statistics object", jsonStr.contains("\"statistics\""));
+        assertTrue("JSON should contain totalHooks", jsonStr.contains("\"totalHooks\":5"));
+        assertTrue("JSON should contain activeHooks", jsonStr.contains("\"activeHooks\":3"));
+        assertTrue("JSON should contain memoryUsage", jsonStr.contains("\"memoryUsage\":\"2.5MB\""));
+        assertTrue("JSON should contain avgLatency", jsonStr.contains("\"avgLatency\":15.7"));
     }
 
     @Test
@@ -286,20 +308,23 @@ public class AdvancedIntegrationTest {
         stats.put("count", 10);
         original.setStatistics(stats);
 
-        JSONObject json = original.toJson();
-        System.out.println("Result JSON: " + json.toString(2));
+        String jsonStr = original.toJsonString();
+        assertNotNull("toJsonString() should not return null", jsonStr);
+        assertFalse("toJsonString() should not be empty", jsonStr.trim().isEmpty());
+        System.out.println("Result JSON: " + jsonStr);
 
         ComplexHookResult restored = new ComplexHookResult();
-        restored.fromJson(json);
+        restored.fromJsonString(jsonStr);
 
         assertTrue("success should survive round-trip", restored.isSuccess());
+        assertNotNull("hookId should not be null after round-trip", restored.getHookId());
         assertEquals("hookId should survive round-trip", original.getHookId(), restored.getHookId());
         assertEquals("message should survive round-trip", original.getMessage(), restored.getMessage());
         assertNotNull("hookedClasses should not be null after round-trip", restored.getHookedClasses());
-        assertEquals("hookedClasses size should match", 
+        assertEquals("hookedClasses size should match",
                      original.getHookedClasses().size(), restored.getHookedClasses().size());
         assertNotNull("statistics should not be null after round-trip", restored.getStatistics());
-        assertEquals("statistics count should match", 10, restored.getStatistics().get("count"));
+        assertEquals("statistics count should match", 10, ((Number) restored.getStatistics().get("count")).intValue());
     }
 
     // ============================================
@@ -312,19 +337,22 @@ public class AdvancedIntegrationTest {
         String[] cliArgs = {"com.example.App", "onCreate"};
 
         ComplexHookRequest request = ParamParser.parse(ComplexHookRequest.class, cliArgs);
-        
+
         assertEquals("CLI parsing - targetClass", "com.example.App", request.getTargetClass());
         assertEquals("CLI parsing - targetMethod", "onCreate", request.getTargetMethod());
 
         // Step 2: Serialize Request to JSON
-        JSONObject requestJson = request.toJson();
-        System.out.println("Request JSON: " + requestJson.toString(2));
+        String requestJsonStr = request.toJsonString();
+        assertNotNull("Request toJsonString() should not return null", requestJsonStr);
+        assertFalse("Request toJsonString() should not be empty", requestJsonStr.trim().isEmpty());
+        System.out.println("Request JSON: " + requestJsonStr);
 
         // Step 3: Deserialize Request from JSON (simulating server receive)
         ComplexHookRequest serverRequest = new ComplexHookRequest();
-        serverRequest.fromJson(requestJson);
-        
-        assertEquals("Server deserialization - targetClass", 
+        serverRequest.fromJsonString(requestJsonStr);
+
+        assertNotNull("Server deserialization - targetClass should not be null", serverRequest.getTargetClass());
+        assertEquals("Server deserialization - targetClass",
                      request.getTargetClass(), serverRequest.getTargetClass());
 
         // Step 4: Create Result and serialize to JSON
@@ -333,14 +361,16 @@ public class AdvancedIntegrationTest {
         result.setHookId("auto-gen-" + System.currentTimeMillis());
         result.setMessage("Successfully hooked " + serverRequest.getTargetClass() + "." + serverRequest.getTargetMethod());
         result.setOriginalRequest(serverRequest);
-        
-        JSONObject resultJson = result.toJson();
-        System.out.println("Result JSON: " + resultJson.toString(2));
+
+        String resultJsonStr = result.toJsonString();
+        assertNotNull("Result toJsonString() should not return null", resultJsonStr);
+        assertFalse("Result toJsonString() should not be empty", resultJsonStr.trim().isEmpty());
+        System.out.println("Result JSON: " + resultJsonStr);
 
         // Step 5: Deserialize Result from JSON (simulating client receive)
         ComplexHookResult clientResult = new ComplexHookResult();
-        clientResult.fromJson(resultJson);
-        
+        clientResult.fromJsonString(resultJsonStr);
+
         assertTrue("Client should see success", clientResult.isSuccess());
         assertNotNull("Client should have hookId", clientResult.getHookId());
         assertNotNull("Client should have message", clientResult.getMessage());
@@ -379,9 +409,9 @@ public class AdvancedIntegrationTest {
         assertEquals("/sdcard/network_hooks.log", request.getOutputPath());
 
         // Step 2: Request -> JSON -> Server Request
-        JSONObject reqJson = request.toJson();
+        String reqJsonStr = request.toJsonString();
         ComplexHookRequest serverReq = new ComplexHookRequest();
-        serverReq.fromJson(reqJson);
+        serverReq.fromJsonString(reqJsonStr);
 
         // Step 3: Create complex Result
         ComplexHookResult result = new ComplexHookResult();
@@ -402,14 +432,16 @@ public class AdvancedIntegrationTest {
         result.setOriginalRequest(serverReq);
 
         // Step 4: Result -> JSON -> Client Result
-        JSONObject resJson = result.toJson();
+        String resJsonStr = result.toJsonString();
+        assertNotNull("Result toJsonString() should not return null", resJsonStr);
+        assertFalse("Request jsonStr should not be empty", reqJsonStr.trim().isEmpty());
         System.out.println("\n=== Complete End-to-End Test ===");
         System.out.println("Request (from CLI): " + Arrays.toString(cliArgs));
-        System.out.println("Serialized Request JSON length: " + reqJson.toString().length());
-        System.out.println("Serialized Result JSON:\n" + resJson.toString(2));
+        System.out.println("Serialized Request JSON length: " + reqJsonStr.length());
+        System.out.println("Serialized Result JSON:\n" + resJsonStr);
 
         ComplexHookResult clientRes = new ComplexHookResult();
-        clientRes.fromJson(resJson);
+        clientRes.fromJsonString(resJsonStr);
 
         // Assertions for complete data integrity
         assertTrue(clientRes.isSuccess());
@@ -418,7 +450,7 @@ public class AdvancedIntegrationTest {
         assertEquals(3, clientRes.getHookedClasses().size());
         assertTrue(clientRes.getHookedClasses().contains("com.example.network.HttpClient"));
         assertNotNull(clientRes.getStatistics());
-        assertEquals(3, clientRes.getStatistics().get("hooksInstalled"));
+        assertEquals(3, ((Number) clientRes.getStatistics().get("hooksInstalled")).intValue());
         assertNotNull(clientRes.getOriginalRequest());
         assertEquals("com.example.network.HttpClient", clientRes.getOriginalRequest().getTargetClass());
         assertEquals("sendRequest", clientRes.getOriginalRequest().getTargetMethod());
@@ -433,26 +465,30 @@ public class AdvancedIntegrationTest {
     public void testEndToEnd_ErrorScenario() throws Exception {
         // Simulate error case: invalid target class
         String[] cliArgs = {"Invalid.Class.Name", "nonExistentMethod"};
-        
+
         try {
             ComplexHookRequest request = ParamParser.parse(ComplexHookRequest.class, cliArgs);
-            
+
             // Even though parsing succeeds, the result indicates failure
             ComplexHookResult result = new ComplexHookResult();
             result.setSuccess(false);
             result.setMessage("Failed to hook: Class Invalid.Class.Name not found");
             result.setOriginalRequest(request);
-            
-            JSONObject resultJson = result.toJson();
+
+            String resultJsonStr = result.toJsonString();
+            assertNotNull("Error Result toJsonString() should not return null", resultJsonStr);
+            assertFalse("Error Result jsonStr should not be empty", resultJsonStr.trim().isEmpty());
+            System.out.println("Error Result JSON: " + resultJsonStr);
+
             ComplexHookResult clientResult = new ComplexHookResult();
-            clientResult.fromJson(resultJson);
-            
+            clientResult.fromJsonString(resultJsonStr);
+
             assertFalse("Error scenario: success should be false", clientResult.isSuccess());
             assertTrue("Error scenario: message should contain error info",
                       clientResult.getMessage().contains("Failed to hook"));
             assertNotNull("Error scenario: should still have originalRequest for debugging",
                          clientResult.getOriginalRequest());
-            
+
         } catch (Exception e) {
             fail("Parsing should succeed even for invalid class names at this stage");
         }
@@ -483,20 +519,22 @@ public class AdvancedIntegrationTest {
         result.setStatistics(bigStats);
         
         long startTime = System.currentTimeMillis();
-        JSONObject json = result.toJson();
+        String jsonStr = result.toJsonString();
+        assertNotNull("toJsonString() should not return null", jsonStr);
+        assertFalse("jsonStr should not be empty", jsonStr.trim().isEmpty());
         long serializationTime = System.currentTimeMillis() - startTime;
-        
+
         System.out.println("\n=== Performance Test ===");
         System.out.println("Dataset size:");
         System.out.println("  - Description length: " + longDescription.length() + " chars");
         System.out.println("  - Hooked classes: " + manyClasses.size());
         System.out.println("  - Statistics entries: " + bigStats.size());
         System.out.println("Serialization time: " + serializationTime + "ms");
-        System.out.println("JSON string length: " + json.toString().length() + " chars");
+        System.out.println("JSON string length: " + jsonStr.length() + " chars");
         
         startTime = System.currentTimeMillis();
         ComplexHookResult restored = new ComplexHookResult();
-        restored.fromJson(json);
+        restored.fromJsonString(jsonStr);
         long deserializationTime = System.currentTimeMillis() - startTime;
         
         System.out.println("Deserialization time: " + deserializationTime + "ms");

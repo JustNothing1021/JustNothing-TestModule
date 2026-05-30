@@ -20,11 +20,11 @@ public class SocketServer {
     private final SocketClientHandler clientHandler;
     private ServerSocket socketServer;
     
-    // ✅ 优化：使用有界线程池替代 CachedThreadPool（防止线程爆炸！）
-    private static final int MAX_SOCKET_THREADS = 4;  // 最大同时处理4个连接
+    //使用有界线程池替代 CachedThreadPool（防止线程爆炸！）
+    private static final int MAX_SOCKET_THREADS = 5;  // 最大同时处理5个连接
     private static final int SOCKET_QUEUE_CAPACITY = 10;  // 等待队列容量
     private final ExecutorService socketExecutor = new ThreadPoolExecutor(
-        2,                                              // 核心线程数
+        3,                                              // 核心线程数
         MAX_SOCKET_THREADS,                             // 最大线程数
         60L, TimeUnit.SECONDS,                          // 空闲线程存活时间
         new LinkedBlockingQueue<>(SOCKET_QUEUE_CAPACITY),// 有界工作队列

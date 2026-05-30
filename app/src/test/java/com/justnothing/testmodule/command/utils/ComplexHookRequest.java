@@ -1,5 +1,7 @@
 package com.justnothing.testmodule.command.utils;
 
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
 import com.justnothing.testmodule.command.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.base.parser.FlagParam;
@@ -8,42 +10,49 @@ import com.justnothing.testmodule.command.base.parser.KeywordParam;
 import com.justnothing.testmodule.command.base.parser.PositionalParam;
 import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import java.util.Objects;
 
 @SerializeKeyName("ComplexHook")
 @AutoSerializable
 public class ComplexHookRequest extends CommandRequest {
 
+    @Expose @SerializedName("targetClass")
     @PositionalParam(order = 1, name = "目标类名")
     private String targetClass;
 
+    @Expose @SerializedName("targetMethod")
     @PositionalParam(order = 2, name = "目标方法名")
     private String targetMethod;
 
+    @Expose @SerializedName("hookType")
     @PositionalParam(order = 3, name = "Hook 类型", required = false, defaultValue = "before")
     private String hookType;
 
+    @Expose @SerializedName("outputPath")
     @PositionalParam(order = 4, name = "输出文件路径", required = false, varArgs = true)
     private String outputPath;
 
+    @Expose @SerializedName("debugMode")
     @FlagParam(names = {"-d", "--debug"}, description = "启用调试模式")
     private boolean debugMode;
 
+    @Expose @SerializedName("threadSafe")
     @FlagParam(names = {"-t", "--thread-safe"}, description = "线程安全模式")
     private boolean threadSafe;
 
+    @Expose @SerializedName("timeout")
     @KeywordParam(name = "timeout", description = "超时时间(毫秒)")
     private int timeout;
 
+    @Expose @SerializedName("maxRetries")
     @KeywordParam(name = "max-retries", description = "最大重试次数")
     private int maxRetries;
 
+    @Expose @SerializedName("description")
     @KeywordParam(name = "description", description = "Hook 描述信息")
     private String description;
 
+    @Expose @SerializedName("tags")
     @KeywordParam(name = "tags", description = "标签列表(逗号分隔)")
     private String tags;
 
@@ -73,8 +82,6 @@ public class ComplexHookRequest extends CommandRequest {
     public String getCommandType() {
         return "complex-hook";
     }
-
-
 
     @Override
     public CommandRequest fromCommandLine(String[] args) throws IllegalCommandLineArgumentException {

@@ -15,11 +15,11 @@ import java.util.Set;
  */
 public enum TokenType {
     
-    KEYWORD("keyword"),
+    // KEYWORD("keyword"),
     IDENTIFIER("identifier"),
-    LITERAL("literal"),
-    OPERATOR("operator"),
-    DELIMITER("delimiter"),
+    // LITERAL("literal"),
+    // OPERATOR("operator"),
+    // DELIMITER("delimiter"),
     
     KEYWORD_INT("int"),
     KEYWORD_LONG("long"),
@@ -70,6 +70,7 @@ public enum TokenType {
     KEYWORD_THIS("this"),
     KEYWORD_ASYNC("async"),
     KEYWORD_AWAIT("await"),
+    KEYWORD_USING("using"),
     
     OPERATOR_ASSIGN("="),
     OPERATOR_PLUS_ASSIGN("+="),
@@ -83,7 +84,6 @@ public enum TokenType {
     OPERATOR_LEFT_SHIFT_ASSIGN("<<="),
     OPERATOR_RIGHT_SHIFT_ASSIGN(">>="),
     OPERATOR_UNSIGNED_RIGHT_SHIFT_ASSIGN(">>>="),
-    
     OPERATOR_EQUAL("=="),
     OPERATOR_NOT_EQUAL("!="),
     OPERATOR_LESS_THAN("<"),
@@ -91,36 +91,29 @@ public enum TokenType {
     OPERATOR_GREATER_THAN(">"),
     OPERATOR_GREATER_THAN_OR_EQUAL(">="),
     OPERATOR_SPACESHIP("<=>"),
-    
     OPERATOR_LOGICAL_AND("&&"),
     OPERATOR_LOGICAL_OR("||"),
     OPERATOR_LOGICAL_NOT("!"),
     OPERATOR_NOT_NULL("!!"),
-    
     OPERATOR_BITWISE_AND("&"),
     OPERATOR_BITWISE_OR("|"),
     OPERATOR_BITWISE_XOR("^"),
     OPERATOR_BITWISE_NOT("~"),
-    
     OPERATOR_LEFT_SHIFT("<<"),
     OPERATOR_RIGHT_SHIFT(">>"),
     OPERATOR_UNSIGNED_RIGHT_SHIFT(">>>"),
-    
     OPERATOR_PLUS("+"),
     OPERATOR_MINUS("-"),
     OPERATOR_MULTIPLY("*"),
     OPERATOR_DIVIDE("/"),
     OPERATOR_MODULO("%"),
-    
     OPERATOR_POWER("**"),
     OPERATOR_INT_DIVIDE("//"),
     OPERATOR_MATH_MODULO("%%"),
     OPERATOR_RANGE(".."),
     OPERATOR_RANGE_EXCLUSIVE("..<"),
-    
     OPERATOR_INCREMENT("++"),
     OPERATOR_DECREMENT("--"),
-    
     OPERATOR_DOT("."),
     OPERATOR_SAFE_DOT("?."),
     OPERATOR_DOUBLE_COLON("::"),
@@ -131,20 +124,18 @@ public enum TokenType {
     OPERATOR_NULL_COALESCING_ASSIGN("??="),
     OPERATOR_NULL_COALESCING("??"),
     OPERATOR_ELVIS("?:"),
+    OPERATOR_PIPELINE("|>"),
     
     DELIMITER_SEMICOLON(";"),
     DELIMITER_COMMA(","),
     DELIMITER_DOT("."),
-    
     DELIMITER_LEFT_PAREN("("),
     DELIMITER_RIGHT_PAREN(")"),
     DELIMITER_LEFT_BRACE("{"),
     DELIMITER_RIGHT_BRACE("}"),
     DELIMITER_LEFT_BRACKET("["),
     DELIMITER_RIGHT_BRACKET("]"),
-    
     DELIMITER_ARROW("->"),
-    OPERATOR_PIPELINE("|>"),
     DELIMITER_AT("@"),
     
     LITERAL_INTEGER("integer literal"),
@@ -195,7 +186,7 @@ public enum TokenType {
             "try", "catch", "finally", "throw", "throws", "import", "delete",
             "class", "interface", "extends", "implements",
             "public", "private", "protected", "static", "abstract", "native", "synchronized",
-            "super", "this", "async", "await"
+            "super", "this", "async", "await", "using"
     ));
     
     public static boolean isKeyword(String text) {
@@ -253,6 +244,7 @@ public enum TokenType {
             case "this" -> KEYWORD_THIS;
             case "async" -> KEYWORD_ASYNC;
             case "await" -> KEYWORD_AWAIT;
+            case "using" -> KEYWORD_USING;
             default -> IDENTIFIER;
         };
     }

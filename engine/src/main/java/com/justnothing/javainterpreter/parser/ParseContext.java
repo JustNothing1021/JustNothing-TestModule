@@ -5,13 +5,16 @@ import com.justnothing.javainterpreter.api.IClassFinder;
 import com.justnothing.javainterpreter.api.ClassResolver;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class ParseContext {
     
     private final List<String> imports;
+    private final Map<String, String> typeAliases;
     private final Set<String> declaredClassNames;
     private ClassLoader classLoader;
     private IClassFinder classFinder;
@@ -26,6 +29,7 @@ public class ParseContext {
     
     public ParseContext(ClassLoader classLoader) {
         this.imports = new ArrayList<>();
+        this.typeAliases = new HashMap<>();
         this.declaredClassNames = new HashSet<>();
         this.classLoader = classLoader != null ? classLoader : Thread.currentThread().getContextClassLoader();
         this.classFinder = new DefaultClassFinder();
@@ -75,6 +79,26 @@ public class ParseContext {
 
     public void addImports(List<String> imports) {
         imports.forEach(this::addImport);
+    }
+
+    public Map<String, String> getTypeAliases() {
+        return typeAliases;
+    }
+
+    public void addTypeAlias(String aliasName, String fullClassName) {
+        typeAliases.put(aliasName, fullClassName);
+    }
+
+    public String resolveTypeAlias(String aliasName) {
+        String resolved = typeAliases.get(aliasName);
+        if (resolved != null && typeAliases.containsKey(resolved)) {
+            return resolveTypeAlias(resolved);
+        }
+        return resolved;
+    }
+
+    public boolean hasTypeAlias(String aliasName) {
+        return typeAliases.containsKey(aliasName);
     }
     
     public void declareClass(String className) {
@@ -128,11 +152,15 @@ public class ParseContext {
     }
     
     public Class<?> resolveClass(String className) {
-        return ClassResolver.findClassWithImports(className, classLoader, imports);
+        String resolved = resolveTypeAlias(className);
+        String actualName = resolved != null ? resolved : className;
+        return ClassResolver.findClassWithImports(actualName, classLoader, imports);
     }
-    
+
     public Class<?> resolveClassOrFail(String className) throws ClassNotFoundException {
-        return ClassResolver.findClassWithImportsOrFail(className, classLoader, imports);
+        String resolved = resolveTypeAlias(className);
+        String actualName = resolved != null ? resolved : className;
+        return ClassResolver.findClassWithImportsOrFail(actualName, classLoader, imports);
     }
 
     public void clearImports() {

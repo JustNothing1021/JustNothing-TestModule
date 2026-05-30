@@ -146,6 +146,10 @@ public abstract class Logger {
         logInternal("DEBUG", str);
     }
 
+    public void debug(String format, Object... args) {
+        logInternal("DEBUG", String.format(format, args));
+    }
+
     public void debug(Throwable th) {
         logThrowable("DEBUG", th);
     }
@@ -157,6 +161,10 @@ public abstract class Logger {
 
     public void info(String str) {
         logInternal("INFO", str);
+    }
+
+    public void info(String format, Object... args) {
+        logInternal("INFO", String.format(format, args));
     }
 
     public void info(Throwable th) {
@@ -173,6 +181,12 @@ public abstract class Logger {
         logInternal("WARN", str);
     }
 
+    public void warn(String format, Object... args) {
+        String message = String.format(format, args);
+        handleWarn(message);
+        logInternal("WARN", message);
+    }
+
     public void warn(Throwable th) {
         handleWarn(th);
         logThrowable("WARN", th);
@@ -187,6 +201,12 @@ public abstract class Logger {
     public void error(String str) {
         handleError(str);
         logInternal("ERROR", str);
+    }
+
+    public void error(String format, Object... args) {
+        String message = String.format(format, args);
+        handleError(message);
+        logInternal("ERROR", message);
     }
 
     public void error(Throwable th) {

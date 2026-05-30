@@ -1,22 +1,26 @@
 package com.justnothing.testmodule.command.functions.memory;
 
-import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 import com.justnothing.testmodule.command.base.protocol.CommandResult;
 import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
 @SerializeKeyName("Gc")
-@AutoSerializable
 public class GcResult extends CommandResult {
 
+    @Expose @SerializedName("beforeUsedMemory")
     private long beforeUsedMemory;
+    @Expose @SerializedName("afterUsedMemory")
     private long afterUsedMemory;
+    @Expose @SerializedName("freedBytes")
     private long freedBytes;
+    @Expose @SerializedName("beforeTotalMemory")
     private long beforeTotalMemory;
+    @Expose @SerializedName("afterTotalMemory")
     private long afterTotalMemory;
+    @Expose @SerializedName("beforeUsagePercent")
     private double beforeUsagePercent;
+    @Expose @SerializedName("afterUsagePercent")
     private double afterUsagePercent;
 
     public GcResult() {
@@ -41,29 +45,4 @@ public class GcResult extends CommandResult {
     public void setBeforeUsagePercent(double beforeUsagePercent) { this.beforeUsagePercent = beforeUsagePercent; }
     public double getAfterUsagePercent() { return afterUsagePercent; }
     public void setAfterUsagePercent(double afterUsagePercent) { this.afterUsagePercent = afterUsagePercent; }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        obj.put("beforeUsedMemory", beforeUsedMemory);
-        obj.put("afterUsedMemory", afterUsedMemory);
-        obj.put("freedBytes", freedBytes);
-        obj.put("beforeTotalMemory", beforeTotalMemory);
-        obj.put("afterTotalMemory", afterTotalMemory);
-        obj.put("beforeUsagePercent", beforeUsagePercent);
-        obj.put("afterUsagePercent", afterUsagePercent);
-        return obj;
-    }
-
-    @Override
-    public void fromJson(JSONObject obj) throws org.json.JSONException {
-        super.fromJson(obj);
-        beforeUsedMemory = obj.optLong("beforeUsedMemory", 0);
-        afterUsedMemory = obj.optLong("afterUsedMemory", 0);
-        freedBytes = obj.optLong("freedBytes", 0);
-        beforeTotalMemory = obj.optLong("beforeTotalMemory", 0);
-        afterTotalMemory = obj.optLong("afterTotalMemory", 0);
-        beforeUsagePercent = obj.optDouble("beforeUsagePercent", 0);
-        afterUsagePercent = obj.optDouble("afterUsagePercent", 0);
-    }
 }

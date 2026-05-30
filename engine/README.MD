@@ -191,6 +191,57 @@ obj.setX(114514);
 obj.getX();      // 114514
 ```
 
+### [17] Using 语法 (类型别名和静态导入)
+
+#### (a) 类型别名
+
+用短名称代替完整的类名，支持嵌套类、接口、链式引用
+
+```java
+using HMap = java.util.HashMap;
+using AList = java.util.ArrayList;
+
+auto map = new HMap();
+auto list = new AList();
+map.put("list", list);
+
+// 支持链式别名（别名引用别名）
+using IntMap = HMap;       // IntMap 等同于 HashMap
+auto m2 = new IntMap();
+
+// 嵌套类
+using Entry = java.util.Map.Entry;
+
+// 接口类型
+using List = java.util.List;
+List ref = new ArrayList();   // 接口引用
+```
+
+#### (b) 静态导入
+
+导入类的静态成员（方法/字段），调用时无需类名前缀
+
+```java
+// 导入 Math 的所有静态方法和字段
+using static java.lang.Math;
+
+max(10, 20);           // 20 (无需 Math.max)
+min(3, 7);             // 3
+abs(-42);              // 42
+sqrt(pow(2, 4));       // 4.0
+PI;                    // 3.14159...
+
+// 导入 Integer
+using static java.lang.Integer;
+parseInt("42");        // 42
+
+// 实用场景：直接使用 System.out
+using static java.lang.System;
+out.println("hello");  // 无需 System.out.println()
+```
+
+> **注意**: `using static` 也支持访问该类的**内部类**，如 `Character.UnicodeBlock.BASIC_LATIN`
+
 ---
 
 ## 内置函数
@@ -334,6 +385,81 @@ delete *;    // 删除所有
 ### (6) 遇到报错不一定是你的问题
 
 可能是解析器不支持这个语法 (
+
+---
+
+## 预处理器指令
+
+类似 C/C++ 预处理器，支持宏定义、条件编译、文件包含等。
+
+### 基本用法
+
+```java
+// 定义简单宏
+#define PI 3.14159
+#define DEBUG
+
+// 定义函数式宏（支持参数）
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+#define LOG(msg) println("[LOG] " + msg)
+
+// 使用宏
+auto r = PI * 2;           // 展开为: 3.14159 * 2
+auto m = MAX(10, 20);      // 展开为: ((10) > (20) ? (10) : (20))
+LOG("hello");              // 展开为: println("[LOG] " + "hello")
+
+// 取消定义
+#undef DEBUG
+
+// 文件包含
+#include "utils.jni"
+#include <stdlib.jni>
+```
+
+### 条件编译
+
+```java
+#define VERSION 2
+#define ANDROID
+
+#ifdef DEBUG
+    println("调试模式");
+#elif VERSION >= 2
+    println("版本 2+");
+#else
+    println("其他版本");
+#endif
+
+#ifndef RELEASE
+    println("非发布版");
+#endif
+
+#if defined(ANDROID) && VERSION >= 2
+    println("Android 平台且版本 >= 2");
+#endif
+```
+
+### 预定义宏
+
+| 宏 | 说明 |
+|---|------|
+| `__FILE__` | 当前文件名 |
+| `__LINE__` | 当前行号 |
+| `__JN__` | 引擎标识，恒定义为 `1` |
+| `true` / `false` | 布尔常量 |
+
+### API 调用
+
+```java
+import com.justnothing.javainterpreter.preprocessor.Preprocessor;
+
+var pp = new Preprocessor();
+pp.addIncludePath("./includes");     // 添加搜索路径
+pp.define("CUSTOM_FLAG", "1");       // 手动定义宏
+String result = pp.process(source);   // 处理源码
+boolean has = pp.isDefined("DEBUG");  // 检查宏是否定义
+pp.clearMacros();                     // 清除所有自定义宏
+```
 
 ---
 

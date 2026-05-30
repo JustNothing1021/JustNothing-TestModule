@@ -45,9 +45,6 @@ public class InteractiveExampleMain extends MainCommand<CommandResult> {
         String password = context.readPassword("请输入密码: ");
         output.println("密码长度: " + password.length() + " 个字符");
         output.println("=== 交互完成 ===");
-        if (shouldReturnStructuredData(context)) {
-            return createSuccessResult("交互式测试命令执行完成");
-        }
-        return null;
+        return createSuccessResult("交互式测试命令执行完成");
     }
 }

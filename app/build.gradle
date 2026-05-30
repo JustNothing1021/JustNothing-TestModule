@@ -35,6 +35,16 @@ android {
 
     }
 
+    packaging {
+        resources {
+            excludes += ['META-INF/DEPENDENCIES', 'META-INF/LICENSE', 'META-INF/LICENSE.txt', 'META-INF/NOTICE', 'META-INF/NOTICE.txt']
+        }
+        jniLibs {
+            useLegacyPackaging = true
+            pickFirsts += ['**/*.so.*']
+        }
+    }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
@@ -73,7 +83,6 @@ android {
     }
 
 
-
     buildToolsVersion '36.1.0'
     ndkVersion '29.0.14206865'
 }
@@ -95,7 +104,14 @@ dependencies {
     implementation libs.cfr
     implementation libs.r8
     implementation libs.mpandroidchart
-    implementation 'org.jline:jline:3.30.3:jdk8'
+    implementation libs.jline.reader
+    implementation libs.jline.terminal
+    implementation libs.jline.terminal.jni
+    implementation libs.jline.native
+    implementation libs.jline.terminal.jna
+    implementation libs.jna
+    implementation libs.jline.console
+    implementation libs.jline.builtins
     implementation project(':engine')
     implementation files("libs/NCW-Logger-1.0.3-hotfix3.jar")
 

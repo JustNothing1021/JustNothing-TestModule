@@ -17,7 +17,6 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.google.android.material.textfield.TextInputEditText;
 import com.justnothing.testmodule.R;
-import com.justnothing.testmodule.command.functions.hook.HookActionRequest;
 import com.justnothing.testmodule.ui.viewmodel.analysis.HookAnalysisViewModel;
 
 import java.util.ArrayList;
@@ -270,7 +269,7 @@ public class HookManagerActivity extends AppCompatActivity {
                 .setTitle(R.string.analysis_hook_confirm_clear_title)
                 .setMessage(R.string.analysis_hook_confirm_clear_msg)
                 .setPositiveButton(R.string.analysis_hook_btn_clear_all, (dialog, which) ->
-                        viewModel.performAction(HookActionRequest.ACTION_CLEAR, null))
+                        viewModel.performAction("clear", null))
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
     }

@@ -114,11 +114,8 @@ public class NativeMain extends MainCommand<NativeResult> {
             }
         }
 
-        if (shouldReturnStructuredData(context)) {
-            NativeResult result = new NativeResult(java.util.UUID.randomUUID().toString());
-            return result;
-        }
-        return null;
+        NativeResult result = new NativeResult(java.util.UUID.randomUUID().toString());
+        return result;
     }
     
     private void handleList(String[] args, boolean verbose, CommandExecutor.CmdExecContext context) {

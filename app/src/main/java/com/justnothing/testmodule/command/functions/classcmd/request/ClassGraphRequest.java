@@ -1,37 +1,50 @@
 package com.justnothing.testmodule.command.functions.classcmd.request;
 
-import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
-import com.justnothing.testmodule.command.base.parser.FlagParam;
-import com.justnothing.testmodule.command.base.parser.KeywordParam;
-import com.justnothing.testmodule.command.base.parser.PositionalParam;
-import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
-import com.justnothing.testmodule.command.base.command.SubCommand;
+import com.justnothing.testmodule.command.base.command.CmdParam;
 import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
+import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
 import com.justnothing.testmodule.command.utils.ParamParser;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandRequest;
 
-@SerializeKeyName("ClassGraph")
-@SubCommand("graph")
-@AutoSerializable
+@SerializeKeyName("class:graph")
 public class ClassGraphRequest extends ClassCommandRequest {
 
-    @PositionalParam(order = 1, name = "类名", required = true)
+    @CmdParam(
+        name = "--class",
+        description = "类名",
+        position = 1,
+        serializedName = "className"
+    )
     private String className;
 
-    @FlagParam(names = {"--no-subclasses", "--hide-subclasses"}, 
-              negated = true,  // ★ 遇到→设为false!
-              description = "隐藏子类")
+    @CmdParam(
+        name = "--no-subclasses",
+        description = "隐藏子类",
+        aliases = {"--hide-subclasses"},
+        serializedName = "showSubclasses"
+    )
     private boolean showSubclasses = true;
 
-    @FlagParam(names = {"--no-interfaces", "--hide-interfaces"}, 
-              negated = true,  // ★ 遇到→设为false!
-              description = "隐藏接口")
+    @CmdParam(
+        name = "--no-interfaces",
+        description = "隐藏接口",
+        aliases = {"--hide-interfaces"},
+        serializedName = "showInterfaces"
+    )
     private boolean showInterfaces = true;
 
-    @FlagParam(names = {"--compact"}, description = "紧凑模式")
+    @CmdParam(
+        name = "--compact",
+        description = "紧凑模式",
+        serializedName = "compactMode"
+    )
     private boolean compactMode = false;
 
-    @KeywordParam(name = "depth", description = "最大深度 (支持: --depth=10 或 --depth 10)")
+    @CmdParam(
+        name = "--depth",
+        description = "最大深度 (支持: --depth=10 或 --depth 10)",
+        serializedName = "maxDepth"
+    )
     private int maxDepth = 10;
 
     public ClassGraphRequest() {

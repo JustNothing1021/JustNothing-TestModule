@@ -1,5 +1,6 @@
 package com.justnothing.testmodule.command.functions.classcmd.impl;
 
+import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.base.command.SubCommandInfo;
 import com.justnothing.testmodule.command.functions.classcmd.AbstractClassCommand;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandContext;
@@ -7,7 +8,6 @@ import com.justnothing.testmodule.command.functions.classcmd.request.MethodListR
 import com.justnothing.testmodule.command.functions.classcmd.response.MethodListResult;
 import com.justnothing.testmodule.command.functions.classcmd.model.MethodInfo;
 import com.justnothing.testmodule.command.output.Colors;
-import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
 import com.justnothing.testmodule.utils.reflect.DescriptorColorizer;
 
@@ -41,13 +41,7 @@ public class ListCommand extends AbstractClassCommand<MethodListRequest, MethodL
         String className = request.getClassName();
 
         if (className == null || className.isEmpty()) {
-            CommandExceptionHandler.handleException(
-                "class list",
-                new IllegalArgumentException("参数不足: class list [options] <class>"),
-                context.execContext(),
-                "参数错误"
-            );
-            return null;
+            throw new IllegalCommandLineArgumentException("参数不足: class list [options] <class>");
         }
 
         context.logger().debug("目标类名: " + className + ", 详细模式: " + verbose);

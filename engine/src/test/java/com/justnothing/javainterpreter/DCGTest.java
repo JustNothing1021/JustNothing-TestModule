@@ -19,12 +19,11 @@ public class DCGTest {
 
     private static final SourceLocation LOC = new SourceLocation(1, 1, "test");
 
-    private ExecutionContext context;
     private DynamicClassGenerator generator;
 
     @Before
     public void setUp() {
-        context = new ExecutionContext();
+        ExecutionContext context = new ExecutionContext();
         generator = new DynamicClassGenerator(context);
     }
 

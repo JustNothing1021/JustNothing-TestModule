@@ -42,7 +42,7 @@ public class MiniApp {
                     player.put("inventory", ArrayList.new());
                     player.put("equippedWeapon", null);
                     player.put("equippedArmor", null);
-                    
+                
                     player.put("takeDamage", (damage) -> {
                         auto currentHp = player.get("hp");
                         auto newHp = currentHp - damage;
@@ -50,7 +50,7 @@ public class MiniApp {
                         player.put("hp", newHp);
                         newHp;
                     });
-                    
+                
                     player.put("heal", (amount) -> {
                         auto currentHp = player.get("hp");
                         auto maxHp = player.get("maxHp");
@@ -59,7 +59,7 @@ public class MiniApp {
                         player.put("hp", newHp);
                         newHp - currentHp;
                     });
-                    
+                
                     player.put("addExp", (amount) -> {
                         auto currentExp = player.get("exp");
                         auto newExp = currentExp + amount;
@@ -76,11 +76,11 @@ public class MiniApp {
                             println("  *** LEVEL UP! You are now level " + player.get("level") + "! ***");
                         }
                     });
-                    
+                
                     player.put("addItem", (item) -> {
                         player.get("inventory").add(item);
                     });
-                    
+                
                     player.put("showStatus", () -> {
                         println("");
                         println("=== " + player.get("name") + " ===");
@@ -93,7 +93,7 @@ public class MiniApp {
                         if (weapon != null) println("Weapon: " + weapon.get("name"));
                         if (armor != null) println("Armor: " + armor.get("name"));
                     });
-                    
+                
                     player;
                 };
                 
@@ -147,10 +147,10 @@ public class MiniApp {
                     println("========================================");
                     println("  BATTLE: " + player.get("name") + " vs " + enemy.get("name"));
                     println("========================================");
-                    
+                
                     auto playerHp = player.get("hp");
                     auto enemyHp = enemy.get("hp");
-                    
+                
                     while (playerHp > 0 && enemyHp > 0) {
                         println("");
                         println(player.get("name") + " HP: " + playerHp + "/" + player.get("maxHp"));
@@ -160,15 +160,15 @@ public class MiniApp {
                         println("2. Use Potion");
                         println("3. Try to Escape");
                         print("Choose action: ");
-                        
+                
                         auto choice = scanner.nextInt();
-                        
+                
                         if (choice == 1) {
                             auto damage = calculateDamage(player, enemy);
                             enemyHp = enemyHp - damage;
                             if (enemyHp < 0) enemyHp = 0;
                             println("  You deal " + damage + " damage!");
-                            
+                
                             if (enemyHp > 0) {
                                 auto enemyDamage = calculateDamage(enemy, player);
                                 playerHp = playerHp - enemyDamage;
@@ -193,7 +193,7 @@ public class MiniApp {
                             if (!hasPotion) {
                                 println("  You have no potions!");
                             }
-                            
+                
                             auto enemyDamage = calculateDamage(enemy, player);
                             playerHp = playerHp - enemyDamage;
                             println("  " + enemy.get("name") + " deals " + enemyDamage + " damage!");
@@ -209,9 +209,9 @@ public class MiniApp {
                             }
                         }
                     }
-                    
+                
                     player.put("hp", playerHp);
-                    
+                
                     if (playerHp > 0) {
                         println("");
                         println("========================================");
@@ -243,7 +243,7 @@ public class MiniApp {
                     }
                     println("0. Exit");
                     print("Buy item: ");
-                    
+                
                     auto choice = scanner.nextInt();
                     if (choice > 0 && choice <= shopItems.size()) {
                         auto item = shopItems.get(choice - 1);
@@ -265,7 +265,7 @@ public class MiniApp {
                         println("Empty");
                         return;
                     }
-                    
+                
                     auto i = 0;
                     while (i < inventory.size()) {
                         auto item = inventory.get(i);
@@ -274,12 +274,12 @@ public class MiniApp {
                     }
                     println("0. Exit");
                     print("Equip/Use item: ");
-                    
+                
                     auto choice = scanner.nextInt();
                     if (choice > 0 && choice <= inventory.size()) {
                         auto item = inventory.get(choice - 1);
                         auto type = item.get("type");
-                        
+                
                         if (type.equals("weapon")) {
                             player.put("equippedWeapon", item);
                             player.put("attack", player.get("attack") + item.get("value"));
@@ -302,9 +302,9 @@ public class MiniApp {
                     println("");
                     println("You venture into the wilderness...");
                     Thread.sleep(500);
-                    
+                
                     auto encounter = random.nextInt(100);
-                    
+                
                     if (encounter < 50) {
                         auto enemyIndex = random.nextInt(enemies.size());
                         auto enemy = enemies.get(enemyIndex);
@@ -347,9 +347,9 @@ public class MiniApp {
                     println("5. Rest at Inn (10 gold)");
                     println("0. Quit Game");
                     print("Choose action: ");
-                    
+                
                     auto choice = scanner.nextInt();
-                    
+                
                     if (choice == 1) {
                         explore(player);
                     } else if (choice == 2) {
@@ -393,7 +393,7 @@ public class MiniApp {
             System.out.println("\n✓ Mini App completed\n");
         } catch (Exception e) {
             System.err.println("✗ Mini App failed: " + e.getMessage());
-            e.printStackTrace();
+            e.printStackTrace(System.out);
         }
     }
 }

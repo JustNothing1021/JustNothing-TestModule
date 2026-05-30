@@ -8,6 +8,7 @@ import com.justnothing.javainterpreter.evaluator.ScopeManager;
 import com.justnothing.javainterpreter.exception.ErrorCode;
 import com.justnothing.javainterpreter.exception.EvaluationException;
 import com.justnothing.javainterpreter.exception.ReturnException;
+import com.justnothing.javainterpreter.utils.TypeUtils;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -104,9 +105,15 @@ public class Lambda implements Function<Object[], Object> {
             
             for (int i = 0; i < parameterNames.size(); i++) {
                 Object argValue = args != null && i < args.length ? args[i] : null;
+                LambdaNode.Parameter param = lambdaNode.getParameters().get(i);
+                Class<?> paramType = param.getType() != Object.class ? param.getType() : 
+                    (argValue != null ? argValue.getClass() : Object.class);
+                if (paramType != Object.class && argValue != null) {
+                    argValue = TypeUtils.convertValue(argValue, paramType, lambdaNode);
+                }
                 callContext.getScopeManager().declareVariable(
                     parameterNames.get(i),
-                    argValue != null ? argValue.getClass() : Object.class,
+                    paramType,
                     argValue,
                     false,
                     lambdaNode

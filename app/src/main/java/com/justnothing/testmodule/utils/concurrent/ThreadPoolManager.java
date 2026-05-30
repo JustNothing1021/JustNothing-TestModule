@@ -86,7 +86,7 @@ public class ThreadPoolManager {
         );
 
         scheduledExecutor = Executors.newScheduledThreadPool(
-                IS_LOW_END_DEVICE ? 20 : Math.max(30, (int) (CPU_CORES / 1.5)),
+                IS_LOW_END_DEVICE ? 75 : 150,
                 scheduledThreadFactory
         );
 

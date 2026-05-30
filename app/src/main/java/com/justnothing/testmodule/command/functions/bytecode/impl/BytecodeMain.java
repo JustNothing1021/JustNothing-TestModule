@@ -156,10 +156,7 @@ public class BytecodeMain extends MainCommand<BytecodeResult> {
 
         if (args.length < 1) {
             context.println(getHelpText(), Colors.WHITE);
-            if (shouldReturnStructuredData(context)) {
-                return createErrorResult("参数不足，需要指定子命令");
-            }
-            return null;
+            return createErrorResult("参数不足，需要指定子命令");
         }
 
         String subcmd = args[0];
@@ -198,19 +195,14 @@ public class BytecodeMain extends MainCommand<BytecodeResult> {
             default -> {
                 context.println("未知子命令: " + subcmd, Colors.RED);
                 context.println(getHelpText(), Colors.WHITE);
-                if (shouldReturnStructuredData(context)) {
-                    return createErrorResult("未知子命令: " + subcmd);
-                }
+                return createErrorResult("未知子命令: " + subcmd);
             }
         }
-        if (shouldReturnStructuredData(context)) {
-            BytecodeResult result = new BytecodeResult(java.util.UUID.randomUUID().toString());
-            result.setSubCommand(subcmd);
-            result.setClassName(targetClassName);
-            result.setOutput(resultOutput);
-            return result;
-        }
-        return null;
+        BytecodeResult result = new BytecodeResult(java.util.UUID.randomUUID().toString());
+        result.setSubCommand(subcmd);
+        result.setClassName(targetClassName);
+        result.setOutput(resultOutput);
+        return result;
     }
 
     private String handleInfo(String[] args, ClassLoader classLoader, boolean verbose, CommandExecutor.CmdExecContext context) {

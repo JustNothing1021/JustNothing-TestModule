@@ -6,9 +6,6 @@ import com.justnothing.testmodule.command.base.protocol.ResultField;
 import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
 import com.justnothing.testmodule.command.base.protocol.ValueSupplier;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
 @SerializeKeyName("PerformanceResult")
 @AutoSerializable
 public class PerformanceResult extends CommandResult {

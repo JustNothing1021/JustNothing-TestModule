@@ -43,13 +43,19 @@ public class LambdaNode extends ASTNode {
     private final List<Parameter> parameters;
     private final ASTNode body;
     private Class<?> functionalInterfaceType;
+    private final ClassReferenceNode returnType;
     
     public LambdaNode(List<Parameter> parameters, ASTNode body, SourceLocation location) {
+        this(parameters, body, null, location);
+    }
+
+    public LambdaNode(List<Parameter> parameters, ASTNode body, ClassReferenceNode returnType, SourceLocation location) {
         super(location);
         this.parameters = parameters != null ? 
             Collections.unmodifiableList(new ArrayList<>(parameters)) : 
             Collections.emptyList();
         this.body = body;
+        this.returnType = returnType;
     }
     
     public List<Parameter> getParameters() {
@@ -58,6 +64,10 @@ public class LambdaNode extends ASTNode {
     
     public ASTNode getBody() {
         return body;
+    }
+    
+    public ClassReferenceNode getReturnType() {
+        return returnType;
     }
     
     public Class<?> getFunctionalInterfaceType() {
@@ -86,6 +96,9 @@ public class LambdaNode extends ASTNode {
         if (functionalInterfaceType != null) {
             sb.append(indent(indent + 1)).append("targetInterface: ").append(functionalInterfaceType.getName()).append("\n");
         }
+        if (returnType != null) {
+            sb.append(indent(indent + 1)).append("returnType: ").append(returnType.getTypeName()).append("\n");
+        }
         sb.append(indent(indent + 1)).append("body:\n");
         sb.append(body.formatString(indent + 2)).append("\n");
         return sb.toString().stripTrailing();
@@ -94,6 +107,7 @@ public class LambdaNode extends ASTNode {
     public static class Builder extends ASTNode.Builder<Builder> {
         private List<Parameter> parameters;
         private ASTNode body;
+        private ClassReferenceNode returnType;
         
         public Builder parameters(List<Parameter> parameters) {
             this.parameters = parameters;
@@ -113,9 +127,14 @@ public class LambdaNode extends ASTNode {
             return this;
         }
         
+        public Builder returnType(ClassReferenceNode returnType) {
+            this.returnType = returnType;
+            return this;
+        }
+        
         @Override
         public LambdaNode build() {
-            return new LambdaNode(parameters, body, location);
+            return new LambdaNode(parameters, body, returnType, location);
         }
     }
 }

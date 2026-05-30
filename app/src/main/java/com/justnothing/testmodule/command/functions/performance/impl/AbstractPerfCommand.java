@@ -97,5 +97,25 @@ public abstract class AbstractPerfCommand<Req extends PerformanceRequest, Res ex
         }
     }
 
+    @SuppressWarnings("unchecked")
+    public Res execute(CommandExecutor.CmdExecContext<?> ctx) {
+        try {
+            return executeInternal((CommandExecutor.CmdExecContext<Req>) ctx);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     protected abstract Res executePerfCommand(Req request) throws Exception;
+
+    protected static byte heatColor(double pct, int rank) {
+        if (pct >= 5.0) return Colors.LIGHT_RED;
+        if (pct >= 2.0) return Colors.RED;
+        if (pct >= 1.0) return Colors.ORANGE;
+        if (pct >= 0.5) return Colors.YELLOW;
+        if (pct >= 0.2) return Colors.GREEN;
+        if (pct >= 0.1) return Colors.CYAN;
+        if (rank < 20) return Colors.WHITE;
+        return Colors.GRAY;
+    }
 }

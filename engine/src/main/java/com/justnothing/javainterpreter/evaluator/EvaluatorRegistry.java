@@ -20,6 +20,7 @@ import com.justnothing.javainterpreter.ast.nodes.DeleteNode;
 import com.justnothing.javainterpreter.ast.nodes.DoWhileNode;
 import com.justnothing.javainterpreter.ast.nodes.FieldAccessNode;
 import com.justnothing.javainterpreter.ast.nodes.FieldAssignmentNode;
+import com.justnothing.javainterpreter.ast.nodes.FunctionDefNode;
 import com.justnothing.javainterpreter.ast.nodes.ForEachNode;
 import com.justnothing.javainterpreter.ast.nodes.ForNode;
 import com.justnothing.javainterpreter.ast.nodes.FunctionCallNode;
@@ -45,11 +46,20 @@ import com.justnothing.javainterpreter.ast.nodes.TernaryNode;
 import com.justnothing.javainterpreter.ast.nodes.ThrowNode;
 import com.justnothing.javainterpreter.ast.nodes.TryNode;
 import com.justnothing.javainterpreter.ast.nodes.UnaryOpNode;
+import com.justnothing.javainterpreter.ast.nodes.UsingStaticNode;
+import com.justnothing.javainterpreter.ast.nodes.UsingAliasNode;
 import com.justnothing.javainterpreter.ast.nodes.VariableNode;
 import com.justnothing.javainterpreter.ast.nodes.WhileNode;
+import com.justnothing.javainterpreter.builtins.Lambda;
+import com.justnothing.javainterpreter.builtins.MethodReference;
+import com.justnothing.javainterpreter.api.ClassResolver;
 import com.justnothing.javainterpreter.exception.EvaluationException;
 import com.justnothing.javainterpreter.exception.ErrorCode;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
@@ -179,6 +189,20 @@ public class EvaluatorRegistry {
         register(InstanceofNode.class, ASTEvaluator::evaluateInstanceof);
         register(CastNode.class, ASTEvaluator::evaluateCast);
         register(LambdaNode.class, ASTEvaluator::evaluateLambda);
+        register(FunctionDefNode.class, (node, ctx) -> {
+            LambdaNode lambdaNode = new LambdaNode(
+                node.getParameters(), node.getBody(), node.getReturnType(), node.getLocation()
+            );
+            Lambda lambda = new Lambda(lambdaNode, ctx);
+            ctx.getScopeManager().declareVariable(
+                node.getFunctionName(),
+                Lambda.class,
+                lambda,
+                false,
+                node
+            );
+            return null;
+        });
         register(ReturnNode.class, ASTEvaluator::evaluateReturn);
         register(BreakNode.class, ASTEvaluator::evaluateBreak);
         register(ContinueNode.class, ASTEvaluator::evaluateContinue);
@@ -189,6 +213,60 @@ public class EvaluatorRegistry {
         register(SwitchNode.class, ASTEvaluator::evaluateSwitch);
         register(ImportNode.class, (node, ctx) -> {
             ctx.addImport(node.getPackageName());
+            return null;
+        });
+        register(UsingStaticNode.class, (node, ctx) -> {
+            String className = node.getClassName();
+            Class<?> clazz = ClassResolver.findClassWithImports(className, ctx.getClassLoader(), ctx.getImports());
+            if (clazz == null) {
+                throw new EvaluationException(
+                    "Class not found for using static: " + className,
+                    ErrorCode.EVAL_CLASS_NOT_FOUND,
+                    node
+                );
+            }
+            java.util.Set<String> declaredNames = new java.util.HashSet<>();
+            for (Field field : clazz.getFields()) {
+                if (Modifier.isStatic(field.getModifiers()) && Modifier.isPublic(field.getModifiers())) {
+                    String name = field.getName();
+                    if (!declaredNames.contains(name)) {
+                        declaredNames.add(name);
+                        try {
+                            Object value = field.get(null);
+                            ctx.getScopeManager().declareVariable(
+                                name, field.getType(), value, true, node
+                            );
+                        } catch (IllegalAccessException e) {
+                            throw new EvaluationException(
+                                "Cannot access static field: " + name,
+                                ErrorCode.EVAL_FIELD_ACCESS_FAILED,
+                                node
+                            );
+                        } catch (EvaluationException ignored) {
+                        }
+                    }
+                }
+            }
+            for (Method method : clazz.getMethods()) {
+                if (Modifier.isStatic(method.getModifiers()) && Modifier.isPublic(method.getModifiers())
+                        && method.getDeclaringClass() != Object.class) {
+                    String name = method.getName();
+                    if (!declaredNames.contains(name)) {
+                        declaredNames.add(name);
+                        MethodReference ref = new MethodReference(clazz, null, name, true, node);
+                        try {
+                            ctx.getScopeManager().declareVariable(
+                                name, Object.class, ref, false, node
+                            );
+                        } catch (EvaluationException ignored) {
+                        }
+                    }
+                }
+            }
+            return null;
+        });
+        register(UsingAliasNode.class, (node, ctx) -> {
+            ctx.addTypeAlias(node.getAliasName(), node.getFullClassName());
             return null;
         });
         register(DeleteNode.class, ASTEvaluator::evaluateDelete);

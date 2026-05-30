@@ -5,6 +5,8 @@ import com.justnothing.testmodule.command.base.AbstractCommand;
 import com.justnothing.testmodule.utils.reflect.ClassLoaderManager;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.functions.packages.request.PackagesRequest;
+import com.justnothing.testmodule.command.functions.packages.PackagesResult;
 
 import java.util.List;
 

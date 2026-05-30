@@ -1,6 +1,6 @@
 package com.justnothing.testmodule.command.handlers.hook;
 
-import com.justnothing.testmodule.command.functions.hook.HookListRequest;
+import com.justnothing.testmodule.command.functions.hook.request.HookListRequest;
 import com.justnothing.testmodule.command.functions.hook.HookListResult;
 import com.justnothing.testmodule.command.functions.hook.HookManager;
 

@@ -1,34 +1,52 @@
 package com.justnothing.testmodule.command.functions.classcmd.request;
 
-import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
-import com.justnothing.testmodule.command.base.parser.FlagParam;
-import com.justnothing.testmodule.command.base.parser.KeywordParam;
-import com.justnothing.testmodule.command.base.parser.PositionalParam;
-import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
-import com.justnothing.testmodule.command.base.command.SubCommand;
+import com.justnothing.testmodule.command.base.command.CmdParam;
 import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
+import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
 import com.justnothing.testmodule.command.utils.ParamParser;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandRequest;
 
-@SerializeKeyName("SetField")
-@SubCommand("setfield")
-@AutoSerializable
+@SerializeKeyName("class:setfield")
 public class SetFieldValueRequest extends ClassCommandRequest {
 
-    @PositionalParam(order = 1, name = "类名")
+    @CmdParam(
+        name = "--class",
+        description = "类名",
+        position = 1,
+        serializedName = "className"
+    )
     private String className;
 
-    @PositionalParam(order = 2, name = "字段名")
+    @CmdParam(
+        name = "--field",
+        description = "字段名",
+        position = 2,
+        serializedName = "fieldName"
+    )
     private String fieldName;
 
-    @PositionalParam(order = 3, name = "值表达式", description = "要设置的值 (支持: 字符串/数字/null)")
+    @CmdParam(
+        name = "--value",
+        description = "值表达式",
+        position = 3,
+        readMode = CmdParam.ReadMode.PRESERVED,
+        serializedName = "valueExpression"
+    )
     private String valueExpression;
 
-    @FlagParam(names = {"-s", "--static"}, description = "静态字段")
+    @CmdParam(
+        name = "--static",
+        description = "静态字段",
+        aliases = {"-s"},
+        serializedName = "static"
+    )
     private boolean isStatic;
 
-    @KeywordParam(name = "type", names = {"t"}, 
-                 description = "值类型提示 (支持: --type=String 或 --type String)")
+    @CmdParam(
+        name = "--type",
+        description = "值类型提示 (支持: --type=String 或 --type String)",
+        serializedName = "valueTypeHint"
+    )
     private String valueTypeHint;
 
     private String targetInstance;  // 目标实例表达式 (GUI用)

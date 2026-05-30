@@ -41,7 +41,6 @@ public abstract class ScriptException extends RuntimeException {
         this.errorCode = errorCode;
     }
 
-
     public int getLine() {
         return location != null ? location.getLine() : -1;
     }
@@ -76,7 +75,7 @@ public abstract class ScriptException extends RuntimeException {
             return "";
         }
         StringBuilder sb = new StringBuilder();
-        sb.append("脚本调用栈:\n");
+        sb.append("Script CallStack:\n");
         for (int i = scriptCallStack.size() - 1; i >= 0; i--) {
             sb.append("  at ").append(scriptCallStack.get(i)).append("\n");
         }

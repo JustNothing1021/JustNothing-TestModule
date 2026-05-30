@@ -59,6 +59,28 @@ public class NumberUtils {
         return Double.compare(a.doubleValue(), b.doubleValue());
     }
 
+    public static Object computeMinMax(java.util.List<Object> args, boolean findMin) {
+        if (args.isEmpty()) return findMin ? Double.POSITIVE_INFINITY : Double.NEGATIVE_INFINITY;
+
+        boolean hasDouble = false, hasFloat = false, hasLong = false;
+        for (Object arg : args) {
+            if (arg instanceof Double) hasDouble = true;
+            else if (arg instanceof Float) hasFloat = true;
+            else if (arg instanceof Long) hasLong = true;
+        }
+        Number result = args.get(0) instanceof Number ? (Number) args.get(0) : 0;
+        for (int i = 1; i < args.size(); i++) {
+            Number val = args.get(i) instanceof Number ? (Number) args.get(i) : 0;
+            double cmpA = result.doubleValue();
+            double cmpB = val.doubleValue();
+            if (findMin ? cmpB < cmpA : cmpB > cmpA) result = val;
+        }
+        if (hasDouble) return result.doubleValue();
+        if (hasFloat) return result.floatValue();
+        if (hasLong) return result.longValue();
+        return result.intValue();
+    }
+
     public static Object createRange(Object start, Object end, boolean exclusive, ASTNode rangeNode) {
         if (start instanceof Number left && end instanceof Number right) {
             return createIntRange((Number) left, (Number) right, exclusive, rangeNode);

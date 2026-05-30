@@ -120,76 +120,80 @@ public class MethodBodyExecutor {
         
         ExecutionContext context = info.creationContext.createChildContext();
         
-        context.getScopeManager().declareVariable("this", 
-            instance != null ? instance.getClass() : Object.class, instance, false, info.methodDecl);
-        
-        Set<String> paramNames = new HashSet<>();
-        List<ParameterNode> parameters = methodDecl.getParameters();
-        if (parameters != null && args != null) {
-            for (int i = 0; i < parameters.size() && i < args.length; i++) {
-                ParameterNode param = parameters.get(i);
-                Object argValue = args[i];
-                paramNames.add(param.getParameterName());
-                context.getScopeManager().declareVariable(
-                    param.getParameterName(), 
-                    Object.class,
-                    argValue, 
-                    false,
-                    info.methodDecl
-                );
-            }
-        }
-        
-        Class<?> fieldSourceClass = null;
-        if (instance != null) {
-            fieldSourceClass = instance.getClass();
-        } else {
-            String className = getCurrentClassContext();
-            if (className != null) {
-                if (info.creationContext.hasCustomClass(className)) {
-                    fieldSourceClass = info.creationContext.getCustomClass(className);
-                } else {
-                    fieldSourceClass = ClassResolver.findClassWithImports(
-                        className, info.creationContext.getClassLoader(), info.creationContext.getImports());
-                }
-            }
-        }
-        
-        if (fieldSourceClass != null) {
-            try {
-                Class<?> clazz = fieldSourceClass;
-                while (clazz != null && clazz != Object.class) {
-                    Field[] fields = clazz.getDeclaredFields();
-                    for (Field field : fields) {
-                        field.setAccessible(true);
-                        String fieldName = field.getName();
-                        if (paramNames.contains(fieldName)) continue;
-                        Object fieldValue = null;
-                        if (instance != null) {
-                            fieldValue = field.get(instance);
-                        } else if (Modifier.isStatic(field.getModifiers())) {
-                            fieldValue = field.get(null);
-                        }
-                        context.getScopeManager().declareVariable(
-                            fieldName, 
-                            field.getType(),
-                            fieldValue, 
-                            false,
-                            info.methodDecl
-                           );
-                    }
-                    clazz = clazz.getSuperclass();
-                }
-            } catch (Exception ignored) {
-            }
-        }
+        context.getScopeManager().enterScope();
         
         try {
+            context.getScopeManager().declareVariable("this", 
+                instance != null ? instance.getClass() : Object.class, instance, false, info.methodDecl);
+            
+            Set<String> paramNames = new HashSet<>();
+            List<ParameterNode> parameters = methodDecl.getParameters();
+            if (parameters != null && args != null) {
+                for (int i = 0; i < parameters.size() && i < args.length; i++) {
+                    ParameterNode param = parameters.get(i);
+                    Object argValue = args[i];
+                    paramNames.add(param.getParameterName());
+                    context.getScopeManager().declareVariable(
+                        param.getParameterName(), 
+                        Object.class,
+                        argValue, 
+                        false,
+                        info.methodDecl
+                    );
+                }
+            }
+            
+            Class<?> fieldSourceClass = null;
+            if (instance != null) {
+                fieldSourceClass = instance.getClass();
+            } else {
+                String className = getCurrentClassContext();
+                if (className != null) {
+                    if (info.creationContext.hasCustomClass(className)) {
+                        fieldSourceClass = info.creationContext.getCustomClass(className);
+                    } else {
+                        fieldSourceClass = ClassResolver.findClassWithImports(
+                            className, info.creationContext.getClassLoader(), info.creationContext.getImports());
+                    }
+                }
+            }
+            
+            if (fieldSourceClass != null) {
+                try {
+                    Class<?> clazz = fieldSourceClass;
+                    while (clazz != null && clazz != Object.class) {
+                        Field[] fields = clazz.getDeclaredFields();
+                        for (Field field : fields) {
+                            field.setAccessible(true);
+                            String fieldName = field.getName();
+                            if (paramNames.contains(fieldName)) continue;
+                            Object fieldValue = null;
+                            if (instance != null) {
+                                fieldValue = field.get(instance);
+                            } else if (Modifier.isStatic(field.getModifiers())) {
+                                fieldValue = field.get(null);
+                            }
+                            context.getScopeManager().declareVariable(
+                                fieldName, 
+                                field.getType(),
+                                fieldValue, 
+                                false,
+                                info.methodDecl
+                               );
+                        }
+                        clazz = clazz.getSuperclass();
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+            
             return evaluateWithFieldResolution(body, context, instance);
         } catch (ReturnException e) {
             return e.getValue();
         } catch (EvaluationException e) {
             throw new RuntimeException("Method execution failed: " + e.getMessage(), e);
+        } finally {
+            context.getScopeManager().exitScope();
         }
     }
     

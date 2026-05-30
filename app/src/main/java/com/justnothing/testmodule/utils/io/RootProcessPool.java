@@ -24,8 +24,8 @@ public class RootProcessPool extends Logger {
     private static final Logger logger = Logger.getLoggerForName(TAG);
     private static volatile RootProcessPool instance = null;
 
-    private static final int MIN_POOL_SIZE = 3;
-    private static final int MAX_POOL_SIZE = 6;
+    private static final int MIN_POOL_SIZE = 2;
+    private static final int MAX_POOL_SIZE = 5;
     private static final long PROCESS_IDLE_TIMEOUT = 30000;
     private static final long COMMAND_TIMEOUT_MS = 30000;
 
@@ -89,7 +89,6 @@ public class RootProcessPool extends Logger {
                 warn("初始化Root进程失败，将在后台重试: " + e.getMessage());
             }
         }
-
         for (int i = 0; i < MIN_POOL_SIZE; i++) {
             try {
                 RootProcess process = createNonRootProcess();
@@ -144,6 +143,7 @@ public class RootProcessPool extends Logger {
 
     private void maintainPool() {
         poolLock.lock();
+        
         try {
             int currentSize = totalProcesses.get();
             int availableSize = availableProcesses.size();
@@ -178,14 +178,14 @@ public class RootProcessPool extends Logger {
             while (iterator.hasNext()) {
                 RootProcess process = iterator.next();
 
-                // ✅ 新增：检查进程是否不健康或超时空闲
+                // 检查进程是否不健康或超时空闲
                 if (!process.isHealthy() || currentTime - process.getLastUsedTime() > PROCESS_IDLE_TIMEOUT) {
                     iterator.remove();
                     process.close();
                     totalProcesses.decrementAndGet();
 
                     if (!process.isHealthy()) {
-                        warn("维护任务：发现并移除不健康的Root进程（防止资源泄漏）");
+                        warn("维护任务, 发现了并移除不健康的Root进程");
                     }
                     // debug("移除空闲Root进程");
                 }
@@ -330,13 +330,13 @@ public class RootProcessPool extends Logger {
         // 1. 快速从队列获取
         RootProcess process = queue.poll(ACQUIRE_POLL_TIMEOUT_MS, TimeUnit.MILLISECONDS);
 
-        // ✅ 修复：检查并清理不健康的进程（防止资源泄漏！）
+        // 修复：检查并清理不健康的进程（防止资源泄漏！）
         if (process != null) {
             if (process.isHealthy()) {
                 return process;
             } else {
                 // 关键修复：关闭不健康的进程，防止 su 进程、流对象等资源泄漏！
-                warn("发现不健康的" + processType + "进程，正在关闭以防止资源泄漏");
+                warn("发现不健康的" + processType + "进程, 正在关闭");
                 process.close();
                 totalCounter.decrementAndGet();
             }
@@ -385,7 +385,7 @@ public class RootProcessPool extends Logger {
         if (process != null && process.isHealthy()) {
             return process;
         } else if (process != null && !process.isHealthy()) {
-            // ✅ 同样需要清理不健康的进程
+            // 同样需要清理不健康的进程
             warn("最后获取时发现不健康的" + processType + "进程，正在关闭");
             process.close();
             totalCounter.decrementAndGet();
@@ -607,11 +607,11 @@ public class RootProcessPool extends Logger {
             try {
                 stdoutFuture.get(timeoutMs, TimeUnit.MILLISECONDS);
             } catch (TimeoutException e) {
-                // ⚠️ 关键修复：cancel() 无法中断 I/O 阻塞的 readLine()，必须直接销毁底层进程！
+                // 关键修复：cancel() 无法中断 I/O 阻塞的 readLine()，必须直接销毁底层进程！
                 stdoutFuture.cancel(true);
                 stderrFuture.cancel(true);
 
-                // ✅ 核心修复：强制终止 su 进程以实现真正的超时！
+                // 核心修复：强制终止 su 进程以实现真正的超时！
                 try {
                     if (process != null && process.isAlive()) {
                          process.destroyForcibly();

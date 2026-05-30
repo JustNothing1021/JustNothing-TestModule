@@ -69,10 +69,7 @@ public class SandboxTestMain extends MainCommand<CommandResult> {
         
         if (args.length < 1) {
             context.println(getHelpText());
-            if (shouldReturnStructuredData(context)) {
-                return createErrorResult("参数不足，需要指定子命令");
-            }
-            return null;
+            return createErrorResult("参数不足，需要指定子命令");
         }
 
         String subCommand = args[0];
@@ -91,10 +88,7 @@ public class SandboxTestMain extends MainCommand<CommandResult> {
                 context.println(getHelpText());
             }
         }
-        if (shouldReturnStructuredData(context)) {
-            return createSuccessResult("沙箱测试命令执行完成");
-        }
-        return null;
+        return createSuccessResult("沙箱测试命令执行完成");
     }
 
     private interface TestRunnable {

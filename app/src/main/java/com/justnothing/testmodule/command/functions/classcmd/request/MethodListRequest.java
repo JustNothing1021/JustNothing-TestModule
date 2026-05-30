@@ -1,23 +1,29 @@
 package com.justnothing.testmodule.command.functions.classcmd.request;
 
-import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
-import com.justnothing.testmodule.command.base.parser.FlagParam;
+import com.justnothing.testmodule.command.base.command.CmdParam;
 import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
-import com.justnothing.testmodule.command.base.parser.PositionalParam;
-import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
-import com.justnothing.testmodule.command.base.command.SubCommand;
+import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
 import com.justnothing.testmodule.command.utils.ParamParser;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandRequest;
 
-@SerializeKeyName("MethodList")
-@SubCommand("list")
-@AutoSerializable
+@SerializeKeyName("class:methods")
 public class MethodListRequest extends ClassCommandRequest {
 
-    @PositionalParam(order = 1, name = "类名", required = true)
+    @CmdParam(
+        name = "--class",
+        description = "类名",
+        required = true,
+        position = 1,
+        serializedName = "className"
+    )
     private String className;
 
-    @FlagParam(names = {"-v", "--verbose"}, description = "显示详细信息（参数、异常等）")
+    @CmdParam(
+        name = "--verbose",
+        description = "显示详细信息（参数、异常等）",
+        aliases = {"-v"},
+        serializedName = "verbose"
+    )
     private boolean verbose;
 
     public MethodListRequest() {

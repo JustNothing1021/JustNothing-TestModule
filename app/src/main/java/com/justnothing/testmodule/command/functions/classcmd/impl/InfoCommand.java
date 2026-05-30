@@ -1,6 +1,7 @@
 package com.justnothing.testmodule.command.functions.classcmd.impl;
 
 
+import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.base.command.SubCommandInfo;
 import com.justnothing.testmodule.command.functions.classcmd.AbstractClassCommand;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandContext;
@@ -10,7 +11,6 @@ import com.justnothing.testmodule.command.functions.classcmd.model.MethodInfo;
 import com.justnothing.testmodule.command.functions.classcmd.request.ClassInfoRequest;
 import com.justnothing.testmodule.command.functions.classcmd.response.ClassInfoResult;
 import com.justnothing.testmodule.command.output.Colors;
-import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
 import com.justnothing.testmodule.utils.reflect.DescriptorColorizer;
 
@@ -52,13 +52,7 @@ public class InfoCommand extends AbstractClassCommand<ClassInfoRequest, ClassInf
         String className = request.getClassName();
 
         if (className == null || className.isEmpty()) {
-            CommandExceptionHandler.handleException(
-                "class info",
-                new IllegalArgumentException("参数不足, 需要至少1个参数: class info <class_name>"),
-                context.execContext(),
-                "参数错误"
-            );
-            return null;
+            throw new IllegalCommandLineArgumentException("参数不足, 需要至少1个参数: class info <class_name>");
         }
 
         boolean showInterfaces = request.isShowInterfaces();

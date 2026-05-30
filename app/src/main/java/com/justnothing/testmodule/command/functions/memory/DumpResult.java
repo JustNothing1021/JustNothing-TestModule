@@ -1,18 +1,19 @@
 package com.justnothing.testmodule.command.functions.memory;
 
-import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 import com.justnothing.testmodule.command.base.protocol.CommandResult;
 import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
 @SerializeKeyName("Dump")
-@AutoSerializable
 public class DumpResult extends CommandResult {
 
+    @Expose
+    @SerializedName("dumpContent")
     private String dumpContent;
+    @Expose @SerializedName("filePath")
     private String filePath;
+    @Expose @SerializedName("timestamp")
     private long timestamp;
 
     public DumpResult() {
@@ -45,26 +46,5 @@ public class DumpResult extends CommandResult {
 
     public void setTimestamp(long timestamp) {
         this.timestamp = timestamp;
-    }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        obj.put("timestamp", timestamp);
-        if (filePath != null) {
-            obj.put("filePath", filePath);
-        }
-        if (dumpContent != null) {
-            obj.put("dumpContent", dumpContent);
-        }
-        return obj;
-    }
-
-    @Override
-    public void fromJson(JSONObject obj) throws JSONException {
-        super.fromJson(obj);
-        timestamp = obj.optLong("timestamp", 0);
-        filePath = obj.optString("filePath", null);
-        dumpContent = obj.optString("dumpContent", null);
     }
 }

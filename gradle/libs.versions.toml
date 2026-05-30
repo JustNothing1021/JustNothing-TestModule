@@ -11,6 +11,9 @@ constraintlayoutVersion = "2.2.1"
 espressoCoreVersion = "3.7.0"
 hutoolAll = "5.8.44"
 gson = "2.14.0"
+jlineReader = "3.30.13"
+jlineTerminal = "3.30.13"
+jna = "5.18.1"
 junit = "4.13.2"
 materialVersion = "1.13.0"
 mpandroidchart = "v3.1.0"
@@ -37,6 +40,14 @@ bsh = { module = "org.beanshell:bsh", version.ref = "bsh" }
 cfr = { module = "org.benf:cfr", version.ref = "cfr" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 hutool-all = { module = "cn.hutool:hutool-all", version.ref = "hutoolAll" }
+jline-builtins = { module = "org.jline:jline-builtins", version.ref = "jlineReader" }
+jline-console = { module = "org.jline:jline-console", version.ref = "jlineReader" }
+jline-native = { module = "org.jline:jline-native", version.ref = "jlineReader" }
+jline-terminal = { module = "org.jline:jline-terminal", version.ref = "jlineTerminal" }
+jline-reader = { module = "org.jline:jline-reader", version.ref = "jlineReader" }
+jline-terminal-jna = { module = "org.jline:jline-terminal-jna", version.ref = "jlineReader" }
+jline-terminal-jni = { module = "org.jline:jline-terminal-jni", version.ref = "jlineReader" }
+jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 material-v1110 = { module = "com.google.android.material:material", version.ref = "materialVersion" }
 mpandroidchart = { module = "com.github.PhilJay:MPAndroidChart", version.ref = "mpandroidchart" }

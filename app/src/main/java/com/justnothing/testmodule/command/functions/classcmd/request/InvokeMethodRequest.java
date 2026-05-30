@@ -1,11 +1,8 @@
 package com.justnothing.testmodule.command.functions.classcmd.request;
 
-import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
-import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
-import com.justnothing.testmodule.command.base.parser.FlagParam;
 import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
-import com.justnothing.testmodule.command.base.parser.PositionalParam;
-import com.justnothing.testmodule.command.base.command.SubCommand;
+import com.justnothing.testmodule.command.base.command.CmdParam;
+import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandRequest;
 import com.justnothing.testmodule.command.utils.ParamParser;
 import com.justnothing.testmodule.command.utils.ParamStringUtils;
@@ -13,30 +10,62 @@ import com.justnothing.testmodule.command.utils.ParamStringUtils;
 import java.util.ArrayList;
 import java.util.List;
 
-@SerializeKeyName("InvokeMethod")
-@SubCommand("invoke")
-@AutoSerializable
+@SerializeKeyName("class:invoke")
 public class InvokeMethodRequest extends ClassCommandRequest {
 
-    @PositionalParam(order = 1, name = "类名")
+    @CmdParam(
+        name = "--class",
+        description = "类名",
+        position = 1,
+        serializedName = "className"
+    )
     private String className;
 
-    @PositionalParam(order = 2, name = "方法名")
+    @CmdParam(
+        name = "--method",
+        description = "方法名",
+        position = 2,
+        serializedName = "methodName"
+    )
     private String methodName;
 
-    @PositionalParam(order = 3, name = "方法参数", required = false, varArgs = true)
+    @CmdParam(
+        name = "--params",
+        description = "方法参数",
+        position = 3,
+        varArgs = true,
+        serializedName = "paramsRaw"
+    )
     private String paramsRaw;
 
-    @FlagParam(names = {"-s"}, description = "静态方法")
+    @CmdParam(
+        name = "--static",
+        description = "静态方法",
+        aliases = {"-s"},
+        serializedName = "static"
+    )
     private boolean isStatic = false;
 
-    @FlagParam(names = {"-f", "--free"}, description = "自由模式")
+    @CmdParam(
+        name = "--free",
+        description = "自由模式",
+        aliases = {"-f"},
+        serializedName = "freeMode"
+    )
     private boolean freeMode = false;
 
-    @FlagParam(names = {"--super"}, description = "访问父类成员")
+    @CmdParam(
+        name = "--super",
+        description = "访问父类成员",
+        serializedName = "accessSuper"
+    )
     private boolean accessSuper = false;
 
-    @FlagParam(names = {"--interfaces"}, description = "访问接口成员")
+    @CmdParam(
+        name = "--interfaces",
+        description = "访问接口成员",
+        serializedName = "accessInterfaces"
+    )
     private boolean accessInterfaces = false;
 
     private String signature;
@@ -91,7 +120,6 @@ public class InvokeMethodRequest extends ClassCommandRequest {
         InvokeMethodRequest parsed = ParamParser.parse(InvokeMethodRequest.class, args);
 
         if (parsed.paramsRaw != null && !parsed.paramsRaw.isEmpty()) {
-            // ★ 使用ParamStringUtils正确处理引号、转义字符!
             List<ParamStringUtils.ParamToken> paramTokens = ParamStringUtils.parseParams(parsed.paramsRaw);
             
             for (ParamStringUtils.ParamToken token : paramTokens) {

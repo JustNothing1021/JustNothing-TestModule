@@ -1,5 +1,6 @@
 package com.justnothing.testmodule.command.functions.classcmd.impl;
 
+import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.base.command.SubCommandInfo;
 import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
 import com.justnothing.testmodule.command.functions.classcmd.AbstractClassCommand;
@@ -64,13 +65,7 @@ public class ConstructorCommand extends AbstractClassCommand<InvokeConstructorRe
         String signature = request.getSignature();
 
         if (className == null || className.isEmpty()) {
-            CommandExceptionHandler.handleException(
-                "class constructor",
-                new IllegalArgumentException("参数不足: class constructor <class_name> [params...]"),
-                context.execContext(),
-                "参数错误"
-            );
-            return null;
+            throw new IllegalCommandLineArgumentException("参数不足: class constructor <class_name> [params...]");
         }
 
         List<Object> params = new ArrayList<>();

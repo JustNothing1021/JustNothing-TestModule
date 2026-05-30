@@ -1,17 +1,22 @@
 package com.justnothing.testmodule.command.functions.nativecmd;
 
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 import com.justnothing.testmodule.command.base.protocol.CommandResult;
-
-import org.json.JSONException;
-import org.json.JSONObject;
 
 public class NativeResult extends CommandResult {
 
+    @Expose @SerializedName("subCommand")
     private String subCommand;
+    @Expose @SerializedName("libraryName")
     private String libraryName;
+    @Expose @SerializedName("output")
     private String output;
+    @Expose @SerializedName("loaded")
     private Boolean loaded;
+    @Expose @SerializedName("libPath")
     private String libPath;
+    @Expose @SerializedName("abi")
     private String abi;
 
     public NativeResult() { super(); }
@@ -34,27 +39,4 @@ public class NativeResult extends CommandResult {
 
     public String getAbi() { return abi; }
     public void setAbi(String abi) { this.abi = abi; }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        if (subCommand != null) obj.put("subCommand", subCommand);
-        if (libraryName != null) obj.put("libraryName", libraryName);
-        if (output != null) obj.put("output", output);
-        if (loaded != null) obj.put("loaded", loaded);
-        if (libPath != null) obj.put("libPath", libPath);
-        if (abi != null) obj.put("abi", abi);
-        return obj;
-    }
-
-    @Override
-    public void fromJson(JSONObject obj) throws JSONException {
-        super.fromJson(obj);
-        subCommand = obj.optString("subCommand", null);
-        libraryName = obj.optString("libraryName", null);
-        output = obj.optString("output", null);
-        loaded = obj.has("loaded") ? obj.getBoolean("loaded") : null;
-        libPath = obj.optString("libPath", null);
-        abi = obj.optString("abi", null);
-    }
 }

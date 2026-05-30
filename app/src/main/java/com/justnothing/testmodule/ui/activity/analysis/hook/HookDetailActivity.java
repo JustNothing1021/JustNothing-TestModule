@@ -10,7 +10,6 @@ import androidx.core.content.ContextCompat;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.justnothing.testmodule.R;
-import com.justnothing.testmodule.command.functions.hook.HookActionRequest;
 import com.justnothing.testmodule.command.functions.hook.HookAddResult;
 import com.justnothing.testmodule.ui.viewmodel.analysis.HookAnalysisViewModel;
 
@@ -136,18 +135,18 @@ public class HookDetailActivity extends AppCompatActivity {
 
         findViewById(R.id.btn_toggle_enable).setOnClickListener(v -> {
             viewModel.performAction(
-                    HookActionRequest.ACTION_ENABLE,
+                    "enable",
                     currentHookId
             );
         });
 
         findViewById(R.id.btn_refresh_output).setOnClickListener(v -> {
-            viewModel.performAction(HookActionRequest.ACTION_OUTPUT, currentHookId, 50);
+            viewModel.performAction("output", currentHookId, 50);
         });
     }
 
     private void refreshOutput() {
-        viewModel.performAction(HookActionRequest.ACTION_OUTPUT, currentHookId, 50);
+        viewModel.performAction("output", currentHookId, 50);
 
         viewModel.getActionResult().observe(this, result -> {
             if (result != null && result.getDetail() != null && !result.getDetail().isEmpty()) {
@@ -169,7 +168,7 @@ public class HookDetailActivity extends AppCompatActivity {
                 .setTitle(R.string.analysis_hook_confirm_remove_title)
                 .setMessage(getString(R.string.analysis_hook_confirm_remove_msg, currentHookId))
                 .setPositiveButton(R.string.analysis_hook_detail_btn_remove, (dialog, which) -> {
-                    viewModel.performAction(HookActionRequest.ACTION_REMOVE, currentHookId);
+                    viewModel.performAction("remove", currentHookId);
                     finish();
                 })
                 .setNegativeButton(android.R.string.cancel, null)

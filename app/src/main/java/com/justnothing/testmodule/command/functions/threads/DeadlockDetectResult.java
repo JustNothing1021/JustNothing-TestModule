@@ -1,19 +1,21 @@
 package com.justnothing.testmodule.command.functions.threads;
 
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 import com.justnothing.testmodule.command.base.protocol.CommandResult;
-
-import org.json.JSONObject;
-import org.json.JSONException;
-import org.json.JSONArray;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class DeadlockDetectResult extends CommandResult {
 
+    @Expose @SerializedName("timestamp")
     private long timestamp;
+    @Expose @SerializedName("blockedCount")
     private int blockedCount;
+    @Expose @SerializedName("hasDeadlock")
     private boolean hasDeadlock;
+    @Expose @SerializedName("blockedThreads")
     private List<ThreadInfoResult.ThreadDetail> blockedThreads;
 
     public DeadlockDetectResult() {
@@ -38,40 +40,4 @@ public class DeadlockDetectResult extends CommandResult {
     public List<ThreadInfoResult.ThreadDetail> getBlockedThreads() { return blockedThreads; }
     public void setBlockedThreads(List<ThreadInfoResult.ThreadDetail> blockedThreads) { this.blockedThreads = blockedThreads; }
     public void addBlockedThread(ThreadInfoResult.ThreadDetail thread) { this.blockedThreads.add(thread); }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        obj.put("timestamp", timestamp);
-        obj.put("blockedCount", blockedCount);
-        obj.put("hasDeadlock", hasDeadlock);
-
-        if (blockedThreads != null && !blockedThreads.isEmpty()) {
-            JSONArray arr = new JSONArray();
-            for (ThreadInfoResult.ThreadDetail thread : blockedThreads) {
-                arr.put(thread.toJson());
-            }
-            obj.put("blockedThreads", arr);
-        }
-
-        return obj;
-    }
-
-    @Override
-    public void fromJson(JSONObject obj) throws JSONException {
-        super.fromJson(obj);
-        timestamp = obj.optLong("timestamp", 0);
-        blockedCount = obj.optInt("blockedCount", 0);
-        hasDeadlock = obj.optBoolean("hasDeadlock", blockedCount > 0);
-
-        blockedThreads = new ArrayList<>();
-        if (obj.has("blockedThreads")) {
-            JSONArray arr = obj.getJSONArray("blockedThreads");
-            for (int i = 0; i < arr.length(); i++) {
-                ThreadInfoResult.ThreadDetail detail = new ThreadInfoResult.ThreadDetail();
-                detail.fromJson(arr.getJSONObject(i));
-                blockedThreads.add(detail);
-            }
-        }
-    }
 }

@@ -48,6 +48,7 @@ public class ExecutionContext {
     private final ClassLoader classLoader;
     private final ScopeManager scopeManager;
     private final List<String> imports;
+    private final Map<String, String> typeAliases;
     private final Map<String, Class<?>> customClasses;
     private final Builtins builtins;
     private int loopDepth;
@@ -68,6 +69,7 @@ public class ExecutionContext {
         this.classLoader = classLoader;
         this.scopeManager = new ScopeManager();
         this.imports = new ArrayList<>();
+        this.typeAliases = new HashMap<>();
         this.customClasses = new HashMap<>();
         this.builtins = new Builtins();
         this.loopDepth = 0;
@@ -85,6 +87,7 @@ public class ExecutionContext {
         this.classLoader = classLoader;
         this.scopeManager = new ScopeManager();
         this.imports = new ArrayList<>();
+        this.typeAliases = new HashMap<>();
         this.customClasses = new HashMap<>();
         this.builtins = new Builtins();
         this.loopDepth = 0;
@@ -102,6 +105,7 @@ public class ExecutionContext {
         this.classLoader = classLoader;
         this.scopeManager = new ScopeManager();
         this.imports = imports != null ? new ArrayList<>(imports) : new ArrayList<>();
+        this.typeAliases = new HashMap<>();
         this.customClasses = new HashMap<>();
         this.builtins = new Builtins();
         this.loopDepth = 0;
@@ -121,6 +125,7 @@ public class ExecutionContext {
         this.classLoader = parent.classLoader;
         this.scopeManager = new ScopeManager(parent.scopeManager);
         this.imports = new ArrayList<>(parent.imports);
+        this.typeAliases = new HashMap<>(parent.typeAliases);
         this.customClasses = new HashMap<>(parent.customClasses);
         this.builtins = parent.builtins;
         this.loopDepth = parent.loopDepth;
@@ -170,7 +175,23 @@ public class ExecutionContext {
             imports.add(importStmt);
         }
     }
-    
+
+    public void addTypeAlias(String aliasName, String fullClassName) {
+        typeAliases.put(aliasName, fullClassName);
+    }
+
+    public Map<String, String> getTypeAliases() {
+        return typeAliases;
+    }
+
+    public String resolveTypeAlias(String name) {
+        String resolved = typeAliases.get(name);
+        if (resolved != null && typeAliases.containsKey(resolved)) {
+            return resolveTypeAlias(resolved);
+        }
+        return resolved;
+    }
+
     public int getLoopDepth() {
         return loopDepth;
     }

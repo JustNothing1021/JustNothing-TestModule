@@ -30,13 +30,13 @@ public abstract class AbstractSampler<T extends SampleData> implements Sampler<T
 
         running = true;
         startTime = System.currentTimeMillis();
-        long intervalMs = 1000 / sampleRate;
+        long intervalMs = 1_000_000_000 / sampleRate;
 
         logger.info("启动采样器 (频率: " + sampleRate + " Hz)");
 
         samplerFuture = ThreadPoolManager.scheduleWithFixedDelayWhile(
             this::doSample,
-            0, intervalMs, TimeUnit.MILLISECONDS,
+            0, intervalMs, TimeUnit.NANOSECONDS,
             () -> running
         );
     }
@@ -87,7 +87,7 @@ public abstract class AbstractSampler<T extends SampleData> implements Sampler<T
         return stopTime;
     }
 
-    protected void incrementSampleCount() {
-        totalSamples.incrementAndGet();
+    protected int incrementSampleCount() {
+        return totalSamples.incrementAndGet();
     }
 }

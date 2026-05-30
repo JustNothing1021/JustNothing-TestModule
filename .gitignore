@@ -24,6 +24,9 @@ gradle/wrapper/dists/
 # 我解出来的源代码，可能传不上去（因为太多了）
 /system_source
 
+# JLine3 完整源码副本（本地修改用，不需要提交）
+/jline3-native
+
 # 签名文件，防止爆破掉
 testmodule-keystore.jks
 

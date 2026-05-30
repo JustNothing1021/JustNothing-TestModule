@@ -1,19 +1,21 @@
 package com.justnothing.testmodule.command.functions.bsh.response;
 
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 import com.justnothing.testmodule.command.base.protocol.CommandResult;
-
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.json.JSONArray;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class BeanShellResult extends CommandResult {
 
+    @Expose @SerializedName("action")
     private String action;
+    @Expose @SerializedName("code")
     private String code;
+    @Expose @SerializedName("output")
     private String output;
+    @Expose @SerializedName("variables")
     private List<VariableInfo> variables;
 
     public BeanShellResult() {
@@ -36,40 +38,12 @@ public class BeanShellResult extends CommandResult {
     public List<VariableInfo> getVariables() { return variables; }
     public void setVariables(List<VariableInfo> variables) { this.variables = variables; }
 
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        if (action != null) obj.put("action", action);
-        if (code != null) obj.put("code", code);
-        if (output != null) obj.put("output", output);
-        if (variables != null && !variables.isEmpty()) {
-            JSONArray arr = new JSONArray();
-            for (VariableInfo v : variables) {
-                arr.put(v.toJson());
-            }
-            obj.put("variables", arr);
-        }
-        return obj;
-    }
-
-    @Override
-    public void fromJson(JSONObject obj) throws JSONException {
-        super.fromJson(obj);
-        action = obj.optString("action", null);
-        code = obj.optString("code", null);
-        output = obj.optString("output", null);
-        if (obj.has("variables")) {
-            JSONArray arr = obj.getJSONArray("variables");
-            variables = new ArrayList<>();
-            for (int i = 0; i < arr.length(); i++) {
-                variables.add(VariableInfo.fromJson(arr.getJSONObject(i)));
-            }
-        }
-    }
-
     public static class VariableInfo {
+        @Expose @SerializedName("name")
         private String name;
+        @Expose @SerializedName("type")
         private String type;
+        @Expose @SerializedName("value")
         private String value;
 
         public VariableInfo() {}
@@ -88,21 +62,5 @@ public class BeanShellResult extends CommandResult {
 
         public String getValue() { return value; }
         public void setValue(String value) { this.value = value; }
-
-        public JSONObject toJson() throws JSONException {
-            JSONObject obj = new JSONObject();
-            obj.put("name", name);
-            obj.put("type", type != null ? type : "unknown");
-            obj.put("value", value);
-            return obj;
-        }
-
-        public static VariableInfo fromJson(JSONObject obj) throws JSONException {
-            VariableInfo info = new VariableInfo();
-            info.name = obj.optString("name", "");
-            info.type = obj.optString("type", "unknown");
-            info.value = obj.optString("value", null);
-            return info;
-        }
     }
 }

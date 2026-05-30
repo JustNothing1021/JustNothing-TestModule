@@ -11,6 +11,7 @@ public class FileDirectory {
     public static final String SDCARD_PATH = SDCARD + "/JustNothing";
     public static final String METHODS_DATA_DIR = "/data/local/tmp/methods";
     public static final String PORT_FILE = METHODS_DATA_DIR + "/methods_port";
+    public static final String METHODS_CLIENT_JAR = "/system/framework/methods-client.jar";
     public static String DATA_PATH = EXTERNAL_PATH;
     public static final String EXPORT_DIR_NAME = "TestModuleExports";
     public static final String SCRIPTS_DIR_NAME = "scripts";
@@ -29,6 +30,7 @@ public class FileDirectory {
     public static final String INPUT_FILE_NAME = "input.txt";
     public static final String OUTPUT_FILE_NAME = "output.txt";
     public static final String RESULT_FILE_NAME = "result.txt";
+    public static final String AGENT_ACTIVATION_DIR = METHODS_DATA_DIR + "/agent/activated";
 
     public static final String TEMP_FALLBACK_RECORD_FILE_DIR = SDCARD_PATH + "/fallback_dir";
     public static final String SCRIPT_SUFFIX = ".java";

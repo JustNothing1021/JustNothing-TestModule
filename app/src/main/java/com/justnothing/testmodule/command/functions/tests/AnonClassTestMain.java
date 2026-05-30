@@ -58,10 +58,7 @@ public class AnonClassTestMain extends MainCommand<CommandResult> {
             testAnonymousClassInternal(context, finalQuickMode)
         );
 
-        if (shouldReturnStructuredData(context)) {
-            return createSuccessResult("匿名类测试命令执行完成");
-        }
-        return null;
+        return createSuccessResult("匿名类测试命令执行完成");
     }
 
     private interface TestRunnable {

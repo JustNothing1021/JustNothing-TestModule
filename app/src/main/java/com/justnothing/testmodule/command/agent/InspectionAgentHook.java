@@ -6,6 +6,7 @@ import android.content.Context;
 import com.justnothing.testmodule.hooks.HookAPI;
 import com.justnothing.testmodule.hooks.PackageHook;
 import com.justnothing.testmodule.utils.logging.Logger;
+import com.justnothing.testmodule.constants.FileDirectory;
 import com.justnothing.methodsclient.executor.AsyncChmodExecutor;
 
 import java.io.File;
@@ -21,11 +22,10 @@ public class InspectionAgentHook extends PackageHook {
 
     private static final Logger logger = Logger.getLoggerForName("InspectionAgentHook");
 
-    private static final String ACTIVATION_DIR = "/data/local/tmp/methods/agent/activated";
+    private static final String ACTIVATION_DIR = FileDirectory.AGENT_ACTIVATION_DIR;
     private static final long SENTINEL_INTERVAL_MS = 3000;
     private static final Set<String> activePackages = ConcurrentHashMap.newKeySet();
     
-    // ✅ 新增：去重机制，防止为同一个包创建多个哨兵线程
     private static final ConcurrentHashMap<String, Thread> sentinelThreads = new ConcurrentHashMap<>();
 
     public static boolean requestActivation(String packageName) {
@@ -72,7 +72,7 @@ public class InspectionAgentHook extends PackageHook {
         hookCallback(param -> {
             String packageName = param.packageName;
             
-            // ✅ 去重检查：如果已经为该包创建了哨兵线程，跳过
+            // 去重检查：如果已经为该包创建了哨兵线程，跳过
             if (sentinelThreads.containsKey(packageName)) {
                 debug("Sentinel thread already exists for package: " + packageName + ", skipping");
                 return true;
@@ -128,7 +128,7 @@ public class InspectionAgentHook extends PackageHook {
         sentinel.setPriority(Thread.MIN_PRIORITY);
         sentinel.setDaemon(true);
         
-        // ✅ 记录已创建的哨兵线程（去重关键！）
+        // 记录已创建的哨兵线程（去重关键！）
         sentinelThreads.put(packageName, sentinel);
         
         sentinel.start();

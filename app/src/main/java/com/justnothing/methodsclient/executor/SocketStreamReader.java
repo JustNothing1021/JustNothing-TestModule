@@ -3,6 +3,7 @@ package com.justnothing.methodsclient.executor;
 
 import com.justnothing.methodsclient.StreamClient;
 import com.justnothing.methodsclient.model.ColoredSegment;
+import com.justnothing.methodsclient.utils.TerminalManager;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.protocol.InteractiveProtocol;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
@@ -408,12 +409,13 @@ public class SocketStreamReader {
                 prompt = prompt.substring(9);
             }
             try {
+                System.out.flush();
 
                 String userInput;
                 if (isPassword) {
-                    userInput = StreamConsoleReader.readLine(prompt, '*');
+                    userInput = TerminalManager.readLine(prompt, '*');
                 } else {
-                    userInput = StreamConsoleReader.readLine(prompt);
+                    userInput = TerminalManager.readLine(prompt);
                 }
 
 

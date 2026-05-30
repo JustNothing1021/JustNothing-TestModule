@@ -1,11 +1,8 @@
 package com.justnothing.testmodule.command.functions.classcmd.request;
 
-import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
-import com.justnothing.testmodule.command.base.parser.FlagParam;
-import com.justnothing.testmodule.command.base.parser.PositionalParam;
-import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
-import com.justnothing.testmodule.command.base.command.SubCommand;
 import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
+import com.justnothing.testmodule.command.base.command.CmdParam;
+import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
 import com.justnothing.testmodule.command.utils.CustomCommandLineParser;
 import com.justnothing.testmodule.command.utils.ParamParser;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandRequest;
@@ -13,28 +10,59 @@ import com.justnothing.testmodule.command.functions.classcmd.ClassCommandRequest
 import java.util.ArrayList;
 import java.util.List;
 
-@SerializeKeyName("ReflectClass")
-@SubCommand("reflect")
-@AutoSerializable
+@SerializeKeyName("class:reflect")
 public class ReflectClassRequest extends ClassCommandRequest 
         implements CustomCommandLineParser {
 
-    @PositionalParam(order = 1, name = "类名", required = true)
+    @CmdParam(
+        name = "--class",
+        description = "类名",
+        required = true,
+        position = 1,
+        serializedName = "className"
+    )
     private String className;
 
-    @PositionalParam(order = 2, name = "操作类型", required = true)
+    @CmdParam(
+        name = "--operation",
+        description = "操作类型",
+        required = true,
+        position = 2,
+        serializedName = "operationType"
+    )
     private String operationType;
 
-    @PositionalParam(order = 3, name = "成员名称", required = true)
+    @CmdParam(
+        name = "--member",
+        description = "成员名称",
+        required = true,
+        position = 3,
+        serializedName = "memberName"
+    )
     private String memberName;
 
-    @FlagParam(names = {"-s", "--super"}, description = "访问父类成员")
+    @CmdParam(
+        name = "--super",
+        description = "访问父类成员",
+        aliases = {"-s"},
+        serializedName = "accessSuper"
+    )
     private boolean accessSuper;
 
-    @FlagParam(names = {"-i", "--interfaces"}, description = "访问接口成员")
+    @CmdParam(
+        name = "--interfaces",
+        description = "访问接口成员",
+        aliases = {"-i"},
+        serializedName = "accessInterfaces"
+    )
     private boolean accessInterfaces;
 
-    @FlagParam(names = {"-r", "--raw"}, description = "原始输出格式")
+    @CmdParam(
+        name = "--raw",
+        description = "原始输出格式",
+        aliases = {"-r"},
+        serializedName = "rawOutput"
+    )
     private boolean rawOutput;
 
     // ★ 复杂字段: 由customParse()处理!

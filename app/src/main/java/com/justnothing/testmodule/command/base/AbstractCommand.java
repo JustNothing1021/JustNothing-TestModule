@@ -40,6 +40,8 @@ public abstract class AbstractCommand<Req extends CommandRequest, Res extends Co
         try {
 
             return executeInternal((CommandExecutor.CmdExecContext<Req>) context);
+        } catch (IllegalCommandLineArgumentException e) {
+            throw e;
         } catch (Exception e) {
             CommandExceptionHandler.handleException(
                 commandName,  e,  context,

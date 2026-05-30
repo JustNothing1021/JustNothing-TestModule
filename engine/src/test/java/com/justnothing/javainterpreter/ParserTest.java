@@ -687,7 +687,6 @@ public class ParserTest {
             auto shared = 100;
             runLater(() -> { shared = shared + 1; });
             runLater(() -> { shared = shared + 10; });
-            sleep(200);
             shared;
             """);
         assertEquals(111, ((Number) result).intValue());

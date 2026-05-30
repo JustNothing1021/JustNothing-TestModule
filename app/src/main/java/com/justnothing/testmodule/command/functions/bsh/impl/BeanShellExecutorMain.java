@@ -140,10 +140,7 @@ public class BeanShellExecutorMain extends MainCommand<BeanShellResult> {
             default -> {
                 if (args.length < 1) {
                     context.println(getHelpText(), Colors.WHITE);
-                    if (shouldReturnStructuredData(context)) {
-                        return createErrorResult("参数不足，需要提供BeanShell代码");
-                    }
-                    return null;
+                    return createErrorResult("参数不足，需要提供BeanShell代码");
                 }
 
                 try {
@@ -162,27 +159,22 @@ public class BeanShellExecutorMain extends MainCommand<BeanShellResult> {
 
                 } catch (Exception e) {
                     CommandExceptionHandler.handleException(cmdName, e, context, "BeanShell执行出错");
-                    if (shouldReturnStructuredData(context)) {
-                        return createErrorResult("BeanShell执行出错: " + e.getMessage());
-                    }
+                    return createErrorResult("BeanShell执行出错: " + e.getMessage());
                 }
             }
         }
 
-        if (shouldReturnStructuredData(context)) {
-            BeanShellResult bshResult = new BeanShellResult(java.util.UUID.randomUUID().toString());
-            bshResult.setAction(cmdName);
-            Map<String, Object> vars = getBeanShellExecutor(context.classLoader()).getVariables();
-            if (vars != null && !vars.isEmpty()) {
-                List<BeanShellResult.VariableInfo> varList = new java.util.ArrayList<>();
-                for (Map.Entry<String, Object> entry : vars.entrySet()) {
-                    varList.add(new BeanShellResult.VariableInfo(entry.getKey(), entry.getValue()));
-                }
-                bshResult.setVariables(varList);
+        BeanShellResult bshResult = new BeanShellResult(java.util.UUID.randomUUID().toString());
+        bshResult.setAction(cmdName);
+        Map<String, Object> vars = getBeanShellExecutor(context.classLoader()).getVariables();
+        if (vars != null && !vars.isEmpty()) {
+            List<BeanShellResult.VariableInfo> varList = new java.util.ArrayList<>();
+            for (Map.Entry<String, Object> entry : vars.entrySet()) {
+                varList.add(new BeanShellResult.VariableInfo(entry.getKey(), entry.getValue()));
             }
-            return bshResult;
+            bshResult.setVariables(varList);
         }
-        return null;
+        return bshResult;
     }
 
     public void listVariables(CommandExecutor.CmdExecContext context) {

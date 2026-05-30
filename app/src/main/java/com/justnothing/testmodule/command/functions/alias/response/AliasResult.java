@@ -1,19 +1,17 @@
 package com.justnothing.testmodule.command.functions.alias.response;
 
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 import com.justnothing.testmodule.command.base.protocol.CommandResult;
 import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
 import com.justnothing.testmodule.command.functions.alias.model.AliasInfo;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import java.util.ArrayList;
 import java.util.List;
 
 @SerializeKeyName("Alias")
 public class AliasResult extends CommandResult {
 
+    @Expose @SerializedName("aliases")
     private List<AliasInfo> aliases;
 
     public AliasResult() {
@@ -30,30 +28,5 @@ public class AliasResult extends CommandResult {
 
     public void setAliases(List<AliasInfo> aliases) {
         this.aliases = aliases;
-    }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        if (aliases != null) {
-            JSONArray arr = new JSONArray();
-            for (AliasInfo alias : aliases) {
-                arr.put(alias.toJson());
-            }
-            obj.put("aliases", arr);
-        }
-        return obj;
-    }
-
-    @Override
-    public void fromJson(JSONObject obj) throws JSONException {
-        super.fromJson(obj);
-        if (obj.has("aliases")) {
-            JSONArray arr = obj.getJSONArray("aliases");
-            aliases = new ArrayList<>();
-            for (int i = 0; i < arr.length(); i++) {
-                aliases.add(AliasInfo.fromJson(arr.getJSONObject(i)));
-            }
-        }
     }
 }

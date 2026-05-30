@@ -25,7 +25,6 @@ public interface IOutputHandler {
     
     String readLine(String prompt);
 
-    @Deprecated
     String readPassword(String prompt);
 
     boolean isInteractive();

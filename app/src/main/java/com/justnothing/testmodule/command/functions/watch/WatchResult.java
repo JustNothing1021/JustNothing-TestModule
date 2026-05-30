@@ -1,17 +1,22 @@
 package com.justnothing.testmodule.command.functions.watch;
 
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 import com.justnothing.testmodule.command.base.protocol.CommandResult;
-
-import org.json.JSONException;
-import org.json.JSONObject;
 
 public class WatchResult extends CommandResult {
 
+    @Expose @SerializedName("targetExpression")
     private String targetExpression;
+    @Expose @SerializedName("output")
     private String output;
+    @Expose @SerializedName("active")
     private Boolean active;
+    @Expose @SerializedName("valueType")
     private String valueType;
+    @Expose @SerializedName("currentValue")
     private String currentValue;
+    @Expose @SerializedName("changeCount")
     private Long changeCount;
 
     public WatchResult() { super(); }
@@ -34,27 +39,4 @@ public class WatchResult extends CommandResult {
 
     public Long getChangeCount() { return changeCount; }
     public void setChangeCount(Long changeCount) { this.changeCount = changeCount; }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        if (targetExpression != null) obj.put("targetExpression", targetExpression);
-        if (output != null) obj.put("output", output);
-        if (active != null) obj.put("active", active);
-        if (valueType != null) obj.put("valueType", valueType);
-        if (currentValue != null) obj.put("currentValue", currentValue);
-        if (changeCount != null) obj.put("changeCount", changeCount);
-        return obj;
-    }
-
-    @Override
-    public void fromJson(JSONObject obj) throws JSONException {
-        super.fromJson(obj);
-        targetExpression = obj.optString("targetExpression", null);
-        output = obj.optString("output", null);
-        active = obj.has("active") ? obj.getBoolean("active") : null;
-        valueType = obj.optString("valueType", null);
-        currentValue = obj.optString("currentValue", null);
-        changeCount = obj.has("changeCount") ? obj.getLong("changeCount") : null;
-    }
 }

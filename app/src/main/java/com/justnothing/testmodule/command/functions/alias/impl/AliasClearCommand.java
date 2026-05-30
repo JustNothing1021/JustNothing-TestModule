@@ -19,7 +19,7 @@ import java.io.File;
     optionsDesc = """
             清除所有已保存的别名，恢复到初始状态。
             
-            ⚠️ 警告: 此操作不可撤销！
+            警告: 此操作不可撤销！
             
             示例:
               alias clear                   # 清空所有别名

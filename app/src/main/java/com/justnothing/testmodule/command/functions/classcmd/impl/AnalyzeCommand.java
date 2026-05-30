@@ -1,5 +1,6 @@
 package com.justnothing.testmodule.command.functions.classcmd.impl;
 
+import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.base.command.SubCommandInfo;
 import com.justnothing.testmodule.command.functions.classcmd.AbstractClassCommand;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandContext;
@@ -9,7 +10,6 @@ import com.justnothing.testmodule.command.functions.classcmd.model.FieldInfo;
 import com.justnothing.testmodule.command.functions.classcmd.model.MethodInfo;
 import com.justnothing.testmodule.command.functions.classcmd.response.AnalyzeReportResult;
 import com.justnothing.testmodule.command.output.Colors;
-import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
 import com.justnothing.testmodule.utils.reflect.DescriptorColorizer;
 
@@ -60,13 +60,7 @@ public class AnalyzeCommand extends AbstractClassCommand<AnalyzeClassRequest, An
         var cmd = context.execContext();
 
         if (className == null || className.isEmpty()) {
-            CommandExceptionHandler.handleException(
-                "class analyze",
-                new IllegalArgumentException("参数不足: class analyze [options] <class_name>"),
-                context.execContext(),
-                "参数错误"
-            );
-            return null;
+            throw new IllegalCommandLineArgumentException("参数不足: class analyze [options] <class_name>");
         }
         boolean showHierarchy = request.isShowHierarchy();
         boolean showFields = request.isShowFields();
@@ -176,7 +170,6 @@ public class AnalyzeCommand extends AbstractClassCommand<AnalyzeClassRequest, An
                         cmd.println("");
                         cmd.print("      └─> 继承自: ", Colors.CYAN);
                         cmd.println(methodInfo.getDeclaringClass(), Colors.GREEN);
-                        hasExtraInfo = true;
                     }
 
                     cmd.println("");

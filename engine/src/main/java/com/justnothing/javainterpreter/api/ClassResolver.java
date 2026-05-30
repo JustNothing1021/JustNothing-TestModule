@@ -6,6 +6,8 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class ClassResolver {
@@ -13,6 +15,15 @@ public class ClassResolver {
     private static final List<ClassLoader> registeredLoaders = new CopyOnWriteArrayList<>();
     private static ClassLoader primaryClassLoader = null;
     private static final Object loaderLock = new Object();
+    private static final Map<String, Object> classCache = new ConcurrentHashMap<>();
+
+    public static void clearClassCache() {
+        classCache.clear();
+    }
+
+    public static int getCacheSize() {
+        return classCache.size();
+    }
 
     public static void registerClassLoader(ClassLoader loader) {
         if (loader == null) return;
@@ -85,130 +96,94 @@ public class ClassResolver {
 
     public static Class<?> findClass(String className, ClassLoader classLoader) {
         switch (className) {
-            case "int" -> { return int.class; }
-            case "long" -> { return long.class; }
-            case "float" -> { return float.class; }
-            case "double" -> { return double.class; }
-            case "boolean" -> { return boolean.class; }
-            case "char" -> { return char.class; }
-            case "byte" -> { return byte.class; }
-            case "short" -> { return short.class; }
-            case "void" -> { return void.class; }
+            case "int": return int.class;
+            case "long": return long.class;
+            case "float": return float.class;
+            case "double": return double.class;
+            case "boolean": return boolean.class;
+            case "char": return char.class;
+            case "byte": return byte.class;
+            case "short": return short.class;
+            case "void": return void.class;
         }
         
         Class<?> clazz = findClassInternal(className, classLoader);
-        if (clazz != null) {
-            return clazz;
-        }
-        
+        if (clazz != null) return clazz;
+
         if (className.contains(".")) {
-            String[] parts = className.split("\\.");
-            if (parts.length >= 2) {
-                for (int i = parts.length - 1; i >= 1; i--) {
-                    StringBuilder nestedClassName = new StringBuilder(parts[0]);
-                    for (int j = 1; j < parts.length; j++) {
-                        if (j < i) {
-                            nestedClassName.append('.').append(parts[j]);
-                        } else {
-                            nestedClassName.append('$').append(parts[j]);
-                        }
-                    }
-                    clazz = findClassInternal(nestedClassName.toString(), classLoader);
-                    if (clazz != null) {
-                        return clazz;
-                    }
-                }
-            }
+            clazz = tryNestedVariants(className, classLoader);
+            if (clazz != null) return clazz;
         }
         
         return null;
     }
 
     public static Class<?> findClassWithImports(String className, ClassLoader classLoader, List<String> imports) {
+        Object cached = classCache.get(className);
+        if (cached != null) return (Class<?>) cached;
 
+        Class<?> result = findClassWithImportsInternal(className, classLoader, imports);
+        if (result != null) {
+            classCache.put(className, result);
+        }
+        return result;
+    }
+
+    private static Class<?> findClassWithImportsInternal(String className, ClassLoader classLoader, List<String> imports) {
         switch (className) {
-            case "int":
-                return int.class;
-            case "long":
-                return long.class;
-            case "float":
-                return float.class;
-            case "double":
-                return double.class;
-            case "boolean":
-                return boolean.class;
-            case "char":
-                return char.class;
-            case "byte":
-                return byte.class;
-            case "short":
-                return short.class;
-            case "void":
-                return void.class;
+            case "int": return int.class;
+            case "long": return long.class;
+            case "float": return float.class;
+            case "double": return double.class;
+            case "boolean": return boolean.class;
+            case "char": return char.class;
+            case "byte": return byte.class;
+            case "short": return short.class;
+            case "void": return void.class;
         }
 
-        Class<?> clazz;
         if (className.contains(".")) {
-            clazz = findClassInternal(className, classLoader);
+            Class<?> clazz = findClassInternal(className, classLoader);
+            if (clazz != null) return clazz;
 
-            if (clazz != null) {
-                return clazz;
-            }
-
-            String[] parts = className.split("\\.");
-            if (parts.length >= 2) {
-                for (int i = parts.length - 1; i >= 1; i--) {
-                    StringBuilder nestedClassName = new StringBuilder(parts[0]);
-                    for (int j = 1; j < parts.length; j++) {
-                        if (j < i) {
-                            nestedClassName.append('.').append(parts[j]);
-                        } else {
-                            nestedClassName.append('$').append(parts[j]);
-                        }
-                    }
-                    clazz = findClassInternal(nestedClassName.toString(), classLoader);
-
-                    if (clazz != null) {
-                        return clazz;
-                    }
-                }
-            }
+            clazz = tryNestedVariants(className, classLoader);
+            if (clazz != null) return clazz;
         }
 
-        for (String importStmt : imports) {
+        int importCount = imports.size();
+        for (int idx = 0; idx < importCount; idx++) {
+            String importStmt = imports.get(idx);
             String fullClassName;
+
             if (importStmt.endsWith(".*")) {
-                String packageName = importStmt.substring(0, importStmt.length() - 2);
-                fullClassName = packageName + "." + className;
+                fullClassName = importStmt.substring(0, importStmt.length() - 2) + "." + className;
             } else {
-                fullClassName = importStmt;
-                String lastName = fullClassName.substring(fullClassName.lastIndexOf('.') + 1);
-                if (!lastName.equals(className)) {
+                int lastDot = importStmt.lastIndexOf('.');
+                int shortNameLen = importStmt.length() - lastDot - 1;
+                if (lastDot < 0 || className.length() != shortNameLen ||
+                        !importStmt.regionMatches(lastDot + 1, className, 0, shortNameLen)) {
                     continue;
                 }
-            }
-            clazz = findClassInternal(fullClassName, classLoader);
-            if (clazz != null) {
-                return clazz;
+                fullClassName = importStmt;
             }
 
-            String[] parts = fullClassName.split("\\.");
-            if (parts.length >= 2) {
-                for (int i = parts.length - 1; i >= 1; i--) {
-                    StringBuilder nestedClassName = new StringBuilder(parts[0]);
-                    for (int j = 1; j < parts.length; j++) {
-                        if (j < i) {
-                            nestedClassName.append('.').append(parts[j]);
-                        } else {
-                            nestedClassName.append('$').append(parts[j]);
-                        }
-                    }
-                    clazz = findClassInternal(nestedClassName.toString(), classLoader);
+            Class<?> clazz = findClassInternal(fullClassName, classLoader);
+            if (clazz != null) return clazz;
 
-                    if (clazz != null) {
-                        return clazz;
-                    }
-                }
+            clazz = tryNestedVariants(fullClassName, classLoader);
+            if (clazz != null) return clazz;
+        }
+        return null;
+    }
+
+    private static Class<?> tryNestedVariants(String dottedName, ClassLoader loader) {
+        char[] chars = dottedName.toCharArray();
+        for (int i = chars.length - 1; i > 0; i--) {
+            if (chars[i] == '.') {
+                chars[i] = '$';
+                Class<?> clazz = findClassInternal(new String(chars), loader);
+                if (clazz != null) return clazz;
+                chars[i] = '.';
             }
         }
         return null;

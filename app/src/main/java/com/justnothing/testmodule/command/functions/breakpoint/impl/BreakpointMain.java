@@ -108,16 +108,10 @@ public class BreakpointMain extends MainCommand<BreakpointResult> {
         } catch (Exception e) {
             CommandExceptionHandler.handleException("breakpoint " + subCommand, e, context, "执行breakpoint的某个子命令时出错");
 
-            if (shouldReturnStructuredData(context)) {
-                return createErrorResult("执行breakpoint命令失败: " + e.getMessage());
-            }
+            return createErrorResult("执行breakpoint命令失败: " + e.getMessage());
         }
 
-        if (shouldReturnStructuredData(context)) {
-            return createSuccessResult("断点命令执行完成");
-        }
-
-        return null;
+        return createSuccessResult("断点命令执行完成");
     }
 
     private void handleAdd(String[] args, ClassLoader classLoader, BreakpointManager manager, CommandExecutor.CmdExecContext context) {

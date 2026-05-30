@@ -1,22 +1,30 @@
 package com.justnothing.testmodule.command.functions.classcmd.request;
 
-import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
+import com.justnothing.testmodule.command.base.command.CmdParam;
 import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
-import com.justnothing.testmodule.command.base.parser.PositionalParam;
-import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
-import com.justnothing.testmodule.command.base.command.SubCommand;
+import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
 import com.justnothing.testmodule.command.utils.ParamParser;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandRequest;
 
-@SerializeKeyName("SearchClass")
-@SubCommand("search")
-@AutoSerializable
+@SerializeKeyName("class:search")
 public class SearchClassRequest extends ClassCommandRequest {
 
-    @PositionalParam(order = 1, name = "搜索类型", required = true, description = "class/method/field/annotation")
+    @CmdParam(
+        name = "--type",
+        description = "搜索类型",
+        required = true,
+        position = 1,
+        serializedName = "searchType"
+    )
     private String searchType;
 
-    @PositionalParam(order = 2, name = "搜索模式", required = true)
+    @CmdParam(
+        name = "--pattern",
+        description = "搜索模式",
+        required = true,
+        position = 2,
+        serializedName = "pattern"
+    )
     private String pattern;
 
     public SearchClassRequest() {

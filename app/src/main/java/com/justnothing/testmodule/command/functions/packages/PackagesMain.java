@@ -1,35 +1,32 @@
 package com.justnothing.testmodule.command.functions.packages;
 
 import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.*;
-import com.justnothing.testmodule.command.base.command.CommandInfo;
-import com.justnothing.testmodule.command.base.command.RegisterCommand;
-import com.justnothing.testmodule.command.base.command.SubCommand;
-import com.justnothing.testmodule.command.base.command.SubCommands;
-import com.justnothing.testmodule.command.base.command.SupportsRequests;
+import com.justnothing.testmodule.command.base.MainCommand;
 import com.justnothing.testmodule.command.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.base.command.Cmd;
+import com.justnothing.testmodule.command.base.command.CmdRoutes;
+import com.justnothing.testmodule.command.base.command.CommandRouter;
+import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
+import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.functions.packages.request.PackagesRequest;
+import com.justnothing.testmodule.command.functions.packages.PackagesResult;
 import com.justnothing.testmodule.utils.logging.Logger;
+import com.justnothing.testmodule.command.base.AbstractCommand;
 
-@CommandInfo(
+@Cmd(
     name = "packages",
-    group = "general",
     description = "列出当前进程的所有已知包名",
-    helpText = """
-            语法: packages
-            
-            列出当前进程的所有已知包名。
-            
-            示例:
-                packages
-            """,
-    resultType = PackagesResult.class,
-    defaultSubcommand = "list"
+    defaultResultType = PackagesResult.class
 )
-@SubCommands({
-    @SubCommand(value = "list", request = PackagesRequest.class, description = "列出所有包名")
+@CmdRoutes({
+    @CmdRoutes.Route(
+        path = "list",
+        request = PackagesRequest.class,
+        handler = PackagesCommand.class,
+        description = "列出所有包名"
+    )
 })
-@RegisterCommand("packages")
-@SupportsRequests(PackagesRequest.class)
 public class PackagesMain extends MainCommand<PackagesResult> {
 
     private final Logger logger = Logger.getLoggerForName("PackagesMain");
@@ -39,14 +36,29 @@ public class PackagesMain extends MainCommand<PackagesResult> {
     }
 
     @Override
+    public String getHelpText() {
+        return CommandRouter.getInstance().generateHelpForCommand("packages");
+    }
+
+    @Override
     public PackagesResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
-        logger.debug("执行 packages 命令 (使用 @CommandInfo 声明式架构)");
+        logger.debug("执行 packages 命令 (新架构)");
 
-        if (context.getRequest() == null) {
-            context.setRequest(new PackagesRequest());
+        try {
+            if (context.getRequest() == null) {
+                context.setRequest(new PackagesRequest());
+            }
+
+            PackagesCommand command = new PackagesCommand();
+            return command.execute(context);
+
+        } catch (IllegalCommandLineArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            com.justnothing.testmodule.command.utils.CommandExceptionHandler.handleException(
+                "packages", e, context, "执行 packages 命令失败"
+            );
+            return createErrorResult("执行 packages 命令失败: " + e.getMessage());
         }
-
-        PackagesCommand command = new PackagesCommand();
-        return command.execute(context);
     }
 }

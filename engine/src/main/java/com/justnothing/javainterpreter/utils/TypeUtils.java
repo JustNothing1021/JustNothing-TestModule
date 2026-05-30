@@ -108,7 +108,7 @@ public class TypeUtils {
                 if (elemType.isAssignableFrom(result)) {
                     result = elemType;
                 } else {
-                    return Object.class;
+                    result = closetCommonSuperClass(result, elemType);
                 }
             }
         }
@@ -235,6 +235,19 @@ public class TypeUtils {
         if (primitiveType == byte.class) return Byte.class;
         if (primitiveType == short.class) return Short.class;
         return primitiveType;
+    }
+
+    public static Class<?> getPrimitiveType(Class<?> wrapperType) {
+        if (wrapperType == Integer.class) return int.class;
+        if (wrapperType == Long.class) return long.class;
+        if (wrapperType == Double.class) return double.class;
+        if (wrapperType == Float.class) return float.class;
+        if (wrapperType == Boolean.class) return boolean.class;
+        if (wrapperType == Character.class) return char.class;
+        if (wrapperType == Byte.class) return byte.class;
+        if (wrapperType == Short.class) return short.class;
+        if (wrapperType == Void.class) return void.class;
+        return null;
     }
 
     public static Class<?> getPrimitiveType(String typeName) {

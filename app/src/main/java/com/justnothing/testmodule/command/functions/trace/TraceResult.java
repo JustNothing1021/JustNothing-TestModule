@@ -1,16 +1,20 @@
 package com.justnothing.testmodule.command.functions.trace;
 
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 import com.justnothing.testmodule.command.base.protocol.CommandResult;
-
-import org.json.JSONException;
-import org.json.JSONObject;
 
 public class TraceResult extends CommandResult {
 
+    @Expose @SerializedName("targetClass")
     private String targetClass;
+    @Expose @SerializedName("targetMethod")
     private String targetMethod;
+    @Expose @SerializedName("output")
     private String output;
+    @Expose @SerializedName("active")
     private Boolean active;
+    @Expose @SerializedName("entryCount")
     private Long entryCount;
 
     public TraceResult() { super(); }
@@ -30,25 +34,4 @@ public class TraceResult extends CommandResult {
 
     public Long getEntryCount() { return entryCount; }
     public void setEntryCount(Long entryCount) { this.entryCount = entryCount; }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        if (targetClass != null) obj.put("targetClass", targetClass);
-        if (targetMethod != null) obj.put("targetMethod", targetMethod);
-        if (output != null) obj.put("output", output);
-        if (active != null) obj.put("active", active);
-        if (entryCount != null) obj.put("entryCount", entryCount);
-        return obj;
-    }
-
-    @Override
-    public void fromJson(JSONObject obj) throws JSONException {
-        super.fromJson(obj);
-        targetClass = obj.optString("targetClass", null);
-        targetMethod = obj.optString("targetMethod", null);
-        output = obj.optString("output", null);
-        active = obj.has("active") ? obj.getBoolean("active") : null;
-        entryCount = obj.has("entryCount") ? obj.getLong("entryCount") : null;
-    }
 }
