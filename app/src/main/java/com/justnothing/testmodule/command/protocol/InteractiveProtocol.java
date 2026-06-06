@@ -34,6 +34,10 @@ public class InteractiveProtocol {
     public static final byte TYPE_JSON_COMMAND_REQUEST = 0x15;
     public static final byte TYPE_JSON_COMMAND_RESPONSE = 0x16;
     public static final byte TYPE_SET_HIGHLIGHT_MODE = 0x17;
+    public static final byte TYPE_TUI_WIDGET_CREATE = 0x18;
+    public static final byte TYPE_TUI_WIDGET_UPDATE = 0x19;
+    public static final byte TYPE_TUI_WIDGET_DESTROY = 0x1A;
+    public static final byte TYPE_TUI_WIDGET_CLEAR_ALL = 0x1B;
 
 
 
@@ -56,6 +60,10 @@ public class InteractiveProtocol {
             case TYPE_JSON_COMMAND_REQUEST -> "COMMAND_REQUEST";
             case TYPE_JSON_COMMAND_RESPONSE -> "COMMAND_RESPONSE";
             case TYPE_SET_HIGHLIGHT_MODE -> "SET_HIGHLIGHT_MODE";
+            case TYPE_TUI_WIDGET_CREATE -> "TUI_WIDGET_CREATE";
+            case TYPE_TUI_WIDGET_UPDATE -> "TUI_WIDGET_UPDATE";
+            case TYPE_TUI_WIDGET_DESTROY -> "TUI_WIDGET_DESTROY";
+            case TYPE_TUI_WIDGET_CLEAR_ALL -> "TUI_WIDGET_CLEAR_ALL";
             default -> "UNKNOWN(" + type + ")";
         };
     }

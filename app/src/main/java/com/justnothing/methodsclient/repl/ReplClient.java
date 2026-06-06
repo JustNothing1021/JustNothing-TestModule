@@ -10,12 +10,14 @@ import com.justnothing.methodsclient.tailtip.TailTipManager;
 import com.justnothing.methodsclient.utils.TerminalManager;
 import com.justnothing.testmodule.command.protocol.InteractiveProtocol;
 import com.justnothing.testmodule.command.output.ClientRequirements;
+import com.justnothing.testmodule.utils.logging.Logger;
 
 import org.jline.reader.Completer;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
 import org.jline.reader.EndOfFileException;
 import org.jline.reader.UserInterruptException;
+import org.jline.widget.AutopairWidgets;
 import org.jline.widget.TailTipWidgets;
 
 import java.io.IOException;
@@ -31,7 +33,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class ReplClient {
 
-    private static final StreamClient.ClientLogger logger = new StreamClient.ClientLogger();
+    public static final Logger logger = Logger.getLoggerForName("ReplClient");
 
     private static final String PROMPT = "\u001B[32mmethods\u001B[0m\u001B[36m>\u001B[0m ";
     private static final String WELCOME = """
@@ -219,8 +221,8 @@ public class ReplClient {
         CommandCompleter completer = new CommandCompleter();
 
         var currentMode = TerminalManager.getCurrentMode();
-        com.justnothing.testmodule.utils.logging.Logger.getLoggerForName("ReplClient")
-                .info("构建 REPL LineReader, 终端模式: " + currentMode
+
+                logger.info("构建 REPL LineReader, 终端模式: " + currentMode
                         + ", 终端类型: " + TerminalManager.getTerminal().getType());
 
         // 创建可切换代理高亮器（运行时可通过 HighlighterManager 切换模式）
@@ -249,9 +251,8 @@ public class ReplClient {
         // 通过 CommandCompleter 的 firstUseCallback 延迟到首次 Tab/输入时触发，
         // 此时一定处于 readLine 上下文内。
         if (TerminalManager.getCurrentMode() != TerminalManager.TerminalMode.DUMB) {
-            TailTipWidgets tailTips = TailTipManager.setupCommandTailTips(reader, completer);
 
-            final TailTipWidgets capturedTips = tailTips;
+            final TailTipWidgets capturedTips = TailTipManager.setupCommandTailTips(reader, completer);
             completer.setFirstUseCallback(() -> {
                 try {
                     capturedTips.enable();
@@ -261,7 +262,7 @@ public class ReplClient {
                 }
                 // 同时尝试启用 AutopairWidgets
                 try {
-                    new org.jline.widget.AutopairWidgets(reader).enable();
+                    new AutopairWidgets(reader).enable();
                     logger.info("AutopairWidgets 已启用");
                 } catch (IllegalStateException e) {
                     logger.warn("AutopairWidgets 启用失败（非致命）: " + e.getMessage());

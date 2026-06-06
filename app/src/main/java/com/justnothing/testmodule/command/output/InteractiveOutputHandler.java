@@ -5,6 +5,7 @@ import androidx.annotation.NonNull;
 import com.justnothing.testmodule.command.base.protocol.GsonFactory;
 import com.justnothing.testmodule.command.output.InputMode;
 import com.justnothing.testmodule.command.protocol.InteractiveProtocol;
+import com.justnothing.testmodule.command.tui.TuiWidgetData;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
@@ -251,6 +252,82 @@ public class InteractiveOutputHandler implements ICommandOutputHandler {
             throw new RuntimeException("通信失败");
         } finally {
             stopPingFuture();
+        }
+    }
+
+    // ==================== TUI Widget 控制协议 ====================
+
+    @Override
+    public void createWidget(TuiWidgetData widgetData) {
+        logger.info("[TUI-SRV] createWidget() called, widgetId=%s, closed=%s",
+            widgetData != null ? widgetData.getWidgetId() : "null", closed.get());
+        if (!closed.get() && widgetData != null) {
+            try {
+                byte[] jsonBytes = widgetData.toJsonBytes();
+                logger.info("[TUI-SRV] createWidget: JSON size=%d bytes, content=%s",
+                    jsonBytes.length,
+                    jsonBytes.length < 200 ? new String(jsonBytes, StandardCharsets.UTF_8) : "(too large)");
+                synchronized (writeLock) {
+                    InteractiveProtocol.writeMessage(outputStream,
+                            InteractiveProtocol.TYPE_TUI_WIDGET_CREATE,
+                            jsonBytes);
+                }
+                logger.info("[TUI-SRV] TUI_WIDGET_CREATE sent OK for %s", widgetData.getWidgetId());
+            } catch (IOException e) {
+                logger.error("发送 TUI_WIDGET_CREATE 失败", e);
+            }
+        } else {
+            logger.warn("[TUI-SRV] createWidget SKIPPED: closed=%s, data=%s", closed.get(), widgetData);
+        }
+    }
+
+    @Override
+    public void updateWidget(TuiWidgetData widgetData) {
+        if (!closed.get() && widgetData != null) {
+            try {
+                byte[] jsonBytes = widgetData.toJsonBytes();
+                synchronized (writeLock) {
+                    InteractiveProtocol.writeMessage(outputStream,
+                            InteractiveProtocol.TYPE_TUI_WIDGET_UPDATE,
+                            jsonBytes);
+                }
+                logger.info("[TUI-SRV] TUI_WIDGET_UPDATE sent for %s", widgetData.getWidgetId());
+            } catch (IOException e) {
+                logger.error("发送 TUI_WIDGET_UPDATE 失败", e);
+            }
+        }
+    }
+
+    @Override
+    public void destroyWidget(String widgetId) {
+        logger.info("[TUI-SRV] destroyWidget() called, widgetId=%s, closed=%s", widgetId, closed.get());
+        if (!closed.get() && widgetId != null) {
+            try {
+                synchronized (writeLock) {
+                    InteractiveProtocol.writeMessage(outputStream,
+                            InteractiveProtocol.TYPE_TUI_WIDGET_DESTROY,
+                            widgetId.getBytes(StandardCharsets.UTF_8));
+                }
+                logger.info("[TUI-SRV] TUI_WIDGET_DESTROY sent for %s", widgetId);
+            } catch (IOException e) {
+                logger.error("发送 TUI_WIDGET_DESTROY 失败", e);
+            }
+        }
+    }
+
+    @Override
+    public void clearAllWidgets() {
+        if (!closed.get()) {
+            try {
+                synchronized (writeLock) {
+                    InteractiveProtocol.writeMessage(outputStream,
+                            InteractiveProtocol.TYPE_TUI_WIDGET_CLEAR_ALL,
+                            null);
+                }
+                logger.info("[TUI-SRV] TUI_WIDGET_CLEAR_ALL sent");
+            } catch (IOException e) {
+                logger.error("发送 TUI_WIDGET_CLEAR_ALL 失败", e);
+            }
         }
     }
 

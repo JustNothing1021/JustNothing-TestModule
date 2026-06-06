@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.output;
 
 import com.justnothing.javainterpreter.api.IOutputHandler;
 import com.justnothing.testmodule.command.output.InputMode;
+import com.justnothing.testmodule.command.tui.TuiWidgetData;
 
 
 /**
@@ -96,4 +97,31 @@ public interface ICommandOutputHandler extends IOutputHandler {
     default void printStackTrace(Throwable t, byte color) {
         printStackTrace(t);
     }
+
+    // ==================== TUI Widget 控制协议 ====================
+
+    /**
+     * 通过 socket 协议通知客户端创建一个 TUI Widget。
+     * <p>
+     * 服务端调用此方法后，数据通过 {@link com.justnothing.testmodule.command.protocol.InteractiveProtocol}
+     * 的 TYPE_TUI_WIDGET_CREATE (0x18) 消息发送到客户端，客户端在本地 Terminal 上渲染。
+     *
+     * @param widgetData Widget 描述数据（包含 id、类型、配置等），使用 {@link com.justnothing.testmodule.command.tui.TuiWidgetData} 构建
+     */
+    default void createWidget(TuiWidgetData widgetData) {}
+
+    /**
+     * 通知客户端更新一个已存在的 TUI Widget 状态。
+     */
+    default void updateWidget(TuiWidgetData widgetData) {}
+
+    /**
+     * 通知客户端销毁指定 TUI Widget。
+     */
+    default void destroyWidget(String widgetId) {}
+
+    /**
+     * 通知客户端清除所有 TUI Widget。
+     */
+    default void clearAllWidgets() {}
 }

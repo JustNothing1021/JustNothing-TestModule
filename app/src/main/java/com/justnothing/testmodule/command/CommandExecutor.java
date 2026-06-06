@@ -32,6 +32,7 @@ import com.justnothing.testmodule.command.functions.trace.TraceMain;
 import com.justnothing.testmodule.command.functions.watch.WatchMain;
 import com.justnothing.testmodule.command.functions.tests.SandboxTestMain;
 import com.justnothing.testmodule.command.functions.tests.AnonClassTestMain;
+import com.justnothing.testmodule.command.functions.tui.TuiTestMain;
 import com.justnothing.testmodule.command.output.ClientRequirements;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.output.StringBuilderCollector;
@@ -93,7 +94,8 @@ public class CommandExecutor {
             AnonClassTestMain.class,
             ClassMain.class,
             PackagesMain.class,
-            AgentCliMain.class
+            AgentCliMain.class,
+            TuiTestMain.class
         );
     }
 

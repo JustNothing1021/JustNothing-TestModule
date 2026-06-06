@@ -40,11 +40,12 @@ bsh = { module = "org.beanshell:bsh", version.ref = "bsh" }
 cfr = { module = "org.benf:cfr", version.ref = "cfr" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 hutool-all = { module = "cn.hutool:hutool-all", version.ref = "hutoolAll" }
-jline-builtins = { module = "org.jline:jline-builtins", version.ref = "jlineReader" }
 jline-console = { module = "org.jline:jline-console", version.ref = "jlineReader" }
-jline-native = { module = "org.jline:jline-native", version.ref = "jlineReader" }
+jline-console-ui = { module = "org.jline:jline-console-ui", version.ref = "jlineReader" }
+jline-builtins = { module = "org.jline:jline-builtins", version.ref = "jlineReader" }
 jline-terminal = { module = "org.jline:jline-terminal", version.ref = "jlineTerminal" }
 jline-reader = { module = "org.jline:jline-reader", version.ref = "jlineReader" }
+jline-native = { module = "org.jline:jline-native", version.ref = "jlineReader" }
 jline-terminal-jna = { module = "org.jline:jline-terminal-jna", version.ref = "jlineReader" }
 jline-terminal-jni = { module = "org.jline:jline-terminal-jni", version.ref = "jlineReader" }
 jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }

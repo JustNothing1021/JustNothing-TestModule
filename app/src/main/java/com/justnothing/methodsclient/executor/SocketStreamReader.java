@@ -8,6 +8,7 @@ import com.justnothing.methodsclient.highlighter.HighlighterManager;
 import com.justnothing.testmodule.command.output.InputMode;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.protocol.InteractiveProtocol;
+import com.justnothing.methodsclient.tui.TuiClientManager;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
 import java.io.IOException;
@@ -306,6 +307,34 @@ public class SocketStreamReader {
 
             case InteractiveProtocol.TYPE_SET_HIGHLIGHT_MODE:
                 handleSetHighlightMode(data);
+                return null;
+
+            case InteractiveProtocol.TYPE_TUI_WIDGET_CREATE:
+                logger.info("[TUI-CLI] 收到 TYPE_TUI_WIDGET_CREATE (0x18), data size=%d",
+                    data != null ? data.length : 0);
+                if (data != null) {
+                    String preview = new String(data, StandardCharsets.UTF_8);
+                    logger.info("[TUI-CLI] CREATE payload: %s",
+                        preview.length() < 200 ? preview : preview.substring(0, 200) + "...");
+                }
+                TuiClientManager.getInstance().handleWidgetCreate(data);
+                return null;
+
+            case InteractiveProtocol.TYPE_TUI_WIDGET_UPDATE:
+                logger.info("[TUI-CLI] 收到 TYPE_TUI_WIDGET_UPDATE (0x19), data size=%d",
+                    data != null ? data.length : 0);
+                TuiClientManager.getInstance().handleWidgetUpdate(data);
+                return null;
+
+            case InteractiveProtocol.TYPE_TUI_WIDGET_DESTROY:
+                String destroyId = data != null ? new String(data, StandardCharsets.UTF_8) : null;
+                logger.info("[TUI-CLI] 收到 TYPE_TUI_WIDGET_DESTROY (0x1A), widgetId=%s", destroyId);
+                TuiClientManager.getInstance().handleWidgetDestroy(destroyId);
+                return null;
+
+            case InteractiveProtocol.TYPE_TUI_WIDGET_CLEAR_ALL:
+                logger.info("[TUI-CLI] 收到 TYPE_TUI_WIDGET_CLEAR_ALL (0x1B)");
+                TuiClientManager.getInstance().handleClearAll();
                 return null;
 
             case InteractiveProtocol.TYPE_COMMAND_END:

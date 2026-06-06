@@ -111,6 +111,7 @@ dependencies {
     implementation libs.jline.terminal.jna
     implementation libs.jna
     implementation libs.jline.console
+    implementation libs.jline.console.ui
     implementation libs.jline.builtins
     implementation project(':engine')
     implementation files("libs/NCW-Logger-1.0.3-hotfix3.jar")
