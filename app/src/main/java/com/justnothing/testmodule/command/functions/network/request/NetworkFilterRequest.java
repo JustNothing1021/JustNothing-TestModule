@@ -25,6 +25,8 @@ public class NetworkFilterRequest extends CommandRequest {
     public String getHost() { return host; }
     public void setHost(String host) { this.host = host; }
 
+    public String getHostPattern() { return host; }
+
     @Override
     public JSONObject toJson() throws JSONException {
         JSONObject obj = super.toJson();

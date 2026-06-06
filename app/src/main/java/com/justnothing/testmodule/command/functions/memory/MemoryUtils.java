@@ -23,7 +23,7 @@ public final class MemoryUtils {
         }
     }
 
-    public static void printBytes(CommandExecutor.CmdExecContext ctx, long bytes) {
+    public static void printBytes(CommandExecutor.CmdExecContext<?> ctx, long bytes) {
         String[] units = {"B", "KB", "MB", "GB", "TB"};
         int unitIndex = 0;
         double size = bytes;
@@ -44,7 +44,7 @@ public final class MemoryUtils {
         ctx.print(" " + units[unitIndex], Colors.CYAN);
     }
 
-    public static void printMemoryValue(CommandExecutor.CmdExecContext ctx, String label, long bytes) {
+    public static void printMemoryValue(CommandExecutor.CmdExecContext<?> ctx, String label, long bytes) {
         ctx.print(label, Colors.GRAY);
         printBytes(ctx, bytes);
         ctx.println("", Colors.DEFAULT);

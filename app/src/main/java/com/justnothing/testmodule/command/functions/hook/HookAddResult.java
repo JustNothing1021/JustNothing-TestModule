@@ -9,6 +9,8 @@ import java.util.List;
 
 public class HookAddResult extends CommandResult {
 
+    @Expose @SerializedName("subCommand")
+    private String subCommand;
     @Expose @SerializedName("hookId")
     private String hookId;
     @Expose @SerializedName("successAction")
@@ -27,6 +29,9 @@ public class HookAddResult extends CommandResult {
         super(requestId);
         this.detail = new ArrayList<>();
     }
+
+    public String getSubCommand() { return subCommand; }
+    public void setSubCommand(String subCommand) { this.subCommand = subCommand; }
 
     public String getHookId() { return hookId; }
     public void setHookId(String hookId) { this.hookId = hookId; }

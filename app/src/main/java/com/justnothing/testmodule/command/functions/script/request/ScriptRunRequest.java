@@ -8,7 +8,7 @@ import org.json.JSONObject;
 @SerializeKeyName("script:run")
 public class ScriptRunRequest extends ScriptBaseRequest {
 
-    @CmdParam(name = "name", position = 1, description = "脚本名称")
+    @CmdParam(name = "name", position = 1, required = true, description = "脚本名称")
     private String name;
 
     public ScriptRunRequest() {

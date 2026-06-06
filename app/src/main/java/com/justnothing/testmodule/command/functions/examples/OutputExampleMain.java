@@ -7,9 +7,9 @@ import com.justnothing.testmodule.command.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.output.ICommandOutputHandler;
 
-import com.justnothing.testmodule.command.base.command.RegisterCommand;
+import com.justnothing.testmodule.command.base.command.Cmd;
 
-@RegisterCommand("output_test")
+@Cmd(name = "output_test", description = "输出处理器测试", defaultResultType = CommandResult.class)
 public class OutputExampleMain extends MainCommand<CommandResult> {
 
     public OutputExampleMain() {

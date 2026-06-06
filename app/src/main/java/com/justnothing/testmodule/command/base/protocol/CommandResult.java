@@ -39,6 +39,12 @@ public class CommandResult {
     @Expose(serialize = false, deserialize = false)
     private ErrorInfo error;
 
+    @Expose @SerializedName("resultType")
+    private String resultType;
+
+    @Expose @SerializedName("data")
+    private Object data;
+
     public CommandResult() { this.success = true; }
     public CommandResult(String requestId) { this.requestId = requestId; this.success = true; }
 
@@ -55,10 +61,16 @@ public class CommandResult {
     public void setError(ErrorInfo error) { this.error = error; this.success = false; }
 
     public String getResultType() {
+        if (resultType != null && !resultType.isEmpty()) return resultType;
         SerializeKeyName keyName = this.getClass().getAnnotation(SerializeKeyName.class);
         if (keyName != null) return keyName.value();
-        throw new IllegalStateException("Result类 " + this.getClass().getSimpleName() + " 缺少@SerializeKeyName注解!");
+        return "unknown";
     }
+
+    public void setResultType(String resultType) { this.resultType = resultType; }
+
+    public Object getData() { return data; }
+    public void setData(Object data) { this.data = data; }
 
     /**
      * 序列化为 JSONObject（兼容旧接口）

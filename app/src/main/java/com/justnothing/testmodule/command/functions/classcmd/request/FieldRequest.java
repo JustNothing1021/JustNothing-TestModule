@@ -10,9 +10,10 @@ public class FieldRequest extends ClassCommandRequest {
     // ========== 通用参数（不属于任何操作符）==========
 
     @CmdParam(
-        name = "--class",
+        name = "class",
         description = "目标类名",
         position = 1,
+        required = true,
         serializedName = "className"
     )
     private String className;

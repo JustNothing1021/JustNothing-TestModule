@@ -7,6 +7,8 @@ import com.justnothing.testmodule.command.base.protocol.CommandResult;
 import com.justnothing.testmodule.command.base.command.Cmd;
 import com.justnothing.testmodule.command.base.command.CmdRoutes;
 import com.justnothing.testmodule.command.base.command.CommandRouter;
+import com.justnothing.testmodule.command.functions.performance.sampler.SampleData;
+import com.justnothing.testmodule.command.functions.performance.sampler.Sampler;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.functions.performance.impl.*;
 import com.justnothing.testmodule.command.functions.performance.request.*;
@@ -133,23 +135,28 @@ public class PerformanceMain extends MainCommand<PerformanceResult> {
     }
 
     private void printSamplers(CommandExecutor.CmdExecContext<?> ctx,
-                               Map<Integer, ?> running, Map<?, ?> completed, String label) {
+                               Map<Integer, ? extends Sampler<?>> running, Map<Integer, ? extends SampleData> completed, String label) {
         if (!running.isEmpty()) {
-            ctx.println("运行中的" + label + "器:", Colors.CYAN);
-            for (Map.Entry<Integer, ?> e : running.entrySet()) {
+            ctx.println("记录中的" + label + "器:", Colors.CYAN);
+            for (Map.Entry<Integer, ? extends Sampler<?>> e : running.entrySet()) {
                 ctx.print("  ID: ", Colors.CYAN);
                 ctx.println(String.valueOf(e.getKey()), Colors.YELLOW);
                 ctx.println("    类型: " + label, Colors.WHITE);
-                ctx.println("    状态: 运行中", Colors.GREEN);
+                ctx.print("    状态: ", Colors.YELLOW);
+                ctx.println(e.getValue().isRunning() ? "运行中" : "已停止",
+                            e.getValue().isRunning() ? Colors.GREEN : Colors.GRAY);
+                ctx.print("    采样数量: ", Colors.YELLOW);
+                ctx.println(String.valueOf(e.getValue().getTotalSamples()), Colors.CYAN);
             }
             ctx.println("", Colors.WHITE);
         }
         if (!completed.isEmpty()) {
-            ctx.println("已完成的" + label + "数据:", Colors.CYAN);
-            for (Map.Entry<?, ?> e : completed.entrySet()) {
+            ctx.println("已收集完成的" + label + "数据:", Colors.CYAN);
+            for (Map.Entry<Integer, ? extends SampleData> e : completed.entrySet()) {
                 ctx.print("  ID: ", Colors.CYAN);
                 ctx.println(String.valueOf(e.getKey()), Colors.YELLOW);
-                ctx.println("    状态: 已完成", Colors.GRAY);
+                ctx.println("    采样数量: " + e.getValue().totalSamples(), Colors.GREEN);
+
             }
             ctx.println("", Colors.WHITE);
         }

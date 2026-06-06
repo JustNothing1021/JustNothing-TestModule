@@ -22,9 +22,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-import com.justnothing.testmodule.command.base.command.RegisterCommand;
+import com.justnothing.testmodule.command.base.command.Cmd;
 
-@RegisterCommand("sandboxtest")
+@Cmd(name = "sandboxtest", description = "沙箱安全机制测试", defaultResultType = CommandResult.class)
 public class SandboxTestMain extends MainCommand<CommandResult> {
 
     private static volatile boolean nativeLoaded = false;

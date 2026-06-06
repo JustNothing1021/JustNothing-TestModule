@@ -10,9 +10,10 @@ import com.justnothing.testmodule.command.functions.classcmd.ClassCommandRequest
 public class ClassGraphRequest extends ClassCommandRequest {
 
     @CmdParam(
-        name = "--class",
+        name = "class",
         description = "类名",
         position = 1,
+        required = true,
         serializedName = "className"
     )
     private String className;
@@ -21,7 +22,8 @@ public class ClassGraphRequest extends ClassCommandRequest {
         name = "--no-subclasses",
         description = "隐藏子类",
         aliases = {"--hide-subclasses"},
-        serializedName = "showSubclasses"
+        serializedName = "showSubclasses",
+        isNegated = true
     )
     private boolean showSubclasses = true;
 

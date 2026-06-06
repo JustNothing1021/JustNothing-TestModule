@@ -15,17 +15,19 @@ public class GetFieldValueRequest extends ClassCommandRequest
         implements CustomCommandLineParser {
 
     @CmdParam(
-        name = "--class",
+        name = "class",
         description = "类名",
         position = 1,
+        required = true,
         serializedName = "className"
     )
     private String className;
 
     @CmdParam(
-        name = "--field",
+        name = "field",
         description = "字段名",
         position = 2,
+        required = true,
         serializedName = "fieldName"
     )
     private String fieldName;

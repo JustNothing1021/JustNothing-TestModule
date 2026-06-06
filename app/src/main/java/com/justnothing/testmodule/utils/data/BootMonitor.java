@@ -121,7 +121,7 @@ public class BootMonitor {
 
         public static void requestPermission(Activity activity) {
             ActivityCompat.requestPermissions(activity,
-                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1145);
+                    new String[] {Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1145);
         }
 
     }

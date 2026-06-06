@@ -6,6 +6,8 @@ import com.justnothing.testmodule.command.base.protocol.CommandResult;
 
 public class TraceResult extends CommandResult {
 
+    @Expose @SerializedName("subCommand")
+    private String subCommand;
     @Expose @SerializedName("targetClass")
     private String targetClass;
     @Expose @SerializedName("targetMethod")
@@ -19,6 +21,9 @@ public class TraceResult extends CommandResult {
 
     public TraceResult() { super(); }
     public TraceResult(String requestId) { super(requestId); }
+
+    public String getSubCommand() { return subCommand; }
+    public void setSubCommand(String subCommand) { this.subCommand = subCommand; }
 
     public String getTargetClass() { return targetClass; }
     public void setTargetClass(String targetClass) { this.targetClass = targetClass; }

@@ -8,9 +8,10 @@ import com.justnothing.testmodule.command.functions.classcmd.ClassCommandRequest
 public class ClassHierarchyRequest extends ClassCommandRequest {
 
     @CmdParam(
-        name = "--class",
+        name = "class",
         description = "类名",
         position = 1,
+        required = true,
         serializedName = "className"
     )
     private String className;

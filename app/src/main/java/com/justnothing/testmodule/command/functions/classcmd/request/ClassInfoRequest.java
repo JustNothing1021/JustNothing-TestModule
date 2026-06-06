@@ -10,10 +10,10 @@ import com.justnothing.testmodule.command.functions.classcmd.ClassCommandRequest
 public class ClassInfoRequest extends ClassCommandRequest {
 
     @CmdParam(
-        name = "--class",
+        name = "class",
         description = "类名",
-        required = true,
         position = 1,
+        required = true,
         serializedName = "className"
     )
     private String className;
@@ -22,6 +22,7 @@ public class ClassInfoRequest extends ClassCommandRequest {
         name = "--verbose",
         description = "显示详细信息",
         aliases = {"-v"},
+        required = false,
         serializedName = "verbose"
     )
     private boolean isVerbose = false;
@@ -30,6 +31,7 @@ public class ClassInfoRequest extends ClassCommandRequest {
         name = "--interfaces",
         description = "显示实现的接口",
         aliases = {"-i"},
+        required = false,
         serializedName = "showInterfaces"
     )
     private boolean showInterfaces = false;
@@ -38,6 +40,7 @@ public class ClassInfoRequest extends ClassCommandRequest {
         name = "--constructors",
         description = "显示构造函数",
         aliases = {"-c"},
+        required = false,
         serializedName = "showConstructors"
     )
     private boolean showConstructors = false;
@@ -46,6 +49,7 @@ public class ClassInfoRequest extends ClassCommandRequest {
         name = "--super",
         description = "显示父类信息",
         aliases = {"-s"},
+        required = false,
         serializedName = "showSuper"
     )
     private boolean showSuper = false;
@@ -54,6 +58,7 @@ public class ClassInfoRequest extends ClassCommandRequest {
         name = "--modifiers",
         description = "显示修饰符信息",
         aliases = {"-m"},
+        required = false,
         serializedName = "showModifiers"
     )
     private boolean showModifiers = false;
@@ -62,6 +67,7 @@ public class ClassInfoRequest extends ClassCommandRequest {
         name = "--all",
         description = "显示所有信息 (默认)",
         aliases = {"-a"},
+        required = false,
         serializedName = "showAll"
     )
     private boolean showAll = true;

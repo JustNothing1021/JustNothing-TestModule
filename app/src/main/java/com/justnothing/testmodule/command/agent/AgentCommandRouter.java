@@ -11,9 +11,9 @@ public class AgentCommandRouter {
 
     private static final Logger logger = Logger.getLoggerForName("AgentCommandRouter");
 
-    private static final Map<String, AgentCommandHandler<?>> handlers = new ConcurrentHashMap<>();
+    private static final Map<String, AgentCommandHandler> handlers = new ConcurrentHashMap<>();
 
-    public static void register(AgentCommandHandler<?> handler) {
+    public static void register(AgentCommandHandler handler) {
         if (handler == null || handler.getCommandType() == null) return;
         handlers.put(handler.getCommandType(), handler);
         logger.debug("注册 Agent 命令: " + handler.getCommandType());
@@ -23,7 +23,7 @@ public class AgentCommandRouter {
         if (commandType != null) handlers.remove(commandType);
     }
 
-    public static AgentCommandHandler<?> getHandler(String commandType) {
+    public static AgentCommandHandler getHandler(String commandType) {
         return commandType != null ? handlers.get(commandType) : null;
     }
 

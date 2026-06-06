@@ -3,13 +3,15 @@ package com.justnothing.testmodule.command.agent;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-import org.json.JSONArray;
+import com.justnothing.testmodule.command.base.protocol.CommandResult;
+import com.justnothing.testmodule.constants.AgentResultTypes;
+
 import org.json.JSONObject;
 
 import java.io.File;
 import java.util.Arrays;
 
-public class SpListHandler extends AgentCommandHandler<JSONArray> {
+public class SpListHandler extends AgentCommandHandler {
 
     @Override
     public String getCommandType() {
@@ -17,41 +19,46 @@ public class SpListHandler extends AgentCommandHandler<JSONArray> {
     }
 
     @Override
-    public JSONArray handle(JSONObject params, Context context) throws Exception {
+    public CommandResult handle(JSONObject params, Context context) throws Exception {
+        SpListResult result = new SpListResult();
+        result.setResultType(AgentResultTypes.SP_LIST);
+
         File spDir = new File(context.getApplicationInfo().dataDir, "shared_prefs");
 
         if (!spDir.exists() || !spDir.isDirectory()) {
-            return new JSONArray();
+            result.setSuccess(true);
+            return result;
         }
 
         String[] files = spDir.list((dir, name) -> name.endsWith(".xml"));
         if (files == null || files.length == 0) {
-            return new JSONArray();
+            result.setSuccess(true);
+            return result;
         }
 
         Arrays.sort(files);
 
-        JSONArray result = new JSONArray();
         for (String file : files) {
             String spName = file.substring(0, file.length() - 4);
             File spFile = new File(spDir, file);
-            long lastModified = spFile.lastModified();
 
-            JSONObject info = new JSONObject();
-            info.put("name", spName);
-            info.put("file", file);
-            info.put("sizeBytes", spFile.length());
-            info.put("lastModified", lastModified);
+            SpListResult.SpFileInfo info = new SpListResult.SpFileInfo();
+            info.setName(spName);
+            info.setFile(file);
+            info.setSizeBytes(spFile.length());
+            info.setLastModified(spFile.lastModified());
 
             try {
                 SharedPreferences sp = context.getSharedPreferences(spName, Context.MODE_PRIVATE);
-                info.put("keyCount", sp.getAll().size());
+                info.setKeyCount(sp.getAll().size());
             } catch (Exception ignored) {
-                info.put("keyCount", -1);
+                info.setKeyCount(-1);
             }
 
-            result.put(info);
+            result.addSpFile(info);
         }
+
+        result.setSuccess(true);
         return result;
     }
 }

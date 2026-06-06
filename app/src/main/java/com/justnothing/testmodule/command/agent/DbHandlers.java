@@ -1,17 +1,16 @@
 package com.justnothing.testmodule.command.agent;
 
 import android.content.Context;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 
-import org.json.JSONArray;
+import com.justnothing.testmodule.command.base.protocol.CommandResult;
+import com.justnothing.testmodule.constants.AgentResultTypes;
+
 import org.json.JSONObject;
 
 import java.io.File;
 import java.util.Arrays;
-import java.util.Collections;
 
-class DbListHandler extends AgentCommandHandler<JSONArray> {
+class DbListHandler extends AgentCommandHandler {
 
     @Override
     public String getCommandType() {
@@ -19,39 +18,46 @@ class DbListHandler extends AgentCommandHandler<JSONArray> {
     }
 
     @Override
-    public JSONArray handle(JSONObject params, Context context) throws Exception {
+    public CommandResult handle(JSONObject params, Context context) throws Exception {
+        DbListResult result = new DbListResult();
+        result.setResultType(AgentResultTypes.DB_LIST);
+
         File dbDir = new File(context.getApplicationInfo().dataDir, "databases");
 
         if (!dbDir.exists() || !dbDir.isDirectory()) {
-            return new JSONArray();
+            result.setSuccess(true);
+            return result;
         }
 
         String[] files = dbDir.list();
         if (files == null || files.length == 0) {
-            return new JSONArray();
+            result.setSuccess(true);
+            return result;
         }
 
         Arrays.sort(files, String.CASE_INSENSITIVE_ORDER);
 
-        JSONArray result = new JSONArray();
         for (String file : files) {
             File dbFile = new File(dbDir, file);
-            JSONObject info = new JSONObject();
-            info.put("name", file);
-            info.put("sizeBytes", dbFile.length());
-            info.put("lastModified", dbFile.lastModified());
+
+            DbListResult.DbFileInfo info = new DbListResult.DbFileInfo();
+            info.setName(file);
+            info.setSizeBytes(dbFile.length());
+            info.setLastModified(dbFile.lastModified());
 
             boolean isDb = file.endsWith(".db") || file.endsWith(".sqlite") ||
                     file.endsWith(".sqlite3") || file.endsWith(".wal");
-            info.put("isDatabase", isDb);
+            info.setDatabase(isDb);
 
-            result.put(info);
+            result.addDbFile(info);
         }
+
+        result.setSuccess(true);
         return result;
     }
 }
 
-class DbQueryHandler extends AgentCommandHandler<JSONObject> {
+class DbQueryHandler extends AgentCommandHandler {
 
     @Override
     public String getCommandType() {
@@ -59,68 +65,64 @@ class DbQueryHandler extends AgentCommandHandler<JSONObject> {
     }
 
     @Override
-    public JSONObject handle(JSONObject params, Context context) throws Exception {
+    public CommandResult handle(JSONObject params, Context context) throws Exception {
+        DbQueryResult result = new DbQueryResult();
+        result.setResultType(AgentResultTypes.DB_QUERY);
+
         String dbName = params.getString("dbName");
         String sql = params.getString("sql");
         int limit = params.optInt("limit", 1000);
+
+        result.setDbName(dbName);
 
         File dbFile = new File(context.getApplicationInfo().dataDir, "databases/" + dbName);
         if (!dbFile.exists()) {
             throw new IllegalArgumentException("数据库不存在: " + dbFile.getPath());
         }
 
-        try (SQLiteDatabase db = SQLiteDatabase.openDatabase(dbFile.getPath(), null,
-                SQLiteDatabase.OPEN_READONLY)) {
-            Cursor cursor = db.rawQuery(sql, null);
+        try (android.database.sqlite.SQLiteDatabase db =
+                     android.database.sqlite.SQLiteDatabase.openDatabase(dbFile.getPath(), null,
+                             android.database.sqlite.SQLiteDatabase.OPEN_READONLY)) {
+            android.database.Cursor cursor = db.rawQuery(sql, null);
 
             String[] columns = cursor.getColumnNames();
+            for (String col : columns) {
+                result.getColumns().add(col);
+            }
 
-            JSONArray rows = new JSONArray();
             int rowCount = 0;
-
             while (cursor.moveToNext() && rowCount < limit) {
-                JSONObject row = new JSONObject();
+                java.util.Map<String, Object> row = new java.util.HashMap<>();
                 for (int i = 0; i < columns.length; i++) {
-                    putCursorValue(row, columns[i], cursor, i);
+                    row.put(columns[i], getCursorValue(cursor, i));
                 }
-                rows.put(row);
+                result.addRow(row);
                 rowCount++;
             }
 
             cursor.close();
-
-            JSONObject result = new JSONObject();
-            result.put("columns", new JSONArray(Arrays.asList(columns)));
-            result.put("rows", rows);
-            result.put("rowCount", rowCount);
+            result.setSuccess(true);
             return result;
         }
     }
 
-    private void putCursorValue(JSONObject row, String col, Cursor c, int idx)
-            throws org.json.JSONException {
+    private Object getCursorValue(android.database.Cursor c, int idx) {
         switch (c.getType(idx)) {
-            case Cursor.FIELD_TYPE_NULL:
-                row.put(col, JSONObject.NULL);
-                break;
-            case Cursor.FIELD_TYPE_INTEGER:
-                row.put(col, c.getLong(idx));
-                break;
-            case Cursor.FIELD_TYPE_FLOAT:
-                row.put(col, c.getDouble(idx));
-                break;
-            case Cursor.FIELD_TYPE_BLOB:
-                byte[] blob = c.getBlob(idx);
-                row.put(col, new JSONArray(Collections.singletonList(blob)));
-                break;
+            case android.database.Cursor.FIELD_TYPE_NULL:
+                return null;
+            case android.database.Cursor.FIELD_TYPE_INTEGER:
+                return c.getLong(idx);
+            case android.database.Cursor.FIELD_TYPE_FLOAT:
+                return c.getDouble(idx);
+            case android.database.Cursor.FIELD_TYPE_BLOB:
+                return c.getBlob(idx);
             default:
-                row.put(col, c.getString(idx));
-                break;
+                return c.getString(idx);
         }
     }
 }
 
-class DbTablesHandler extends AgentCommandHandler<JSONArray> {
+class DbTablesHandler extends AgentCommandHandler {
 
     @Override
     public String getCommandType() {
@@ -128,21 +130,27 @@ class DbTablesHandler extends AgentCommandHandler<JSONArray> {
     }
 
     @Override
-    public JSONArray handle(JSONObject params, Context context) throws Exception {
+    public CommandResult handle(JSONObject params, Context context) throws Exception {
+        DbTablesResult result = new DbTablesResult();
+        result.setResultType(AgentResultTypes.DB_TABLES);
+
         String dbName = params.getString("dbName");
+        result.setDbName(dbName);
 
         File dbFile = new File(context.getApplicationInfo().dataDir, "databases/" + dbName);
 
-        try (SQLiteDatabase db = SQLiteDatabase.openDatabase(dbFile.getPath(), null,
-                SQLiteDatabase.OPEN_READONLY)) {
-            Cursor cursor = db.rawQuery(
+        try (android.database.sqlite.SQLiteDatabase db =
+                     android.database.sqlite.SQLiteDatabase.openDatabase(dbFile.getPath(), null,
+                             android.database.sqlite.SQLiteDatabase.OPEN_READONLY)) {
+            android.database.Cursor cursor = db.rawQuery(
                     "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name", null);
-            JSONArray tables = new JSONArray();
             while (cursor.moveToNext()) {
-                tables.put(cursor.getString(0));
+                result.addTable(cursor.getString(0));
             }
             cursor.close();
-            return tables;
+
+            result.setSuccess(true);
+            return result;
         }
     }
 }

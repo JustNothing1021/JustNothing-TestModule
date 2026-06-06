@@ -840,11 +840,13 @@ public class ASTEvaluator {
                 String finalMethodName = methodName;
                 throw new EvaluationException(
                         "Can't find method " + methodName + " with signature " + Arrays.toString(args) + "\n" +
+                                // Stream 神力
                                 "Possible candidates are: " + "\n" + Arrays.stream(targetClass.getMethods())
                                         .filter(m -> m.getName().equals(finalMethodName))
                                         .map(Method::toString)
                                         .map(s -> s.substring(s.indexOf('(') + 1, s.indexOf(')')))
                                         .map(s -> s.replace(",", ", "))
+                                        .map(s -> "[" + s + "]")
                                         .map(s -> s.isEmpty() ? "[No arguments]" : s)
                                         .map(s -> "  " + s)
                                         .collect(Collectors.joining("\n"))

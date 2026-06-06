@@ -4,8 +4,9 @@ import android.annotation.SuppressLint;
 
 import com.justnothing.testmodule.utils.data.BootMonitor;
 import com.justnothing.testmodule.utils.logging.Logger;
-import com.justnothing.testmodule.utils.io.RootProcessPool;
 import com.justnothing.testmodule.utils.io.IOManager;
+import com.justnothing.testmodule.utils.io.ShellExecutionException;
+import com.justnothing.testmodule.utils.io.ShellExecutorProvider;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -96,7 +97,8 @@ public class AsyncChmodExecutor extends Logger {
 
     private static boolean isSystemBootCompletedFallbackNoLog() {
         try {
-            IOManager.ProcessResult result = RootProcessPool.executeCommand("getprop sys.boot_completed", 5000, true);
+            IOManager.ProcessResult result = ShellExecutorProvider.get()
+                    .execute("getprop sys.boot_completed", 5000);
             
             if (result.isSuccess()) {
                 String output = result.stdout().trim();
@@ -163,7 +165,8 @@ public class AsyncChmodExecutor extends Logger {
         
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-                IOManager.ProcessResult result = RootProcessPool.executeCommand(chmodCmd, timeoutMs);
+                IOManager.ProcessResult result = ShellExecutorProvider.get()
+                        .execute(chmodCmd, timeoutMs);
                 
                 if (result.isSuccess()) {
                     logInfo("chmod执行成功, 命令内容: " + chmodCmd + ", 尝试: " + attempt);
@@ -182,8 +185,8 @@ public class AsyncChmodExecutor extends Logger {
                                 ", stderr: " + stderr);
                     }
                 }
-            } catch (InterruptedException e) {
-                logWarn("chmod尝试 " + attempt + " 超时: " + e.getMessage());
+            } catch (ShellExecutionException e) {
+                logWarn("chmod尝试 " + attempt + " 执行异常: " + e.getMessage());
                 if (attempt < maxRetries) {
                     logInfo("将重试chmod命令...");
                 }

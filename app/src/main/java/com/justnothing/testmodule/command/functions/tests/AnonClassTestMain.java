@@ -12,9 +12,9 @@ import com.justnothing.javainterpreter.evaluator.DynamicClassGenerator;
 
 import java.util.concurrent.atomic.AtomicReference;
 
-import com.justnothing.testmodule.command.base.command.RegisterCommand;
+import com.justnothing.testmodule.command.base.command.Cmd;
 
-@RegisterCommand("anonclasstest")
+@Cmd(name = "anonclasstest", description = "匿名类生成诊断测试", defaultResultType = CommandResult.class)
 public class AnonClassTestMain extends MainCommand<CommandResult> {
 
     public AnonClassTestMain() {

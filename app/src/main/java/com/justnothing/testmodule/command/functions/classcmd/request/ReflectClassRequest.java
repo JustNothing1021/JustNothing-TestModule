@@ -15,28 +15,28 @@ public class ReflectClassRequest extends ClassCommandRequest
         implements CustomCommandLineParser {
 
     @CmdParam(
-        name = "--class",
+        name = "class",
         description = "类名",
-        required = true,
         position = 1,
+        required = true,
         serializedName = "className"
     )
     private String className;
 
     @CmdParam(
-        name = "--operation",
+        name = "operation",
         description = "操作类型",
-        required = true,
         position = 2,
+        required = true,
         serializedName = "operationType"
     )
     private String operationType;
 
     @CmdParam(
-        name = "--member",
+        name = "member",
         description = "成员名称",
-        required = true,
         position = 3,
+        required = true,
         serializedName = "memberName"
     )
     private String memberName;

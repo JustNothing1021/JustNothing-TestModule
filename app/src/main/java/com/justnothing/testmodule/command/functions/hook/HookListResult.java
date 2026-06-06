@@ -9,6 +9,8 @@ import java.util.List;
 
 public class HookListResult extends CommandResult {
 
+    @Expose @SerializedName("subCommand")
+    private String subCommand;
     @Expose @SerializedName("timestamp")
     private long timestamp;
     @Expose @SerializedName("totalHookCount")
@@ -27,6 +29,14 @@ public class HookListResult extends CommandResult {
         super(requestId);
         this.hooks = new ArrayList<>();
     }
+
+    public String getSubCommand() { return subCommand; }
+    public void setSubCommand(String subCommand) { this.subCommand = subCommand; }
+
+    @Expose @SerializedName("message")
+    private String message;
+    public String getMessage() { return message; }
+    public void setMessage(String message) { this.message = message; }
 
     public long getTimestamp() { return timestamp; }
     public void setTimestamp(long timestamp) { this.timestamp = timestamp; }

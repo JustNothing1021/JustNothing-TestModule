@@ -167,7 +167,6 @@ public class AnalyzeCommand extends AbstractClassCommand<AnalyzeClassRequest, An
                         if (hasExtraInfo) {
                             cmd.println("");
                         }
-                        cmd.println("");
                         cmd.print("      └─> 继承自: ", Colors.CYAN);
                         cmd.println(methodInfo.getDeclaringClass(), Colors.GREEN);
                     }

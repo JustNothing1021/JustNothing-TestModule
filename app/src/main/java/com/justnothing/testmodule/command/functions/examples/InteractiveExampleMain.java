@@ -6,9 +6,9 @@ import com.justnothing.testmodule.command.base.protocol.CommandResult;
 import com.justnothing.testmodule.command.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.output.ICommandOutputHandler;
 
-import com.justnothing.testmodule.command.base.command.RegisterCommand;
+import com.justnothing.testmodule.command.base.command.Cmd;
 
-@RegisterCommand("interactive_test")
+@Cmd(name = "interactive_test", description = "交互式输入测试", defaultResultType = CommandResult.class)
 public class InteractiveExampleMain extends MainCommand<CommandResult> {
 
     public InteractiveExampleMain() {

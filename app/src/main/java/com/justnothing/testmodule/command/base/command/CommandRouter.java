@@ -31,6 +31,14 @@ public class CommandRouter {
         return INSTANCE;
     }
 
+    private static Method executeMethod;
+
+    static {
+        try {
+            executeMethod = Command.class.getDeclaredMethod("execute", CommandExecutor.CmdExecContext.class);
+        } catch (NoSuchMethodException ignored) { }
+    }
+
     public void registerCommand(Class<? extends MainCommand<?>> cmdClass) {
         Cmd cmdAnnotation = cmdClass.getAnnotation(Cmd.class);
         if (cmdAnnotation == null) {
@@ -48,7 +56,7 @@ public class CommandRouter {
             }
         }
 
-        logger.info("✅ 注册命令: " + commandName + " (" + cmdClass.getSimpleName() + ")");
+        logger.info("注册命令: " + commandName + " (" + cmdClass.getSimpleName() + ")");
     }
 
     private void registerRoute(String parentPath, CmdRoutes.Route route, Class<? extends MainCommand<?>> cmdClass) {
@@ -90,21 +98,32 @@ public class CommandRouter {
     }
 
     public RouteMatch matchRoute(String commandName, String[] args) {
-        logger.debug("🔍 [matchRoute] 开始匹配: command=" + commandName + 
-                    ", args=" + java.util.Arrays.toString(args));
+        logger.debug("[matchRoute] 开始匹配: command=" + commandName +
+                    ", args=" + Arrays.toString(args));
         
         RouteNode rootNode = routeTree.get(commandName);
         if (rootNode == null) {
-            logger.warn("⚠️ [matchRoute] 未找到根节点: " + commandName);
+            logger.warn("[matchRoute] 未找到根节点: " + commandName);
             return null;
         }
 
-        logger.debug("✅ [matchRoute] 找到根节点: " + rootNode.name + 
+        logger.debug("[matchRoute] 找到根节点: " + rootNode.name +
                    ", 子节点数: " + rootNode.children.size() +
                    ", 自身configs: " + rootNode.routeConfigs.size());
 
         if (args.length == 0) {
-            logger.debug("⚠️ [matchRoute] 无参数，返回null以显示帮助");
+            // 空参数：检查根节点自身是否有配置（空路径路由，如 help 的 path=""）
+            if (rootNode.hasConfig()) {
+                logger.debug("[matchRoute] 无参数，匹配到根节点自身的空路径路由");
+                return new RouteMatch(rootNode.getFirstRouteConfig(), new String[0]);
+            }
+            // 检查是否有空字符串 key 的子节点（path="" 注册为子节点的情况）
+            RouteNode emptyChild = rootNode.getChild("");
+            if (emptyChild != null && emptyChild.hasConfig()) {
+                logger.debug("[matchRoute] 无参数，匹配到空路径子节点");
+                return new RouteMatch(emptyChild.getFirstRouteConfig(), new String[0]);
+            }
+            logger.debug("[matchRoute] 无参数且无空路径路由，返回null以显示帮助");
             return null;
         }
 
@@ -114,10 +133,10 @@ public class CommandRouter {
 
         for (int i = 0; i < args.length; i++) {
             String arg = args[i];
-            logger.debug("   📍 [matchRoute] 处理参数[" + i + "] = '" + arg + "'");
+            logger.debug("   [matchRoute] 处理参数[" + i + "] = '" + arg + "'");
             
             if (!current.hasChild(arg)) {
-                logger.debug("   ❌ [matchRoute] 未找到子节点: '" + arg + "'" +
+                logger.debug("   [matchRoute] 未找到子节点: '" + arg + "'" +
                            ", 可用子节点: " + current.children.keySet());
                 
                 RouteNode fuzzyMatch = tryFuzzyMatch(current, arg);
@@ -126,7 +145,7 @@ public class CommandRouter {
                 }
                 
                 current = fuzzyMatch;
-                logger.debug("   ✅ [matchRoute] 模糊匹配到中间节点!");
+                logger.debug("   [matchRoute] 模糊匹配到中间节点!");
                 matchedSegments.add(arg);
                 consumedArgs++;
                 continue;
@@ -136,7 +155,7 @@ public class CommandRouter {
             
             if (child.hasConfig() && child.isLeaf()) {
                 String[] remainingArgs = Arrays.copyOfRange(args, i + 1, args.length);
-                logger.debug("   ✅ [matchRoute] 匹配到叶子节点! path=" + 
+                logger.debug("   [matchRoute] 匹配到叶子节点! path=" +
                            child.getFirstRouteConfig().path + 
                            ", remainingArgs=" + java.util.Arrays.toString(remainingArgs));
                 return new RouteMatch(child.getFirstRouteConfig(), remainingArgs);
@@ -150,17 +169,17 @@ public class CommandRouter {
         if (current.hasConfig()) {
             RouteConfig config = current.getFirstRouteConfig();
             String[] remainingArgs = Arrays.copyOfRange(args, consumedArgs, args.length);
-            logger.debug("✅ [matchRoute] 最终匹配! path=" + config.path);
+            logger.debug("[matchRoute] 最终匹配! path=" + config.path);
             return new RouteMatch(config, remainingArgs);
         }
 
         if (!current.isLeaf()) {
-            logger.warn("❌ [matchRoute] 停在中间节点 '" + current.name +
+            logger.warn("[matchRoute] 停在中间节点 '" + current.name +
                        "', 需要更多参数。可用子节点: " + current.children.keySet());
             return null;
         }
 
-        logger.warn("❌ [matchRoute] 完全未匹配! 已匹配段: " + matchedSegments);
+        logger.warn("[matchRoute] 完全未匹配! 已匹配段: " + matchedSegments);
         return null;
     }
     
@@ -223,10 +242,14 @@ public class CommandRouter {
         RouteConfig config = match.routeConfig;
         Class<? extends CommandRequest> requestType = config.requestType;
 
-        CommandRequest request = requestType.getDeclaredConstructor().newInstance();
+        // 抽象类（如 CommandRequest 本身）无法实例化，直接用 null
+        int requestModifiers = requestType.getModifiers();
+        CommandRequest request = (requestModifiers & java.lang.reflect.Modifier.ABSTRACT) != 0
+                ? null
+                : requestType.getDeclaredConstructor().newInstance();
 
-        // 使用统一的智能解析入口
-        if (match.remainingArgs.length > 0 || hasRequiredParams(requestType)) {
+        // 使用统一的智能解析入口（request 为 null 时跳过，对应无参命令如 help）
+        if (request != null && (match.remainingArgs.length > 0 || hasRequiredParams(requestType))) {
             request = CmdParamProcessor.parseRequest(request, match.remainingArgs);
         }
 
@@ -235,7 +258,7 @@ public class CommandRouter {
         typedContext.setRequest(request);
 
         Object handlerInstance = config.handlerType.getDeclaredConstructor().newInstance();
-        logger.info("🔧 [dispatch] handler实例已创建: %s", config.handlerType.getSimpleName());
+        logger.info("handler实例已创建: %s", config.handlerType.getSimpleName());
 
         if (handlerInstance instanceof MainCommand) {
             @SuppressWarnings("unchecked")
@@ -244,7 +267,7 @@ public class CommandRouter {
         } else {
             Method executeMethod = findExecuteMethod(config.handlerType);
             if (executeMethod != null) {
-                logger.info("🔧 [dispatch] 反射调用 execute(): %s.%s()",
+                logger.info("反射调用 execute(): %s.%s()",
                         config.handlerType.getSimpleName(), executeMethod.getName());
                 Object result;
                 try {
@@ -254,7 +277,7 @@ public class CommandRouter {
                     if (cause == null) cause = e;
                     throw cause;
                 }
-                logger.info("🔧 [dispatch] execute() 返回: %s",
+                logger.info("execute() 返回: %s",
                         result != null ? result.getClass().getSimpleName() : "null");
                 return (CommandResult) result;
             } else {
@@ -270,6 +293,8 @@ public class CommandRouter {
     }
 
     private Method findExecuteMethod(Class<?> handlerClass) {
+        if (Arrays.asList(handlerClass.getInterfaces()).contains(Command.class) && executeMethod != null)
+            return executeMethod;
         try {
             return handlerClass.getMethod("execute", CommandExecutor.CmdExecContext.class);
         } catch (NoSuchMethodException e) {
@@ -323,10 +348,6 @@ public class CommandRouter {
 
         // 未匹配到子命令或匹配失败，显示完整帮助
         return generateHelpForCommand(commandName);
-    }
-
-    public Map<String, Class<? extends MainCommand<?>>> getAllCommands() {
-        return new HashMap<>(commandRegistry);
     }
 
     public record RouteMatch(RouteConfig routeConfig, String[] remainingArgs) {

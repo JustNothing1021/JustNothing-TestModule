@@ -4,7 +4,11 @@ JustNothing1021 (真的啥也不是啊) 的测试模块。
 
 ~~终于会写MD了!!!~~
 
+
 ## 这是个啥东西？
+
+> 我觉得一个相当贴切的项目描述: 一个高中生和朋友一起, 从零开始, 边学边做, 把所有觉得酷的东西都塞进去的"技术游乐场".
+
 
 如果你是一个新手安卓开发者，想必你也会有下面的一些疑问：
 
@@ -140,57 +144,6 @@ chmod -R 0775 /data/local/tmp/methods
 
 (困了，下面让AI跟你们讲讲吧)
 
-## 项目结构
-
-```
-TestModule/
-├── app/                            # Android应用模块
-│   ├── src/
-│   │   ├── main/
-│   │   │   ├── assets/             # 资源文件
-│   │   │   │   └── codebase/       # 动态Hook示例代码
-│   │   │   ├── cpp/                # C++客户端源码
-│   │   │   │   ├── CMakeLists.txt
-│   │   │   │   └── methods_client.cpp
-│   │   │   ├── java/               # Java源码
-│   │   │   │   └── com/justnothing/
-│   │   │   │       ├── methodsclient/        # 客户端代码
-│   │   │   │       │   ├── executor/         # 命令执行器
-│   │   │   │       │   ├── monitor/          # 监控器
-│   │   │   │       │   └── StreamClient.java
-│   │   │   │       ├── testmodule/          # Xposed模块代码
-│   │   │   │       │   ├── command/         # 命令处理
-│   │   │   │       │   ├── constants/       # 常量定义
-│   │   │   │       │   ├── hooks/           # Xposed钩子
-│   │   │   │       │   ├── service/         # 服务端代码
-│   │   │   │       │   ├── ui/              # 用户界面
-│   │   │   │       │   └── utils/           # 工具类
-│   │   │   │       └── xtchttplib/          # HTTP库（类似存根）
-│   │   │   └── res/              # Android资源
-│   │   ├── libs/                 # 依赖库
-│   │   └── build.gradle          # Gradle构建配置
-├── magisk/                       # Magisk模块文件
-│   ├── install.sh                # 安装脚本
-│   └── scripts/                  # Shell脚本
-│       ├── methods                 # 主脚本
-│       ├── methods-daemon          # 守护进程脚本
-│       └── methods-concurrent-test # 并发测试脚本
-├── gradle/                         # Gradle配置
-│   └── wrapper/
-├── .github/                        # GitHub配置
-│   └── workflows/
-│       └── release.yml
-├── .idea/                        # Android Studio配置
-├── .vscode/                      # VSCode配置
-├── .gitignore                    # Git忽略文件
-├── README.MD                     # 你现在在看的东西
-├── build.gradle                  # 根Gradle配置
-├── gradle.properties             # Gradle属性
-├── gradlew                       # Gradle包装器(Unix)
-├── gradlew.bat                   # Gradle包装器(Windows)
-└── settings.gradle               # Gradle设置
-```
-
 ## 技术栈
 
 ### Android
@@ -211,8 +164,7 @@ TestModule/
 ## 开发指南
 
 ### 环境要求
- - Android Studio Hedgehog | 2023.1.1 或更高
- - JDK 21 或更高
+ - JDK 8 (运行时) / JDK 17 (编译器) 或更高
  - Android NDK r29.0.14206865
  - Gradle 8.14.3
  - Magisk v19.0 或更高

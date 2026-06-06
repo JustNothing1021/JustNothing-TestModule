@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -51,64 +52,16 @@ public class CmdParamProcessor {
             for (Field field : current.getDeclaredFields()) {
                 if (java.lang.reflect.Modifier.isStatic(field.getModifiers())) continue;
 
-                // 优先检查新注解 @CmdParam
+                // 检查 @CmdParam 注解
                 CmdParam param = field.getAnnotation(CmdParam.class);
                 if (param != null) {
                     fields.add(new FieldInfo(field, param));
-                    continue; // 新注解优先，跳过旧注解检查
-                }
-
-                // 兼容层：检查旧注解系统
-                FieldInfo legacyFi = convertLegacyAnnotation(field);
-                if (legacyFi != null) {
-                    fields.add(legacyFi);
-                    logger.debug("📦 兼容模式: " + field.getName() + " 使用旧注解 → 已转换为 CmdParam");
                 }
             }
             current = current.getSuperclass();
         }
 
         return fields;
-    }
-
-    /**
-     *  将旧注解转换为 CmdParam 格式的 FieldInfo (兼容层)
-     * <p>
-     * 支持的旧注解:
-     * - @PositionalParam → CmdParam(position=order)
-     * - @KeywordParam  → CmdParam(name=..., aliases=...)
-     * - @FlagParam     → CmdParam(aliases=..., boolean类型)
-     * - @AllowedValues  → CmdParam(allowedValues=...)
-     */
-    private static FieldInfo convertLegacyAnnotation(Field field) {
-        // 检查 @PositionalParam
-        com.justnothing.testmodule.command.base.parser.PositionalParam posAnno =
-            field.getAnnotation(com.justnothing.testmodule.command.base.parser.PositionalParam.class);
-        
-        if (posAnno != null) {
-            CmdParam converted = LegacyCmdParamConverter.PositionalToCmdParam(posAnno, field);
-            return new FieldInfo(field, converted);
-        }
-
-        // 检查 @KeywordParam
-        com.justnothing.testmodule.command.base.parser.KeywordParam kwAnno =
-            field.getAnnotation(com.justnothing.testmodule.command.base.parser.KeywordParam.class);
-
-        if (kwAnno != null) {
-            CmdParam converted = LegacyCmdParamConverter.KeywordToCmdParam(kwAnno, field);
-            return new FieldInfo(field, converted);
-        }
-
-        // 检查 @FlagParam
-        com.justnothing.testmodule.command.base.parser.FlagParam flagAnno =
-            field.getAnnotation(com.justnothing.testmodule.command.base.parser.FlagParam.class);
-
-        if (flagAnno != null) {
-            CmdParam converted = LegacyCmdParamConverter.FlagToCmdParam(flagAnno, field);
-            return new FieldInfo(field, converted);
-        }
-
-        return null;
     }
 
     /**
@@ -251,6 +204,7 @@ public class CmdParamProcessor {
 
         List<FieldInfo> fields = getCmdParamFields(request.getClass());
         Map<String, FieldInfo> paramIndex = buildParamIndex(fields);
+        Set<String> explicitlySet = new HashSet<>();
 
         // 初始化所有字段的默认值（包括 required=false 的可选字段）
         initializeDefaultValues(request, fields);
@@ -268,7 +222,7 @@ public class CmdParamProcessor {
 
                 if (fieldInfo != null) {
                     // 已知的关键字参数：正常处理
-                    i = setFieldValue(request, fieldInfo, args, i);
+                    i = setFieldValue(request, fieldInfo, args, i, explicitlySet);
                 } else if (looksLikeNumeric(arg)) {
                     // 看起来像负数：当作位置参数候选
                     logger.debug(" 识别为数值参数: " + arg + " (不是flag)");
@@ -291,7 +245,7 @@ public class CmdParamProcessor {
                 FieldInfo fieldInfo = findMatchingParam(lookupKey, paramIndex);
 
                 if (fieldInfo != null) {
-                    i = setFieldValue(request, fieldInfo, args, i);
+                    i = setFieldValue(request, fieldInfo, args, i, explicitlySet);
                 } else {
                     logger.warn("未知参数: " + arg + ", 忽略");
                     i++;
@@ -302,7 +256,7 @@ public class CmdParamProcessor {
 
                 if (operatorInfo != null && operatorInfo.param.isOperator()) {
                     // 发现操作符！特殊处理（传入 allFields 支持分离模式）
-                    i = handleOperator(request, fields, operatorInfo, args, i);
+                    i = handleOperator(request, fields, operatorInfo, args, i, explicitlySet);
                 } else {
                     // 普通位置参数候选
                     positionalCandidates.add(arg);
@@ -363,6 +317,8 @@ public class CmdParamProcessor {
                     Object value = convertValue(valueStr, fieldInfo.field.getType(), fieldInfo.param.readMode());
                     validateFieldValue(fieldInfo.param, fieldInfo.field.getName(), value);
                     fieldInfo.field.set(request, value);
+                    invokeSetterIfPresent(request, fieldInfo.field, value);
+                    explicitlySet.add(fieldInfo.field.getName());
                     logger.debug(" 位置参数[" + fieldInfo.param.position() + "] " +
                                fieldInfo.field.getName() + " = " + valueStr +
                                " [mode=" + fieldInfo.param.readMode() + "]");
@@ -380,8 +336,10 @@ public class CmdParamProcessor {
                 try {
                     varArgsField.field.setAccessible(true);
                     Object value = convertValue(varArgsValue, varArgsField.field.getType(), varArgsField.param.readMode());
-                    validateFieldValue(varArgsField.param, varArgsField.field.getName(), value);
-                    varArgsField.field.set(request, value);
+                validateFieldValue(varArgsField.param, varArgsField.field.getName(), value);
+                varArgsField.field.set(request, value);
+                invokeSetterIfPresent(request, varArgsField.field, value);
+                explicitlySet.add(varArgsField.field.getName());
                     logger.debug(" varArgs参数[" + varArgsField.param.position() + "] " +
                                varArgsField.field.getName() + " = " + varArgsValue +
                                " [mode=" + varArgsField.param.readMode() + "] (" +
@@ -398,7 +356,7 @@ public class CmdParamProcessor {
             }
         }
 
-        validateRequiredFields(request, fields);
+        validateRequiredFields(request, fields, explicitlySet);
         validateMutexConstraints(request, fields); // 互斥参数验证
     }
 
@@ -471,18 +429,11 @@ public class CmdParamProcessor {
      *   --no-verbose → true (表示设为false)
      *   --noverbose  → true (紧凑格式)
      *
-     * @param arg 命令行参数（如 "--no-verbose"）
+     * @param param 命令行参数（如 "--no-verbose"）
      * @return 如果是 negated 格式返回 true，否则返回 false
      */
-    private static boolean isNegatedFlag(String arg) {
-        if (arg == null || !arg.startsWith("--")) return false;
-
-        String name = arg.substring(2); // 去掉 "--"
-
-        if (name.startsWith("no-") && name.length() > 3) {
-            return true;
-        }
-        return name.startsWith("no") && name.length() > 2 && Character.isLowerCase(name.charAt(2));
+    private static boolean isNegatedFlag(CmdParam param) {
+        return param.isNegated();
     }
 
     private static Map<String, FieldInfo> buildParamIndex(List<FieldInfo> fields) {
@@ -505,7 +456,8 @@ public class CmdParamProcessor {
         return index.get(normalized);
     }
 
-    private static int setFieldValue(CommandRequest request, FieldInfo fieldInfo, String[] args, int currentIndex) {
+    private static int setFieldValue(CommandRequest request, FieldInfo fieldInfo, String[] args, int currentIndex,
+                                       Set<String> explicitlySet) {
         Field field = fieldInfo.field;
         CmdParam param = fieldInfo.param;
 
@@ -517,19 +469,23 @@ public class CmdParamProcessor {
             boolean isFlagField = field.getType() == boolean.class || field.getType() == Boolean.class;
             if (currentArg.contains("=")) {
                 String inlineValue = currentArg.substring(currentArg.indexOf('=') + 1);
-                
+
                 if (isFlagField) {
                     // --key=true/false 格式的布尔值
                     boolean valueToSet = Boolean.parseBoolean(inlineValue);
-                    if (isNegatedFlag(currentArg)) {
+                    if (isNegatedFlag(param)) {
                         valueToSet = !valueToSet;
                     }
                     field.set(request, valueToSet);
+                    invokeSetterIfPresent(request, field, valueToSet);
+                    explicitlySet.add(field.getName());
                 } else {
                     // 普通类型的内联值
                     Object value = convertValue(inlineValue, field.getType(), param.readMode());
                     validateFieldValue(param, field.getName(), value);
                     field.set(request, value);
+                    invokeSetterIfPresent(request, field, value);
+                    explicitlySet.add(field.getName());
                 }
                 return currentIndex + 1;
             }
@@ -542,11 +498,14 @@ public class CmdParamProcessor {
                     i++;
                 }
                 field.set(request, values);
+                explicitlySet.add(field.getName());
                 return i;
             } else if (isFlagField) {
                 // 支持 negated 模式：--no-xxx → false, --xxx → true
-                boolean valueToSet = !isNegatedFlag(args[currentIndex]);
+                boolean valueToSet = !isNegatedFlag(param);
                 field.set(request, valueToSet);
+                invokeSetterIfPresent(request, field, valueToSet);
+                explicitlySet.add(field.getName());
                 logger.debug(" Boolean参数 " + field.getName() + " = " + valueToSet +
                            (valueToSet ? "" : " [negated]"));
                 return currentIndex + 1;
@@ -556,12 +515,34 @@ public class CmdParamProcessor {
                 Object value = convertValue(valueStr, field.getType(), param.readMode());
                 validateFieldValue(param, field.getName(), value);
                 field.set(request, value);
+                invokeSetterIfPresent(request, field, value);
+                explicitlySet.add(field.getName());
                 return currentIndex + 2;
             } else {
                 throw new IllegalArgumentException("参数 " + param.name() + " 需要值");
             }
         } catch (Exception e) {
             throw new IllegalArgumentException("设置字段 " + field.getName() + " 失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 在 field.set() 之后尝试调用 setter 方法，触发副作用逻辑
+     * <p>
+     * 例如 ClassInfoRequest.setShowConstructors(false) 会联动设置 showAll = false，
+     * 如果只用反射 set 字段则跳过了这个逻辑。
+     */
+    private static void invokeSetterIfPresent(Object target, Field field, Object value) {
+        try {
+            String fieldName = field.getName();
+            String setterName = "set" + Character.toUpperCase(fieldName.charAt(0)) + fieldName.substring(1);
+            java.lang.reflect.Method setter = target.getClass().getMethod(setterName, field.getType());
+            setter.invoke(target, value);
+            logger.debug("  [setter] 调用 " + setterName + "(" + value + ")");
+        } catch (NoSuchMethodException ignored) {
+            // 没有 setter，正常（大多数 Request 类没有自定义 setter）
+        } catch (Exception e) {
+            logger.warn("  [setter] 调用 setter 失败 (非致命): " + e.getMessage());
         }
     }
 
@@ -579,7 +560,8 @@ public class CmdParamProcessor {
      */
     private static int handleOperator(CommandRequest request, List<FieldInfo> allFields,
                                        FieldInfo operatorInfo,
-                                       String[] args, int currentIndex) {
+                                       String[] args, int currentIndex,
+                                       Set<String> explicitlySet) {
         Field field = operatorInfo.field;
         CmdParam param = operatorInfo.param;
         String operatorGroup = param.belongsToOperator();
@@ -592,12 +574,14 @@ public class CmdParamProcessor {
             if (argsToConsume == 0) {
                 // 纯标志操作符（如 --verbose）：设置为 true
                 field.set(request, true);
+                explicitlySet.add(field.getName());
                 recordOperator(request, param);
                 return currentIndex + 1;
             }
 
             // 对于有参数的操作符：设置标志为 true（分离模式）
             field.set(request, true);
+            explicitlySet.add(field.getName());
 
             // ========== Step 2: 检查参数数量 ==========
             if (currentIndex + argsToConsume >= args.length) {
@@ -622,6 +606,8 @@ public class CmdParamProcessor {
                         Object value = convertValue(valueStr, subField.getType(), subParam.readMode());
                         validateFieldValue(subParam, subField.getName(), value);
                         subField.set(request, value);
+                        invokeSetterIfPresent(request, subField, value);
+                        explicitlySet.add(subField.getName());
                         logger.debug(" 操作符[" + param.name() + "] 子参数[" + j + "] " +
                                    subField.getName() + " = " + valueStr);
                     } else {
@@ -637,6 +623,8 @@ public class CmdParamProcessor {
                     Object value = convertValue(valueStr, field.getType(), param.readMode());
                     validateFieldValue(param, field.getName(), value);
                     field.set(request, value);  // 覆盖之前的 true
+                    invokeSetterIfPresent(request, field, value);
+                    explicitlySet.add(field.getName());
                     logger.debug(" 操作符[" + param.name() + "] (聚合模式) " +
                                field.getName() + " = " + valueStr);
                 } else {
@@ -646,6 +634,7 @@ public class CmdParamProcessor {
                         consumed.append(args[currentIndex + j]);
                     }
                     field.set(request, consumed.toString());  // 覆盖之前的 true
+                    explicitlySet.add(field.getName());
                     logger.debug(" 操作符[" + param.name() + "] (聚合模式) " +
                                field.getName() + " = " + consumed);
                 }
@@ -818,7 +807,8 @@ public class CmdParamProcessor {
         }
     }
 
-    private static void validateRequiredFields(CommandRequest request, List<FieldInfo> fields) throws IllegalArgumentException {
+    private static void validateRequiredFields(CommandRequest request, List<FieldInfo> fields,
+                                                Set<String> explicitlySet) throws IllegalArgumentException {
         for (FieldInfo fi : fields) {
             if (!fi.param.required()) continue;
 
@@ -838,11 +828,34 @@ public class CmdParamProcessor {
                     } else {
                         throw new IllegalArgumentException("缺少必填参数: " + fi.param.name());
                     }
+                } else if (isPrimitiveDefaultValue(value) && !explicitlySet.contains(fi.field.getName())) {
+                    String defaultVal = fi.param.defaultValue();
+                    if (!defaultVal.isEmpty()) {
+                        Object converted = convertValue(defaultVal, fi.field.getType());
+                        fi.field.set(request, converted);
+                        logger.debug("使用默认值: " + fi.param.name() + " = " + defaultVal);
+                    } else {
+                        throw new IllegalArgumentException("缺少必填参数: " + fi.param.name());
+                    }
                 }
             } catch (IllegalAccessException e) {
                 throw new RuntimeException("无法访问字段: " + fi.field.getName(), e);
             }
         }
+    }
+
+    private static boolean isPrimitiveDefaultValue(Object value) {
+        if (value == null) return false;
+        Class<?> type = value.getClass();
+        if (type == Integer.class) return ((Integer) value) == 0;
+        if (type == Long.class) return ((Long) value) == 0L;
+        if (type == Double.class) return ((Double) value) == 0.0;
+        if (type == Float.class) return ((Float) value) == 0.0f;
+        if (type == Short.class) return ((Short) value) == (short) 0;
+        if (type == Byte.class) return ((Byte) value) == (byte) 0;
+        if (type == Character.class) return ((Character) value) == '\0';
+        if (type == Boolean.class) return !((Boolean) value);
+        return false;
     }
 
     /**

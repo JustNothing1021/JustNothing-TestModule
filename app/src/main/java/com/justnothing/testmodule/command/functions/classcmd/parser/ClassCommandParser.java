@@ -30,7 +30,6 @@ public class ClassCommandParser implements CommandLineParser<ClassCommandRequest
             case "field" -> new GetFieldValueRequest().fromCommandLine(remainingArgs);
             case "constructor" -> new InvokeConstructorRequest().fromCommandLine(remainingArgs);
             case "invoke" -> new InvokeMethodRequest().fromCommandLine(remainingArgs);
-            case "search" -> new SearchClassRequest().fromCommandLine(remainingArgs);
             case "analyze" -> new AnalyzeClassRequest().fromCommandLine(remainingArgs);
             case "reflect" -> new ReflectClassRequest().fromCommandLine(remainingArgs);
             case "graph" -> new ClassGraphRequest().fromCommandLine(remainingArgs);

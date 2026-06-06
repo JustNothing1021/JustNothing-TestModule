@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
 public @interface CmdParam {
     String name();
     String description();
-    boolean required() default true;
+    boolean required() default false;
     String defaultValue() default "";
     String[] aliases() default {};
     boolean varArgs() default false;
@@ -20,6 +20,7 @@ public @interface CmdParam {
     boolean serialize() default true;
     boolean deserialize() default true;
     String pattern() default "";
+    boolean isNegated() default false;
     String[] allowedValues() default {};
     double min() default Double.NEGATIVE_INFINITY;
     double max() default Double.POSITIVE_INFINITY;

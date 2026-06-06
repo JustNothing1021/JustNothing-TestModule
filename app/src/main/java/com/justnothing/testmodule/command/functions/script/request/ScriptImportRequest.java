@@ -8,7 +8,7 @@ import org.json.JSONObject;
 @SerializeKeyName("script:import")
 public class ScriptImportRequest extends ScriptBaseRequest {
 
-    @CmdParam(name = "filePath", position = 1, description = "导入文件路径")
+    @CmdParam(name = "filePath", position = 1, required = true, description = "导入文件路径")
     private String filePath;
 
     public ScriptImportRequest() {

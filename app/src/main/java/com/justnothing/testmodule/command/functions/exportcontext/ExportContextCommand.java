@@ -9,7 +9,6 @@ import android.os.Build;
 import android.text.TextUtils;
 
 import com.justnothing.testmodule.command.base.AbstractCommand;
-import com.justnothing.testmodule.command.base.command.SubCommandInfo;
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
@@ -25,31 +24,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 
-@SubCommandInfo(
-    description = "导出当前运行环境信息，包括系统属性、网络配置、HTTP 配置等",
-    usage = "export-context [选项]",
-    examples = {
-        "export-context",
-        "export-context --json"
-    },
-    optionsDesc = """
-            收集并导出当前环境的详细信息，用于调试和问题排查。
-            
-            导出内容:
-              - 系统属性 (System Properties)
-              - 网络接口信息
-              - HTTP 代理配置
-              - Watch ID (调试标识符)
-            
-            选项:
-              --json      以 JSON 格式输出（默认为表格格式）
-              --verbose   显示详细信息
-            
-            示例:
-              export-context               # 表格格式输出
-              export-context --json        # JSON 格式输出
-            """
-)
 public class ExportContextCommand extends AbstractCommand<ExportContextRequest, ExportContextResult> {
 
     private static final Logger logger = Logger.getLoggerForName("ExportContextCmd");

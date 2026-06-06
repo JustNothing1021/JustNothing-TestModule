@@ -8,10 +8,10 @@ import org.json.JSONObject;
 @SerializeKeyName("script:export")
 public class ScriptExportRequest extends ScriptBaseRequest {
 
-    @CmdParam(name = "name", position = 1, description = "脚本名称")
+    @CmdParam(name = "name", position = 1, required = true, description = "脚本名称")
     private String name;
 
-    @CmdParam(name = "filePath", position = 2, description = "导出路径")
+    @CmdParam(name = "filePath", position = 2, required = true, description = "导出路径")
     private String filePath;
 
     public ScriptExportRequest() {

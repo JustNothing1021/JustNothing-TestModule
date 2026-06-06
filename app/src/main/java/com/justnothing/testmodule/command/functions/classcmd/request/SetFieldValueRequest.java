@@ -10,25 +10,28 @@ import com.justnothing.testmodule.command.functions.classcmd.ClassCommandRequest
 public class SetFieldValueRequest extends ClassCommandRequest {
 
     @CmdParam(
-        name = "--class",
+        name = "class",
         description = "类名",
         position = 1,
+        required = true,
         serializedName = "className"
     )
     private String className;
 
     @CmdParam(
-        name = "--field",
+        name = "field",
         description = "字段名",
         position = 2,
+        required = true,
         serializedName = "fieldName"
     )
     private String fieldName;
 
     @CmdParam(
-        name = "--value",
+        name = "value",
         description = "值表达式",
         position = 3,
+        required = true,
         readMode = CmdParam.ReadMode.PRESERVED,
         serializedName = "valueExpression"
     )
