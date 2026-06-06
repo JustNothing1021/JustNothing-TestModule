@@ -33,6 +33,7 @@ public class InteractiveProtocol {
     public static final byte TYPE_COLORED_OUTPUT = 0x14;
     public static final byte TYPE_JSON_COMMAND_REQUEST = 0x15;
     public static final byte TYPE_JSON_COMMAND_RESPONSE = 0x16;
+    public static final byte TYPE_SET_HIGHLIGHT_MODE = 0x17;
 
 
 
@@ -54,6 +55,7 @@ public class InteractiveProtocol {
             case TYPE_COLORED_OUTPUT -> "COLORED_OUTPUT";
             case TYPE_JSON_COMMAND_REQUEST -> "COMMAND_REQUEST";
             case TYPE_JSON_COMMAND_RESPONSE -> "COMMAND_RESPONSE";
+            case TYPE_SET_HIGHLIGHT_MODE -> "SET_HIGHLIGHT_MODE";
             default -> "UNKNOWN(" + type + ")";
         };
     }

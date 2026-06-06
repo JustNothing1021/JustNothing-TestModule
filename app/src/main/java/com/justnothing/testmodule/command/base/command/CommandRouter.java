@@ -13,6 +13,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -349,6 +350,16 @@ public class CommandRouter {
             collectRoutes(node, routes);
         }
         return routes;
+    }
+
+    /**
+     * 获取完整路径注册表（反向索引）。
+     * <p>
+     * Key 为完整路径字符串（如 "class:info"），Value 为对应的路由配置。
+     * 供 {@link com.justnothing.methodsclient.metadata.CommandMetadataScanner} 等外部组件使用。
+     */
+    public Map<String, RouteConfig> getPathRegistry() {
+        return Collections.unmodifiableMap(pathRegistry);
     }
 
     private void collectRoutes(RouteNode node, List<RouteConfig> routes) {

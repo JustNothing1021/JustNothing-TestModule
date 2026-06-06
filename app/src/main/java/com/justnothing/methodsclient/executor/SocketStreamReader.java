@@ -4,6 +4,8 @@ package com.justnothing.methodsclient.executor;
 import com.justnothing.methodsclient.StreamClient;
 import com.justnothing.methodsclient.model.ColoredSegment;
 import com.justnothing.methodsclient.utils.TerminalManager;
+import com.justnothing.methodsclient.highlighter.HighlighterManager;
+import com.justnothing.testmodule.command.output.InputMode;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.protocol.InteractiveProtocol;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
@@ -56,9 +58,29 @@ public class SocketStreamReader {
     private static void handleInputPing(OutputStream output) {
         logger.info("收到INPUT_PING，返回INPUT_PONG");
         try {
-            InteractiveProtocol.writeMessage(output, InteractiveProtocol.TYPE_INPUT_PONG, null);
+            InteractiveProtocol.writeMessage(output,
+                    InteractiveProtocol.TYPE_INPUT_PONG, null);
         } catch (IOException e) {
             logger.error("发送INPUT_PONG响应失败", e);
+        }
+    }
+
+    /**
+     * 处理服务端发来的高亮模式切换请求。
+     * data 内容为 {@link InputMode} 中定义的模式名称（UTF-8），如 "java"、"command"、"none"
+     */
+    private static void handleSetHighlightMode(byte[] data) {
+        if (data == null || data.length == 0) {
+            logger.warn("收到 SET_HIGHLIGHT_MODE 但数据为空");
+            return;
+        }
+        String modeName = new String(data, StandardCharsets.UTF_8);
+        boolean success = HighlighterManager.switchMode(modeName);
+        if (success) {
+            logger.info("高亮模式已切换: " + modeName + " (" + InputMode.getDescription(modeName) + ")");
+        } else {
+            logger.warn("未知的高亮模式: " + modeName +
+                    " (预定义模式: " + String.join(", ", InputMode.allModes()) + ")");
         }
     }
 
@@ -280,6 +302,10 @@ public class SocketStreamReader {
 
             case InteractiveProtocol.TYPE_INPUT_PING:
                 handleInputPing(output);
+                return null;
+
+            case InteractiveProtocol.TYPE_SET_HIGHLIGHT_MODE:
+                handleSetHighlightMode(data);
                 return null;
 
             case InteractiveProtocol.TYPE_COMMAND_END:

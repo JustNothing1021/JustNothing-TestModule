@@ -218,7 +218,11 @@ public class TerminalManager {
         // 只在非Dumb模式下启用TailTip（需要终端支持）
         if (currentMode != TerminalMode.DUMB) {
             TailTipManager.setupJavaTailTips(reader);
-            new org.jline.widget.AutopairWidgets(reader).enable();
+            // 注意：AutopairWidgets.enable() 内部会调用 callWidget()，
+            // 而 JLine 要求该方法只能在 readLine() 调用期间使用。
+            // 静态初始化块中没有活跃的 readLine 上下文，会导致
+            // IllegalStateException("Widgets can only be called during a `readLine` call")。
+            // 因此将 AutopairWidgets 的启用推迟到 getLineReader() 或首次使用时。
         }
 
         KeyMap<Binding> keyMap = reader.getKeyMaps().get(LineReader.MAIN);
@@ -275,6 +279,34 @@ public class TerminalManager {
                 currentMode,
                 terminal.getType(),
                 terminal.getClass().getSimpleName());
+    }
+
+    /**
+     * 获取已初始化的 Terminal 实例（供 REPL 等外部组件复用）
+     */
+    public static org.jline.terminal.Terminal getTerminal() {
+        return terminal;
+    }
+
+    private static volatile boolean autopairInitialized = false;
+
+    /**
+     * 获取已初始化的 LineReader 实例
+     * 首次调用时会延迟启用 AutopairWidgets（需要在 readLine 上下文之外安全初始化）
+     */
+    public static LineReader getLineReader() {
+        if (!autopairInitialized && reader != null && currentMode != TerminalMode.DUMB) {
+            autopairInitialized = true;
+            try {
+                new org.jline.widget.AutopairWidgets(reader).enable();
+            } catch (IllegalStateException e) {
+                // AutopairWidgets.enable() 内部调用 callWidget()，
+                // 某些 JLine 版本要求必须在 readLine() 调用期间才能调用。
+                // 非致命错误，降级为不启用自动括号配对即可。
+                autopairInitialized = false; // 允许下次重试
+            }
+        }
+        return reader;
     }
 
     /**

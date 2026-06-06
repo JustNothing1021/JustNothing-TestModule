@@ -14,40 +14,40 @@ package com.justnothing.testmodule.command.output;
  * 因为JSON模式不支持交互输入。</p>
  */
 public class ClientRequirements {
-    
+
     private boolean supportsInput;
     private boolean isJsonMode;
-    
+
     public ClientRequirements() {
         this(false, false);
     }
-    
+
     public ClientRequirements(boolean supportsInput, boolean isJsonMode) {
         this.isJsonMode = isJsonMode;
         this.supportsInput = !isJsonMode && supportsInput;
     }
-    
+
     public boolean isSupportsInput() {
         return supportsInput;
     }
-    
+
     public void setSupportsInput(boolean supportsInput) {
         if (!isJsonMode) {
             this.supportsInput = supportsInput;
         }
     }
-    
+
     public boolean isJsonMode() {
         return isJsonMode;
     }
-    
+
     public void setJsonMode(boolean jsonMode) {
         this.isJsonMode = jsonMode;
         if (jsonMode) {
             this.supportsInput = false;
         }
     }
-    
+
     @Override
     public String toString() {
         return "ClientRequirements[" +

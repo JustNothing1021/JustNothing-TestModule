@@ -72,6 +72,12 @@ public class ClassInfoRequest extends ClassCommandRequest {
     )
     private boolean showAll = true;
 
+    // 追踪哪些字段被用户显式设置了（用于区分默认值和用户意图）
+    private boolean constructorsExplicitlySet = false;
+    private boolean interfacesExplicitlySet = false;
+    private boolean superExplicitlySet = false;
+    private boolean modifiersExplicitlySet = false;
+
     private boolean showMethods;
     private boolean showFields;
 
@@ -92,29 +98,42 @@ public class ClassInfoRequest extends ClassCommandRequest {
     public boolean isShowInterfaces() { return showInterfaces; }
     public void setShowInterfaces(boolean showInterfaces) {
         this.showInterfaces = showInterfaces;
+        this.interfacesExplicitlySet = true;
         if (showInterfaces) this.showAll = false;
     }
 
     public boolean isShowConstructors() { return showConstructors; }
     public void setShowConstructors(boolean showConstructors) {
         this.showConstructors = showConstructors;
+        this.constructorsExplicitlySet = true;
         if (showConstructors) this.showAll = false;
     }
 
     public boolean isShowSuper() { return showSuper; }
     public void setShowSuper(boolean showSuper) {
         this.showSuper = showSuper;
+        this.superExplicitlySet = true;
         if (showSuper) this.showAll = false;
     }
 
     public boolean isShowModifiers() { return showModifiers; }
     public void setShowModifiers(boolean showModifiers) {
         this.showModifiers = showModifiers;
+        this.modifiersExplicitlySet = true;
         if (showModifiers) this.showAll = false;
     }
 
     public boolean isShowAll() { return showAll; }
     public void setShowAll(boolean showAll) { this.showAll = showAll; }
+
+    /** 用户是否显式设置了 --constructors（用于区分默认值和用户意图） */
+    public boolean wasConstructorsExplicitlySet() { return constructorsExplicitlySet; }
+    /** 用户是否显式设置了 --interfaces */
+    public boolean wasInterfacesExplicitlySet() { return interfacesExplicitlySet; }
+    /** 用户是否显式设置了 --super */
+    public boolean wasSuperExplicitlySet() { return superExplicitlySet; }
+    /** 用户是否显式设置了 --modifiers */
+    public boolean wasModifiersExplicitlySet() { return modifiersExplicitlySet; }
 
     public boolean isVerbose() { return isVerbose; }
     public void setVerbose(boolean verbose) { isVerbose = verbose; }

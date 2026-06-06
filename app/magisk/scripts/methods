@@ -377,7 +377,8 @@ start_interactive_terminal() {
     echo -e "${CYAN}║  ${YELLOW}• ${CYAN}class    - 查询类型                               ║"
     echo -e "${CYAN}║  ${YELLOW}• ${CYAN}script   - 执行代码                               ║"
     echo -e "${CYAN}║  ${YELLOW}• ${CYAN}...                                               ║"
-    echo -e "${CYAN}║  ${YELLOW}• ${CYAN}help     - 显示帮助, 查看服务端支持的更多命令     ║"
+    echo -e "${CYAN}║  ${YELLOW}• ${CYAN}help      - 显示帮助, 查看服务端支持的更多命令    ║"
+    echo -e "${CYAN}║  ${YELLOW}• ${CYAN}java_repl - 进入 Java 交互式 REPL（推荐）         ║"
     echo -e "${CYAN}║  ${YELLOW}终端命令：${CYAN}                                          ║"
     echo -e "${CYAN}║  ${YELLOW}• ${CYAN}exit/quit      - 退出终端                         ║"
     echo -e "${CYAN}║  ${YELLOW}• ${CYAN}clear          - 清屏                             ║"
@@ -487,6 +488,7 @@ start_interactive_terminal() {
                 echo "  clear      - 清屏"
                 echo "  history    - 显示历史命令"
                 echo "  mode       - 切换执行模式 (当前: $INTERACTIVE_MODE)"
+                echo "  java_repl  - 进入 Java 持久化 REPL（Tab补全/历史/高亮）"
                 if [ "$DEBUG" = "1" ]; then
                     echo "  debug      - 切换调试模式 (当前: 开启)"
                 else
@@ -494,13 +496,22 @@ start_interactive_terminal() {
                 fi
                 echo
                 echo "模块命令:"
-                echo "  help        - 显示模块帮助"
+                echo "  help        - 显示帮助"
                 echo "  invoke      - 调用方法"
                 echo "  list        - 列出方法"
                 echo "  bsh         - 执行BeanShell代码"
                 echo "  script      - 执行脚本代码"
                 echo "  packages    - 列出包名"
                 echo "  ...其他模块支持的命令, 可以通过help获得服务端帮助"
+                continue
+                ;;
+            java_repl)
+                color_cyan "[切换到 Java REPL 模式...]"
+                if [ -f "$JAVA_CLIENT_JAR" ]; then
+                    execute_java_client_direct "--repl"
+                else
+                    color_red "Java 客户端未安装，无法启动 REPL 模式"
+                fi
                 continue
                 ;;
         esac
@@ -733,6 +744,7 @@ show_help() {
     echo "  ${GREEN}-s, --socket${NC}         使用套接字模式（默认）"
     echo "  ${GREEN}-f, --file${NC}           使用文件模式（无长度限制）"
     echo "  ${GREEN}-i, --interactive${NC}    启动交互式终端"
+    echo "  ${GREEN}-r, --repl${NC}           启动 Java 持久化 REPL（推荐，Tab补全/历史/高亮）"
     echo "  ${GREEN}--exec-file <文件>${NC}   从文件读取并执行命令"
     echo "  ${GREEN}--current-port${NC}       获取当前服务器的端口"
     echo "  ${GREEN}--update-port <端口>${NC} 更新Socket服务器端口，会重启Socket服务端"
@@ -792,6 +804,7 @@ show_help() {
     echo "  ${GREEN}exit/quit${NC} - 退出终端"
     echo "  ${GREEN}clear${NC}     - 清屏"
     echo "  ${GREEN}history${NC}   - 显示历史"
+    echo "  ${GREEN}java_repl${NC} - 进入 Java REPL（Tab补全/方向键/高亮）"
     echo "  ${GREEN}mode${NC}      - 切换执行模式"
     echo "  ${GREEN}debug${NC}     - 切换调试模式"
     echo ""
@@ -899,6 +912,10 @@ main() {
                 ;;
             -i|--interactive)
                 MODE="interactive"
+                shift
+                ;;
+            -r|--repl)
+                MODE="repl"
                 shift
                 ;;
             -j|--java-client)
@@ -1021,6 +1038,18 @@ main() {
         fi
         
         start_interactive_terminal
+        return 0
+    fi
+
+    # REPL 模式（持久化 Java Shell，推荐）
+    if [ "$MODE" = "repl" ]; then
+        if [ -f "$JAVA_CLIENT_JAR" ]; then
+            color_cyan "启动 Java REPL 模式..."
+            execute_java_client_direct "--repl"
+        else
+            color_red "REPL 模式需要 Java 客户端，但未找到: $JAVA_CLIENT_JAR"
+            return 1
+        fi
         return 0
     fi
     

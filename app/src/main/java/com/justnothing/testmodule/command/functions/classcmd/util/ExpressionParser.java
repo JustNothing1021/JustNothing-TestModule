@@ -36,8 +36,8 @@ public class ExpressionParser {
         if (expression == null || expression.trim().isEmpty()) {
             return new ParseResult(null, Void.class, false);
         }
-        
-        expression = expression.trim();
+
+        expression = stripBackticks(expression.trim());
         
         int colonIndex = findTypeHintSeparator(expression);
         
@@ -245,8 +245,8 @@ public class ExpressionParser {
         for (String importStmt : imports) {
             runner.addImport(importStmt);
         }
-        
-        String code = expression.trim();
+
+        String code = stripBackticks(expression.trim());
         if (!code.endsWith(";") && !code.endsWith("}")) {
             code = code + ";";
         }
@@ -273,6 +273,31 @@ public class ExpressionParser {
         }
         
         return runner;
+    }
+
+    /**
+     * 剥离反引号包裹。
+     * <p>
+     * Shell 环境下用户常用反引号引用表达式（防止空格拆分），
+     * 如 {@code `new HashMap()`}。在传给脚本引擎前需要剥离。
+     * <p>
+     * 支持格式：
+     * <ul>
+     *   <li>{@code `expression`} → expression</li>
+     *   <li>无反引号 → 原样返回</li>
+     * </ul>
+     */
+    private static String stripBackticks(String input) {
+        if (input == null || input.length() < 2) {
+            return input;
+        }
+
+        // 匹配 `...` 包裹（首尾都是反引号）
+        if (input.charAt(0) == '`' && input.charAt(input.length() - 1) == '`') {
+            return input.substring(1, input.length() - 1);
+        }
+
+        return input;
     }
     
     public static void clearVariables(ClassLoader classLoader) {
