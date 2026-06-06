@@ -1,6 +1,7 @@
 package com.justnothing.testmodule.command.base.command;
 
 import com.justnothing.testmodule.command.functions.memory.MemoryInfoRequest;
+import com.justnothing.testmodule.command.utils.CmdParamProcessor;
 
 import org.junit.Test;
 

@@ -1,5 +1,7 @@
 package com.justnothing.testmodule.command.base.validator;
 
+import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
+
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,7 +38,7 @@ public class ValidatorFactory {
     }
 
     public static void validateField(String paramName, String value, Field field) 
-            throws com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException {
+            throws IllegalCommandLineArgumentException {
         
         List<ParamValidator> validators = createValidators(field);
         for (ParamValidator validator : validators) {

@@ -1,18 +1,11 @@
 package com.justnothing.testmodule.command.functions.exportcontext;
 
-import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
-import com.justnothing.testmodule.command.base.protocol.ResultField;
-
-@AutoSerializable
 public class ContextFieldInfo {
 
-    @ResultField(name = "category")
     private String category;
 
-    @ResultField(name = "label")
     private String label;
 
-    @ResultField(name = "value")
     private String value;
 
     public ContextFieldInfo() {

@@ -1,55 +1,37 @@
 package com.justnothing.testmodule.command.functions.performance.response;
 
-import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
 import com.justnothing.testmodule.command.base.protocol.CommandResult;
-import com.justnothing.testmodule.command.base.protocol.ResultField;
 import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
-import com.justnothing.testmodule.command.base.protocol.ValueSupplier;
 
 @SerializeKeyName("PerfHookResult")
-@AutoSerializable
 public class PerfHookResult extends CommandResult {
 
-    @ResultField(name = "taskId", defaultValue = ValueSupplier.ZeroSupplier.class)
     private int taskId;
 
-    @ResultField(name = "status", defaultValue = ValueSupplier.EmptyStringSupplier.class)
     private String status;
 
-    @ResultField(name = "className", defaultValue = ValueSupplier.EmptyStringSupplier.class)
     private String className;
 
-    @ResultField(name = "methodName", defaultValue = ValueSupplier.EmptyStringSupplier.class)
     private String methodName;
 
-    @ResultField(name = "signature", defaultValue = ValueSupplier.EmptyStringSupplier.class)
     private String signature;
 
-    @ResultField(name = "callCount", description = "调用次数", defaultValue = ValueSupplier.ZeroSupplier.class)
     private int callCount;
 
-    @ResultField(name = "totalDurationNs", defaultValue = ValueSupplier.ZeroSupplier.class)
     private long totalDurationNs;
 
-    @ResultField(name = "avgDurationNs", defaultValue = ValueSupplier.ZeroSupplier.class)
     private double avgDurationNs;
 
-    @ResultField(name = "minDurationNs", defaultValue = ValueSupplier.ZeroSupplier.class)
     private long minDurationNs;
 
-    @ResultField(name = "maxDurationNs", defaultValue = ValueSupplier.ZeroSupplier.class)
     private long maxDurationNs;
 
-    @ResultField(name = "totalDurationMs", defaultValue = ValueSupplier.ZeroSupplier.class)
     private long totalDurationMs;
 
-    @ResultField(name = "avgDurationMs", defaultValue = ValueSupplier.ZeroSupplier.class)
     private double avgDurationMs;
 
-    @ResultField(name = "monitorDuration", description = "监控时长(ms)", defaultValue = ValueSupplier.ZeroSupplier.class)
     private long monitorDuration;
 
-    @ResultField(name = "exportPath", defaultValue = ValueSupplier.EmptyStringSupplier.class)
     private String exportPath;
 
     public PerfHookResult() {}

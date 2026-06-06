@@ -1,31 +1,21 @@
 package com.justnothing.testmodule.command.functions.performance.response;
 
-import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
 import com.justnothing.testmodule.command.base.protocol.CommandResult;
-import com.justnothing.testmodule.command.base.protocol.ResultField;
 import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
-import com.justnothing.testmodule.command.base.protocol.ValueSupplier;
 
 @SerializeKeyName("SystraceResult")
-@AutoSerializable
 public class SystraceResult extends CommandResult {
 
-    @ResultField(name = "taskId", defaultValue = ValueSupplier.ZeroSupplier.class)
     private int taskId;
 
-    @ResultField(name = "status", defaultValue = ValueSupplier.EmptyStringSupplier.class)
     private String status;
 
-    @ResultField(name = "duration", description = "采集时长(秒)", defaultValue = ValueSupplier.ZeroSupplier.class)
     private int duration;
 
-    @ResultField(name = "outputFile", description = "原始输出文件路径", defaultValue = ValueSupplier.EmptyStringSupplier.class)
     private String outputFile;
 
-    @ResultField(name = "report", description = "解析后的报告文本", defaultValue = ValueSupplier.EmptyStringSupplier.class)
     private String report;
 
-    @ResultField(name = "exportPath", defaultValue = ValueSupplier.EmptyStringSupplier.class)
     private String exportPath;
 
     public SystraceResult() {}

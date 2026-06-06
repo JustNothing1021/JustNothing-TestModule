@@ -36,7 +36,10 @@ public class JavaCompleter extends StringsCompleter {
                 "Map", "NavigableMap", "NavigableSet", "Objects", "Optional",
                 "PriorityQueue", "Properties", "Queue", "Random", "Scanner",
                 "Set", "SortedMap", "SortedSet", "Stack", "StringTokenizer",
-                "Timer", "TimerTask", "TreeMap", "TreeSet", "UUID", "Vector"
+                "Timer", "TimerTask", "TreeMap", "TreeSet", "UUID", "Vector",
+
+                // 我们自己的 BuiltIn
+                "Lambda", "MethodReference", "JustNothing", "NoneColdWind", "NAN", "YunMo", "DYD"
         );
     }
 

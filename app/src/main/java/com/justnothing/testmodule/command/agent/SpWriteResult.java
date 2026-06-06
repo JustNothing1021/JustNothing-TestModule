@@ -2,12 +2,10 @@ package com.justnothing.testmodule.command.agent;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
 import com.justnothing.testmodule.command.base.protocol.CommandResult;
 import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
 
 @SerializeKeyName("SpWriteResult")
-@AutoSerializable
 public class SpWriteResult extends CommandResult {
 
     @Expose @SerializedName("spName")

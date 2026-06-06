@@ -2,10 +2,7 @@ package com.justnothing.testmodule.command.functions.classcmd.model;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
-import com.justnothing.testmodule.command.base.protocol.ResultField;
-import com.justnothing.testmodule.command.base.protocol.ValueSupplier;
-import com.justnothing.testmodule.command.utils.AutoSerializer;
+import com.justnothing.testmodule.command.base.protocol.GsonFactory;
 
 import com.justnothing.testmodule.utils.reflect.DescriptorColorizer;
 
@@ -19,43 +16,33 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 
-@AutoSerializable
 public class MethodInfo {
 
     @Expose @SerializedName("name")
-    @ResultField(name = "name", description = "方法名", required = true)
     private String name;
 
     @Expose @SerializedName("returnType")
-    @ResultField(name = "returnType", description = "返回类型", required = true, defaultValue = ValueSupplier.EmptyStringSupplier.class)
     private String returnType;
 
     @Expose @SerializedName("genericReturnType")
-    @ResultField(name = "genericReturnType", description = "泛型返回类型", defaultValue = ValueSupplier.EmptyStringSupplier.class)
     private String genericReturnType;
 
     @Expose @SerializedName("parameters")
-    @ResultField(name = "parameters", description = "参数名列表")
     private List<String> parameters;
 
     @Expose @SerializedName("parameterTypes")
-    @ResultField(name = "parameterTypes", description = "参数类型列表")
     private List<String> parameterTypes;
 
     @Expose @SerializedName("genericParameterTypes")
-    @ResultField(name = "genericParameterTypes", description = "泛型参数类型列表")
     private List<String> genericParameterTypes;
 
     @Expose @SerializedName("modifiers")
-    @ResultField(name = "modifiers", description = "修饰符", defaultValue = ValueSupplier.ZeroSupplier.class)
     private int modifiers;
 
     @Expose @SerializedName("declaringClass")
-    @ResultField(name = "declaringClass", description = "声明类", defaultValue = ValueSupplier.EmptyStringSupplier.class)
     private String declaringClass;
 
     @Expose @SerializedName("declaringClassIsInterface")
-    @ResultField(name = "declaringClassIsInterface", description = "声明类是否为接口", defaultValue = ValueSupplier.FalseSupplier.class)
     private boolean declaringClassIsInterface;
 
     public MethodInfo() {
@@ -153,7 +140,7 @@ public class MethodInfo {
 
     public JSONObject toJson() {
         try {
-            String jsonStr = AutoSerializer.toJson(this);
+            String jsonStr = GsonFactory.getInstance().toJson(this);
             return new JSONObject(jsonStr);
         } catch (Exception e) {
             throw new RuntimeException("Failed to serialize MethodInfo", e);
@@ -163,7 +150,7 @@ public class MethodInfo {
     public static MethodInfo fromJson(JSONObject json) {
         try {
             String jsonStr = json.toString();
-            return AutoSerializer.fromJson(jsonStr, MethodInfo.class);
+            return GsonFactory.getInstance().fromJson(jsonStr, MethodInfo.class);
         } catch (Exception e) {
             throw new RuntimeException("Failed to deserialize MethodInfo", e);
         }

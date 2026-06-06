@@ -6,11 +6,11 @@ import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.CommandType;
 import com.justnothing.testmodule.command.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.base.protocol.GsonFactory;
 import com.justnothing.testmodule.command.output.ClientRequirements;
 import com.justnothing.testmodule.command.output.ICommandOutputHandler;
 import com.justnothing.testmodule.command.output.InteractiveOutputHandler;
 import com.justnothing.testmodule.command.protocol.InteractiveProtocol;
-import com.justnothing.testmodule.command.protocol.JsonProtocol;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
@@ -474,7 +474,10 @@ public class SocketClientHandler {
             String jsonRequest = new String(data, StandardCharsets.UTF_8);
             logger.info("命令请求: " + jsonRequest);
 
-            CommandRequest request = JsonProtocol.parseRequest(jsonRequest);
+            // 使用新架构 CommandRouter 解析 JSON 请求（替代旧的 AutoSerializer）
+            // CommandRouter 在注册路由时已建立 commandType → RequestClass 的映射
+            CommandRequest request = com.justnothing.testmodule.command.base.command.CommandRouter
+                    .getInstance().resolveRequestFromJson(jsonRequest);
 
             if (request == null) {
                 CommandResult errorResult = new CommandResult();
@@ -507,7 +510,7 @@ public class SocketClientHandler {
     
     private void sendErrorResponse(OutputStream output,
                                    CommandResult result) throws Exception {
-        String jsonResponse = JsonProtocol.toJson(result);
+        String jsonResponse = GsonFactory.getInstance().toJson(result);
         logger.info("返回错误响应: resultType=" + result.getResultType() + ", class=" + result.getClass().getSimpleName() + ", json=" + jsonResponse);
         
         byte[] data = InteractiveProtocol.encodeColoredOutput((byte) 0, jsonResponse);

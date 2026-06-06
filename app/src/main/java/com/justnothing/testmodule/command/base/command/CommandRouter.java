@@ -6,6 +6,7 @@ import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.base.MainCommand;
 import com.justnothing.testmodule.command.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.utils.CmdParamProcessor;
 import com.justnothing.testmodule.utils.logging.Logger;
 
 import java.lang.reflect.InvocationTargetException;
@@ -17,6 +18,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.json.JSONObject;
+
 public class CommandRouter {
 
     private static final Logger logger = Logger.getLoggerForName("CommandRouter");
@@ -26,6 +29,7 @@ public class CommandRouter {
     private final Map<String, RouteNode> routeTree = new ConcurrentHashMap<>();
     private final Map<String, Class<? extends MainCommand<?>>> commandRegistry = new ConcurrentHashMap<>();
     private final Map<Class<? extends CommandRequest>, RouteConfig> requestRegistry = new ConcurrentHashMap<>();
+    private final Map<String, RouteConfig> pathRegistry = new ConcurrentHashMap<>(); // 反向索引
 
     public static CommandRouter getInstance() {
         return INSTANCE;
@@ -89,6 +93,7 @@ public class CommandRouter {
 
                 currentNode.addConfig(config);
                 requestRegistry.put(route.request(), config);
+                pathRegistry.put(fullPath, config);
 
                 logger.debug("  └─ 注册路由: " + fullPath +
                            " → " + route.request().getSimpleName() +
@@ -214,7 +219,42 @@ public class CommandRouter {
         
         return null;
     }
-    
+
+    /**
+     * 通过 commandType 字符串（如 "class:info"）解析 JSON 请求。
+     * 用于 UI/Socket 客户端发送的 JSON 命令请求
+     *
+     * @param json 包含 commandType 字段的 JSON 字符串
+     * @return 解析后的 CommandRequest 实例，如果 commandType 未注册则返回 null
+     */
+    public CommandRequest resolveRequestFromJson(String json) {
+        try {
+            JSONObject obj = new JSONObject(json);
+            String commandType = obj.optString("commandType");
+            if (commandType == null || commandType.isEmpty()) {
+                logger.warn("[resolveRequest] JSON 中缺少 commandType 字段");
+                return null;
+            }
+
+            RouteConfig config = pathRegistry.get(commandType);
+            if (config == null) {
+                logger.warn("[resolveRequest] 未注册的命令类型: " + commandType +
+                           ", 已注册类型: " + pathRegistry.keySet());
+                return null;
+            }
+
+            Class<? extends CommandRequest> requestClass = config.requestType;
+            CommandRequest request = com.justnothing.testmodule.command.base.protocol.GsonFactory
+                    .getInstance().fromJson(json, requestClass);
+            logger.info("[resolveRequest] 成功解析: " + commandType + " → " + requestClass.getSimpleName());
+            return request;
+
+        } catch (Exception e) {
+            logger.error("[resolveRequest] 解析失败", e);
+            return null;
+        }
+    }
+
     private RouteMatch findRouteByRequestInNode(RouteNode node, Class<? extends CommandRequest> requestType) {
         for (RouteConfig config : node.getRouteConfigs()) {
             if (config.requestType == requestType) {

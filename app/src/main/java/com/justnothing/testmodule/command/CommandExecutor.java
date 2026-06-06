@@ -3,14 +3,9 @@ package com.justnothing.testmodule.command;
 import com.justnothing.testmodule.command.base.*;
 import com.justnothing.testmodule.command.base.command.Cmd;
 import com.justnothing.testmodule.command.base.command.CommandRouter;
-import com.justnothing.testmodule.command.base.command.CommandLineParser;
 import com.justnothing.testmodule.command.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.base.protocol.CommandResult;
-import com.justnothing.testmodule.command.utils.AutoSerializer;
-import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
-import com.justnothing.testmodule.command.utils.ParamParser;
 
-import java.util.Arrays;
 import static com.justnothing.testmodule.constants.CommandServer.MAIN_MODULE_VER;
 
 import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
@@ -68,9 +63,6 @@ public class CommandExecutor {
     private static final CmdExcLogger logger = new CmdExcLogger();
 
     private static final Map<String, MainCommand<?>> commandRegistry = new ConcurrentHashMap<>();
-    private static final Map<String, CommandLineParser<? extends CommandRequest>>
-                commandParsers = new ConcurrentHashMap<>();
-
     private static final ThreadLocal<String> targetPackageThreadLocal = new ThreadLocal<>();
     private static final ThreadLocal<ClassLoader> classLoaderThreadLocal = new ThreadLocal<>();
     private static final ThreadLocal<ClassLoaderManager> classLoaderManagerThreadLocal = new ThreadLocal<>();
@@ -149,10 +141,6 @@ public class CommandExecutor {
                 logger.error("注册命令时状态异常 (已跳过): " + e.getMessage());
             }
         }
-    }
-
-    public static void registerParser(String name, CommandLineParser<? extends CommandRequest> parser) {
-        commandParsers.put(name, parser);
     }
 
     public static MainCommand<? extends CommandResult> getCommand(String name) {
@@ -532,20 +520,6 @@ public class CommandExecutor {
         public ICommandOutputHandler output() { return output; }
         public ArgumentGroup argGroup() { return argGroup; }
         public ClientRequirements requirements() { return requirements; }
-
-        @SuppressWarnings("unchecked")
-        public T parseRequest() throws IllegalCommandLineArgumentException {
-            if (request != null) return request;
-            try {
-                CommandLineParser<?> parser = commandParsers.get(cmdName);
-                if (parser == null) {
-                    return null;
-                }
-                return this.request = (T) parser.parse(this);
-            } catch (Exception e) {
-                throw new IllegalCommandLineArgumentException("命令解析异常: " + e.getMessage());
-            }
-        }
 
         public T getRequest() { return request; }
         public void setRequest(T r) { this.request = r; }

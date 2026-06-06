@@ -1,35 +1,25 @@
 package com.justnothing.testmodule.command.functions.classcmd.response;
 
-import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
 import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
-import com.justnothing.testmodule.command.base.protocol.ResultField;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandResult;
 import com.justnothing.testmodule.command.functions.classcmd.model.FieldInfo;
 import com.justnothing.testmodule.command.functions.classcmd.model.MethodInfo;
 
 @SerializeKeyName("ReflectOperation")
-@AutoSerializable
 public class ReflectOperationResult extends ClassCommandResult {
 
-    @ResultField(name = "className")
     private String className;
 
-    @ResultField(name = "operationType")
     private String operationType;
 
-    @ResultField(name = "memberName")
     private String memberName;
 
-    @ResultField(name = "fieldInfo")
     private FieldInfo fieldInfo;
 
-    @ResultField(name = "methodInfo")
     private MethodInfo methodInfo;
 
-    @ResultField(name = "value")
     private Object value;
 
-    @ResultField(name = "valueType")
     private String valueType;
 
     public ReflectOperationResult() {

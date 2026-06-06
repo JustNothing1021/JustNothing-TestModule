@@ -1,4 +1,4 @@
-package com.justnothing.testmodule.command.base.command;
+package com.justnothing.testmodule.command.utils;
 
 import com.google.gson.ExclusionStrategy;
 import com.google.gson.FieldAttributes;
@@ -6,8 +6,13 @@ import com.google.gson.FieldNamingPolicy;
 import com.google.gson.FieldNamingStrategy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.justnothing.testmodule.command.base.command.Cmd;
+import com.justnothing.testmodule.command.base.command.CmdParam;
+import com.justnothing.testmodule.command.base.command.CmdRoutes;
+import com.justnothing.testmodule.command.base.command.CommandRouter;
+import com.justnothing.testmodule.command.base.command.SubCommandInfo;
 import com.justnothing.testmodule.command.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.utils.CustomCommandLineParser;
+import com.justnothing.testmodule.command.base.validator.ValidatorFactory;
 import com.justnothing.testmodule.utils.logging.Logger;
 
 import java.lang.reflect.Field;
@@ -317,6 +322,7 @@ public class CmdParamProcessor {
                     Object value = convertValue(valueStr, fieldInfo.field.getType(), fieldInfo.param.readMode());
                     validateFieldValue(fieldInfo.param, fieldInfo.field.getName(), value);
                     fieldInfo.field.set(request, value);
+                    ValidatorFactory.validateField(fieldInfo.param.name(), valueStr, fieldInfo.field);
                     invokeSetterIfPresent(request, fieldInfo.field, value);
                     explicitlySet.add(fieldInfo.field.getName());
                     logger.debug(" 位置参数[" + fieldInfo.param.position() + "] " +
@@ -338,6 +344,7 @@ public class CmdParamProcessor {
                     Object value = convertValue(varArgsValue, varArgsField.field.getType(), varArgsField.param.readMode());
                 validateFieldValue(varArgsField.param, varArgsField.field.getName(), value);
                 varArgsField.field.set(request, value);
+                ValidatorFactory.validateField(varArgsField.param.name(), varArgsValue, varArgsField.field);
                 invokeSetterIfPresent(request, varArgsField.field, value);
                 explicitlySet.add(varArgsField.field.getName());
                     logger.debug(" varArgs参数[" + varArgsField.param.position() + "] " +
@@ -484,6 +491,7 @@ public class CmdParamProcessor {
                     Object value = convertValue(inlineValue, field.getType(), param.readMode());
                     validateFieldValue(param, field.getName(), value);
                     field.set(request, value);
+                    ValidatorFactory.validateField(param.name(), inlineValue, field);
                     invokeSetterIfPresent(request, field, value);
                     explicitlySet.add(field.getName());
                 }
@@ -515,6 +523,7 @@ public class CmdParamProcessor {
                 Object value = convertValue(valueStr, field.getType(), param.readMode());
                 validateFieldValue(param, field.getName(), value);
                 field.set(request, value);
+                ValidatorFactory.validateField(param.name(), valueStr, field);
                 invokeSetterIfPresent(request, field, value);
                 explicitlySet.add(field.getName());
                 return currentIndex + 2;
@@ -606,6 +615,7 @@ public class CmdParamProcessor {
                         Object value = convertValue(valueStr, subField.getType(), subParam.readMode());
                         validateFieldValue(subParam, subField.getName(), value);
                         subField.set(request, value);
+                        ValidatorFactory.validateField(subParam.name(), valueStr, subField);
                         invokeSetterIfPresent(request, subField, value);
                         explicitlySet.add(subField.getName());
                         logger.debug(" 操作符[" + param.name() + "] 子参数[" + j + "] " +
@@ -623,6 +633,7 @@ public class CmdParamProcessor {
                     Object value = convertValue(valueStr, field.getType(), param.readMode());
                     validateFieldValue(param, field.getName(), value);
                     field.set(request, value);  // 覆盖之前的 true
+                    ValidatorFactory.validateField(param.name(), valueStr, field);
                     invokeSetterIfPresent(request, field, value);
                     explicitlySet.add(field.getName());
                     logger.debug(" 操作符[" + param.name() + "] (聚合模式) " +

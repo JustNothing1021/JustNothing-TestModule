@@ -1,9 +1,6 @@
 package com.justnothing.testmodule.command.functions.classcmd.response;
 
-import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
-import com.justnothing.testmodule.command.base.protocol.ResultField;
 import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
-import com.justnothing.testmodule.command.base.protocol.ValueSupplier;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandResult;
 import com.justnothing.testmodule.command.functions.classcmd.model.FieldInfo;
 import com.justnothing.testmodule.command.functions.classcmd.model.MethodInfo;
@@ -12,28 +9,20 @@ import java.util.ArrayList;
 import java.util.List;
 
 @SerializeKeyName("Search")
-@AutoSerializable
 public class SearchResult extends ClassCommandResult {
 
-    @ResultField(name = "searchType")
     private String searchType;
 
-    @ResultField(name = "pattern")
     private String pattern;
 
-    @ResultField(name = "matchedClasses", defaultValue = ValueSupplier.EmptyListSupplier.class)
     private List<String> matchedClasses = new ArrayList<>();
 
-    @ResultField(name = "matchedMethods", defaultValue = ValueSupplier.EmptyListSupplier.class)
     private List<MatchedMethod> matchedMethods = new ArrayList<>();
 
-    @ResultField(name = "matchedFields", defaultValue = ValueSupplier.EmptyListSupplier.class)
     private List<FieldInfo> matchedFields = new ArrayList<>();
 
-    @ResultField(name = "matchedAnnotations", defaultValue = ValueSupplier.EmptyListSupplier.class)
     private List<MatchedAnnotation> matchedAnnotations = new ArrayList<>();
 
-    @ResultField(name = "totalCount", defaultValue = ValueSupplier.ZeroSupplier.class)
     private int totalCount;
 
     public SearchResult() {
@@ -59,12 +48,8 @@ public class SearchResult extends ClassCommandResult {
     public int getTotalCount() { return totalCount; }
     public void setTotalCount(int totalCount) { this.totalCount = totalCount; }
 
-    @AutoSerializable
     public static class MatchedMethod {
-        @ResultField(name = "declaringClass")
         public String declaringClass;
-
-        @ResultField(name = "method")
         public MethodInfo method;
 
         public MatchedMethod() {}
@@ -75,15 +60,9 @@ public class SearchResult extends ClassCommandResult {
         }
     }
 
-    @AutoSerializable
     public static class MatchedAnnotation {
-        @ResultField(name = "declaringClass")
         public String declaringClass;
-
-        @ResultField(name = "memberName")
         public String memberName;
-
-        @ResultField(name = "annotationName")
         public String annotationName;
 
         public MatchedAnnotation() {}

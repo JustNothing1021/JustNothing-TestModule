@@ -2,7 +2,6 @@ package com.justnothing.testmodule.command.agent;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
 import com.justnothing.testmodule.command.base.protocol.CommandResult;
 import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
 
@@ -10,7 +9,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 @SerializeKeyName("DbTablesResult")
-@AutoSerializable
 public class DbTablesResult extends CommandResult {
 
     @Expose @SerializedName("dbName")

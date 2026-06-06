@@ -9,7 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.base.MainCommand;
 import com.justnothing.testmodule.command.base.command.Cmd;
-import com.justnothing.testmodule.command.base.command.CmdParamProcessor;
+import com.justnothing.testmodule.command.utils.CmdParamProcessor;
 import com.justnothing.testmodule.command.base.command.CmdRoutes;
 import com.justnothing.testmodule.command.base.command.CommandRouter;
 import com.justnothing.testmodule.command.base.protocol.CommandRequest;

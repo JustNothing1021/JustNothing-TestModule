@@ -2,7 +2,6 @@ package com.justnothing.testmodule.command.utils;
 
 import com.justnothing.testmodule.command.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
-import com.justnothing.testmodule.command.base.command.CmdParamProcessor;
 import com.justnothing.testmodule.utils.logging.Logger;
 
 
@@ -23,7 +22,7 @@ public class ParamParser {
      * @throws IllegalCommandLineArgumentException 参数错误
      */
     public static <T extends CommandRequest> T parse(Class<T> requestClass, String[] args) throws IllegalCommandLineArgumentException {
-        logger.debug("🔄 ParamParser.parse() → 委托给 CmdParamProcessor");
+        logger.debug("ParamParser.parse() 委托给 CmdParamProcessor");
         
         try {
             T request = requestClass.getDeclaredConstructor().newInstance();

@@ -2,8 +2,8 @@ package com.justnothing.testmodule.command.output;
 
 import androidx.annotation.NonNull;
 
+import com.justnothing.testmodule.command.base.protocol.GsonFactory;
 import com.justnothing.testmodule.command.protocol.InteractiveProtocol;
-import com.justnothing.testmodule.command.protocol.JsonProtocol;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
@@ -257,7 +257,7 @@ public class InteractiveOutputHandler implements ICommandOutputHandler {
     public void setStructuredResult(Object result) {
         // 覆盖缓冲区内容
         buffer.setLength(0);
-        buffer.append(JsonProtocol.toJson(result));
+        buffer.append(GsonFactory.getInstance().toJson(result));
     }
 
     @Override

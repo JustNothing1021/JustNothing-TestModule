@@ -1,68 +1,46 @@
 package com.justnothing.testmodule.command.functions.performance.response;
 
-import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
 import com.justnothing.testmodule.command.base.protocol.CommandResult;
-import com.justnothing.testmodule.command.base.protocol.ResultField;
 import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
-import com.justnothing.testmodule.command.base.protocol.ValueSupplier;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @SerializeKeyName("HierarchicalResult")
-@AutoSerializable
 public class HierarchicalResult extends CommandResult {
 
-    @ResultField(name = "taskId", defaultValue = ValueSupplier.ZeroSupplier.class)
     private int taskId;
 
-    @ResultField(name = "sampleRate", defaultValue = ValueSupplier.ZeroSupplier.class)
     private int sampleRate;
 
-    @ResultField(name = "status", defaultValue = ValueSupplier.EmptyStringSupplier.class)
     private String status;
 
-    @ResultField(name = "totalSamples", defaultValue = ValueSupplier.ZeroSupplier.class)
     private int totalSamples;
 
-    @ResultField(name = "methodCount", defaultValue = ValueSupplier.ZeroSupplier.class)
     private int methodCount;
 
-    @ResultField(name = "duration", defaultValue = ValueSupplier.ZeroSupplier.class)
     private long duration;
 
-    @ResultField(name = "hotMethods", description = "热点方法(含调用者)")
     private List<MethodCallEntry> hotMethods;
 
-    @ResultField(name = "exportPath", defaultValue = ValueSupplier.EmptyStringSupplier.class)
     private String exportPath;
 
-    @AutoSerializable
     public static class MethodCallEntry {
-        @ResultField(name = "methodKey", defaultValue = ValueSupplier.EmptyStringSupplier.class)
         private String methodKey;
 
-        @ResultField(name = "sampleCount", defaultValue = ValueSupplier.ZeroSupplier.class)
         private int sampleCount;
 
-        @ResultField(name = "percentage")
         private double percentage;
 
-        @ResultField(name = "avgDepth")
         private double avgDepth;
 
-        @ResultField(name = "callers")
         private List<CallerEntry> callers;
 
-        @AutoSerializable
         public static class CallerEntry {
-            @ResultField(name = "callerName", defaultValue = ValueSupplier.EmptyStringSupplier.class)
             private String callerName;
 
-            @ResultField(name = "count", defaultValue = ValueSupplier.ZeroSupplier.class)
             private int count;
 
-            @ResultField(name = "percentage")
             private double percentage;
 
             public String getCallerName() { return callerName; }

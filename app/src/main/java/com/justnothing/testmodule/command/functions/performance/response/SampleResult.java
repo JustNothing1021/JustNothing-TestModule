@@ -1,50 +1,34 @@
 package com.justnothing.testmodule.command.functions.performance.response;
 
-import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
 import com.justnothing.testmodule.command.base.protocol.CommandResult;
-import com.justnothing.testmodule.command.base.protocol.ResultField;
 import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
-import com.justnothing.testmodule.command.base.protocol.ValueSupplier;
 
 import java.util.List;
 
 @SerializeKeyName("SampleResult")
-@AutoSerializable
 public class SampleResult extends CommandResult {
 
-    @ResultField(name = "taskId", description = "任务ID", defaultValue = ValueSupplier.ZeroSupplier.class)
     private int taskId;
 
-    @ResultField(name = "sampleRate", description = "采样频率(Hz)", defaultValue = ValueSupplier.ZeroSupplier.class)
     private int sampleRate;
 
-    @ResultField(name = "status", description = "状态: running/stopped", defaultValue = ValueSupplier.EmptyStringSupplier.class)
     private String status;
 
-    @ResultField(name = "totalSamples", description = "总采样次数", defaultValue = ValueSupplier.ZeroSupplier.class)
     private int totalSamples;
 
-    @ResultField(name = "duration", description = "持续时间(ms)", defaultValue = ValueSupplier.ZeroSupplier.class)
     private long duration;
 
-    @ResultField(name = "durationStr", description = "持续时间(可读)", defaultValue = ValueSupplier.EmptyStringSupplier.class)
     private String durationStr;
 
-    @ResultField(name = "hotMethods", description = "热点方法列表")
     private List<MethodEntry> hotMethods;
 
-    @ResultField(name = "exportPath", description = "导出文件路径", defaultValue = ValueSupplier.EmptyStringSupplier.class)
     private String exportPath;
 
-    @AutoSerializable
     public static class MethodEntry {
-        @ResultField(name = "methodName", defaultValue = ValueSupplier.EmptyStringSupplier.class)
         private String methodName;
 
-        @ResultField(name = "count", defaultValue = ValueSupplier.ZeroSupplier.class)
         private int count;
 
-        @ResultField(name = "percentage")
         private double percentage;
 
         public MethodEntry() {}

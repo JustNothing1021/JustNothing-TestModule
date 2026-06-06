@@ -1,47 +1,32 @@
 package com.justnothing.testmodule.command.functions.performance.response;
 
-import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
 import com.justnothing.testmodule.command.base.protocol.CommandResult;
-import com.justnothing.testmodule.command.base.protocol.ResultField;
 import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
-import com.justnothing.testmodule.command.base.protocol.ValueSupplier;
 
 import java.util.List;
 
 @SerializeKeyName("TraceResult")
-@AutoSerializable
 public class TraceResult extends CommandResult {
 
-    @ResultField(name = "taskId", defaultValue = ValueSupplier.ZeroSupplier.class)
     private int taskId;
 
-    @ResultField(name = "status", defaultValue = ValueSupplier.EmptyStringSupplier.class)
     private String status;
 
-    @ResultField(name = "traceCount", description = "Trace段数量", defaultValue = ValueSupplier.ZeroSupplier.class)
     private int traceCount;
 
-    @ResultField(name = "traces", description = "Trace数据列表")
     private List<TraceEntry> traces;
 
-    @ResultField(name = "exportPath", defaultValue = ValueSupplier.EmptyStringSupplier.class)
     private String exportPath;
 
-    @AutoSerializable
     public static class TraceEntry {
-        @ResultField(name = "name", defaultValue = ValueSupplier.EmptyStringSupplier.class)
         private String name;
 
-        @ResultField(name = "startTime", defaultValue = ValueSupplier.ZeroSupplier.class)
         private long startTime;
 
-        @ResultField(name = "duration", defaultValue = ValueSupplier.ZeroSupplier.class)
         private long duration;
 
-        @ResultField(name = "threadId", defaultValue = ValueSupplier.ZeroSupplier.class)
         private int threadId;
 
-        @ResultField(name = "threadName", defaultValue = ValueSupplier.EmptyStringSupplier.class)
         private String threadName;
 
         public String getName() { return name; }

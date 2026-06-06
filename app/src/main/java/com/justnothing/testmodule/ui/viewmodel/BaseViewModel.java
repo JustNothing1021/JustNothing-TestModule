@@ -9,7 +9,7 @@ import androidx.lifecycle.MutableLiveData;
 
 import com.justnothing.methodsclient.UiClient;
 import com.justnothing.testmodule.R;
-import com.justnothing.testmodule.command.protocol.JsonProtocol;
+import com.justnothing.testmodule.command.base.protocol.GsonFactory;
 import com.justnothing.testmodule.command.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.base.protocol.CommandResult;
 import com.justnothing.testmodule.utils.logging.Logger;
@@ -53,8 +53,8 @@ public abstract class BaseViewModel<RequestType extends CommandRequest, ResultTy
     protected <Result extends CommandResult> Result executeAny(CommandRequest request, Class<Result> resultClass) {
         try {
             logger.debug("开始执行命令: " + request.getClass().getSimpleName());
-            String jsonResponse = client.executeCommandRequest(JsonProtocol.toJson(request));
-            CommandResult parsedResult = JsonProtocol.parseResponse(jsonResponse);
+            String jsonResponse = client.executeCommandRequest(GsonFactory.getInstance().toJson(request));
+            CommandResult parsedResult = GsonFactory.getInstance().fromJson(jsonResponse, CommandResult.class);
             logger.debug("执行命令响应: " + parsedResult.getClass().getSimpleName());
             if (resultClass.isInstance(parsedResult)) {
                 return resultClass.cast(parsedResult);

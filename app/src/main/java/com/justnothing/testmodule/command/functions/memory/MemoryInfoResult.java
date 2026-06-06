@@ -2,12 +2,10 @@ package com.justnothing.testmodule.command.functions.memory;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
 import com.justnothing.testmodule.command.base.protocol.CommandResult;
 import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
 
 @SerializeKeyName("MemoryInfo")
-@AutoSerializable
 public class MemoryInfoResult extends CommandResult {
 
     @Expose @SerializedName("timestamp")

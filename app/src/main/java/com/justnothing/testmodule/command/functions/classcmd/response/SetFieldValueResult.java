@@ -1,21 +1,15 @@
 package com.justnothing.testmodule.command.functions.classcmd.response;
 
-import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
 import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
-import com.justnothing.testmodule.command.base.protocol.ResultField;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandResult;
 
 @SerializeKeyName("SetFieldValue")
-@AutoSerializable
 public class SetFieldValueResult extends ClassCommandResult {
 
-    @ResultField(name = "className")
     private String className;
 
-    @ResultField(name = "fieldName")
     private String fieldName;
 
-    @ResultField(name = "value")
     private String value;
 
     public SetFieldValueResult() {

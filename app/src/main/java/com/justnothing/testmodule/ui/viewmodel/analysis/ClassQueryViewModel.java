@@ -9,7 +9,7 @@ import androidx.lifecycle.MutableLiveData;
 
 import com.justnothing.methodsclient.UiClient;
 import com.justnothing.testmodule.R;
-import com.justnothing.testmodule.command.protocol.JsonProtocol;
+import com.justnothing.testmodule.command.base.protocol.GsonFactory;
 import com.justnothing.testmodule.command.functions.classcmd.request.ClassInfoRequest;
 import com.justnothing.testmodule.command.base.protocol.CommandResult;
 import com.justnothing.testmodule.command.functions.classcmd.response.ClassInfoResult;
@@ -67,12 +67,12 @@ public class ClassQueryViewModel extends AndroidViewModel {
                 request.setShowMethods(true);
                 request.setShowFields(true);
                 
-                logger.debug("创建请求: " + JsonProtocol.toJson(request));
-                
-                String jsonResponse = client.executeCommandRequest(JsonProtocol.toJson(request));
+                logger.debug("创建请求: " + GsonFactory.getInstance().toJson(request));
+
+                String jsonResponse = client.executeCommandRequest(GsonFactory.getInstance().toJson(request));
                 logger.debug("收到响应: " + jsonResponse);
-                
-                CommandResult parsedResult = JsonProtocol.parseResponse(jsonResponse);
+
+                CommandResult parsedResult = GsonFactory.getInstance().fromJson(jsonResponse, CommandResult.class);
                 logger.debug("解析结果类型: " + parsedResult.getClass().getName());
                 
                 if (parsedResult instanceof ClassInfoResult result) {

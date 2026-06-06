@@ -1,37 +1,25 @@
 package com.justnothing.testmodule.command.functions.performance;
 
-import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
 import com.justnothing.testmodule.command.base.protocol.CommandResult;
-import com.justnothing.testmodule.command.base.protocol.ResultField;
 import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
-import com.justnothing.testmodule.command.base.protocol.ValueSupplier;
 
 @SerializeKeyName("PerformanceResult")
-@AutoSerializable
 public class PerformanceResult extends CommandResult {
 
-    @ResultField(name = "subCommand", defaultValue = ValueSupplier.EmptyStringSupplier.class)
     private String subCommand;
 
-    @ResultField(name = "output", defaultValue = ValueSupplier.EmptyStringSupplier.class)
     private String output;
 
-    @ResultField(name = "subResult", defaultValue = ValueSupplier.EmptyStringSupplier.class)
     private String subResult;
 
-    @ResultField(name = "durationMs")
     private Long durationMs;
 
-    @ResultField(name = "sampleDuration")
     private Long sampleDuration;
 
-    @ResultField(name = "threadCount")
     private Integer threadCount;
 
-    @ResultField(name = "memoryUsed")
     private Long memoryUsed;
 
-    @ResultField(name = "cpuTimeMs")
     private Long cpuTimeMs;
 
     public PerformanceResult() { super(); }

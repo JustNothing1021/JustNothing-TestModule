@@ -1,61 +1,41 @@
 package com.justnothing.testmodule.command.functions.performance.response;
 
-import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
 import com.justnothing.testmodule.command.base.protocol.CommandResult;
-import com.justnothing.testmodule.command.base.protocol.ResultField;
 import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
-import com.justnothing.testmodule.command.base.protocol.ValueSupplier;
 
 import java.util.List;
 
 @SerializeKeyName("MultiThreadResult")
-@AutoSerializable
 public class MultiThreadResult extends CommandResult {
 
-    @ResultField(name = "taskId", defaultValue = ValueSupplier.ZeroSupplier.class)
     private int taskId;
 
-    @ResultField(name = "sampleRate", defaultValue = ValueSupplier.ZeroSupplier.class)
     private int sampleRate;
 
-    @ResultField(name = "status", defaultValue = ValueSupplier.EmptyStringSupplier.class)
     private String status;
 
-    @ResultField(name = "totalSamples", defaultValue = ValueSupplier.ZeroSupplier.class)
     private int totalSamples;
 
-    @ResultField(name = "threadCount", defaultValue = ValueSupplier.ZeroSupplier.class)
     private int threadCount;
 
-    @ResultField(name = "duration", defaultValue = ValueSupplier.ZeroSupplier.class)
     private long duration;
 
-    @ResultField(name = "threadData", description = "各线程数据")
     private List<ThreadEntry> threadData;
 
-    @ResultField(name = "exportPath", defaultValue = ValueSupplier.EmptyStringSupplier.class)
     private String exportPath;
 
-    @AutoSerializable
     public static class ThreadEntry {
-        @ResultField(name = "threadName", defaultValue = ValueSupplier.EmptyStringSupplier.class)
         private String threadName;
 
-        @ResultField(name = "sampleCount", defaultValue = ValueSupplier.ZeroSupplier.class)
         private int sampleCount;
 
-        @ResultField(name = "methods")
         private List<MethodEntry> methods;
 
-        @AutoSerializable
         public static class MethodEntry {
-            @ResultField(name = "methodName", defaultValue = ValueSupplier.EmptyStringSupplier.class)
             private String methodName;
 
-            @ResultField(name = "count", defaultValue = ValueSupplier.ZeroSupplier.class)
             private int count;
 
-            @ResultField(name = "percentage")
             private double percentage;
 
             public String getMethodName() { return methodName; }

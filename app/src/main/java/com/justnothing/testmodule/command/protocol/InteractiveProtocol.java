@@ -5,6 +5,7 @@ import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.utils.logging.Logger;
 import java.io.*;
 import java.nio.ByteBuffer;
+import java.util.Objects;
 
 public class InteractiveProtocol {
 
@@ -274,7 +275,7 @@ public class InteractiveProtocol {
             output.flush();
         } catch (IOException e) {
             // Socket closed 是正常的，因为客户端可能已经断开连接
-            if (!e.getMessage().contains("Socket closed")) {
+            if (!Objects.requireNonNullElse(e.getMessage(), "").contains("Socket closed")) {
                 logger.error("写入消息失败: 类型=" + getMessageTypeName(type), e);
             }
             throw e;

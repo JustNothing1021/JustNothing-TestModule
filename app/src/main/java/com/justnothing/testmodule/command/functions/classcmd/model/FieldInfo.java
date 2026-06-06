@@ -2,10 +2,7 @@ package com.justnothing.testmodule.command.functions.classcmd.model;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
-import com.justnothing.testmodule.command.base.protocol.ResultField;
-import com.justnothing.testmodule.command.base.protocol.ValueSupplier;
-import com.justnothing.testmodule.command.utils.AutoSerializer;
+import com.justnothing.testmodule.command.base.protocol.GsonFactory;
 
 import com.justnothing.testmodule.utils.reflect.DescriptorColorizer;
 import org.json.JSONObject;
@@ -13,31 +10,24 @@ import org.json.JSONObject;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 
-@AutoSerializable
 public class FieldInfo {
 
     @Expose @SerializedName("name")
-    @ResultField(name = "name", description = "字段名", required = true)
     private String name;
 
     @Expose @SerializedName("type")
-    @ResultField(name = "type", description = "字段类型", required = true)
     private String type;
 
     @Expose @SerializedName("genericType")
-    @ResultField(name = "genericType", description = "泛型类型", defaultValue = ValueSupplier.EmptyStringSupplier.class)
     private String genericType;
 
     @Expose @SerializedName("modifiers")
-    @ResultField(name = "modifiers", description = "修饰符", defaultValue = ValueSupplier.ZeroSupplier.class)
     private int modifiers;
 
     @Expose @SerializedName("declaringClass")
-    @ResultField(name = "declaringClass", description = "声明类", defaultValue = ValueSupplier.EmptyStringSupplier.class)
     private String declaringClass;
 
     @Expose @SerializedName("declaringClassIsInterface")
-    @ResultField(name = "declaringClassIsInterface", description = "声明类是否为接口", defaultValue = ValueSupplier.FalseSupplier.class)
     private boolean declaringClassIsInterface;
     
     public FieldInfo() {
@@ -85,7 +75,7 @@ public class FieldInfo {
 
     public JSONObject toJson() {
         try {
-            String jsonStr = AutoSerializer.toJson(this);
+            String jsonStr = GsonFactory.getInstance().toJson(this);
             return new org.json.JSONObject(jsonStr);
         } catch (Exception e) {
             throw new RuntimeException("Failed to serialize FieldInfo", e);

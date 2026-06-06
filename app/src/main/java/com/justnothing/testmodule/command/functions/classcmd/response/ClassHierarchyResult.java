@@ -1,22 +1,16 @@
 package com.justnothing.testmodule.command.functions.classcmd.response;
 
-import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
-import com.justnothing.testmodule.command.base.protocol.ResultField;
 import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
-import com.justnothing.testmodule.command.base.protocol.ValueSupplier;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandResult;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @SerializeKeyName("ClassHierarchy")
-@AutoSerializable
 public class ClassHierarchyResult extends ClassCommandResult {
 
-    @ResultField(name = "classChain", defaultValue = ValueSupplier.EmptyListSupplier.class)
     private List<HierarchyClassInfo> classChain = new ArrayList<>();
 
-    @ResultField(name = "interfacesPerLevel", defaultValue = ValueSupplier.EmptyListSupplier.class)
     private List<List<String>> interfacesPerLevel = new ArrayList<>();
 
     public ClassHierarchyResult() {
@@ -32,24 +26,17 @@ public class ClassHierarchyResult extends ClassCommandResult {
     public List<List<String>> getInterfacesPerLevel() { return interfacesPerLevel; }
     public void setInterfacesPerLevel(List<List<String>> interfacesPerLevel) { this.interfacesPerLevel = interfacesPerLevel; }
 
-    @AutoSerializable
     public static class HierarchyClassInfo {
-        @ResultField(name = "name")
         private String name;
 
-        @ResultField(name = "isInterface", defaultValue = ValueSupplier.FalseSupplier.class)
         private boolean isInterface;
 
-        @ResultField(name = "isAnnotation", defaultValue = ValueSupplier.FalseSupplier.class)
         private boolean isAnnotation;
 
-        @ResultField(name = "isEnum", defaultValue = ValueSupplier.FalseSupplier.class)
         private boolean isEnum;
 
-        @ResultField(name = "isAbstract", defaultValue = ValueSupplier.FalseSupplier.class)
         private boolean isAbstract;
 
-        @ResultField(name = "isFinal", defaultValue = ValueSupplier.FalseSupplier.class)
         private boolean isFinal;
 
         public HierarchyClassInfo() {}
