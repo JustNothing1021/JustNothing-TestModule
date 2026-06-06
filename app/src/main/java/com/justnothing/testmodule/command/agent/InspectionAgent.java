@@ -390,6 +390,17 @@ public class InspectionAgent {
                                 }
                                 break;
 
+                            case com.justnothing.testmodule.command.protocol.InteractiveProtocol.TYPE_TUI_WIDGET_CREATE:
+                            case com.justnothing.testmodule.command.protocol.InteractiveProtocol.TYPE_TUI_WIDGET_UPDATE:
+                            case com.justnothing.testmodule.command.protocol.InteractiveProtocol.TYPE_TUI_WIDGET_DESTROY:
+                            case com.justnothing.testmodule.command.protocol.InteractiveProtocol.TYPE_TUI_CLEAR_ALL:
+                                // TUI Widget 控制消息：客户端→服务端方向暂不处理（当前为服务端驱动）
+                                // 未来可支持双向通信（如客户端上报组件状态）
+                                logger.debug("_dispatch 收到 TUI Widget 消息: %s",
+                                        com.justnothing.testmodule.command.protocol.InteractiveProtocol
+                                                .getMessageTypeName(packetType));
+                                break;
+
                             default:
                                 logger.debug("_dispatch 收到未知帧类型: " +
                                         com.justnothing.testmodule.command.protocol.InteractiveProtocol

@@ -7,6 +7,7 @@ import com.justnothing.testmodule.command.output.InputMode;
 import com.justnothing.testmodule.command.protocol.InteractiveProtocol;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
+import com.justnothing.methodsclient.tui.widget.TuiWidgetData;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -435,6 +436,67 @@ public class InteractiveOutputHandler implements ICommandOutputHandler {
             logger.debug("发送心跳包");
         } catch (IOException e) {
             logger.warn("发送心跳失败", e);
+        }
+    }
+
+    // ==================== TUI Widget 控制（覆写接口默认方法） ====================
+
+    @Override
+    public void createWidget(TuiWidgetData data) {
+        if (closed.get() || data == null) return;
+        try {
+            synchronized (writeLock) {
+                InteractiveProtocol.writeMessage(outputStream,
+                        InteractiveProtocol.TYPE_TUI_WIDGET_CREATE,
+                        data.toJsonBytes());
+            }
+            logger.debug("发送 TUI_WIDGET_CREATE: id=%s, type=%s", data.getId(), data.getType());
+        } catch (IOException e) {
+            logger.error("发送 TUI_WIDGET_CREATE 失败: " + data.getId(), e);
+        }
+    }
+
+    @Override
+    public void updateWidget(TuiWidgetData data) {
+        if (closed.get() || data == null) return;
+        try {
+            synchronized (writeLock) {
+                InteractiveProtocol.writeMessage(outputStream,
+                        InteractiveProtocol.TYPE_TUI_WIDGET_UPDATE,
+                        data.toJsonBytes());
+            }
+        } catch (IOException e) {
+            logger.error("发送 TUI_WIDGET_UPDATE 失败: " + data.getId(), e);
+        }
+    }
+
+    @Override
+    public void destroyWidget(String widgetId) {
+        if (closed.get() || widgetId == null) return;
+        try {
+            synchronized (writeLock) {
+                InteractiveProtocol.writeMessage(outputStream,
+                        InteractiveProtocol.TYPE_TUI_WIDGET_DESTROY,
+                        widgetId.getBytes(StandardCharsets.UTF_8));
+            }
+            logger.debug("发送 TUI_WIDGET_DESTROY: %s", widgetId);
+        } catch (IOException e) {
+            logger.error("发送 TUI_WIDGET_DESTROY 失败: " + widgetId, e);
+        }
+    }
+
+    @Override
+    public void clearAllWidgets() {
+        if (closed.get()) return;
+        try {
+            synchronized (writeLock) {
+                InteractiveProtocol.writeMessage(outputStream,
+                        InteractiveProtocol.TYPE_TUI_CLEAR_ALL,
+                        null);
+            }
+            logger.debug("发送 TUI_CLEAR_ALL");
+        } catch (IOException e) {
+            logger.error("发送 TUI_CLEAR_ALL 失败", e);
         }
     }
 }

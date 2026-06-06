@@ -5,6 +5,8 @@ import com.justnothing.methodsclient.StreamClient;
 import com.justnothing.methodsclient.model.ColoredSegment;
 import com.justnothing.methodsclient.utils.TerminalManager;
 import com.justnothing.methodsclient.highlighter.HighlighterManager;
+import com.justnothing.methodsclient.tui.TuiManager;
+import com.justnothing.methodsclient.tui.widget.TuiWidgetData;
 import com.justnothing.testmodule.command.output.InputMode;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.protocol.InteractiveProtocol;
@@ -31,6 +33,18 @@ public class SocketStreamReader {
 
 
     private static final StreamClient.ClientLogger logger = new StreamClient.ClientLogger();
+
+    /**
+     * TUI 管理器引用（由 ReplClient 在启动时设置）。
+     * Socket 收到 TUI Widget 消息时通过此引用驱动组件更新。
+     */
+    private static volatile TuiManager tuiManager = null;
+
+    /** 设置 TUI 管理器（通常由 ReplClient 启动时调用） */
+    public static void setTuiManager(TuiManager manager) { tuiManager = manager; }
+
+    /** 获取当前 TUI 管理器 */
+    public static TuiManager getTuiManager() { return tuiManager; }
 
 
     private static boolean isServerTimeout(AtomicLong lastResponseTime) {
@@ -82,6 +96,53 @@ public class SocketStreamReader {
             logger.warn("未知的高亮模式: " + modeName +
                     " (预定义模式: " + String.join(", ", InputMode.allModes()) + ")");
         }
+    }
+
+    // ==================== TUI Widget 消息处理 ====================
+
+    /**
+     * 处理 TYPE_TUI_WIDGET_CREATE：创建新组件
+     */
+    private static void handleTuiWidgetCreate(byte[] data) {
+        if (tuiManager == null || !tuiManager.isRunning()) return;
+        try {
+            TuiWidgetData widgetData = TuiWidgetData.fromJsonBytes(data);
+            tuiManager.handleWidgetCreate(widgetData);
+        } catch (Exception e) {
+            logger.error("解析 TUI_WIDGET_CREATE 数据失败", e);
+        }
+    }
+
+    /**
+     * 处理 TYPE_TUI_WIDGET_UPDATE：更新组件
+     */
+    private static void handleTuiWidgetUpdate(byte[] data) {
+        if (tuiManager == null || !tuiManager.isRunning()) return;
+        try {
+            TuiWidgetData widgetData = TuiWidgetData.fromJsonBytes(data);
+            tuiManager.handleWidgetUpdate(widgetData);
+        } catch (Exception e) {
+            logger.error("解析 TUI_WIDGET_UPDATE 数据失败", e);
+        }
+    }
+
+    /**
+     * 处理 TYPE_TUI_WIDGET_DESTROY：销毁组件
+     */
+    private static void handleTuiWidgetDestroy(byte[] data) {
+        if (tuiManager == null || !tuiManager.isRunning()) return;
+        if (data != null && data.length > 0) {
+            String widgetId = new String(data, StandardCharsets.UTF_8);
+            tuiManager.handleWidgetDestroy(widgetId);
+        }
+    }
+
+    /**
+     * 处理 TYPE_TUI_CLEAR_ALL：清除所有组件（命令结束时）
+     */
+    private static void handleTuiClearAll() {
+        if (tuiManager == null || !tuiManager.isRunning()) return;
+        tuiManager.clearAllWidgets();
     }
 
 
@@ -306,6 +367,22 @@ public class SocketStreamReader {
 
             case InteractiveProtocol.TYPE_SET_HIGHLIGHT_MODE:
                 handleSetHighlightMode(data);
+                return null;
+
+            case InteractiveProtocol.TYPE_TUI_WIDGET_CREATE:
+                handleTuiWidgetCreate(data);
+                return null;
+
+            case InteractiveProtocol.TYPE_TUI_WIDGET_UPDATE:
+                handleTuiWidgetUpdate(data);
+                return null;
+
+            case InteractiveProtocol.TYPE_TUI_WIDGET_DESTROY:
+                handleTuiWidgetDestroy(data);
+                return null;
+
+            case InteractiveProtocol.TYPE_TUI_CLEAR_ALL:
+                handleTuiClearAll();
                 return null;
 
             case InteractiveProtocol.TYPE_COMMAND_END:

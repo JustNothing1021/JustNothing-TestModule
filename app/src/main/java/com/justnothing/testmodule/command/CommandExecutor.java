@@ -15,6 +15,7 @@ import com.justnothing.testmodule.command.functions.bytecode.impl.BytecodeMain;
 import com.justnothing.testmodule.command.functions.classcmd.ClassMain;
 import com.justnothing.testmodule.command.functions.examples.InteractiveExampleMain;
 import com.justnothing.testmodule.command.functions.examples.OutputExampleMain;
+import com.justnothing.testmodule.command.functions.examples.TuiTestMain;
 import com.justnothing.testmodule.command.functions.exportcontext.ExportContextMain;
 import com.justnothing.testmodule.command.functions.help.HelpMain;
 import com.justnothing.testmodule.command.functions.alias.AliasMain;
@@ -89,6 +90,7 @@ public class CommandExecutor {
             ScriptExecutorMain.class,
             OutputExampleMain.class,
             InteractiveExampleMain.class,
+            TuiTestMain.class,
             SandboxTestMain.class,
             AnonClassTestMain.class,
             ClassMain.class,

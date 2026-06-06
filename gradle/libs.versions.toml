@@ -13,6 +13,7 @@ hutoolAll = "5.8.44"
 gson = "2.14.0"
 jlineReader = "3.30.13"
 jlineTerminal = "3.30.13"
+lanterna = "3.1.1"
 jna = "5.18.1"
 junit = "4.13.2"
 materialVersion = "1.13.0"
@@ -48,6 +49,7 @@ jline-reader = { module = "org.jline:jline-reader", version.ref = "jlineReader" 
 jline-terminal-jna = { module = "org.jline:jline-terminal-jna", version.ref = "jlineReader" }
 jline-terminal-jni = { module = "org.jline:jline-terminal-jni", version.ref = "jlineReader" }
 jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
+lanterna = { module = "com.googlecode.lanterna:lanterna", version.ref = "lanterna" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 material-v1110 = { module = "com.google.android.material:material", version.ref = "materialVersion" }
 mpandroidchart = { module = "com.github.PhilJay:MPAndroidChart", version.ref = "mpandroidchart" }

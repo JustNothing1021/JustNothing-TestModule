@@ -35,6 +35,16 @@ public class InteractiveProtocol {
     public static final byte TYPE_JSON_COMMAND_RESPONSE = 0x16;
     public static final byte TYPE_SET_HIGHLIGHT_MODE = 0x17;
 
+    // ==================== TUI Widget 控制消息 ====================
+    /** 创建一个新的 TUI 组件 */
+    public static final byte TYPE_TUI_WIDGET_CREATE = 0x18;
+    /** 更新已有 TUI 组件的数据 */
+    public static final byte TYPE_TUI_WIDGET_UPDATE = 0x19;
+    /** 销毁指定 TUI 组件 */
+    public static final byte TYPE_TUI_WIDGET_DESTROY = 0x1A;
+    /** 清除所有 TUI 组件（命令结束时调用） */
+    public static final byte TYPE_TUI_CLEAR_ALL = 0x1B;
+
 
 
     public static String getMessageTypeName(byte type) {
@@ -56,6 +66,10 @@ public class InteractiveProtocol {
             case TYPE_JSON_COMMAND_REQUEST -> "COMMAND_REQUEST";
             case TYPE_JSON_COMMAND_RESPONSE -> "COMMAND_RESPONSE";
             case TYPE_SET_HIGHLIGHT_MODE -> "SET_HIGHLIGHT_MODE";
+            case TYPE_TUI_WIDGET_CREATE -> "TUI_WIDGET_CREATE";
+            case TYPE_TUI_WIDGET_UPDATE -> "TUI_WIDGET_UPDATE";
+            case TYPE_TUI_WIDGET_DESTROY -> "TUI_WIDGET_DESTROY";
+            case TYPE_TUI_CLEAR_ALL -> "TUI_CLEAR_ALL";
             default -> "UNKNOWN(" + type + ")";
         };
     }

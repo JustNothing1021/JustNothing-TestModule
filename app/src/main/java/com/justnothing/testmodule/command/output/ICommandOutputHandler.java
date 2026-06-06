@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.output;
 
 import com.justnothing.javainterpreter.api.IOutputHandler;
 import com.justnothing.testmodule.command.output.InputMode;
+import com.justnothing.methodsclient.tui.widget.TuiWidgetData;
 
 
 /**
@@ -96,4 +97,27 @@ public interface ICommandOutputHandler extends IOutputHandler {
     default void printStackTrace(Throwable t, byte color) {
         printStackTrace(t);
     }
+
+    // ==================== TUI Widget 控制（默认空实现） ====================
+
+    /**
+     * 创建一个 TUI 组件。
+     * <p>非交互式 handler 默认不做任何操作。
+     */
+    default void createWidget(TuiWidgetData data) {}
+
+    /**
+     * 更新一个已有 TUI 组件。
+     */
+    default void updateWidget(TuiWidgetData data) {}
+
+    /**
+     * 销毁指定 ID 的 TUI 组件。
+     */
+    default void destroyWidget(String widgetId) {}
+
+    /**
+     * 清除所有 TUI 组件（命令结束时调用）。
+     */
+    default void clearAllWidgets() {}
 }
