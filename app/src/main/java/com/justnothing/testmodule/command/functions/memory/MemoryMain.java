@@ -76,22 +76,21 @@ public class MemoryMain extends MainCommand<CommandResult> {
 
         // 创建新的上下文，复用原上下文的输出/类加载器等，替换 cmdName 和 args
         CommandExecutor.CmdExecContext<CommandRequest> routeContext = new CommandExecutor.CmdExecContext<>(
-            "memory", routeArgs, context.origCommand, context.targetPackage,
+            "memory", routeArgs, context.origCommand,
             context.classLoader, context.output, context.argGroup, context.requirements
         );
         routeContext.setRequest(context.getRequest());
         routeContext.setExecutionType(context.getExecutionType());
 
         try {
-            Object result = CommandRouter.getInstance().dispatch(routeContext);
-            return (CommandResult) result;
+            return CommandRouter.getInstance().dispatch(routeContext);
         } catch (IllegalArgumentException e) {
             context.print("未知子命令: ", Colors.RED);
             context.println(subCommand, Colors.YELLOW);
             return createErrorResult("未知子命令: " + subCommand);
         } catch (Throwable t) {
             com.justnothing.testmodule.command.utils.CommandExceptionHandler.handleException(
-                "memory", t instanceof Exception ? (Exception) t : new RuntimeException(t), context, "执行memory命令失败"
+                "memory", t instanceof Exception ? t : new RuntimeException(t), context, "执行memory命令失败"
             );
             return createErrorResult("执行memory命令失败: " + t.getMessage());
         }

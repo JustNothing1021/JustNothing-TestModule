@@ -369,5 +369,7 @@ public class AnsiWidgetEngine {
         if (!debugLogging) return;
         String msg = String.format(fmt, args);
         LOG.info("[TUI-Engine] " + msg);
+        // 同时输出到 stderr 以便在设备上直接看到
+        System.err.println("[TUI-Engine] " + msg);
     }
 }

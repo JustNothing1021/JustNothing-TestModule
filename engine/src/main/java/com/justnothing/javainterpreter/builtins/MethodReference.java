@@ -257,6 +257,12 @@ public class MethodReference {
                 if (method.getName().equals("hashCode")) {
                     return System.identityHashCode(proxy);
                 }
+                if (method.getName().equals("getClass")) {
+                    return methodReference.getClass();
+                }
+                if (method.getName().equals("equals")) {
+                    return proxy == args[0];
+                }
             }
 
             Object[] invokeArgs = args != null ? args : new Object[0];

@@ -17,7 +17,6 @@ import org.jline.utils.InfoCmp;
 
 import com.justnothing.testmodule.utils.data.DataBridge;
 import com.justnothing.testmodule.constants.FileDirectory;
-import com.justnothing.testmodule.utils.logging.Logger;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -32,8 +31,6 @@ import java.util.Objects;
 
 public class TerminalManager {
 
-    public static final Logger logger = Logger.getLoggerForName("TerminalManager");
-
     private static final LineReader reader;
     private static final Terminal terminal;
 
@@ -45,7 +42,7 @@ public class TerminalManager {
         DUMB      // Dumb简单模式（最基本功能）
     }
 
-    private static TerminalMode currentMode = TerminalMode.JNI;  // 默认使用Exec
+    private static TerminalMode currentMode = TerminalMode.EXEC;  // 默认使用Exec
 
 
     private static final String CAP = """
@@ -204,8 +201,6 @@ public class TerminalManager {
 
         terminal = builtTerminal;
 
-        logger.info("Terminal initialized: mode=" + currentMode);
-
         // 根据终端模式优化LineReader配置
         Completer completer = new JavaCompleter();
 
@@ -223,6 +218,11 @@ public class TerminalManager {
         // 只在非Dumb模式下启用TailTip（需要终端支持）
         if (currentMode != TerminalMode.DUMB) {
             TailTipManager.setupJavaTailTips(reader);
+            // 注意：AutopairWidgets.enable() 内部会调用 callWidget()，
+            // 而 JLine 要求该方法只能在 readLine() 调用期间使用。
+            // 静态初始化块中没有活跃的 readLine 上下文，会导致
+            // IllegalStateException("Widgets can only be called during a `readLine` call")。
+            // 因此将 AutopairWidgets 的启用推迟到 getLineReader() 或首次使用时。
         }
 
         KeyMap<Binding> keyMap = reader.getKeyMaps().get(LineReader.MAIN);

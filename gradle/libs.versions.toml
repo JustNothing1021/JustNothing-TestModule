@@ -56,7 +56,11 @@ androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version
 xposed-api = { module = "de.robv.android.xposed:api", version.ref = "apiVersion" }
 firebase-crashlytics-buildtools = { group = "com.google.firebase", name = "firebase-crashlytics-buildtools", version.ref = "firebaseCrashlyticsBuildtools" }
 r8 = { module = "com.android.tools:r8", version.ref = "r8" }
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version = "1.9.0" }
+kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version = "2.1.0" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version = "2.1.0" }
 

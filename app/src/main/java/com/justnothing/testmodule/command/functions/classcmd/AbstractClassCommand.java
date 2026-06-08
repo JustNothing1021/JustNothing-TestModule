@@ -46,7 +46,7 @@ public abstract class AbstractClassCommand<Req extends ClassCommandRequest, Res 
         }
 
         ClassCommandContext<Req> ctx = new ClassCommandContext<>
-                (subArgs, context.classLoader(), context.targetPackage(), context, logger);
+                (subArgs, context.classLoader(), context, logger);
 
         return executeClassCommand(ctx);
     }

@@ -8,7 +8,6 @@ import com.justnothing.testmodule.command.base.protocol.CommandResult;
 
 import static com.justnothing.testmodule.constants.CommandServer.MAIN_MODULE_VER;
 
-import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.functions.bsh.impl.BeanShellExecutorMain;
 import com.justnothing.testmodule.command.functions.breakpoint.impl.BreakpointMain;
 import com.justnothing.testmodule.command.functions.bytecode.impl.BytecodeMain;
@@ -43,12 +42,15 @@ import com.justnothing.testmodule.command.utils.ArgumentGroup;
 import com.justnothing.testmodule.command.utils.CommandArgumentParser;
 import com.justnothing.testmodule.utils.reflect.ClassLoaderManager;
 import com.justnothing.testmodule.utils.logging.Logger;
+import com.justnothing.testmodule.utils.reflect.CompositeClassLoader;
 
 import org.json.JSONException;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 
@@ -128,23 +130,6 @@ public class CommandExecutor {
         commandRegistry.put(name, command);
     }
 
-    private static void registerCommand(Class<? extends CommandRequest> requestType, MainCommand<?> command)
-                throws RuntimeException {
-        try {
-            registerCommand(requestType.newInstance().getCommandType(), command);
-        } catch (InstantiationException | IllegalAccessException e) {
-            logger.error("注册命令时出错 (已跳过): " + requestType.getSimpleName()
-                       + " - " + e.getMessage()
-                       + "\n   该请求类型将无法路由，但服务端继续运行");
-        } catch (IllegalStateException e) {
-            if (e.getMessage() != null && e.getMessage().contains("@SerializeKeyName")) {
-                logger.error(requestType.getSimpleName() + " 缺少@SerializeKeyName注解 (已跳过)");
-            } else {
-                logger.error("注册命令时状态异常 (已跳过): " + e.getMessage());
-            }
-        }
-    }
-
     public static MainCommand<? extends CommandResult> getCommand(String name) {
         return commandRegistry.get(name);
     }
@@ -166,44 +151,23 @@ public class CommandExecutor {
         }
     }
 
-    public void setTargetPackage(String pkgName) {
-        targetPackageThreadLocal.set(pkgName);
-        classLoaderThreadLocal.remove();
-        logger.debug("设置目标包名: " + pkgName);
-    }
 
-    private String getTargetPackage() {
-        return targetPackageThreadLocal.get();
-    }
-
-    private ClassLoader getClassLoader() {
+    private ClassLoader getCurrentClassLoader() {
         ClassLoader classLoader = classLoaderThreadLocal.get();
         if (classLoader != null) {
             return classLoader;
         }
-        
-        String targetPackage = getTargetPackage();
-        if (targetPackage == null || targetPackage.equals("default") || targetPackage.isEmpty()) {
-            classLoader = Thread.currentThread().getContextClassLoader();
-            if (classLoader == null) {
-                classLoader = getClass().getClassLoader();
-            }
-        } else {
-            ClassLoaderManager manager = getClassLoaderManager();
-            classLoader = manager.getClassLoaderForPackage(targetPackage);
-        }
-        
-        classLoaderThreadLocal.set(classLoader);
-        return classLoader;
-    }
-
-    private ClassLoaderManager getClassLoaderManager() {
-        ClassLoaderManager manager = classLoaderManagerThreadLocal.get();
-        if (manager == null) {
-            manager = new ClassLoaderManager();
-            classLoaderManagerThreadLocal.set(manager);
-        }
-        return manager;
+        CompositeClassLoader cl = new CompositeClassLoader();
+        ClassLoader[] classLoaders = {
+            Thread.currentThread().getContextClassLoader(),
+            ClassLoaderManager.getApkClassLoader(),
+            getClass().getClassLoader()
+        };
+        Arrays.stream(classLoaders)
+            .filter(Objects::nonNull)
+            .forEach(cl::addClassLoader);
+        classLoaderThreadLocal.set(cl);
+        return cl;
     }
 
     public void cleanup() {
@@ -324,11 +288,7 @@ public class CommandExecutor {
 
         fullCommand = AliasMain.resolveAlias(fullCommand);
 
-        CommandArgumentParser.ParseResult parseResult = CommandArgumentParser.parseOptions(fullCommand, logger);
-
-        if (parseResult.classLoader() != null) {
-            setTargetPackage(parseResult.classLoader());
-        }
+        CommandArgumentParser.ParseResult parseResult = CommandArgumentParser.parseOptions(fullCommand);
 
         String[] commandParams = CommandArgumentParser.splitArguments(parseResult.commandLine());
         if (commandParams.length == 0) {
@@ -347,13 +307,15 @@ public class CommandExecutor {
         // 解析 ArgumentGroup（提供多种参数格式）
         ArgumentGroup argGroup = ArgumentGroup.parse(commandString.trim());
 
+        ClassLoader classLoader = getCurrentClassLoader();
+        logger.debug("本次使用的类加载器: ", classLoader);
+
         // 创建执行上下文
         CmdExecContext<CommandRequest> context = new CmdExecContext<>(
             command,
             args,
             commandString,
-            getTargetPackage(),
-            getClassLoader(),
+            classLoader,
             executionType == CommandType.COMMAND_LINE ? output : new VoidOutputHandler(),
             argGroup,
             requirements
@@ -370,12 +332,14 @@ public class CommandExecutor {
                                        ClientRequirements requirements, CommandType executionType) throws Throwable {
         String cmdName = request.getCommandType();
 
+        ClassLoader classLoader = getCurrentClassLoader();
+        logger.debug("本次使用的类加载器: ", classLoader);
+
         CmdExecContext<CommandRequest> context = new CmdExecContext<>(
             cmdName,
             new String[0],
             "",
-            getTargetPackage(),
-            getClassLoader(),
+            classLoader,
             executionType == CommandType.COMMAND_LINE ? output : new VoidOutputHandler(),
             ArgumentGroup.parse(""),
             requirements
@@ -450,12 +414,8 @@ public class CommandExecutor {
             try {
                 @SuppressWarnings("unchecked")
                 MainCommand<CommandResult> typedCmd = (MainCommand<CommandResult>) commandObj;
-                CommandRequest request = context.getRequest();
-                if (request == null) {
-                    // 无路由命令不需要 Request 对象（如 output_test 直接在 runMain 里处理）
-                }
-                CommandResult result = typedCmd.runMain(
-                        (CmdExecContext<CommandRequest>) context);
+                // 无路由命令不需要 Request 对象（如 output_test 直接在 runMain 里处理）
+                CommandResult result = typedCmd.runMain(context);
 
                 if (executionType == CommandType.USER_INTERFACE) {
                     origOutput.println(result.toJson().toString());
@@ -505,7 +465,6 @@ public class CommandExecutor {
         public String cmdName;
         public String[] args;
         public String origCommand;
-        public String targetPackage;
         public ClassLoader classLoader;
         public ICommandOutputHandler output;
         public ArgumentGroup argGroup;
@@ -517,7 +476,6 @@ public class CommandExecutor {
         public String cmdName() { return cmdName; }
         public String[] args() { return args; }
         public String origCommand() { return origCommand; }
-        public String targetPackage() { return targetPackage; }
         public ClassLoader classLoader() { return classLoader; }
         public ICommandOutputHandler output() { return output; }
         public ArgumentGroup argGroup() { return argGroup; }
@@ -530,21 +488,19 @@ public class CommandExecutor {
         public void setExecutionType(CommandType t) { this.executionType = t; }
 
         public boolean isCli() { return executionType == CommandType.COMMAND_LINE; }
-        public boolean isGui() { return executionType == CommandType.USER_INTERFACE; }
         public boolean isAgent() { return executionType == CommandType.AGENT; }
 
         public T getCommandRequest() {
             return request;
         }
 
-        public CmdExecContext(String cmdName, String[] args, String origCommand,
-                              String targetPackage, ClassLoader classLoader,
+        public CmdExecContext(String cmdName, String[] args,
+                              String origCommand, ClassLoader classLoader,
                               ICommandOutputHandler output, ArgumentGroup argGroup,
                               ClientRequirements requirements) {
             this.cmdName = cmdName;
             this.args = args;
             this.origCommand = origCommand;
-            this.targetPackage = targetPackage;
             this.classLoader = classLoader;
             this.output = output;
             this.argGroup = argGroup;
@@ -554,7 +510,7 @@ public class CommandExecutor {
         public static <T extends CommandRequest> CmdExecContext<T> copyOf(CmdExecContext<? extends T> other) {
             return new CmdExecContext<>(
                 other.cmdName, other.args, other.origCommand,
-                other.targetPackage, other.classLoader,
+                other.classLoader,
                 other.output, other.argGroup, other.requirements
             );
         }
@@ -631,8 +587,6 @@ public class CommandExecutor {
             获取一个子命令的帮助:
               help <cmd_name>
             
-            可选项:
-              -cl, --classloader <package>      - 指定类加载器（软件包名，没找到会是默认的类加载器）
             """, MAIN_MODULE_VER);
     }
 }

@@ -37,10 +37,7 @@ public class BshQueryCommand extends AbstractBeanShellCommand<CommandRequest> {
 
     public BeanShellResult handleVars(BshVarsRequest request, CommandExecutor.CmdExecContext<CommandRequest> context) {
         ClassLoader classLoader = context.classLoader();
-        String targetPackage = context.targetPackage();
-
-        context.print("(当前ClassLoader: ", Colors.GRAY);
-        context.println((targetPackage == null ? "默认加载器" : targetPackage) + ")", Colors.YELLOW);
+;
         context.println("", Colors.WHITE);
         context.println("BeanShell执行器的变量列表:", Colors.CYAN);
 

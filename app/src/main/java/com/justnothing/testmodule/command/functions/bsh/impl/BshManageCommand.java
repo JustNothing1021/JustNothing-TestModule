@@ -80,12 +80,10 @@ public class BshManageCommand extends AbstractBeanShellCommand<CommandRequest> {
 
     public BeanShellResult handleClear(BshClearRequest request, CommandExecutor.CmdExecContext<CommandRequest> context) {
         ClassLoader classLoader = context.classLoader();
-        String targetPackage = context.targetPackage();
 
         getBeanShellExecutor(classLoader).clearVariables();
         context.println("已清空BeanShell执行器的所有变量", Colors.GREEN);
         context.print("提示: 只清空了", Colors.GRAY);
-        context.print(targetPackage == null ? "默认" : targetPackage, Colors.YELLOW);
         context.println("的ClassLoader的执行器的变量，其他ClassLoader的并没有被清空", Colors.GRAY);
 
         return buildSuccessResult("bclear", "已清空变量");

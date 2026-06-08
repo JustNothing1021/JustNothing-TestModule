@@ -337,5 +337,6 @@ public class TuiClientManager {
     private void log(String fmt, Object... args) {
         String msg = String.format(fmt, args);
         LOG.info("[TUI-Client] " + msg);
+        System.err.println("[TUI-Client] " + msg);  // 方便在设备上直接看
     }
 }

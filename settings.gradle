@@ -19,3 +19,5 @@ dependencyResolutionManagement {
 rootProject.name = "JustNothing"
 include ':app'
 include ':engine'
+include ':rich'
+include ':engine_new'

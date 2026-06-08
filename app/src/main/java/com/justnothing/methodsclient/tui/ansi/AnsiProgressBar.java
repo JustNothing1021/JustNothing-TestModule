@@ -32,7 +32,7 @@ public class AnsiProgressBar implements AnsiWidgetEngine.AnsiWidget {
     // ==================== 预设样式 ====================
 
     public static final Style STYLE_UNICODE = Style.builder()
-        .fill('█').empty('░')
+        .fill('\u2588').empty('\u2591')
         .leftBracket('[').rightBracket(']')
         .fillColor(AttributedStyle.CYAN).emptyColor(AttributedStyle.BLUE)
         .build();
@@ -43,7 +43,7 @@ public class AnsiProgressBar implements AnsiWidgetEngine.AnsiWidget {
         .fillColor(AttributedStyle.GREEN).emptyColor(0)
         .build();
     public static final Style STYLE_BLOCK = Style.builder()
-        .fill('■').empty('□')
+        .fill('\u25A0').empty('\u25A1')
         .leftBracket('|').rightBracket('|')
         .fillColor(AttributedStyle.YELLOW).emptyColor(0)
         .build();
@@ -57,64 +57,45 @@ public class AnsiProgressBar implements AnsiWidgetEngine.AnsiWidget {
 
     /**
      * 进度条视觉样式（字符 + 颜色）
-     *
-     * @param fillChar     填充字符
-     * @param emptyChar    空白字符
-     * @param leftBracket  左边框
-     * @param rightBracket 右边框
-     * @param fillColor    填充颜色（基础色，colorGradient 启用时会被覆盖）
-     * @param emptyColor   空白颜色
      */
-        public record Style(char fillChar, char emptyChar, char leftBracket, char rightBracket,
-                            int fillColor, int emptyColor) {
+    public static class Style {
+        public final char fillChar;       // 填充字符
+        public final char emptyChar;      // 空白字符
+        public final char leftBracket;    // 左边框
+        public final char rightBracket;   // 右边框
+        public final int fillColor;       // 填充颜色（基础色，colorGradient 启用时会被覆盖）
+        public final int emptyColor;      // 空白颜色
 
-        public static Builder builder() {
-            return new Builder();
+        public Style(char fillChar, char emptyChar,
+                     char leftBracket, char rightBracket,
+                     int fillColor, int emptyColor) {
+            this.fillChar = fillChar;
+            this.emptyChar = emptyChar;
+            this.leftBracket = leftBracket;
+            this.rightBracket = rightBracket;
+            this.fillColor = fillColor;
+            this.emptyColor = emptyColor;
         }
 
-            public static class Builder {
-                private char fill = '\u2588';
-                private char empty = '\u2591';
-                private char left = '[';
-                private char right = ']';
-                private int fillClr = AttributedStyle.CYAN;
-                private int emptyClr = 0;
+        public static Builder builder() { return new Builder(); }
 
-                public Builder fill(char c) {
-                    fill = c;
-                    return this;
-                }
+        public static class Builder {
+            private char fill = '\u2588';
+            private char empty = '\u2591';
+            private char left = '[';
+            private char right = ']';
+            private int fillClr = AttributedStyle.CYAN;
+            private int emptyClr = 0;
 
-                public Builder empty(char c) {
-                    empty = c;
-                    return this;
-                }
-
-                public Builder leftBracket(char c) {
-                    left = c;
-                    return this;
-                }
-
-                public Builder rightBracket(char c) {
-                    right = c;
-                    return this;
-                }
-
-                public Builder fillColor(int c) {
-                    fillClr = c;
-                    return this;
-                }
-
-                public Builder emptyColor(int c) {
-                    emptyClr = c;
-                    return this;
-                }
-
-                public Style build() {
-                    return new Style(fill, empty, left, right, fillClr, emptyClr);
-                }
-            }
+            public Builder fill(char c) { fill = c; return this; }
+            public Builder empty(char c) { empty = c; return this; }
+            public Builder leftBracket(char c) { left = c; return this; }
+            public Builder rightBracket(char c) { right = c; return this; }
+            public Builder fillColor(int c) { fillClr = c; return this; }
+            public Builder emptyColor(int c) { emptyClr = c; return this; }
+            public Style build() { return new Style(fill, empty, left, right, fillClr, emptyClr); }
         }
+    }
 
     /**
      * 颜色渐变策略：根据进度百分比动态改变填充颜色
@@ -309,8 +290,10 @@ public class AnsiProgressBar implements AnsiWidgetEngine.AnsiWidget {
         lastUpdateTime = startTime;
 
         if (boundEngine != null) {
+            System.err.println("[TUI-Bar] " + widgetId + ".start() — bound to Engine, delegating");
             boundEngine.requestRefreshFromWidget(widgetId);
         } else {
+            System.err.println("[TUI-Bar] " + widgetId + ".start() — standalone mode");
             renderer.hideCursor();
             renderToTerminal();
         }
@@ -367,8 +350,10 @@ public class AnsiProgressBar implements AnsiWidgetEngine.AnsiWidget {
         current = isIndeterminate() ? current : max;
 
         if (boundEngine != null) {
+            System.err.println("[TUI-Bar] " + widgetId + ".complete() — bound to Engine");
             boundEngine.requestRefreshFromWidget(widgetId);
         } else {
+            System.err.println("[TUI-Bar] " + widgetId + ".complete() — standalone");
             renderToTerminal();
             renderer.println("");
             renderer.showCursor();
@@ -599,6 +584,8 @@ public class AnsiProgressBar implements AnsiWidgetEngine.AnsiWidget {
     @Override
     public void bindEngine(AnsiWidgetEngine engine) {
         this.boundEngine = engine;
+        System.err.println("[TUI-Bar] " + widgetId + ".bindEngine(" +
+            (engine != null ? engine.getClass().getSimpleName() : "null") + ")");
     }
 
     @Override

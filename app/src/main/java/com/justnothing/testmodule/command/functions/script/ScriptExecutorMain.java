@@ -197,17 +197,10 @@ public class ScriptExecutorMain extends MainCommand<ScriptResult> {
     public void clearExecutorVariables(CommandExecutor.CmdExecContext<?> context) {
         AbstractScriptCommand.systemScriptRunner.clearVariables();
         context.println("已清空所有执行器的变量", Colors.GREEN);
-        context.print("提示: ", Colors.CYAN);
-        context.print((context.targetPackage() == null ? "默认" : context.targetPackage()), Colors.YELLOW);
-        context.println("的ClassLoader的执行器的变量，其他ClassLoader的并没有被清空", Colors.GRAY);
     }
 
     public void listExecutorVariables(CommandExecutor.CmdExecContext<?> context) {
-        ClassLoader classLoader = context.classLoader();
-        String targetPackage = context.targetPackage();
 
-        context.print("(当前ClassLoader: ", Colors.GRAY);
-        context.println((targetPackage == null ? "默认加载器" : targetPackage) + ")", Colors.YELLOW);
         context.println("", Colors.WHITE);
         context.println("脚本执行器的变量列表:", Colors.CYAN);
 

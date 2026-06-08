@@ -7,41 +7,11 @@ import java.util.Locale;
 
 public class CommandArgumentParser {
 
-    public record ParseResult(String commandLine, String classLoader) {
+    public record ParseResult(String commandLine) {
     }
     
-    public static ParseResult parseOptions(String cmdline, Logger logger) {
-        String classLoader = null;
-        
-        while (true) {
-            cmdline = cmdline.trim();
-            if (cmdline.startsWith("-")) {
-                int index = cmdline.indexOf(' ');
-                if (index == -1) {
-                    return new ParseResult(cmdline, classLoader);
-                } else {
-                    String option = cmdline.substring(0, index);
-                    if (option.equals("-cl") || option.equals("-classloader")) {
-                        cmdline = cmdline.substring(index).trim();
-                        int nextIndex = cmdline.indexOf(' ');
-                        if (nextIndex == -1) {
-                            logger.warn("指定了类加载器参数，但没有指定类加载器名称");
-                            classLoader = cmdline;
-                            cmdline = "";
-                        } else {
-                            classLoader = cmdline.substring(0, nextIndex);
-                            cmdline = cmdline.substring(nextIndex).trim();
-                        }
-                    } else {
-                        logger.warn("无效的参数: " + option);
-                        cmdline = cmdline.substring(index).trim();
-                    }
-                }
-            } else {
-                break;
-            }
-        }
-        return new ParseResult(cmdline, classLoader);
+    public static ParseResult parseOptions(String cmdline) {
+        return new ParseResult(cmdline); // 因为暂时移除了ClassLoader指定机制
     }
     
     public static String[] splitArguments(String cmdline) {

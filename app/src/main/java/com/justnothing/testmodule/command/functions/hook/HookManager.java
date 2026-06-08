@@ -5,7 +5,6 @@ package com.justnothing.testmodule.command.functions.hook;
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.output.SystemOutputRedirector;
-import com.justnothing.testmodule.command.output.VoidOutputHandler;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.javainterpreter.ScriptRunner;
 import com.justnothing.javainterpreter.evaluator.ExecutionContext;
@@ -156,7 +155,7 @@ public class HookManager {
     public static AddHookResult addHook(String className, String methodName, String signature,
                                String beforeCode, String afterCode, String replaceCode,
                                String beforeCodebase, String afterCodebase, String replaceCodebase,
-                               CommandExecutor.CmdExecContext context) {
+                               CommandExecutor.CmdExecContext<?> context) {
         ClassLoader classLoader = context.classLoader();
         HookInfo hookInfo = new HookInfo(className, methodName, signature,
                                         beforeCode, afterCode, replaceCode,
@@ -640,7 +639,7 @@ public class HookManager {
         logger.info("Hook移除成功: " + hookId);
     }
 
-    public static void removeHook(String hookId, CommandExecutor.CmdExecContext ctx) {
+    public static void removeHook(String hookId, CommandExecutor.CmdExecContext<?> ctx) {
         HookInfo hookInfo = hooks.get(hookId);
         if (hookInfo == null) {
             ctx.print("Hook不存在: ", Colors.RED);
@@ -666,7 +665,7 @@ public class HookManager {
         ctx.println(hookId, Colors.YELLOW);
     }
 
-    public static void listHooks(CommandExecutor.CmdExecContext ctx) {
+    public static void listHooks(CommandExecutor.CmdExecContext<?> ctx) {
         if (hooks.isEmpty()) {
             ctx.println("没有活动的Hook", Colors.GRAY);
             return;
@@ -686,7 +685,7 @@ public class HookManager {
         ctx.println(" 个Hook", Colors.CYAN);
     }
 
-    public static void getHookInfo(String hookId, CommandExecutor.CmdExecContext ctx) {
+    public static void getHookInfo(String hookId, CommandExecutor.CmdExecContext<?> ctx) {
         HookInfo hookInfo = hooks.get(hookId);
         if (hookInfo == null) {
             ctx.print("Hook不存在: ", Colors.RED);
@@ -697,7 +696,7 @@ public class HookManager {
         hookInfo.printDisplayInfo(ctx);
     }
 
-    public static void enableHook(String hookId, CommandExecutor.CmdExecContext ctx) {
+    public static void enableHook(String hookId, CommandExecutor.CmdExecContext<?> ctx) {
         HookInfo hookInfo = hooks.get(hookId);
         if (hookInfo == null) {
             ctx.print("Hook不存在: ", Colors.RED);
@@ -711,7 +710,7 @@ public class HookManager {
         ctx.println(hookId, Colors.YELLOW);
     }
 
-    public static void disableHook(String hookId, CommandExecutor.CmdExecContext ctx) {
+    public static void disableHook(String hookId, CommandExecutor.CmdExecContext<?> ctx) {
         HookInfo hookInfo = hooks.get(hookId);
         if (hookInfo == null) {
             ctx.print("Hook不存在: ", Colors.RED);
@@ -725,7 +724,7 @@ public class HookManager {
         ctx.println(hookId, Colors.YELLOW);
     }
 
-    public static void getHookOutput(String hookId, CommandExecutor.CmdExecContext ctx, int count) {
+    public static void getHookOutput(String hookId, CommandExecutor.CmdExecContext<?> ctx, int count) {
         HookInfo hookInfo = hooks.get(hookId);
         if (hookInfo == null) {
             ctx.print("Hook不存在: ", Colors.RED);
@@ -775,19 +774,6 @@ public class HookManager {
             removeHook(hookId);
         }
         logger.info("所有Hook已清除");
-    }
-
-    public static CommandExecutor.CmdExecContext createDummyContext() {
-        return new CommandExecutor.CmdExecContext(
-                "protocol",
-                new String[0],
-                "",
-                null,
-                Thread.currentThread().getContextClassLoader(),
-                new VoidOutputHandler(),
-                null,
-                null
-        );
     }
 
     public static List<Map<String, Object>> getAllHooksAsMap() {

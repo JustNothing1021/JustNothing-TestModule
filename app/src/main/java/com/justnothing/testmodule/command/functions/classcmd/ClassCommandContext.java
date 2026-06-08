@@ -12,7 +12,6 @@ import java.util.Arrays;
 
 public record ClassCommandContext<Req extends ClassCommandRequest>
          (String[] args, ClassLoader classLoader,
-          String targetPackage,
           CommandExecutor.CmdExecContext<Req> execContext,
           Logger logger) {
 

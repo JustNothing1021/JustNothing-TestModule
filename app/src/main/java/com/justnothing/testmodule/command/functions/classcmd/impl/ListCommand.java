@@ -51,7 +51,7 @@ public class ListCommand extends AbstractClassCommand<MethodListRequest, MethodL
 
         MethodListResult result = new MethodListResult();
         result.setClassName(className);
-        result.setTargetPackage(context.targetPackage() != null ? context.targetPackage() : "default");
+        result.setTargetPackage("default");
         result.setClassLoader(context.classLoader() != null ? context.classLoader().toString() : "无");
 
         context.execContext().print("类名: ", Colors.CYAN);

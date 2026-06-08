@@ -346,8 +346,6 @@ public class AnalyzeCommand extends AbstractClassCommand<AnalyzeClassRequest, An
             result.setInterfaces(interfaceList);
 
             cmd.println("=== 包信息 ===", Colors.CYAN);
-            cmd.print("包: ", Colors.CYAN);
-            cmd.println(context.targetPackage() != null ? context.targetPackage() : "default", Colors.GREEN);
             cmd.print("类加载器: ", Colors.CYAN);
             cmd.println(context.classLoader() != null ? context.classLoader().toString() : "无", Colors.LIGHT_GREEN);
         }

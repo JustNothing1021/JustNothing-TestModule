@@ -779,7 +779,14 @@ public class ASTEvaluator {
                     return ((Lambda) target).invoke(args);
                 }
             } else if (target instanceof MethodReference) {
-                return ((MethodReference) target).invoke(args);
+                // 检查是否是 Object 类的方法，避免 getClass/toString 等被错误转发
+                if ("getClass".equals(methodName) || "toString".equals(methodName) ||
+                        "hashCode".equals(methodName) || "equals".equals(methodName)) {
+                    targetClass = target.getClass();
+                    targetInstance = target;
+                } else {
+                    return ((MethodReference) target).invoke(args);
+                }
             } else if (target instanceof Class<?> targetClassObj) {
                 Method classMethod = TypeUtils.findMethod(Class.class, methodName, args);
                 if (classMethod != null) {
@@ -899,17 +906,33 @@ public class ASTEvaluator {
             args[i] = evaluate(node.getArguments().get(i), context);
         }
 
+        
+        Class<?> targetClass;
+        Object targetInstance;
+
         try {
             if (target instanceof Lambda) {
-                return ((Lambda) target).invoke(args);
+                // 检查是否是 Object 类的方法，避免 getClass/toString 等被错误转发
+                if ("getClass".equals(methodName) || "toString".equals(methodName) ||
+                        "hashCode".equals(methodName) || "equals".equals(methodName)) {
+                    targetClass = target.getClass();
+                    targetInstance = target;
+                } else {
+                    return ((Lambda) target).invoke(args);
+                }
             }
 
             if (target instanceof MethodReference) {
-                return ((MethodReference) target).invoke(args);
+                // 检查是否是 Object 类的方法，避免 getClass/toString 等被错误转发
+                if ("getClass".equals(methodName) || "toString".equals(methodName) ||
+                        "hashCode".equals(methodName) || "equals".equals(methodName)) {
+                    targetClass = target.getClass();
+                    targetInstance = target;
+                } else {
+                    return ((MethodReference) target).invoke(args);
+                }
             }
 
-            Class<?> targetClass;
-            Object targetInstance;
 
             if (target instanceof Class<?> targetClassObj) {
                 Method classMethod = TypeUtils.findMethod(Class.class, methodName, args);
@@ -1636,6 +1659,16 @@ public class ASTEvaluator {
         Class<?> type = node.getTargetType();
 
         try {
+            // Lambda / MethodReference → FunctionalInterface 转换需要通过 Proxy，普通 Class.cast 无法处理
+            if (type.isInterface()) {
+                if (value instanceof Lambda) {
+                    return ((Lambda) value).asInterface(type);
+                }
+                if (value instanceof MethodReference) {
+                    return ((MethodReference) value).asInterface(type);
+                }
+            }
+
             if (type == int.class)
                 return TypeUtils.toInt(value);
             if (type == long.class)

@@ -83,54 +83,6 @@ public class ClassLoaderManager {
         return ClassLoader.getSystemClassLoader();
     }
 
-    public static Class<?> loadClassFromApk(String className) throws ClassNotFoundException {
-        ClassLoader loader = getApkClassLoader();
-        if (loader == null) {
-            throw new ClassNotFoundException("无法获取APK ClassLoader");
-        }
-        return Class.forName(className, true, loader);
-    }
-
-    public static Object createInstanceFromApk(String className) throws Exception {
-        Class<?> clazz = loadClassFromApk(className);
-        return clazz.getDeclaredConstructor().newInstance();
-    }
-
-    public ClassLoader getClassLoaderForPackage(String packageName) {
-        if (packageName == null) {
-            logger.warn("packageName为null, 将会使用默认的ClassLoader");
-            return defaultClassLoader;
-        }
-        
-        if (APK_PACKAGE_NAME.equals(packageName)) {
-            logger.debug("请求APK ClassLoader: " + packageName);
-            ClassLoader apkLoader = getApkClassLoader();
-            if (apkLoader != null) {
-                logger.debug("返回APK ClassLoader");
-                return apkLoader;
-            }
-            logger.warn("APK ClassLoader未创建，使用默认ClassLoader");
-            return defaultClassLoader;
-        }
-        
-        try {
-            JSONObject status = DataBridge.readServerHookStatus();
-            JSONArray packages = status.optJSONArray(HookConfig.KEY_PROCESSED_PACKAGES);
-            if (packages != null) {
-                for (int i = 0; i < packages.length(); i++) {
-                    if (packages.getString(i).equals(packageName)) {
-                        logger.debug("在本地找到了" + packageName + "的ClassLoader");
-                        return defaultClassLoader;
-                    }
-                }
-            }
-        } catch (Exception e) {
-            logger.error("读取模块状态失败", e);
-        }
-        logger.warn("在本地没有找到" + packageName + "的ClassLoader, 将会使用默认的ClassLoader");
-        return defaultClassLoader;
-    }
-
     public static List<String> getAllKnownPackages() {
         List<String> localPackages = new ArrayList<>();
         

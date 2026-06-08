@@ -86,6 +86,8 @@ public final class AnsiRenderer {
     public void overwriteLine(String content) {
         writer.print(CR + CLEAR_LINE + content);
         writer.flush();
+        System.err.println("[TUI-Render] overwriteLine: len=" + content.length()
+            + " preview='" + (content.length() > 50 ? content.substring(0, 50) + "..." : content) + "'");
     }
 
     /**

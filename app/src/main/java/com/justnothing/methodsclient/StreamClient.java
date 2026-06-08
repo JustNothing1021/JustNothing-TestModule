@@ -309,6 +309,7 @@ public class StreamClient {
                     }
                 }
                 case "--repl", "-r" -> {
+                    // 持久化 REPL 模式：保持长连接，JLine 交互
                     ReplClient repl = new ReplClient();
                     repl.start();
                 }
