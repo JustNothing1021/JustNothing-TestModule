@@ -9,6 +9,7 @@ import com.justnothing.engine.lexer.Keywords;
 import com.justnothing.engine.lexer.Token;
 import com.justnothing.engine.lexer.TokenType;
 import com.justnothing.engine.parser.ParseContext.VariableSymbol;
+import com.justnothing.engine.util.MethodResolver;
 
 import java.lang.reflect.Array;
 import java.util.ArrayList;

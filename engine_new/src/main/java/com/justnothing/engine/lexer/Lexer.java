@@ -53,6 +53,13 @@ public class Lexer {
             
             if (Character.isDigit(c)) {
                 readNumber();
+            } else if ((c == '"' || c == 'f')
+                    && position + 2 < length && source.charAt(position + 1) == '"'
+                    && source.charAt(position + 2) == '"') {
+                // Triple-quote multi-line string: """ or f"""
+                boolean interpolated = (c == 'f');
+                if (interpolated) advance(); // consume 'f'
+                readMultiLineString(interpolated);
             } else if (c == 'f' && (peekNext() == '"' || peekNext() == '\'')) {
                 advance();
                 readInterpolatedString();
@@ -515,7 +522,187 @@ public class Lexer {
         }
         addToken(TokenType.LITERAL_INTERPOLATED_STRING, interpolatedParts, location);
     }
-    
+
+    /**
+     * 读取三引号多行字符串（{@code """..."""} 或 {@code f"""..."""}）。
+     * <p>
+     * 特性：
+     * <ul>
+     *   <li>支持跨行内容，保留原始换行符</li>
+     *   <li>自动缩进修剪（Python 风格）：以首行非空内容的缩进为基准，裁剪所有行的前导空白</li>
+     *   <li>Raw 模式：不处理转义序列，内容原样保留</li>
+     *   <li>插值模式（{@code f"""}）：支持 {@code ${expr}} 和 {@code $var}</li>
+     * </ul>
+     *
+     * @param interpolated 是否为插值模式
+     */
+    private void readMultiLineString(boolean interpolated) throws ParseException {
+        // 消耗开头的 """
+        for (int i = 0; i < 3; i++) advance();
+        int startLine = line;
+        int startColumn = column;
+
+        List<String> rawLines = new ArrayList<>();
+        StringBuilder currentLine = new StringBuilder();
+
+        while (!isAtEnd()) {
+            if (peek() == '"' && peekNext() == '"'
+                    && position + 2 < length && source.charAt(position + 2) == '"') {
+                // 找到 closing """
+                break;
+            }
+            char c = advance();
+            if (c == '\n') {
+                rawLines.add(currentLine.toString());
+                currentLine = new StringBuilder();
+            } else {
+                currentLine.append(c);
+            }
+        }
+        // 最后一行（可能为空）
+        rawLines.add(currentLine.toString());
+
+        if (isAtEnd()) {
+            throw error("Unterminated multi-line string literal", ErrorCode.LEXICAL_UNTERMINATED_STRING);
+        }
+
+        // 消耗 closing """
+        for (int i = 0; i < 3; i++) advance();
+
+        SourceLocation location = createLocation(startLine, startColumn);
+
+        if (!interpolated) {
+            // 单行内容（无换行）：直接使用原始文本，不做缩进修剪
+            String result;
+            if (rawLines.size() <= 1) {
+                result = rawLines.isEmpty() ? "" : rawLines.get(0);
+            } else {
+                result = trimIndentation(rawLines);
+            }
+            addToken(TokenType.LITERAL_MULTI_LINE_STRING, result, location);
+        } else {
+            // 插值模式：逐行处理 ${expr} / $var
+            List<Object> parts = parseMultiLineInterpolation(rawLines);
+            addToken(TokenType.LITERAL_MULTI_LINE_INTERPOLATED_STRING, parts, location);
+        }
+    }
+
+    /**
+     * 多行字符串缩进修剪（Swift/Kotlin/Python 混合风格）。
+     * <p>
+     * 处理步骤：
+     * <ol>
+     *   <li>移除开头的空行（{@code """} 后紧跟的换行产生的空行）</li>
+     *   <li>移除结尾的纯空白行（{@code """} 前的缩进产生的空行）</li>
+     *   <li>计算剩余行的最小公共前导空白长度</li>
+     *   <li>从每行裁剪该长度的前导空白</li>
+     * </ol>
+     */
+    private static String trimIndentation(List<String> rawLines) {
+        if (rawLines.isEmpty()) return "";
+
+        // 1. 移除开头的空行
+        int start = 0;
+        while (start < rawLines.size() && rawLines.get(start).trim().isEmpty()) {
+            start++;
+        }
+        if (start >= rawLines.size()) return ""; // 全是空行
+
+        // 2. 移除结尾的纯空白行
+        int end = rawLines.size() - 1;
+        while (end > start && rawLines.get(end).trim().isEmpty()) {
+            end--;
+        }
+
+        // 3. 计算最小公共缩进（仅基于非空行）
+        int minIndent = Integer.MAX_VALUE;
+        for (int i = start; i <= end; i++) {
+            String line = rawLines.get(i);
+            if (line.trim().isEmpty()) continue; // 中间空行不参与缩进计算
+            int indent = 0;
+            while (indent < line.length()
+                    && (line.charAt(indent) == ' ' || line.charAt(indent) == '\t')) {
+                indent++;
+            }
+            minIndent = Math.min(minIndent, indent);
+        }
+        if (minIndent == Integer.MAX_VALUE) minIndent = 0;
+
+        // 4. 裁剪 + 拼接
+        StringBuilder sb = new StringBuilder();
+        for (int i = start; i <= end; i++) {
+            String line = rawLines.get(i);
+            if (i > start) sb.append('\n');
+            if (line.trim().isEmpty()) {
+                continue; // 中间空行保留为空行
+            }
+            if (line.length() > minIndent) {
+                sb.append(line.substring(minIndent));
+            }
+        }
+        return sb.toString();
+    }
+
+    /**
+     * 解析多行插值字符串中的 {@code ${expr}} 和 {@code $var}。
+     * 返回混合了 String 和 InterpolationPart 的列表。
+     */
+    private List<Object> parseMultiLineInterpolation(List<String> rawLines) {
+        List<Object> parts = new ArrayList<>();
+        StringBuilder pendingText = new StringBuilder();
+
+        for (int lineIdx = 0; lineIdx < rawLines.size(); lineIdx++) {
+            String line = rawLines.get(lineIdx);
+            if (lineIdx > 0) pendingText.append('\n');
+
+            int pos = 0;
+            while (pos < line.length()) {
+                char c = line.charAt(pos);
+                if (c == '$' && pos + 1 < line.length()) {
+                    char next = line.charAt(pos + 1);
+                    if (next == '{') {
+                        // ${expr} 形式
+                        flushPending(parts, pendingText);
+                        int braceStart = pos + 2;
+                        int braceCount = 1;
+                        int exprStart = braceStart;
+                        while (exprStart < line.length() && braceCount > 0) {
+                            if (line.charAt(exprStart) == '{') braceCount++;
+                            else if (line.charAt(exprStart) == '}') braceCount--;
+                            exprStart++;
+                        }
+                        String expr = line.substring(braceStart, exprStart - 1).trim();
+                        parts.add(new InterpolationPart(expr));
+                        pos = exprStart;
+                        continue;
+                    } else if (Character.isLetterOrDigit(next) || next == '_') {
+                        // $var 形式
+                        flushPending(parts, pendingText);
+                        int varStart = pos + 1;
+                        while (varStart < line.length()
+                                && (Character.isLetterOrDigit(line.charAt(varStart)) || line.charAt(varStart) == '_')) {
+                            varStart++;
+                        }
+                        parts.add(new InterpolationPart(line.substring(pos + 1, varStart)));
+                        pos = varStart;
+                        continue;
+                    }
+                }
+                pendingText.append(c);
+                pos++;
+            }
+        }
+        flushPending(parts, pendingText);
+        return parts;
+    }
+
+    private static void flushPending(List<Object> parts, StringBuilder pending) {
+        if (pending.length() > 0) {
+            parts.add(pending.toString());
+            pending.setLength(0);
+        }
+    }
+
     public static class InterpolationPart {
         private final String expression;
         

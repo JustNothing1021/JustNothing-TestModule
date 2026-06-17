@@ -114,6 +114,24 @@ public final class DynamicClassGenerator {
         return cache.computeIfAbsent(name, k -> doGenerateAnonymous(name, classDecl));
     }
 
+    /**
+     * 生成匿名类，指定父类构造器的参数类型。
+     * <p>当匿名类声明为 {@code new SuperType(arg1, arg2) { ... }} 时，
+     * 必须用此重载传入父类构造器签名，否则生成的子类构造器参数列表不匹配。
+     *
+     * @param name            匿名类名
+     * @param classDecl       类声明节点（superClass 已设置）
+     * @param ctorSuperArgTypes 父类构造器参数类型列表，null 等同于无参
+     */
+    public Class<?> generateAnonymous(String name, ClassDeclarationNode classDecl,
+                                       List<Class<?>> ctorSuperArgTypes) {
+        String key = name + "$" + (ctorSuperArgTypes != null ? ctorSuperArgTypes.size() : "0");
+        return cache.computeIfAbsent(key, k -> {
+            preprocessParentClass(classDecl);
+            return doGenerateInternal(name, classDecl, ctorSuperArgTypes, null);
+        });
+    }
+
     public boolean hasGenerated(String className) {
         return cache.containsKey(className);
     }
@@ -160,9 +178,12 @@ public final class DynamicClassGenerator {
         String superName = resolveSuperInternalName(classDecl);
         cw.visit(CLASS_VERSION, access, internalName, null, superName, null);
 
+        // ★ 泛型类型参数列表（用于类型擦除：T → Object）
+        List<String> typeParams = classDecl.getTypeParameters();
+
         // 字段
         for (FieldDeclarationNode field : classDecl.getFields()) {
-            addField(cw, field);
+            addField(cw, field, typeParams);
         }
 
         // 构造器
@@ -226,9 +247,11 @@ public final class DynamicClassGenerator {
 
     // ==================== 字段 ====================
 
-    private static void addField(ClassWriter cw, FieldDeclarationNode field) {
+    private static void addField(ClassWriter cw, FieldDeclarationNode field, List<String> typeParams) {
         String fieldName = field.getFieldName();
-        String descriptor = DescriptorUtils.fieldDescriptor(field.getType());
+        // ★ 泛型擦除：如果字段类型是泛型参数（T, K 等），替换为 Object
+        ClassReferenceNode fieldType = eraseTypeParameter(field.getType(), typeParams);
+        String descriptor = DescriptorUtils.fieldDescriptor(fieldType);
 
         int mods = Opcodes.ACC_PUBLIC;
         var modifiers = field.getModifiers();
@@ -240,6 +263,20 @@ public final class DynamicClassGenerator {
         // static final 字面量 → ConstantValue 属性
         Object constVal = extractConstantValue(field);
         cw.visitField(mods, fieldName, descriptor, null, constVal).visitEnd();
+    }
+
+    /**
+     * 泛型类型擦除：如果类型的原始名称匹配某个泛型参数（T, K, V 等），
+     * 返回一个指向 Object 的 ClassReferenceNode；否则原样返回。
+     */
+    private static ClassReferenceNode eraseTypeParameter(ClassReferenceNode typeRef, List<String> typeParams) {
+        if (typeRef == null || typeParams.isEmpty() || typeRef.getResolvedClass() != null) return typeRef;
+        String originalName = typeRef.getOriginalTypeName();
+        if (originalName != null && typeParams.contains(originalName)) {
+            // 泛型参数 → 擦除为 Object
+            return ClassReferenceNode.of("java.lang.Object", Object.class, true, typeRef.getLocation());
+        }
+        return typeRef;
     }
 
     private static Object extractConstantValue(FieldDeclarationNode field) {
@@ -286,30 +323,32 @@ public final class DynamicClassGenerator {
                                                     List<FieldDeclarationNode> fields) {
         try {
             Class<?> superClass = Class.forName(DescriptorUtils.toClassName(superName));
-            Constructor<?> noArgCtor = superClass.getDeclaredConstructor();
-            if (Modifier.isPrivate(noArgCtor.getModifiers())) {
-                return false;  // 私有构造器，不可访问
-            }
-        } catch (Exception e) {
-            // 类找不到或无无参构造器 → fallback
+            // getConstructor(): 查找 public 构造器（含继承的），兼容 Android ART
+            superClass.getConstructor();
+
+            // 找到可访问的无参构造器，生成标准 super()V 调用
+            MethodVisitor mv = cw.visitMethod(Opcodes.ACC_PUBLIC, INIT, VOID_NO_ARGS, null, null);
+            mv.visitCode();
+            mv.visitVarInsn(Opcodes.ALOAD, 0);
+            mv.visitMethodInsn(Opcodes.INVOKESPECIAL, superName, INIT, VOID_NO_ARGS, false);
+            initializeFieldLiterals(mv, internalName, fields);
+            mv.visitInsn(Opcodes.RETURN);
+            mv.visitMaxs(3, 1);
+            mv.visitEnd();
+            return true;
+        } catch (NoSuchMethodException e) {
+            // 无公共无参构造器 → fallback
+            return false;
+        } catch (ClassNotFoundException e) {
             return false;
         }
-
-        MethodVisitor mv = cw.visitMethod(Opcodes.ACC_PUBLIC, INIT, VOID_NO_ARGS, null, null);
-        mv.visitCode();
-        mv.visitVarInsn(Opcodes.ALOAD, 0);
-        mv.visitMethodInsn(Opcodes.INVOKESPECIAL, superName, INIT, VOID_NO_ARGS, false);
-        initializeFieldLiterals(mv, internalName, fields);
-        mv.visitInsn(Opcodes.RETURN);
-        mv.visitMaxs(3, 1);
-        mv.visitEnd();
-        return true;
     }
 
     /**
      * Fallback 构造器：当父类无可访问的无参构造器时，
-     * 找到父类第一个声明的构造器，用默认参数值生成匹配的构造器。
-     * （对齐旧版 ConstructorGenerator.generateFallbackConstructor 的行为）
+     * 找到父类第一个可访问的构造器，用默认参数值生成匹配的构造器。
+     * <p>如果所有构造器都是 private，提前抛出异常止损（字节码生成阶段即失败），
+     * 测试框架会将其识别为平台限制跳过。
      */
     private static void addFallbackConstructor(ClassWriter cw, String internalName,
                                                String superName,
@@ -317,13 +356,20 @@ public final class DynamicClassGenerator {
         try {
             Class<?> superClass = Class.forName(DescriptorUtils.toClassName(superName));
             Constructor<?>[] ctors = superClass.getDeclaredConstructors();
-            if (ctors.length == 0) {
-                // 无任何声明构造器（极少见），回退到最简单的无参调用
-                addSimpleFallback(cw, internalName, superName, fields);
-                return;
+            // 过滤掉 private 构造器（Android DEX 不允许子类 INVOKESPECIAL 父类私有构造器）
+            Constructor<?> ctor = null;
+            for (Constructor<?> c : ctors) {
+                if (!Modifier.isPrivate(c.getModifiers())) {
+                    ctor = c;
+                    break;
+                }
             }
-
-            Constructor<?> ctor = ctors[0];
+            if (ctor == null) {
+                // 所有构造器都是 private → 无法生成合法子类（INVOKESPECIAL 不能调 private）
+                throw new UnsupportedOperationException(
+                        "Cannot extend " + superClass.getName() +
+                                ": all constructors are private/inaccessible");
+            }
             Class<?>[] paramTypes = ctor.getParameterTypes();
             String desc = buildDescriptorFromTypes(java.util.Arrays.asList(paramTypes));
 

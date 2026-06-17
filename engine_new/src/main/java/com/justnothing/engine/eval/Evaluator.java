@@ -1,6 +1,7 @@
 package com.justnothing.engine.eval;
 
 import com.justnothing.engine.ast.ASTNode;
+import com.justnothing.engine.ast.GenericType;
 import com.justnothing.engine.ast.OperatorCallback;
 import com.justnothing.engine.ast.nodes.*;
 import com.justnothing.engine.ast.visitor.ASTVisitor;
@@ -12,6 +13,7 @@ import com.justnothing.engine.exception.ContinueException;
 import com.justnothing.engine.exception.ErrorCode;
 import com.justnothing.engine.exception.LabeledBreakException;
 import com.justnothing.engine.exception.ReturnException;
+import com.justnothing.engine.util.MethodResolver;
 import com.justnothing.engine.parser.OperatorRegistry;
 import com.justnothing.engine.parser.ParseContext;
 import com.justnothing.engine.security.SecurityGate;
@@ -23,10 +25,14 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.Proxy;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class Evaluator implements ASTVisitor<Value> {
@@ -91,6 +97,7 @@ public class Evaluator implements ASTVisitor<Value> {
         if (node instanceof ContinueNode n) return visitContinue(n);
         if (node instanceof LambdaNode n) return visitLambda(n);
         if (node instanceof FunctionCallNode n) return visitFunctionCall(n);
+        if (node instanceof DirectCallNode n) return visitDirectCall(n);
         if (node instanceof AsyncNode n) return visitAsync(n);
         if (node instanceof AwaitNode n) return visitAwait(n);
         if (node instanceof MapLiteralNode n) return visitMapLiteral(n);
@@ -148,122 +155,68 @@ public class Evaluator implements ASTVisitor<Value> {
             return left.isTruthy() ? left : evaluate(node.getRight());
         }
         Value right = evaluate(node.getRight());
-        // 自定义运算符重载：优先于内建运算（缓存回调避免重复查找）
+        OperatorRegistry registry = parseContext.getOperatorRegistry();
+
+        // 优先级 1: 解析期缓存的 callback（解析期已绑定，运行期零查找）
         OperatorCallback cached = node.getOperatorCallback();
         if (cached != null) {
             return cached.call(left, right);
         }
+
+        // 优先级 2: 自定义运算符重载（用户定义的运算符）
         Value customResult = tryCustomBinaryOp(node.getOperator(), left, right);
         if (customResult != null) {
             cacheOperatorCallback(node, left, right);
             return customResult;
         }
-        return switch (node.getOperator()) {
-            case ADD -> binaryAdd(left, right);
-            case SUBTRACT -> binaryNumericOp(left, right, (a, b) -> new Value.DoubleValue(a - b), (a, b) -> new Value.LongValue(a - b), (a, b) -> new Value.IntValue(a - b));
-            case MULTIPLY -> binaryNumericOp(left, right, (a, b) -> new Value.DoubleValue(a * b), (a, b) -> new Value.LongValue(a * b), (a, b) -> new Value.IntValue(a * b));
-            case DIVIDE -> binaryNumericOp(left, right,
-                    (a, b) -> new Value.DoubleValue(a / b),
-                    (a, b) -> { if (b == 0) throw new EvalException("Division by zero", ErrorCode.EVAL_DIVISION_BY_ZERO); return new Value.LongValue(a / b); },
-                    (a, b) -> { if (b == 0) throw new EvalException("Division by zero", ErrorCode.EVAL_DIVISION_BY_ZERO); return new Value.IntValue(a / b); });
-            case MODULO -> binaryNumericOp(left, right,
-                    (a, b) -> new Value.DoubleValue(a % b),
-                    (a, b) -> { if (b == 0) throw new EvalException("Division by zero", ErrorCode.EVAL_DIVISION_BY_ZERO); return new Value.LongValue(a % b); },
-                    (a, b) -> { if (b == 0) throw new EvalException("Division by zero", ErrorCode.EVAL_DIVISION_BY_ZERO); return new Value.IntValue(a % b); });
-            case INT_DIVIDE -> {
-                long a = left.asLong();
-                long b = right.asLong();
-                if (b == 0) throw new EvalException("Division by zero", ErrorCode.EVAL_DIVISION_BY_ZERO);
-                yield new Value.LongValue(a / b);
-            }
-            case MATH_MODULO -> {
-                long a = left.asLong();
-                long b = right.asLong();
-                if (b == 0) throw new EvalException("Division by zero", ErrorCode.EVAL_DIVISION_BY_ZERO);
-                yield new Value.LongValue(Math.floorMod(a, b));
-            }
-            case POWER -> binaryNumericOp(left, right, (a, b) -> new Value.DoubleValue(Math.pow(a, b)), (a, b) -> new Value.DoubleValue(Math.pow(a, b)), null);
-            case EQUAL -> new Value.BooleanValue(left.equals(right));
-            case NOT_EQUAL -> new Value.BooleanValue(!left.equals(right));
-            case LESS_THAN -> new Value.BooleanValue(compare(left, right) < 0);
-            case LESS_THAN_OR_EQUAL -> new Value.BooleanValue(compare(left, right) <= 0);
-            case GREATER_THAN -> new Value.BooleanValue(compare(left, right) > 0);
-            case GREATER_THAN_OR_EQUAL -> new Value.BooleanValue(compare(left, right) >= 0);
-            case LOGICAL_AND -> new Value.BooleanValue(left.isTruthy() && right.isTruthy());
-            case LOGICAL_OR -> new Value.BooleanValue(left.isTruthy() || right.isTruthy());
-            case BITWISE_AND -> new Value.IntValue(left.asInt() & right.asInt());
-            case BITWISE_OR -> new Value.IntValue(left.asInt() | right.asInt());
-            case BITWISE_XOR -> new Value.IntValue(left.asInt() ^ right.asInt());
-            case LEFT_SHIFT -> new Value.IntValue(left.asInt() << right.asInt());
-            case RIGHT_SHIFT -> new Value.IntValue(left.asInt() >> right.asInt());
-            case UNSIGNED_RIGHT_SHIFT -> new Value.IntValue(left.asInt() >>> right.asInt());
-            case SPACESHIP -> new Value.IntValue(compare(left, right));
-            case RANGE -> makeRange(left, right, true);
-            case RANGE_EXCLUSIVE -> makeRange(left, right, false);
-            default -> throw new EvalException("Unknown binary operator: " + node.getOperator(), ErrorCode.EVAL_INVALID_OPERATION);
-        };
+
+        // 优先级 3: 从 OperatorRegistry 查找（统一运算符分发，替代旧版 switch-case fallback）
+        String opStr = operatorToRegistryString(node.getOperator());
+        Class<?> lhsType = getRuntimeType(left);
+        Class<?> rhsType = getRuntimeType(right);
+
+        OperatorRegistry.Overload overload = registry.findBinaryCompatible(opStr, lhsType, rhsType);
+        if (overload != null) {
+            // 将 BiFunction 包装为 OperatorCallback（方法签名不同：apply vs call）
+            OperatorCallback opCb = (l, r) -> overload.javaCallback().apply(l, r);
+            cacheOperatorCallback(node, opCb);  // 缓存供下次使用
+            return opCb.call(left, right);
+        }
+
+        throw new EvalException(
+                "No matching operator '" + opStr + "' for types '"
+                        + lhsType.getSimpleName() + "' and '" + rhsType.getSimpleName() + "'",
+                ErrorCode.EVAL_INVALID_OPERATION);
     }
 
-    private Value binaryAdd(Value left, Value right) {
-        if (left instanceof Value.StringValue || right instanceof Value.StringValue) {
-            return new Value.StringValue(left.asString() + right.asString());
-        }
-        if (left instanceof Value.DoubleValue || right instanceof Value.DoubleValue) {
-            return new Value.DoubleValue(left.asDouble() + right.asDouble());
-        }
-        if (left instanceof Value.LongValue || right instanceof Value.LongValue) {
-            return new Value.LongValue(left.asLong() + right.asLong());
-        }
-        return new Value.IntValue(left.asInt() + right.asInt());
-    }
-
-    private interface DoubleOp { Value apply(double a, double b); }
-    private interface LongOp { Value apply(long a, long b); }
-    private interface IntOp { Value apply(int a, int b); }
-
-    private Value binaryNumericOp(Value left, Value right, DoubleOp doubleOp, LongOp longOp, IntOp intOp) {
-        if (left instanceof Value.DoubleValue || right instanceof Value.DoubleValue) {
-            return doubleOp.apply(left.asDouble(), right.asDouble());
-        }
-        if (left instanceof Value.LongValue || right instanceof Value.LongValue) {
-            return longOp.apply(left.asLong(), right.asLong());
-        }
-        return intOp.apply(left.asInt(), right.asInt());
-    }
-
-    private int compare(Value a, Value b) {
-        if (a instanceof Value.DoubleValue || b instanceof Value.DoubleValue) {
-            return Double.compare(a.asDouble(), b.asDouble());
-        }
-        if (a instanceof Value.IntValue && b instanceof Value.IntValue) {
-            return Integer.compare(a.asInt(), b.asInt());
-        }
-        return Long.compare(a.asLong(), b.asLong());
-    }
-
-    private Value makeRange(Value left, Value right, boolean inclusive) {
-        int start = left.asInt();
-        int end = right.asInt();
-        List<Integer> list = new ArrayList<>();
-        int limit = inclusive ? end + 1 : end;
-        for (int i = start; i < limit; i++) {
-            list.add(i);
-        }
-        return Value.of(list);
-    }
 
     private Value visitUnaryOp(UnaryOpNode node) {
         Value operand = evaluate(node.getOperand());
+        OperatorRegistry registry = parseContext.getOperatorRegistry();
         return switch (node.getOperator()) {
-            case NEGATIVE -> {
-                if (operand instanceof Value.IntValue i) yield new Value.IntValue(-i.getValue());
-                else if (operand instanceof Value.LongValue l) yield new Value.LongValue(-l.getValue());
-                else yield new Value.DoubleValue(-operand.asDouble());
-            }
             case POSITIVE -> operand;
             case NOT_NULL -> operand.requiresNonNull();
-            case LOGICAL_NOT -> new Value.BooleanValue(!operand.isTruthy());
-            case BITWISE_NOT -> new Value.IntValue(~operand.asInt());
+            case NEGATIVE -> {
+                String opStr = operatorToRegistryString(UnaryOpNode.Operator.NEGATIVE);
+                Class<?> opType = getRuntimeType(operand);
+                OperatorRegistry.Overload overload = registry.findUnaryCompatible(opStr, opType);
+                if (overload != null) yield overload.javaCallback().apply(operand, Value.NullValue.INSTANCE);
+                throw new EvalException("No matching unary operator '" + opStr + "' for type '" + opType.getSimpleName() + "'", ErrorCode.EVAL_INVALID_OPERATION);
+            }
+            case LOGICAL_NOT -> {
+                String opStr = operatorToRegistryString(UnaryOpNode.Operator.LOGICAL_NOT);
+                Class<?> opType = getRuntimeType(operand);
+                OperatorRegistry.Overload overload = registry.findUnaryCompatible(opStr, opType);
+                if (overload != null) yield overload.javaCallback().apply(operand, Value.NullValue.INSTANCE);
+                throw new EvalException("No matching unary operator '" + opStr + "' for type '" + opType.getSimpleName() + "'", ErrorCode.EVAL_INVALID_OPERATION);
+            }
+            case BITWISE_NOT -> {
+                String opStr = operatorToRegistryString(UnaryOpNode.Operator.BITWISE_NOT);
+                Class<?> opType = getRuntimeType(operand);
+                OperatorRegistry.Overload overload = registry.findUnaryCompatible(opStr, opType);
+                if (overload != null) yield overload.javaCallback().apply(operand, Value.NullValue.INSTANCE);
+                throw new EvalException("No matching unary operator '" + opStr + "' for type '" + opType.getSimpleName() + "'", ErrorCode.EVAL_INVALID_OPERATION);
+            }
             case PRE_INCREMENT -> {
                 if (node.getOperand() instanceof VariableNode v) {
                     Value val = evalContext.getVariable(v.getName());
@@ -363,15 +316,14 @@ public class Evaluator implements ASTVisitor<Value> {
         if ("forEach".equals(methodName) && target instanceof Iterable<?> iterable
                 && args.size() == 1) {
             Object argObj = args.get(0).asJavaObject();
-            if (argObj instanceof Lambda lambda && Lambda.isFunctionalInterface(java.util.function.Consumer.class)) {
-                argObj = lambda.asInterface(java.util.function.Consumer.class);
+            if (argObj instanceof Lambda lambda && Lambda.isFunctionalInterface(Consumer.class)) {
+                argObj = lambda.asInterface(Consumer.class);
             }
-            if (argObj instanceof java.util.function.Consumer) {
+            if (argObj instanceof Consumer) {
                 @SuppressWarnings("unchecked")
-                java.util.function.Consumer<Object> consumer =
-                        (java.util.function.Consumer<Object>) argObj;
+                Consumer<Object> consumer = (Consumer<Object>) argObj;
                 Object[] snapshot;
-                if (target instanceof java.util.Collection<?> coll) {
+                if (target instanceof Collection<?> coll) {
                     snapshot = coll.toArray();
                 } else {
                     List<Object> tmp = new ArrayList<>();
@@ -395,6 +347,9 @@ public class Evaluator implements ASTVisitor<Value> {
                 Function<Value[], Value> func =
                         (Function<Value[], Value>) target;
                 return func.apply(args.toArray(new Value[0]));
+            }
+            if (target instanceof MethodReference mr) {
+                return Value.of(mr.invoke(args.stream().map(Value::asJavaObject).toArray()));
             }
         }
 
@@ -467,13 +422,13 @@ public class Evaluator implements ASTVisitor<Value> {
             throw new EvalException("Method not found: " + methodName + " on " + clazz.getSimpleName(), ErrorCode.METHOD_NO_APPLICABLE_METHOD);
     }
 
-    private Object resolveTarget(ASTNode targetNode) {
+    Object resolveTarget(ASTNode targetNode) {
         if (targetNode == null) return null;
         Value targetVal = evaluate(targetNode);
         return targetVal.asJavaObject();
     }
 
-    private Class<?> findClassForMethod(String methodName) {
+    Class<?> findClassForMethod(String methodName) {
         try {
             checkClassByName(methodName); // ★ 安全检查
             return Class.forName(methodName);
@@ -514,6 +469,10 @@ public class Evaluator implements ASTVisitor<Value> {
         }
 
         try {
+            // 特判：数组的 .length 不是普通 Field，用 Array.getLength 获取
+            if (resolvedClass.isArray() && "length".equals(node.getFieldName())) {
+                return Value.of(Array.getLength(obj));
+            }
             Field f = resolvedClass.getField(node.getFieldName());
             checkFieldRead(f); // ★ 安全检查
             return Value.of(f.get(obj));
@@ -531,7 +490,11 @@ public class Evaluator implements ASTVisitor<Value> {
             DynamicClassGenerator dcg = parseContext.getCodeGenerator();
             if (dcg != null) {
                 String anonName = anonClassName(node);
-                Class<?> generated = dcg.generateAnonymous(anonName, anonClass);
+
+                // 解析父类构造器签名：根据实参匹配父类构造器，获取参数类型列表
+                List<Class<?>> superArgTypes = resolveSuperConstructorArgTypes(anonClass, args);
+
+                Class<?> generated = dcg.generateAnonymous(anonName, anonClass, superArgTypes);
                 if (generated != null) {
                     try {
                         Constructor<?> anonCtor = generated.getDeclaredConstructors()[0];
@@ -558,7 +521,7 @@ public class Evaluator implements ASTVisitor<Value> {
                 if (ctor.getParameterCount() != args.size() && !ctor.isVarArgs()) continue;
                 if (args.size() < ctor.getParameterCount() - (ctor.isVarArgs() ? 1 : 0)) continue;
                 try {
-                    checkConstructor(ctor); // ★ 安全检查
+                    checkConstructor(ctor); // 安全检查
                     Object[] javaArgs = convertArgsForParameters(args, ctor.getParameterTypes(), ctor.isVarArgs());
                     Object result = ctor.newInstance(javaArgs);
                     return Value.of(result);
@@ -578,6 +541,37 @@ public class Evaluator implements ASTVisitor<Value> {
     private static String anonClassName(ConstructorCallNode node) {
         String base = node.getClassName().replace('.', '_');
         return "anon$" + base + "$" + (++anonSeq);
+    }
+
+    /**
+     * 根据实参列表匹配匿名类父类的构造器，返回参数类型列表。
+     * <p>匹配逻辑与普通构造器调用一致：遍历所有 public 构造器，
+     * 找到参数数量兼容的第一个（支持 varargs）。
+     *
+     * @param anonClass 匿名类声明（superClass 已设置）
+     * @param args      实际参数值列表（已求值）
+     * @return 父类构造器的参数类型列表；无参时返回空列表（非 null）；匹配失败返回 null
+     */
+    private List<Class<?>> resolveSuperConstructorArgTypes(ClassDeclarationNode anonClass, List<Value> args) {
+        ClassReferenceNode superRef = anonClass.getSuperClass();
+        if (superRef == null) return List.of();
+
+        Class<?> superClass = superRef.getResolvedClass();
+        if (superClass == null) return List.of();
+
+        try {
+            for (Constructor<?> ctor : superClass.getConstructors()) {
+                if (ctor.getParameterCount() != args.size() && !ctor.isVarArgs()) continue;
+                if (args.size() < ctor.getParameterCount() - (ctor.isVarArgs() ? 1 : 0)) continue;
+                // 找到兼容的构造器
+                return Arrays.asList(ctor.getParameterTypes());
+            }
+        } catch (Exception ignored) {
+            // 安全限制等异常 → 返回 null 让 DCG fallback 到无参
+        }
+
+        // 无匹配构造器 → 返回空列表（无参 fallback）
+        return args.isEmpty() ? List.of() : null;
     }
 
     private Class<?> findClass(String className) {
@@ -705,61 +699,15 @@ public class Evaluator implements ASTVisitor<Value> {
         }
     }
 
+    private final PipelineDispatcher pipelineDispatcher = new PipelineDispatcher(this);
+
     private Value visitPipeline(PipelineNode node) {
-        Value input = evaluate(node.getInput());
-        if (node.getFunction() instanceof MethodReferenceNode ref) {
-            String methodName = ref.getMethodName();
-            ASTNode targetNode = ref.getTarget();
-            Object target = targetNode != null ? evaluate(targetNode).asJavaObject() : null;
-            Class<?> clazz = target != null ? target.getClass() : findClassForMethod(methodName);
-            if (clazz == null) throw new EvalException("Cannot resolve method: " + methodName, ErrorCode.METHOD_NOT_FOUND);
-            for (Method m : clazz.getMethods()) {
-                if (m.getName().equals(methodName) && m.getParameterCount() == 1) {
-                    try {
-                        checkMethod(m); // ★ 安全检查
-                        Object result = m.invoke(target, input.asJavaObject());
-                        return Value.of(result);
-                    } catch (Exception e) {
-                        throw new EvalException("Pipeline method reference failed", e, ErrorCode.METHOD_INVOCATION_FAILED);
-                    }
-                }
-            }
-            throw new EvalException("Method not found: " + methodName, ErrorCode.METHOD_NO_APPLICABLE_METHOD);
+        try {
+            return pipelineDispatcher.dispatch(node);
+        } catch (Exception e) {
+
+            throw new EvalException("Failed to dispatch pipeline: " + e.getMessage(), e, ErrorCode.EVAL_ERROR);
         }
-        if (node.getFunction() instanceof MethodCallNode call) {
-            List<Value> args = new ArrayList<>();
-            args.add(input);
-            for (ASTNode arg : call.getArguments()) {
-                args.add(evaluate(arg));
-            }
-            Object target = resolveTarget(call.getTarget());
-            try {
-                if (call.getBoundMethod() != null) {
-                    checkMethod(call.getBoundMethod()); // ★ 安全检查
-                    Object result = call.getBoundMethod().invoke(target, args.stream().map(Value::asJavaObject).toArray());
-                    return Value.of(result);
-                }
-            } catch (Exception e) {
-                throw new EvalException("Pipeline method call failed", e, ErrorCode.METHOD_INVOCATION_FAILED);
-            }
-        }
-        // 对已求值的 Lambda / MethodReference 做 pipeline
-        Value funcVal = evaluate(node.getFunction());
-        Object raw = funcVal.asJavaObject();
-        if (raw instanceof Lambda lambda) {
-            return lambda.invoke(input);
-        }
-        if (raw instanceof MethodReference ref) {
-            Object result = ref.invoke(input.asJavaObject());
-            return Value.of(result);
-        }
-        if (raw instanceof java.util.function.Function) {
-            @SuppressWarnings("unchecked")
-            java.util.function.Function<Object, Object> fn =
-                    (java.util.function.Function<Object, Object>) raw;
-            return Value.of(fn.apply(input.asJavaObject()));
-        }
-        throw new EvalException("Pipeline: unsupported function type", ErrorCode.EVAL_INVALID_OPERATION);
     }
 
     private Value visitBlock(BlockNode node) {
@@ -970,22 +918,56 @@ public class Evaluator implements ASTVisitor<Value> {
         String funcName = node.getFunctionName();
         if (evalContext.hasVariable(funcName)) {
             Value funcVal = evalContext.getVariable(funcName);
-            if (funcVal instanceof Value.ObjectValue ov) {
-                Object raw = ov.getValue();
-                if (raw instanceof Lambda lambda) {
-                    return lambda.invoke(args.toArray(new Value[0]));
-                }
-                if (raw instanceof Function) {
-                    @SuppressWarnings("unchecked")
-                    Function<Value[], Value> func = (Function<Value[], Value>) raw;
-                    return func.apply(args.toArray(new Value[0]));
-                }
-            }
+            Value result = tryInvokeCallable(funcVal, args);
+            if (result != null) return result;
         }
         if (evalContext.hasBuiltin(funcName)) {
             return evalContext.callBuiltin(funcName, args);
         }
         throw new EvalException("Function not defined: " + funcName, ErrorCode.EVAL_UNDEFINED_VARIABLE);
+    }
+
+    /** DirectCallNode: 对任意可调用表达式的直接 () 调用 */
+    private Value visitDirectCall(DirectCallNode node) {
+        Value targetVal = evaluate(node.getTarget());
+        List<Value> args = evaluateAll(node.getArguments());
+        Value result = tryInvokeCallable(targetVal, args);
+        if (result != null) return result;
+        throw new EvalException("Value is not callable: " + targetVal, ErrorCode.EVAL_INVALID_OPERATION);
+    }
+
+    /**
+     * 尝试将 Value 作为可调用对象调用。支持 Lambda / Function / MethodReference / FI proxy。
+     * @return 调用结果，不可调用时返回 null
+     */
+    private Value tryInvokeCallable(Value val, List<Value> args) {
+        Object raw = val.asJavaObject();
+        if (raw instanceof Lambda lambda) {
+            return lambda.invoke(args.toArray(new Value[0]));
+        }
+        if (raw instanceof Function) {
+            @SuppressWarnings("unchecked")
+            Function<Value[], Value> func = (Function<Value[], Value>) raw;
+            return func.apply(args.toArray(new Value[0]));
+        }
+        if (raw instanceof MethodReference mr) {
+            return Value.of(mr.invoke(args.stream().map(Value::asJavaObject).toArray()));
+        }
+        // FI proxy: 通过 Lambda.getSAM 检测并 invoke
+        Class<?> rawClass = raw.getClass();
+        if (rawClass.isInterface() || Proxy.isProxyClass(rawClass)) {
+            Method sam = Lambda.getSAM(rawClass);
+            if (sam != null) {
+                try {
+                    Object[] javaArgs = args.stream().map(Value::asJavaObject).toArray();
+                    return Value.of(sam.invoke(raw, javaArgs));
+                } catch (Exception e) {
+                    throw new EvalException("Functional interface invocation failed", e,
+                            ErrorCode.METHOD_INVOCATION_FAILED);
+                }
+            }
+        }
+        return null;  // 不是可调用对象
     }
 
     private Value visitAsync(AsyncNode node) {
@@ -1024,6 +1006,19 @@ public class Evaluator implements ASTVisitor<Value> {
         Value target = evaluate(node.getTarget());
         Value value = evaluate(node.getValue());
         Object obj = target.asJavaObject();
+
+        // ★ 静态字段赋值：目标是 Class 对象（如 Test1.value0 = 1）
+        if (obj instanceof Class<?> clazz) {
+            try {
+                Field f = clazz.getField(node.getFieldName());
+                checkFieldWrite(f);
+                f.set(null, value.asJavaObject());
+                return value;
+            } catch (Exception e) {
+                throw new EvalException("Static field assignment failed: " + node.getFieldName(), e, ErrorCode.EVAL_FIELD_ACCESS_FAILED);
+            }
+        }
+
         if (obj == null) throw new EvalException("Cannot set field on null", ErrorCode.EVAL_NULL_POINTER);
         try {
             Field f = obj.getClass().getField(node.getFieldName());
@@ -1038,24 +1033,77 @@ public class Evaluator implements ASTVisitor<Value> {
     private Value visitMethodReference(MethodReferenceNode node) {
         String methodName = node.getMethodName();
         ASTNode targetNode = node.getTarget();
-        Function<Object[], Object> refFunc = args -> {
-            Object target = targetNode != null ? evaluate(targetNode).asJavaObject() : null;
-            Class<?> clazz = target != null ? target.getClass() : findClassForMethod(methodName);
-            if (clazz == null) throw new EvalException("Cannot resolve method: " + methodName, ErrorCode.METHOD_NOT_FOUND);
-            for (Method m : clazz.getMethods()) {
-                if (m.getName().equals(methodName) && m.getParameterCount() == args.length) {
-                    try {
-                        checkMethod(m); // ★ 安全检查
-                        return m.invoke(target, args);
-                    } catch (Exception e) {
-                        throw new EvalException("Method reference failed", e, ErrorCode.METHOD_INVOCATION_FAILED);
-                    }
-                }
+
+        // ★ 提前解析目标信息用于 toString 显示
+        String targetClassName;
+        Object boundTarget;
+        Class<?> staticTargetClass;  // 静态引用时的目标 Class
+
+        if (targetNode != null) {
+            Value targetVal = evaluate(targetNode);
+            Object targetObj = targetVal.asJavaObject();
+            if (targetObj instanceof Class<?> clazz) {
+                targetClassName = clazz.getName();
+                staticTargetClass = clazz;
+                boundTarget = null;
+            } else if (targetObj != null) {
+                boundTarget = targetObj;
+                targetClassName = targetObj.getClass().getName();
+                staticTargetClass = null;
+            } else {
+                targetClassName = null;
+                staticTargetClass = null;
+                boundTarget = null;
             }
-            throw new EvalException("Method not found: " + methodName, ErrorCode.METHOD_NO_APPLICABLE_METHOD);
+        } else {
+            targetClassName = null;
+            staticTargetClass = null;
+            boundTarget = null;
+        }
+
+        // ★ 确保所有被 lambda 引用的变量都是 effectively final
+        final String fnMethodName = methodName;
+        final ASTNode fnTargetNode = targetNode;
+        final Class<?> fnStaticTargetClass = staticTargetClass;
+
+        // ★ 旧版风格的 refFunc：动态方法重载选择 + 自动装箱/拆箱
+        Function<Object[], Object> refFunc = args -> {
+            Object target = fnTargetNode != null ? evaluate(fnTargetNode).asJavaObject() : null;
+            Class<?> clazz = target != null ? target.getClass()
+                    : (fnStaticTargetClass != null ? fnStaticTargetClass : findClassForMethod(fnMethodName));
+            if (clazz == null)
+                throw new EvalException("Cannot resolve method: " + fnMethodName, ErrorCode.METHOD_NOT_FOUND);
+
+            Method method;
+            Method explicitMethod = node.getBoundMethod();  // 解析期通过 <Sig> 强制指定的方法
+            if (explicitMethod != null) {
+                method = explicitMethod;  // ★ 强制使用指定签名，不做运行时重载选择
+            } else {
+                method = MethodResolver.resolveRuntime(clazz, fnMethodName, args);  // 动态决策
+            }
+            try {
+                checkMethod(method);
+                return method.invoke(target, MethodResolver.coerceArgs(method.getParameterTypes(), args));
+            } catch (EvalException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new EvalException("Method reference failed: " + fnMethodName, e,
+                        ErrorCode.METHOD_INVOCATION_FAILED);
+            }
         };
 
-        MethodReference ref = new MethodReference(methodName, refFunc);
+        // ★ 提取泛型参数名列表（如 <int> → ["int"]）
+        List<String> typeArgNames = null;
+        if (!node.getTypeArguments().isEmpty()) {
+            typeArgNames = new ArrayList<>();
+            for (GenericType ga : node.getTypeArguments()) {
+                typeArgNames.add(ga.getRawType() != null ? ga.getRawType().getSimpleName()
+                        : ga.getTypeName());
+            }
+        }
+
+        MethodReference ref = new MethodReference(methodName, refFunc,
+                targetClassName, boundTarget, node.getBoundMethod(), typeArgNames);
 
         Class<?> fiType = node.getFunctionalInterfaceType();
         if (fiType != null) {
@@ -1137,6 +1185,52 @@ public class Evaluator implements ASTVisitor<Value> {
         node.setOperatorCallback((l, r) -> invokeOperatorOverload(overload, List.of(l, r)));
     }
 
+    /** 缓存已找到的 Overload callback（避免下次重复查找） */
+    private void cacheOperatorCallback(BinaryOpNode node, OperatorCallback callback) {
+        node.setOperatorCallback(callback);
+    }
+
+    /**
+     * 将 BinaryOpNode.Operator 枚举转换为 Registry 使用的字符串表示。
+     * <p>例如：{@code ADD} → {@code "+"}, {@code SUBTRACT} → {@code "-"} */
+    private static String operatorToRegistryString(BinaryOpNode.Operator op) {
+        return op.getSymbol();
+    }
+
+    /**
+     * 将 UnaryOpNode.Operator 枚举转换为 Registry 使用的字符串表示。
+     * <p>例如：{@code NEGATIVE} → {@code "-"}, {@code LOGICAL_NOT} → {@code "!"} */
+    private static String operatorToRegistryString(UnaryOpNode.Operator op) {
+        return op.getSymbol();
+    }
+
+    /**
+     * 获取 Value 的运行时 Java 类型（用于 Registry 查找）。
+     * <p>基本类型返回其原始类型；Number 包装类返回对应基本类型或 Number；
+     * 其他对象返回其实际 Class。 */
+    private static Class<?> getRuntimeType(Value v) {
+        if (v instanceof Value.IntValue) return int.class;
+        if (v instanceof Value.LongValue) return long.class;
+        if (v instanceof Value.DoubleValue) return double.class;
+        if (v instanceof Value.BooleanValue) return boolean.class;
+        if (v instanceof Value.StringValue) return String.class;
+        // 对于 ObjectValue（如从 Java 集合取出的元素），尝试获取更精确的类型
+        Object obj = v.asJavaObject();
+        if (obj != null) {
+            Class<?> clazz = obj.getClass();
+            // Number 包装类 → 优先返回具体类型，便于匹配数值运算符
+            if (clazz == Integer.class) return int.class;
+            if (clazz == Long.class) return long.class;
+            if (clazz == Double.class) return double.class;
+            if (clazz == Float.class) return float.class;
+            if (clazz == Short.class) return short.class;
+            if (clazz == Byte.class) return byte.class;
+            if (Number.class.isAssignableFrom(clazz)) return Number.class;
+            return clazz;
+        }
+        return Object.class;
+    }
+
     private Value visitSafeFieldAccess(SafeFieldAccessNode node) {
         Value target = evaluate(node.getTarget());
         if (target instanceof Value.NullValue) return Value.NullValue.INSTANCE;
@@ -1178,6 +1272,7 @@ public class Evaluator implements ASTVisitor<Value> {
     private Value visitDelete(DeleteNode node) {
         if (node.isDeleteAll()) {
             evalContext.getVariables().clear();
+            parseContext.clearAllVariables();  // ★ 同步清除解析上下文
         } else {
             String name = node.getVariableName();
             if (evalContext.getVariables().containsKey(name)) {
@@ -1255,7 +1350,7 @@ public class Evaluator implements ASTVisitor<Value> {
     }
 
     /** 快捷方法：在方法调用前检查。 */
-    private void checkMethod(Method method) throws SecurityException {
+    void checkMethod(Method method) throws SecurityException {
         SecurityGate gate = sg();
         if (gate != null) gate.beforeMethodCall(method);
     }

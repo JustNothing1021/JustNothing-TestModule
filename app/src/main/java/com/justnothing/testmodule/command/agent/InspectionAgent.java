@@ -68,9 +68,12 @@ public class InspectionAgent {
         this.applicationContext = ctx.getApplicationContext();
         this.packageName = ctx.getPackageName();
         this.socketName = DESCRIPTOR_PREFIX + packageName;
+        // ★ 缓存目标应用的 ClassLoader，确保 AgentWorker 线程继承正确的 CL
+        final ClassLoader appClassLoader = ctx.getClassLoader();
         this.executor = Executors.newCachedThreadPool(r -> {
             Thread t = new Thread(r, "AgentWorker-" + packageName);
             t.setDaemon(true);
+            t.setContextClassLoader(appClassLoader);  // ★ 关键：继承目标应用 CL
             return t;
         });
     }

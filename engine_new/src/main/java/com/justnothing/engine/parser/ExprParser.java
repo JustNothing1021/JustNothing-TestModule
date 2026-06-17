@@ -10,6 +10,7 @@ import com.justnothing.engine.lexer.Lexer;
 import com.justnothing.engine.lexer.Token;
 import com.justnothing.engine.lexer.TokenType;
 import com.justnothing.engine.parser.constant.ConstantFolder;
+import com.justnothing.engine.util.MethodResolver;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
@@ -148,7 +149,10 @@ public class ExprParser extends BaseParser {
         if (overload != null) {
             context.setType(binaryOp, JType.of(overload.returnType()));
             // 内置运算符：解析期直接写 callback，运行期零查找
-            if (overload.isBuiltin()) {
+            // 但对于 + 运算符，如果任一参数类型太模糊（Object），延迟到运行时决定
+            // （避免 int+Object 被错误绑定为字符串拼接而非数值加法）
+            boolean skipBind = opSymbol.equals("+") && (isAmbiguousType(lhsType) || isAmbiguousType(rhsType));
+            if (overload.isBuiltin() && !skipBind) {
                 binaryOp.setOperatorCallback(overload.toOperatorCallback(null));
             }
             return;
@@ -162,6 +166,11 @@ public class ExprParser extends BaseParser {
                     ErrorCode.PARSE_INVALID_TYPE);
         }
         // 宽松模式：静默放行，运行期走 Evaluator switch 兜底
+    }
+
+    /** 判断类型是否过于模糊（Object），不适合在解析期绑定运算符回调。 */
+    private static boolean isAmbiguousType(Class<?> type) {
+        return type == Object.class || type == null;
     }
 
     /**
@@ -191,6 +200,89 @@ public class ExprParser extends BaseParser {
                     opSymbol, operandType.getSimpleName()),
                     ErrorCode.PARSE_INVALID_TYPE);
         }
+    }
+
+    /**
+     * 根据用户显式指定的泛型签名（如 {@code <int>}）精确匹配方法重载。
+     * <p>
+     * 当用户写 {@code System.out::<int>println} 时，typeArgs 为 {@code [int]}，
+     * 此方法会找到 {@code PrintStream.println(int)} 而非其他重载。
+     *
+     * @param methodRef 方法引用节点
+     * @param methodName 方法名
+     * @param typeArgs  用户显式指定的参数类型列表
+     * @return 精确匹配的 Method，无匹配时返回 null
+     */
+    private Method resolveByExplicitSignature(MethodReferenceNode methodRef, String methodName,
+                                              List<GenericType> typeArgs) {
+        ASTNode target = methodRef.getTarget();
+        Class<?> targetClass = inferTargetClassFromNode(target);
+        if (targetClass == null) return null;
+
+        // 将 GenericType 转为 Class<?> 数组
+        Class<?>[] paramTypes = new Class<?>[typeArgs.size()];
+        for (int i = 0; i < typeArgs.size(); i++) {
+            Class<?> raw = typeArgs.get(i).getRawType();
+            if (raw == null) return null;  // 类型解析失败
+            paramTypes[i] = raw;
+        }
+
+        try {
+            for (Method m : targetClass.getMethods()) {
+                if (!m.getName().equals(methodName)) continue;
+                Class<?>[] mParamTypes = m.getParameterTypes();
+                if (mParamTypes.length != paramTypes.length) continue;
+                boolean exactMatch = true;
+                for (int i = 0; i < mParamTypes.length; i++) {
+                    if (!isAssignable(paramTypes[i], mParamTypes[i])) {
+                        exactMatch = false;
+                        break;
+                    }
+                }
+                if (exactMatch) return m;
+            }
+        } catch (SecurityException ignored) {
+            // fall through
+        }
+        return null;
+    }
+
+    /** 从方法引用目标节点推断目标 Class。 */
+    private Class<?> inferTargetClassFromNode(ASTNode target) {
+        if (target instanceof ClassReferenceNode classRef) {
+            return classRef.getResolvedClass();
+        }
+        JType jtype = context.getType(target);
+        if (jtype != null) {
+            Class<?> raw = jtype.getRawType();
+            if (raw != null) return raw;
+        }
+        return null;
+    }
+
+    /** 检查 from 类型是否可赋值给 to 类型（含装箱/拆箱转换）。 */
+    private boolean isAssignable(Class<?> from, Class<?> to) {
+        if (from == to) return true;
+        if (from.isPrimitive()) {
+            return to.isAssignableFrom(boxPrimitive(from));
+        }
+        if (to.isPrimitive()) {
+            return from.isAssignableFrom(boxPrimitive(to));
+        }
+        return to.isAssignableFrom(from);
+    }
+
+    private static Class<?> boxPrimitive(Class<?> primitive) {
+        if (primitive == int.class) return Integer.class;
+        if (primitive == long.class) return Long.class;
+        if (primitive == double.class) return Double.class;
+        if (primitive == float.class) return Float.class;
+        if (primitive == boolean.class) return Boolean.class;
+        if (primitive == char.class) return Character.class;
+        if (primitive == byte.class) return Byte.class;
+        if (primitive == short.class) return Short.class;
+        if (primitive == void.class) return Void.class;
+        return primitive;
     }
 
     /**
@@ -1128,8 +1220,17 @@ public class ExprParser extends BaseParser {
                         .location(location)
                         .build();
                 // 方法引用类型推断：尝试通过反射绑定方法，获取返回类型
-                Method boundMethod = methodResolver.resolve(expr, refName, List.of());
+                Method boundMethod = null;
+                MethodReferenceNode methodRef = (MethodReferenceNode) expr;
+                if (!typeArgs.isEmpty()) {
+                    // ★ 签名强制指定：用户显式写了 <TypeArgs>，按参数类型精确匹配
+                    boundMethod = resolveByExplicitSignature(methodRef, refName, typeArgs);
+                } else {
+                    // 无签名标注：用空参数列表做宽松匹配（可能返回任意重载）
+                    boundMethod = methodResolver.resolve(expr, refName, List.of());
+                }
                 if (boundMethod != null) {
+                    methodRef.setBoundMethod(boundMethod);  // ★ 绑定到节点，运行期直接使用
                     annotate(expr, boundMethod.getReturnType());
                 } else {
                     annotate(expr, Object.class); // 无法绑定时保持 Object 占位
@@ -1288,6 +1389,11 @@ public class ExprParser extends BaseParser {
                 .location(nameToken.location()).build();
         Class<?> targetType = context.getRawType(target);
         if (targetType != null && !targetType.equals(Object.class)) {
+            // ★ 特判：数组的 .length 不是 Java 反射 Field，需要特殊处理
+            if (targetType.isArray() && "length".equals(memberName)) {
+                annotate(node, int.class);
+                return node;
+            }
             java.lang.reflect.Field field = findFieldInHierarchy(targetType, memberName);
             if (field != null) {
                 node.setBoundField(field);
@@ -1537,8 +1643,14 @@ public class ExprParser extends BaseParser {
             return node;
         }
 
-        // 其他情况暂不支持直接 () 调用
-        throw error("Cannot call non-method expression", ErrorCode.PARSE_UNEXPECTED_TOKEN);
+        // 其他情况 → 直接调用节点（语法糖：lambdaExpr(args), methodRef(args) 等）
+        DirectCallNode node = (DirectCallNode) new DirectCallNode.Builder()
+                .target(target)
+                .arguments(args)
+                .location(location)
+                .build();
+        annotate(node, Object.class);
+        return node;
     }
 
     private JType inferFunctionReturnType(String funcName, List<ASTNode> args) {
@@ -1680,6 +1792,23 @@ public class ExprParser extends BaseParser {
             annotate(node, String.class);
             return node;
         }
+        // 多行原始字符串 ("""...""")
+        if (match(TokenType.LITERAL_MULTI_LINE_STRING)) {
+            Token token = tokens.get(position - 1);
+            LiteralNode node = (LiteralNode) new LiteralNode.Builder()
+                    .value(token.value())
+                    .type(String.class)
+                    .location(token.location()).build();
+            annotate(node, String.class);
+            return node;
+        }
+        // 多行插值字符串 (f"""...""")
+        if (match(TokenType.LITERAL_MULTI_LINE_INTERPOLATED_STRING)) {
+            Token token = tokens.get(position - 1);
+            ASTNode node = parseInterpolatedString(token);
+            annotate(node, String.class);
+            return node;
+        }
         // 字符字面量
         if (match(TokenType.LITERAL_CHAR)) {
             Token token = tokens.get(position - 1);
@@ -1815,19 +1944,24 @@ public class ExprParser extends BaseParser {
             }
 
             // ★ 标识符消歧算法（文档 PARSER_DESIGN_V2.md §5.3）★
-            // 优先级 1: 局部变量/参数 → VariableNode（从符号表取声明类型）
-            if (context.isKnownVariable(name)) {
-                VariableNode varNode = (VariableNode) new VariableNode.Builder().name(name).location(token.location())
-                        .build();
-                GenericType declaredType = context.getDeclaredType(name);
-                if (declaredType != null) {
-                    context.setType(varNode, JType.fromGenericType(declaredType));
-                } else {
-                    // auto 推断变量：尝试从初始化表达式推断（或保留 Object 占位）
-                    context.setType(varNode, JType.of(Object.class));
-                }
-                return varNode;
+    // 优先级 1: 局部变量/参数 → VariableNode（从符号表取声明类型）
+    if (context.isKnownVariable(name)) {
+        VariableNode varNode = (VariableNode) new VariableNode.Builder().name(name).location(token.location())
+                .build();
+        // Lambda 自动推断类型参数：不标注类型（保留 null），让 checkCustomOperator 跳过
+        if (context.isInferredVariable(name)) {
+            // 不设置类型 → getType 返回 null → checkCustomOperator 的 null 检查生效
+        } else {
+            GenericType declaredType = context.getDeclaredType(name);
+            if (declaredType != null) {
+                context.setType(varNode, JType.fromGenericType(declaredType));
+            } else {
+                // auto 推断变量：尝试从初始化表达式推断（或保留 Object 占位）
+                context.setType(varNode, JType.of(Object.class));
             }
+        }
+        return varNode;
+    }
 
             // 优先级 2: 当前类字段 → FieldAccessNode(this, fieldName)
             if (context.shouldResolveAsField(name)) {
@@ -2235,7 +2369,13 @@ public class ExprParser extends BaseParser {
 
         context.enterScope(ParseContext.ScopeKind.LAMBDA);
         for (LambdaNode.Parameter param : params) {
-            context.declareVariable(param.name());
+            if (param.type() != null) {
+                // 显式类型标注：传递类型信息给符号表
+                context.declareVariable(param.name(), param.type());
+            } else {
+                // 自动推断类型：用 inferred 标记，避免被当成 Object
+                context.declareInferredVariable(param.name());
+            }
         }
 
         ASTNode body;
@@ -3017,6 +3157,12 @@ public class ExprParser extends BaseParser {
             if (actualRaw == Object.class && !context.isStrictMode()) {
                 continue; // 非严格模式下无法精确推断类型时跳过
             }
+            // 内置运算符的动态返回类型：Registry 中数值/字符串运算符注册为 Object 返回，
+            // 但运行时会根据操作数实际类型返回 int/long/double/String 等精确类型。
+            // 因此当声明类型是常见基本/包装类型且实际推断为 Object 时，放行（信任运行期）。
+            if (actualRaw == Object.class && isBuiltinOperatorReturnType(declaredRaw)) {
+                continue;
+            }
             if (!isReturnTypeCompatible(actualRaw, declaredRaw)) {
                 throw error("Method '" + methodName + "' declares return type '"
                                 + declaredRaw.getSimpleName() + "' but returns '"
@@ -3085,6 +3231,15 @@ public class ExprParser extends BaseParser {
      *   <li>引用类型：isAssignableFrom</li>
      * </ul>
      */
+
+    /** 判断类型是否是内置运算符可能产生的返回类型（用于宽松的返回值检查）。 */
+    private static boolean isBuiltinOperatorReturnType(Class<?> type) {
+        return type == int.class || type == long.class || type == double.class
+                || type == float.class || type == boolean.class
+                || type == String.class || type == Integer.class || type == Long.class
+                || type == Double.class || type == Float.class;
+    }
+
     private boolean isReturnTypeCompatible(Class<?> actual, Class<?> declared) {
         if (actual == declared) return true;
         if (actual == null) return !declared.isPrimitive(); // null 可赋给任何引用类型
@@ -3473,6 +3628,7 @@ public class ExprParser extends BaseParser {
         TokenType t = peek().type();
         // 字面量、标识符（枚举常量）、一元运算符（-1, !flag）都可能是值
         return t == TokenType.LITERAL_INTEGER || t == TokenType.LITERAL_STRING
+                || t == TokenType.LITERAL_MULTI_LINE_STRING
                 || t == TokenType.LITERAL_CHAR || t == TokenType.LITERAL_DECIMAL
                 || t == TokenType.KEYWORD_TRUE || t == TokenType.KEYWORD_FALSE
                 || t == TokenType.KEYWORD_NULL

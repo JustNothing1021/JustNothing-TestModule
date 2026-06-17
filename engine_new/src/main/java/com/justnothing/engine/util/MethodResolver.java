@@ -1,4 +1,4 @@
-package com.justnothing.engine.parser;
+package com.justnothing.engine.util;
 
 import com.justnothing.engine.ast.ASTNode;
 import com.justnothing.engine.ast.GenericType;
@@ -7,8 +7,9 @@ import com.justnothing.engine.ast.nodes.FieldAccessNode;
 import com.justnothing.engine.ast.nodes.LambdaNode;
 import com.justnothing.engine.ast.nodes.MethodReferenceNode;
 import com.justnothing.engine.ast.nodes.VariableNode;
+import com.justnothing.engine.parser.JType;
+import com.justnothing.engine.parser.ParseContext;
 
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -173,7 +174,7 @@ public class MethodResolver {
     private Class<?> resolveWildcardBound(GenericType typeArg) {
         if (typeArg == null) return null;
 
-        // ★ 检查通配符: originalTypeName 编码了 ? extends / ? super 信息
+        // originalTypeName 编码了 ? extends / ? super 信息
         String origName = typeArg.getOriginalTypeName();
         if (origName != null) {
             if (origName.startsWith("? extends ")) {
@@ -719,5 +720,139 @@ public class MethodResolver {
      */
     private static boolean isInheritedStatic(Method method, Class<?> targetClass) {
         return !method.getDeclaringClass().equals(targetClass);
+    }
+
+    // ==================== 运行时方法重载选择（供 Evaluator 使用） ====================
+
+    /**
+     * 运行时版本：根据实际参数的运行时类型，从候选方法中选出最佳匹配。
+     * <p>
+     * 与解析期 {@link #resolve} 不同，此方法接收 {@code Class<?>[] argTypes}
+     * （参数的实际运行时类型），而非 AST 节点列表。
+     * 用于 MethodRef / Lambda 等延迟到运行时才确定参数类型的场景。
+     *
+     * @param clazz      目标类
+     * @param methodName 方法名
+     * @param args       实际参数数组（元素可能为 null）
+     * @return 最佳匹配的方法；无匹配时抛出 NoSuchMethodException
+     */
+    public static Method resolveRuntime(Class<?> clazz, String methodName, Object[] args) {
+        Class<?>[] argTypes = new Class<?>[args != null ? args.length : 0];
+        if (args != null) {
+            for (int i = 0; i < args.length; i++) {
+                argTypes[i] = args[i] != null ? args[i].getClass() : Object.class;
+            }
+        }
+
+        Method bestMatch = null;
+        int bestScore = Integer.MAX_VALUE;
+
+        for (Method m : clazz.getMethods()) {
+            if (!m.getName().equals(methodName)) continue;
+            Class<?>[] paramTypes = m.getParameterTypes();
+            if (paramTypes.length != argTypes.length) continue;
+            if (argTypes.length == 0) return m;  // 无参直接匹配
+
+            int score = computeRuntimeScore(paramTypes, argTypes);
+            if (score >= 0 && score < bestScore) {
+                bestScore = score;
+                bestMatch = m;
+            }
+        }
+
+        if (bestMatch != null) return bestMatch;
+        throw new IllegalArgumentException("No applicable method: " + methodName
+                + java.util.Arrays.toString(argTypes));
+    }
+
+    /** 运行时参数类型匹配分数（复用 isAssignable 逻辑） */
+    private static int computeRuntimeScore(Class<?>[] targetTypes, Class<?>[] sourceTypes) {
+        int totalScore = 0;
+        for (int i = 0; i < targetTypes.length; i++) {
+            if (sourceTypes[i] == null) continue;
+            int s = scoreParam(targetTypes[i], sourceTypes[i]);
+            if (s < 0) return -1;
+            totalScore += s;
+        }
+        return totalScore;
+    }
+
+    /** 单参数匹配分数：精确=0, 拆箱=1, widening=距离+1, 装箱=距离+2 */
+    private static int scoreParam(Class<?> targetType, Class<?> sourceType) {
+        if (targetType.isAssignableFrom(sourceType)) {
+            if (targetType == sourceType) return 0;
+            if (targetType == Object.class) return 100;
+            return inheritanceDepth(sourceType, targetType) * 10;
+        }
+        // 原始类型 ← 包装类型（拆箱）
+        if (targetType.isPrimitive()) {
+            Class<?> wrapper = box(targetType);
+            if (wrapper == sourceType) return 1;
+            Class<?> sourcePrim = unbox(sourceType);
+            if (sourcePrim != null && isWideningPrimitive(sourcePrim, targetType)) {
+                return wideningDistance(sourcePrim, targetType) + 1;
+            }
+        }
+        // 包装类型 ← 原始类型（装箱）
+        Class<?> targetPrim = unbox(targetType);
+        Class<?> sourcePrim = unbox(sourceType);
+        if (targetPrim != null && sourcePrim != null && isWideningPrimitive(sourcePrim, targetPrim)) {
+            return wideningDistance(sourcePrim, targetPrim) + 2;
+        }
+        return -1;
+    }
+
+    private static int inheritanceDepth(Class<?> from, Class<?> to) {
+        int depth = 0;
+        Class<?> current = from.getSuperclass();
+        while (current != null && current != to) { depth++; current = current.getSuperclass(); }
+        return depth;
+    }
+
+    private static int wideningDistance(Class<?> from, Class<?> to) {
+        if (from == to) return 0;
+        for (Class<?>[] chain : WIDENING_HIERARCHY) {
+            int fromIdx = -1, toIdx = -1;
+            for (int i = 0; i < chain.length; i++) {
+                if (chain[i] == from) fromIdx = i;
+                if (chain[i] == to) toIdx = i;
+            }
+            if (fromIdx >= 0 && toIdx > fromIdx) return toIdx - fromIdx;
+        }
+        return 50;
+    }
+
+    /**
+     * 将实际参数强制转换为目标方法的参数类型（处理装箱/拆箱）。
+     *
+     * @param paramTypes 目标方法的参数类型数组
+     * @param args       实际参数值数组
+     * @return 转换后的参数数组
+     */
+    public static Object[] coerceArgs(Class<?>[] paramTypes, Object[] args) {
+        if (args == null) return new Object[0];
+        Object[] result = new Object[args.length];
+        for (int i = 0; i < args.length; i++) {
+            result[i] = coerceArg(paramTypes[i], args[i]);
+        }
+        return result;
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T> T coerceArg(Class<T> targetType, Object value) {
+        if (value == null) return null;
+        if (targetType.isInstance(value)) return (T) value;
+        if (targetType.isPrimitive()) {
+            Number n = (Number) value;
+            if (targetType == int.class) return (T) (Integer) n.intValue();
+            if (targetType == long.class) return (T) (Long) n.longValue();
+            if (targetType == double.class) return (T) (Double) n.doubleValue();
+            if (targetType == float.class) return (T) (Float) n.floatValue();
+            if (targetType == short.class) return (T) (Short) n.shortValue();
+            if (targetType == byte.class) return (T) (Byte) n.byteValue();
+            if (targetType == char.class) return (T) (Character) (char) ((Number) value).intValue();
+            if (targetType == boolean.class) return (T) value;
+        }
+        return (T) value;
     }
 }

@@ -10,7 +10,7 @@ public class DefaultClassFinder implements IClassFinder {
     ClassLoader classLoader;
 
     public DefaultClassFinder(ClassLoader cl) {
-        classLoader = (cl == null ? cl : DefaultClassFinder.class.getClassLoader());
+        classLoader = (cl != null ? cl : DefaultClassFinder.class.getClassLoader());
     }
     
     @Override

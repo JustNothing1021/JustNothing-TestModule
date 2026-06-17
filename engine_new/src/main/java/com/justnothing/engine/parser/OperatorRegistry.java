@@ -2,18 +2,16 @@ package com.justnothing.engine.parser;
 
 import com.justnothing.engine.ast.ASTNode;
 import com.justnothing.engine.ast.OperatorCallback;
+import com.justnothing.engine.eval.EvalException;
 import com.justnothing.engine.eval.Value;
-import com.justnothing.engine.eval.Value.BooleanValue;
-import com.justnothing.engine.eval.Value.DoubleValue;
-import com.justnothing.engine.eval.Value.IntValue;
-import com.justnothing.engine.eval.Value.LongValue;
-import com.justnothing.engine.eval.Value.StringValue;
+import com.justnothing.engine.exception.ErrorCode;
 import com.justnothing.engine.lexer.Operators;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
-import java.util.function.Function;
+import java.util.function.BinaryOperator;
+import java.util.function.UnaryOperator;
 
 /**
  * 统一运算符注册表——内置运算符和用户自定义运算符的唯一真相源。
@@ -133,7 +131,7 @@ public final class OperatorRegistry {
      * @param callback       运算逻辑回调
      */
     public void registerBuiltinBinary(String operator, Class<?> lhsType, Class<?> rhsType,
-                                      Class<?> returnType, BiFunction<Value, Value, Value> callback) {
+                                      Class<?> returnType, BinaryOperator<Value> callback) {
         validateOperator(operator, false);
         Overload overload = new Overload(operator,
                 List.of(lhsType, rhsType), null, returnType, callback);
@@ -149,9 +147,9 @@ public final class OperatorRegistry {
      * @param callback       运算逻辑回调
      */
     public void registerBuiltinUnary(String operator, Class<?> operandType,
-                                     Class<?> returnType, Function<Value, Value> callback) {
+                                     Class<?> returnType, UnaryOperator<Value> callback) {
         validateOperator(operator, true);
-        BiFunction<Value, Value, Value> bifunc = (v, ignore) -> callback.apply(v);
+        BinaryOperator<Value> bifunc = (v, ignore) -> callback.apply(v);
         Overload overload = new Overload(operator,
                 List.of(operandType), null, returnType, bifunc);
         doRegisterUnary(operator, operandType, overload);
@@ -182,13 +180,18 @@ public final class OperatorRegistry {
         if (exact != null) return exact;
 
         Overload best = null;
-        int bestScore = -1;
+        double bestScore = -1;
         for (Map.Entry<BinaryOpKey, Overload> entry : binaryOps.entrySet()) {
             BinaryOpKey key = entry.getKey();
             if (!key.operator().equals(operator)) continue;
 
-            int score = compatibilityScore(key.lhsType(), lhsType)
+            double score = compatibilityScore(key.lhsType(), lhsType)
                     + compatibilityScore(key.rhsType(), rhsType);
+            // 数值运算符优先级加权：避免 (String,Object) 抢先于 (Number,Number)
+            if (Number.class.isAssignableFrom(key.lhsType())
+                    && Number.class.isAssignableFrom(key.rhsType())) {
+                score += 0.5;  // 数值运算符微优先
+            }
             if (score > bestScore && score > 0) {
                 bestScore = score;
                 best = entry.getValue();
@@ -238,79 +241,134 @@ public final class OperatorRegistry {
     }
 
     /**
-     * 预注册所有内置运算符（Number/Number + String 拼接等）。
+     * 预注册所有内置运算符。
      * <p>由 ScriptRunner 在构造时调用一次，使 Registry 成为运算符的唯一真相源。
+     *
+     * <h3>设计原则</h3>
+     * <ul>
+     *   <li>只注册包装类型/父类型（如 {@code Number}, {@code Integer}, {@code Object}）</li>
+     *   <li>基本类型（{@code int}, {@code long} 等）通过 {@link #boxPrimitive()} 自动拆箱匹配</li>
+     *   <li>所有算术回调使用"智能类型提升"（Double > Long > Int），与 Evaluator 行为一致</li>
+     * </ul>
      */
     public void registerAllBuiltins() {
-        // ===== 算术运算符 (Number, Number) → Number =====
-        registerBuiltinBinary("+", Number.class, Number.class, Object.class,
+        // ===== 算术运算符 =====
+        // + : 字符串拼接优先，否则数值加法（智能提升）
+        registerBuiltinBinary(Operators.ADD, String.class, Object.class, String.class,
+                (l, r) -> new Value.StringValue(l.asJavaObject().toString() + r.asJavaObject().toString()));
+        registerBuiltinBinary(Operators.ADD, String.class, String.class, Object.class,
+                (l, r) -> new Value.StringValue(l.asJavaObject().toString() + r.asJavaObject().toString()));
+        registerBuiltinBinary(Operators.ADD, Number.class, Number.class, Object.class,
                 (l, r) -> numericAdd(l, r));
-        registerBuiltinBinary("-", Number.class, Number.class, Double.class,
-                (l, r) -> new Value.DoubleValue(l.asDouble() - r.asDouble()));
-        registerBuiltinBinary("*", Number.class, Number.class, Double.class,
-                (l, r) -> new Value.DoubleValue(l.asDouble() * r.asDouble()));
-        registerBuiltinBinary("/", Number.class, Number.class, Double.class,
-                (l, r) -> { double b = r.asDouble(); if (b == 0) throw new RuntimeException("Division by zero"); return new Value.DoubleValue(l.asDouble() / b); });
-        registerBuiltinBinary("%", Number.class, Number.class, Double.class,
-                (l, r) -> { double b = r.asDouble(); if (b == 0) throw new RuntimeException("Division by zero"); return new Value.DoubleValue(l.asDouble() % b); });
-        registerBuiltinBinary("**", Number.class, Number.class, Double.class,
+
+        // -, *, /, % : 统一用智能数值运算（Double > Long > Int）
+        registerBuiltinBinary(Operators.SUBTRACT, Number.class, Number.class, Object.class,
+                (l, r) -> smartNumericOp(l, r,
+                        (a, b) -> new Value.DoubleValue(a - b),
+                        (a, b) -> new Value.LongValue(a - b),
+                        (a, b) -> new Value.IntValue(a - b)));
+        registerBuiltinBinary(Operators.MULTIPLY, Number.class, Number.class, Object.class,
+                (l, r) -> smartNumericOp(l, r,
+                        (a, b) -> new Value.DoubleValue(a * b),
+                        (a, b) -> new Value.LongValue(a * b),
+                        (a, b) -> new Value.IntValue(a * b)));
+        registerBuiltinBinary(Operators.DIVIDE, Number.class, Number.class, Object.class,
+                (l, r) -> smartNumericOp(l, r,
+                        (a, b) -> { if (b == 0) throw new EvalException("Division by zero", ErrorCode.EVAL_DIVISION_BY_ZERO); return new Value.DoubleValue(a / b); },
+                        (a, b) -> { if (b == 0) throw new EvalException("Division by zero", ErrorCode.EVAL_DIVISION_BY_ZERO); return new Value.LongValue(a / b); },
+                        (a, b) -> { if (b == 0) throw new EvalException("Division by zero", ErrorCode.EVAL_DIVISION_BY_ZERO); return new Value.IntValue(a / b); }));
+        registerBuiltinBinary(Operators.MODULO, Number.class, Number.class, Object.class,
+                (l, r) -> smartNumericOp(l, r,
+                        (a, b) -> { if (b == 0) throw new EvalException("Division by zero", ErrorCode.EVAL_DIVISION_BY_ZERO); return new Value.DoubleValue(a % b); },
+                        (a, b) -> { if (b == 0) throw new EvalException("Division by zero", ErrorCode.EVAL_DIVISION_BY_ZERO); return new Value.LongValue(a % b); },
+                        (a, b) -> { if (b == 0) throw new EvalException("Division by zero", ErrorCode.EVAL_DIVISION_BY_ZERO); return new Value.IntValue(a % b); }));
+
+        // ** (幂运算): 始终返回 double（Math.pow 的自然行为）
+        registerBuiltinBinary(Operators.POWER, Number.class, Number.class, Double.class,
                 (l, r) -> new Value.DoubleValue(Math.pow(l.asDouble(), r.asDouble())));
 
-        // 整数专用
-        registerBuiltinBinary("//", Integer.class, Integer.class, Long.class,
-                (l, r) -> { int b = r.asInt(); if (b == 0) throw new RuntimeException("Division by zero"); return new Value.LongValue((long) l.asInt() / b); });
-        registerBuiltinBinary("%%", Integer.class, Integer.class, Long.class,
-                (l, r) -> { int b = r.asInt(); if (b == 0) throw new RuntimeException("Division by zero"); return new Value.LongValue(Math.floorMod(l.asInt(), b)); });
+        // 整数专用运算符
+        registerBuiltinBinary(Operators.INT_DIVIDE, Integer.class, Integer.class, Long.class,
+                (l, r) -> { int b = r.asInt(); if (b == 0) throw new EvalException("Division by zero", ErrorCode.EVAL_DIVISION_BY_ZERO); return new Value.LongValue((long) l.asInt() / b); });
+        registerBuiltinBinary(Operators.MATH_MODULO, Integer.class, Integer.class, Long.class,
+                (l, r) -> { int b = r.asInt(); if (b == 0) throw new EvalException("Division by zero", ErrorCode.EVAL_DIVISION_BY_ZERO); return new Value.LongValue(Math.floorMod(l.asInt(), b)); });
 
         // ===== 比较运算符 =====
-        registerBuiltinBinary("==", Object.class, Object.class, Boolean.class,
+        registerBuiltinBinary(Operators.EQUAL, Object.class, Object.class, Boolean.class,
                 (l, r) -> new Value.BooleanValue(l.equals(r)));
-        registerBuiltinBinary("!=", Object.class, Object.class, Boolean.class,
+        registerBuiltinBinary(Operators.NOT_EQUAL, Object.class, Object.class, Boolean.class,
                 (l, r) -> new Value.BooleanValue(!l.equals(r)));
-        registerBuiltinBinary("<", Number.class, Number.class, Boolean.class,
+        registerBuiltinBinary(Operators.LESS_THAN, Number.class, Number.class, Boolean.class,
                 (l, r) -> new Value.BooleanValue(compareValues(l, r) < 0));
-        registerBuiltinBinary("<=", Number.class, Number.class, Boolean.class,
+        registerBuiltinBinary(Operators.LESS_THAN_OR_EQUAL, Number.class, Number.class, Boolean.class,
                 (l, r) -> new Value.BooleanValue(compareValues(l, r) <= 0));
-        registerBuiltinBinary(">", Number.class, Number.class, Boolean.class,
+        registerBuiltinBinary(Operators.GREATER_THAN, Number.class, Number.class, Boolean.class,
                 (l, r) -> new Value.BooleanValue(compareValues(l, r) > 0));
-        registerBuiltinBinary(">=", Number.class, Number.class, Boolean.class,
+        registerBuiltinBinary(Operators.GREATER_THAN_OR_EQUAL, Number.class, Number.class, Boolean.class,
                 (l, r) -> new Value.BooleanValue(compareValues(l, r) >= 0));
-        registerBuiltinBinary("<=>", Object.class, Object.class, Integer.class,
+        registerBuiltinBinary(Operators.SPACESHIP, Object.class, Object.class, Integer.class,
                 (l, r) -> new Value.IntValue(compareValues(l, r)));
 
         // ===== 逻辑运算符 =====
-        registerBuiltinBinary("&&", Object.class, Object.class, Boolean.class,
+        registerBuiltinBinary(Operators.LOGICAL_AND, Object.class, Object.class, Boolean.class,
                 (l, r) -> new Value.BooleanValue(l.isTruthy() && r.isTruthy()));
-        registerBuiltinBinary("||", Object.class, Object.class, Boolean.class,
+        registerBuiltinBinary(Operators.LOGICAL_OR, Object.class, Object.class, Boolean.class,
                 (l, r) -> new Value.BooleanValue(l.isTruthy() || r.isTruthy()));
 
-        // ===== 位运算符 (Integer, Integer) → Integer =====
-        registerBuiltinBinary("&", Integer.class, Integer.class, Integer.class,
+        // ===== 位运算符 (int, int) → int =====
+        // 注意：注册 int.class 而非 Integer.class，这样基本类型可以直接精确匹配
+        registerBuiltinBinary(Operators.BITWISE_AND, int.class, int.class, int.class,
                 (l, r) -> new Value.IntValue(l.asInt() & r.asInt()));
-        registerBuiltinBinary("|", Integer.class, Integer.class, Integer.class,
+        registerBuiltinBinary(Operators.BITWISE_OR, int.class, int.class, int.class,
                 (l, r) -> new Value.IntValue(l.asInt() | r.asInt()));
-        registerBuiltinBinary("^", Integer.class, Integer.class, Integer.class,
+        registerBuiltinBinary(Operators.BITWISE_XOR, int.class, int.class, int.class,
                 (l, r) -> new Value.IntValue(l.asInt() ^ r.asInt()));
-        registerBuiltinBinary("<<", Integer.class, Integer.class, Integer.class,
+        registerBuiltinBinary(Operators.LEFT_SHIFT, int.class, int.class, int.class,
                 (l, r) -> new Value.IntValue(l.asInt() << r.asInt()));
-        registerBuiltinBinary(">>", Integer.class, Integer.class, Integer.class,
+        registerBuiltinBinary(Operators.RIGHT_SHIFT, int.class, int.class, int.class,
                 (l, r) -> new Value.IntValue(l.asInt() >> r.asInt()));
-        registerBuiltinBinary(">>>", Integer.class, Integer.class, Integer.class,
+        registerBuiltinBinary(Operators.UNSIGNED_RIGHT_SHIFT, int.class, int.class, int.class,
                 (l, r) -> new Value.IntValue(l.asInt() >>> r.asInt()));
 
         // ===== 范围运算符 =====
-        registerBuiltinBinary("..", Integer.class, Integer.class, Object.class,
+        registerBuiltinBinary(Operators.RANGE, int.class, int.class, Object.class,
                 (l, r) -> makeRange(l, r, true));
-        registerBuiltinBinary("..<", Integer.class, Integer.class, Object.class,
+        registerBuiltinBinary(Operators.RANGE_EXCLUSIVE, int.class, int.class, Object.class,
                 (l, r) -> makeRange(l, r, false));
 
         // ===== 一元运算符 =====
-        registerBuiltinUnary("-", Number.class, Double.class,
-                v -> new Value.DoubleValue(-v.asDouble()));
-        registerBuiltinUnary("!", Object.class, Boolean.class,
+        // - (负号): 智能类型保持
+        registerBuiltinUnary(Operators.SUBTRACT, Number.class, Object.class,
+                v -> {
+                    if (v instanceof Value.IntValue) return new Value.IntValue(-v.asInt());
+                    if (v instanceof Value.LongValue) return new Value.LongValue(-v.asLong());
+                    return new Value.DoubleValue(-v.asDouble());
+                });
+        registerBuiltinUnary(Operators.NOT, Object.class, Boolean.class,
                 v -> new Value.BooleanValue(!v.isTruthy()));
-        registerBuiltinUnary("~", Integer.class, Integer.class,
+        registerBuiltinUnary(Operators.BITWISE_NOT, int.class, int.class,
                 v -> new Value.IntValue(~v.asInt()));
+    }
+
+    // ==================== 智能运算辅助方法 ====================
+
+    /**
+     * 智能数值二元运算：根据操作数实际类型选择 Double > Long > Int 分支。
+     * <p>与 Evaluator.binaryNumericOp() 行为完全一致。 */
+    @FunctionalInterface
+    private interface DoubleBiOp { Value apply(double a, double b); }
+    @FunctionalInterface
+    private interface LongBiOp { Value apply(long a, long b); }
+    @FunctionalInterface
+    private interface IntBiOp { Value apply(int a, int b); }
+
+    private static Value smartNumericOp(Value l, Value r,
+                                       DoubleBiOp doubleOp, LongBiOp longOp, IntBiOp intOp) {
+        if (l instanceof Value.DoubleValue || r instanceof Value.DoubleValue)
+            return doubleOp.apply(l.asDouble(), r.asDouble());
+        if (l instanceof Value.LongValue || r instanceof Value.LongValue)
+            return longOp.apply(l.asLong(), r.asLong());
+        return intOp.apply(l.asInt(), r.asInt());
     }
 
     // ==================== 内置运算辅助方法 ====================
@@ -338,7 +396,6 @@ public final class OperatorRegistry {
         return Long.compare(a.asLong(), b.asLong());
     }
 
-    @SuppressWarnings("unchecked")
     private static Value makeRange(Value left, Value right, boolean inclusive) {
         int start = left.asInt();
         int end = right.asInt();
@@ -359,10 +416,40 @@ public final class OperatorRegistry {
         }
     }
 
-    /** 精确匹配=2，父类匹配=1，不兼容=0 */
+    /**
+     * 将基本类型映射为其对应的包装类型（用于运算符匹配时的自动拆箱）。
+     * <p>
+     * Java 的 {@code isAssignableFrom()} 不支持基本类型到包装类型的隐式转换，
+     * 所以需要手动处理：{@code int.class} → {@code Integer.class}，以此类推。
+     *
+     * @param type 可能是基本类型或包装类型
+     * @return 如果输入是基本类型则返回对应包装类型，否则原样返回
+     */
+    static Class<?> boxPrimitive(Class<?> type) {
+        if (!type.isPrimitive()) return type;
+        if (type == int.class) return Integer.class;
+        if (type == long.class) return Long.class;
+        if (type == double.class) return Double.class;
+        if (type == float.class) return Float.class;
+        if (type == short.class) return Short.class;
+        if (type == byte.class) return Byte.class;
+        if (type == char.class) return Character.class;
+        if (type == boolean.class) return Boolean.class;
+        return type; // void 等其他基本类型原样返回
+    }
+
+    /**
+     * 兼容性评分：精确匹配=2，包装类型匹配=1.5，父类匹配=1，不兼容=0。
+     * <p>
+     * 相比原始版本，增加了基本类型→包装类型的自动拆箱支持：
+     * {@code int} 可以匹配到注册的 {@code Integer} 或 {@code Number}。
+     */
     static int compatibilityScore(Class<?> declared, Class<?> actual) {
         if (declared == actual) return 2;
-        if (declared.isAssignableFrom(actual)) return 1;
+        // 基本类型 → 包装类型匹配（如 int → Integer, Number）
+        Class<?> boxedActual = boxPrimitive(actual);
+        if (declared == boxedActual) return 2;  // 精确匹配（含拆箱）
+        if (declared.isAssignableFrom(boxedActual)) return 1;  // 父类匹配（含拆箱）
         return 0;
     }
 

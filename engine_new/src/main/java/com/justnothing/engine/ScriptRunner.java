@@ -22,6 +22,7 @@ import com.justnothing.engine.preprocessor.Preprocessor;
 import com.justnothing.engine.security.IPermissionChecker;
 import com.justnothing.engine.security.SandboxConfig;
 import com.justnothing.engine.security.SecurityGate;
+import com.justnothing.engine.util.CompositeClassLoader;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -52,24 +53,30 @@ public class ScriptRunner {
     }
 
     public ScriptRunner(ClassLoader classLoader, IOutputHandler outputHandler, IOutputHandler errorHandler) {
-        this.classLoader = classLoader != null ? classLoader : Thread.currentThread().getContextClassLoader();
+        ClassLoader appClassLoader = classLoader != null ? classLoader : Thread.currentThread().getContextClassLoader();
         this.outputHandler = outputHandler != null ? outputHandler : new DefaultOutputHandler(System.out, System.in);
         this.errorHandler = errorHandler != null ? errorHandler : new DefaultOutputHandler(System.err, System.in);
 
-        // ★ 创建共享的 BuiltinRegistry，解析器和运行时共用同一个实例
         BuiltinRegistry registry = new BuiltinRegistry();
-        // ★ 创建共享的 OperatorRegistry，解析期注册 + 运行期查询共用
         OperatorRegistry operatorRegistry = new OperatorRegistry();
         operatorRegistry.registerAllBuiltins();  // 预注册所有内置运算符
+
+        // DCG 仍以原始 classLoader（目标应用）为 parent，确保内部 Loader 可委托到目标应用
+        this.codegen = new DynamicClassGenerator(appClassLoader);
+        this.codegen.setDelegateToExecutor(true);
+
+        // 组合 ClassLoader：DCG Loader（动态生成类）→ 目标应用 CL → parent chain
+        // 解析期和运行时统一使用此 composite，不再覆盖
+        CompositeClassLoader composite = new CompositeClassLoader(appClassLoader);
+        composite.addFirst(codegen.getLoader());
+        this.classLoader = composite;
+
         this.parseContext = new ParseContext(this.classLoader);
         this.parseContext.setBuiltinRegistry(registry);
         this.parseContext.setOperatorRegistry(operatorRegistry);
         this.evalContext = new EvalContext(registry, this.outputHandler);
-        this.codegen = new DynamicClassGenerator(this.classLoader);
-        this.codegen.setDelegateToExecutor(true);
         this.codegen.setClassDeclarations(parseContext.getClassDeclarations());
         this.preprocessor = new Preprocessor();
-        this.parseContext.setClassLoader(codegen.getLoader());
         this.parseContext.setCodeGenerator(codegen);
     }
 

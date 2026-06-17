@@ -19,6 +19,8 @@ public class Preprocessor {
     private final List<Path> includePaths = new ArrayList<>();
     private String currentFile = "<unknown>";
     private int currentLine = 0;
+    /** 是否当前处于三引号多行字符串内部（跨行状态）。 */
+    private boolean inMultiLineString = false;
 
     /** #pragma typeCheck 的值（默认 true，即开启严格类型检查）。 */
     private boolean typeCheckEnabled = true;
@@ -59,11 +61,11 @@ public class Preprocessor {
         }
     }
 
-    private static final Pattern DEFINE_PATTERN      = Pattern.compile("^#define\\s+(\\w+)(?:\\s+(.*))?$");
-    private static final Pattern DEFINE_FUNC_PATTERN  = Pattern.compile("^#define\\s+(\\w+)\\s*\\(([^)]*)\\)\\s+(.*)$");
-    private static final Pattern UNDEF_PATTERN        = Pattern.compile("^#undef\\s+(\\w+)$");
-    private static final Pattern IFDEF_PATTERN        = Pattern.compile("^#ifdef\\s+(\\w+)$");
-    private static final Pattern IFNDEF_PATTERN       = Pattern.compile("^#ifndef\\s+(\\w+)$");
+    private static final Pattern DEFINE_PATTERN        = Pattern.compile("^#define\\s+(\\w+)(?:\\s+(.*))?$");
+    private static final Pattern DEFINE_FUNC_PATTERN   = Pattern.compile("^#define\\s+(\\w+)\\s*\\(([^)]*)\\)\\s+(.*)$");
+    private static final Pattern UNDEF_PATTERN         = Pattern.compile("^#undef\\s+(\\w+)$");
+    private static final Pattern IFDEF_PATTERN         = Pattern.compile("^#ifdef\\s+(\\w+)$");
+    private static final Pattern IFNDEF_PATTERN        = Pattern.compile("^#ifndef\\s+(\\w+)$");
     private static final Pattern IF_PATTERN            = Pattern.compile("^#if\\s+(.+)$");
     private static final Pattern ELIF_PATTERN          = Pattern.compile("^#elif\\s+(.+)$");
     private static final Pattern ELSE_PATTERN          = Pattern.compile("^#else$");
@@ -110,6 +112,15 @@ public class Preprocessor {
     }
 
     private String processLine(String trimmedLine, String originalLine) {
+        // 如果当前在多行字符串内部，原样输出直到遇到关闭 """
+        if (inMultiLineString) {
+            int closePos = findTripleQuote(originalLine, 0);
+            if (closePos >= 0) {
+                inMultiLineString = false;
+            }
+            return originalLine;
+        }
+
         if (trimmedLine.startsWith("#")) {
             return processDirective(trimmedLine);
         }
@@ -118,7 +129,37 @@ public class Preprocessor {
             return null;
         }
 
+        // 先检查是否开启多行字符串（在 expandMacros 之前，因为 expandMacros 会破坏 """）
+        int openPos = findTripleQuote(originalLine, 0);
+        if (openPos >= 0) {
+            int closePos = findTripleQuote(originalLine, openPos + 3);
+            if (closePos < 0) {
+                // 开启了但没有在同一行关闭 → 标记状态，本行原样输出
+                inMultiLineString = true;
+                return originalLine;
+            }
+            // 同行开启并关闭（如 """""" 或 """hello"""）→ 正常展开
+        }
+
         return expandMacros(originalLine);
+    }
+
+    /**
+     * 在文本中查找三引号 {@code """} 的位置。
+     *
+     * @param text    要搜索的文本
+     * @param fromIndex 起始搜索位置
+     * @return 三引号的起始索引，未找到返回 -1
+     */
+    private static int findTripleQuote(String text, int fromIndex) {
+        for (int i = fromIndex; i < text.length() - 2; i++) {
+            if (text.charAt(i) == '"'
+                    && text.charAt(i + 1) == '"'
+                    && text.charAt(i + 2) == '"') {
+                return i;
+            }
+        }
+        return -1;
     }
 
     private String processDirective(String line) {
@@ -396,6 +437,7 @@ public class Preprocessor {
         StringBuilder protectedLine = new StringBuilder();
         boolean inString = false;
         boolean inChar = false;
+        boolean inTripleQuote = false;   // 三引号多行字符串模式
         boolean escape = false;
         StringBuilder currentString = new StringBuilder();
 
@@ -408,13 +450,40 @@ public class Preprocessor {
                 continue;
             }
 
+            // 三引号检测（优先于单引号，因为 """ 以 " 开头）
+            if (c == '"' && !inChar && i + 2 < line.length()
+                    && line.charAt(i + 1) == '"' && line.charAt(i + 2) == '"') {
+                if (!inString && !inTripleQuote) {
+                    // 开启三引号字符串
+                    inTripleQuote = true;
+                    currentString = new StringBuilder();
+                    currentString.append("\"\"\"");
+                    i += 2;  // 跳过已消费的 2 个额外 "
+                } else if (inTripleQuote) {
+                    // 关闭三引号字符串
+                    currentString.append("\"\"\"");
+                    stringLiterals.add(currentString.toString());
+                    protectedLine.append("__JN_STR_").append(stringLiterals.size() - 1).append("__");
+                    inTripleQuote = false;
+                    i += 2;
+                } else if (inString) {
+                    // 在普通字符串内遇到 """：先关闭普通字符串（只消费第一个 "）
+                    currentString.append(c);
+                    stringLiterals.add(currentString.toString());
+                    protectedLine.append("__JN_STR_").append(stringLiterals.size() - 1).append("__");
+                    inString = false;
+                    // 剩下的 "" 开启一个新的空字符串（下一轮循环处理）
+                }
+                continue;
+            }
+
             if (c == '\\' && (inString || inChar)) {
                 currentString.append(c);
                 escape = true;
                 continue;
             }
 
-            if (c == '"' && !inChar) {
+            if (c == '"' && !inChar && !inTripleQuote) {
                 if (!inString) {
                     inString = true;
                     currentString = new StringBuilder();
@@ -442,7 +511,7 @@ public class Preprocessor {
                 continue;
             }
 
-            if (inString || inChar) {
+            if (inString || inChar || inTripleQuote) {
                 currentString.append(c);
                 continue;
             }

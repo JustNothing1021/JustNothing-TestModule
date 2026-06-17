@@ -122,6 +122,7 @@ public class ParseContext {
         imports.add("java.util.*");
         imports.add("java.lang.reflect.*");
         imports.add("java.util.function.*");
+        imports.add("com.justnothing.engine.builtins.*");
         imports.add("android.os.*");
         imports.add("android.util.*");
     }
@@ -229,28 +230,34 @@ public class ParseContext {
 
     /** 共享的运算符重载注册表（由 ScriptRunner 注入，与 Evaluator 共用）。 */
     private OperatorRegistry operatorRegistry;
+    private boolean builtinsRegistered = false;
+    private boolean externallyManaged = false;  // 用户通过 setOperatorRegistry() 显式设置
 
-    /** 设置共享的 OperatorRegistry（必须在解析前调用）。 */
+    /** 设置共享的 OperatorRegistry（必须在解析前调用）。标记为外部管理，不自动注册 builtins。 */
     public void setOperatorRegistry(OperatorRegistry registry) {
         this.operatorRegistry = registry;
+        this.externallyManaged = true;  // 外部管理，跳过自动注册
     }
 
-    /** 获取运算符注册表（用于注册和查询）。未显式设置时懒创建。 */
+    /** 获取运算符注册表（用于注册和查询）。未显式设置时懒创建并自动注册内置运算符。 */
     public OperatorRegistry getOperatorRegistry() {
         if (operatorRegistry == null) {
             operatorRegistry = new OperatorRegistry();
+        }
+        // 自动注册内置运算符（仅非外部管理时，且只执行一次）
+        if (!externallyManaged && !builtinsRegistered) {
+            operatorRegistry.registerAllBuiltins();
+            builtinsRegistered = true;
         }
         return operatorRegistry;
     }
 
     // ==================== 类加载器与查找 ====================
 
-    @SuppressFBWarnings("EI_EXPOSE_REP")
     public ClassLoader getClassLoader() {
         return classLoader;
     }
 
-    @SuppressFBWarnings("EI_EXPOSE_REP2")
     public void setClassLoader(ClassLoader classLoader) {
         this.classLoader = classLoader;
     }
@@ -285,8 +292,7 @@ public class ParseContext {
         if (classDeclarations.containsKey(actualName)) {
             ClassDeclarationNode classDecl = classDeclarations.get(actualName);
             if (codegen != null) {
-                codegen.generate(classDecl);
-                result = classFinder.findClass(actualName, classLoader);
+                result = codegen.generate(classDecl);
                 if (result == null) {
                     throw new RuntimeException(
                             "Cannot generate bytecode for user-defined class " + classDecl.getClassName()
@@ -398,6 +404,41 @@ public class ParseContext {
         }
     }
 
+    /** 清除所有作用域的变量声明（用于 delete * 命令）。 */
+    public void clearAllVariables() {
+        for (Scope scope : scopeStack) {
+            scope.variables.clear();
+        }
+    }
+
+    /**
+     * 声明一个 Lambda 自动推断类型参数（无显式类型标注）。
+     * <p>
+     * 与普通 {@code declareVariable(name)} 的区别：此方法标记变量为"inferred"，
+     * 使解析期运算符查表等检查跳过该变量（类型将在运行时确定）。
+     * </p>
+     *
+     * @param name 参数名
+     */
+    public void declareInferredVariable(String name) throws CythavaParseException {
+        declareVariable(name, false, (GenericType) null);
+        VariableSymbol sym = resolveVariable(name);
+        if (sym != null) {
+            sym.markInferred();
+        }
+    }
+
+    /**
+     * 检查变量是否为 Lambda 自动推断类型参数。
+     *
+     * @param name 变量名
+     * @return true 如果该变量标记为 inferred
+     */
+    public boolean isInferredVariable(String name) {
+        VariableSymbol sym = resolveVariable(name);
+        return sym != null && sym.isInferred();
+    }
+
     /**
      * 从内向外解析变量名。
      *
@@ -495,7 +536,17 @@ public class ParseContext {
      */
     public Class<?> getRawType(ASTNode node) {
         JType jtype = typeMap.get(node);
-        return jtype != null ? jtype.getRawType() : null;
+        if (jtype == null) return null;
+        // 如果是数组类型（arrayDepth > 0），返回实际的数组 Class
+        // 例如 int[] 类型应该返回 int[].class 而不是 int.class
+        int arrayDepth = jtype.getArrayDepth();
+        if (arrayDepth > 0) {
+            Class<?> componentType = jtype.getRawType();
+            // 使用 Array.newInstance 创建正确的数组类型
+            // 例如: Array.newInstance(int.class, 0).getClass() → int[]
+            return java.lang.reflect.Array.newInstance(componentType, new int[arrayDepth]).getClass();
+        }
+        return jtype.getRawType();
     }
 
     /**
@@ -520,14 +571,15 @@ public class ParseContext {
         Class<?> rawType = jtype.getRawType();
         if (rawType == null) return null;
         List<JType> jArgs = jtype.getTypeArguments();
+        int arrayDepth = jtype.getArrayDepth();
         if (jArgs == null || jArgs.isEmpty()) {
-            return new GenericType(rawType);
+            return new GenericType(rawType, Collections.emptyList(), arrayDepth);
         }
         List<GenericType> genericArgs = new ArrayList<>(jArgs.size());
         for (JType ja : jArgs) {
             genericArgs.add(toGenericType(ja));
         }
-        return new GenericType(rawType, genericArgs);
+        return new GenericType(rawType, genericArgs, arrayDepth);
     }
 
     /**
@@ -667,6 +719,8 @@ public class ParseContext {
         private final boolean isFinal;
         private GenericType declaredType;  // 声明时的类型（null = auto 推断）
         private ClassDeclarationNode anonymousClass;  // 匿名类初始化器（如有）
+        /** 是否为 Lambda 自动推断类型参数（无显式类型标注）。 */
+        private boolean inferred;
 
         VariableSymbol(String name, boolean isFinal) {
             this(name, isFinal, null);
@@ -676,6 +730,17 @@ public class ParseContext {
             this.name = name;
             this.isFinal = isFinal;
             this.declaredType = declaredType;
+            this.inferred = false;
+        }
+
+        /** 是否为 Lambda 自动推断类型参数。 */
+        public boolean isInferred() {
+            return inferred;
+        }
+
+        /** 标记为自动推断类型（由 Lambda 参数声明时调用）。 */
+        public void markInferred() {
+            this.inferred = true;
         }
 
         public String getName() {

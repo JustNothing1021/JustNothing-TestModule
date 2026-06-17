@@ -7,6 +7,7 @@ import com.justnothing.engine.ast.GenericType;
 import com.justnothing.engine.ast.SourceLocation;
 import com.justnothing.engine.ast.visitor.ASTVisitor;
 
+import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.List;
 
@@ -15,6 +16,7 @@ public class MethodReferenceNode extends ASTNode {
     private final String methodName;
     private final List<GenericType> typeArguments;
     private Class<?> functionalInterfaceType;
+    private Method boundMethod;  // 绑定的重载方法（解析期确定）
 
     private MethodReferenceNode(ASTNode target, String methodName, List<GenericType> typeArguments, SourceLocation location) {
         super(location);
@@ -43,6 +45,14 @@ public class MethodReferenceNode extends ASTNode {
 
     public void setFunctionalInterfaceType(Class<?> functionalInterfaceType) {
         this.functionalInterfaceType = functionalInterfaceType;
+    }
+
+    public Method getBoundMethod() {
+        return boundMethod;
+    }
+
+    public void setBoundMethod(Method boundMethod) {
+        this.boundMethod = boundMethod;
     }
     
     @Override

@@ -226,6 +226,12 @@ public class AnonClassTestMain extends MainCommand<CommandResult> {
         if (cause instanceof com.justnothing.engine.eval.EvalException) {
             return msg != null && (msg.contains("private") || msg.contains("final"));
         }
+        // ★ DCG 提前检测到全 private 构造器时抛出的异常（字节码生成阶段即止损）
+        if (cause instanceof UnsupportedOperationException) {
+            return msg != null && (msg.contains("Cannot extend")
+                    || msg.contains("private")
+                    || msg.contains("inaccessible"));
+        }
         return msg != null && (msg.contains("declared final") || msg.contains("constructor is private"));
     }
 }

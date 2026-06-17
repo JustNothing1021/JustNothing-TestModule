@@ -27,6 +27,8 @@ public class OperatorSystemTest {
     @Before
     public void setUp() {
         context = new ParseContext();
+        // 显式设置空 Registry（标记为外部管理，跳过自动注册 builtins）
+        context.setOperatorRegistry(new OperatorRegistry());
         codegen = new DynamicClassGenerator(context.getClassLoader());
         codegen.setDelegateToExecutor(true);
         context.setClassLoader(codegen.getLoader());

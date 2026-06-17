@@ -10,6 +10,7 @@ import java.lang.reflect.Proxy;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class Lambda {
@@ -47,20 +48,21 @@ public class Lambda {
         return func.apply(args);
     }
 
-    public Value invokeWithClosure(Value... args) {
-        EvalContext ctx = closureContext.createChild();
-        for (Map.Entry<String, Value> entry : capturedVariables.entrySet()) {
-            ctx.setVariable(entry.getKey(), entry.getValue());
-        }
-        for (int i = 0; i < parameterNames.size() && i < args.length; i++) {
-            ctx.setVariable(parameterNames.get(i), args[i]);
-        }
-        return func.apply(args);
-    }
-
     public List<String> getParameterNames() {
         return parameterNames;
     }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder("Lambda[params=(");
+        for (int i = 0; i < parameterNames.size(); i++) {
+            if (i > 0) sb.append(", ");
+            sb.append(parameterNames.get(i));
+        }
+        sb.append(")]");
+        return sb.toString();
+    }
+
 
     public Map<String, Value> getCapturedVariables() {
         return capturedVariables;
@@ -118,15 +120,11 @@ public class Lambda {
 
     static Object handleObjectMethod(Object proxy, Method method, Object[] args) {
         String name = method.getName();
-        if ("toString".equals(name)) {
-            return "Lambda@" + System.identityHashCode(proxy);
-        }
-        if ("hashCode".equals(name)) {
-            return System.identityHashCode(proxy);
-        }
-        if ("equals".equals(name)) {
-            return args != null && args.length > 0 && args[0] == proxy;
-        }
-        throw new UnsupportedOperationException("Unknown Object method: " + name);
+        return switch (name) {
+            case "toString" -> "Lambda[proxy=" + System.identityHashCode(proxy) + "]";
+            case "hashCode" -> System.identityHashCode(proxy);
+            case "equals" -> args != null && args.length > 0 && args[0] == proxy;
+            default -> throw new UnsupportedOperationException("Unknown Object method: " + name);
+        };
     }
 }

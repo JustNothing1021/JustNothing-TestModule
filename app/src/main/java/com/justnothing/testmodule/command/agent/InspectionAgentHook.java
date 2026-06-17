@@ -41,10 +41,11 @@ public class InspectionAgentHook extends PackageHook {
             }
         } catch (Exception e) {
             logger.warn("写入激活标记失败: " + e.getMessage());
+            return false;
         }
         activePackages.add(packageName);
         logger.info("已请求激活 InspectionAgent: " + packageName);
-        return false;
+        return true;
     }
 
     public static void deactivate(String packageName) {
@@ -68,7 +69,8 @@ public class InspectionAgentHook extends PackageHook {
 
     @Override
     protected void hookImplements() {
-        setHookDisplayName("Agent sentinel");
+        setHookDisplayName("Agent哨兵");
+        setHookDescription("用来监听CLI的agent命令激活信号, 启动之后可以在CLI用agent命令激活其他应用内的InspectionAgent, 然后干点好事情 (比如往这个运行中的应用注入代码之类的)");
         hookCallback(param -> {
             String packageName = param.packageName;
             

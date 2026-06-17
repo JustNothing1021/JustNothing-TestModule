@@ -30,20 +30,10 @@ public class Builtins {
     private final BuiltinRegistry registry;
     private IOutputHandler outputHandler;
 
-    /** 使用共享注册表创建（推荐）。 */
     public Builtins(BuiltinRegistry registry, IOutputHandler outputHandler) {
         this.registry = registry;
         this.outputHandler = outputHandler;
         registerAll();
-    }
-
-    /** 创建独立实例（自带私有注册表，不与其他组件共享）。 */
-    public Builtins(IOutputHandler outputHandler) {
-        this(new BuiltinRegistry(), outputHandler);
-    }
-
-    public Builtins() {
-        this(null);
     }
 
     public void setOutputHandler(IOutputHandler outputHandler) {
@@ -744,7 +734,7 @@ public class Builtins {
                 new Class[] { Runnable.class },
                     (proxy, method, params) -> switch (method.getName()) {
                         case "run" -> callFunctionValue(func);
-                        case "toString" -> "java.util.function.Function[From Lambda]@" + System.identityHashCode(proxy);
+                        case "toString" -> "Lambda[as=Runnable]";
                         case "hashCode" -> System.identityHashCode(proxy);
                         case "equals" -> Objects.equals(params[0], proxy);
                         case "getClass" -> Function.class;
@@ -760,7 +750,7 @@ public class Builtins {
                 new Class[] { Consumer.class },
                     (proxy, method, params) -> switch (method.getName()) {
                         case "accept" -> callFunctionValue(func, params[0]);
-                        case "toString" -> "java.util.function.Consumer[From Lambda]@" + System.identityHashCode(proxy);
+                        case "toString" -> "Lambda[as=Consumer]";
                         case "hashCode" -> System.identityHashCode(proxy);
                         case "equals" -> Objects.equals(params[0], proxy);
                         case "getClass" -> Function.class;
@@ -776,7 +766,7 @@ public class Builtins {
                 new Class[] { Supplier.class },
                     (proxy, method, params) -> switch (method.getName()) {
                         case "apply" -> callFunctionValue(func);
-                        case "toString" -> "java.util.function.Supplier[From Lambda]@" + System.identityHashCode(proxy);
+                        case "toString" -> "Lambda[as=Supplier]";
                         case "hashCode" -> System.identityHashCode(proxy);
                         case "equals" -> Objects.equals(params[0], proxy);
                         case "getClass" -> Supplier.class;
@@ -792,7 +782,7 @@ public class Builtins {
                 new Class[] { Function.class },
                 (proxy, method, params) -> switch (method.getName()) {
                     case "apply" -> callFunctionValue(func, params[0]);
-                    case "toString" -> "java.util.function.Function[From Lambda]@" + System.identityHashCode(proxy);
+                    case "toString" -> "Lambda[as=Function]";
                     case "hashCode" -> System.identityHashCode(proxy);
                     case "equals" -> Objects.equals(params[0], proxy);
                     case "getClass" -> Function.class;
@@ -808,7 +798,7 @@ public class Builtins {
                 new Class[] { Predicate.class },
                     (proxy, method, params) -> switch (method.getName()) {
                         case "test" -> callFunctionValue(func, params[0]);
-                        case "toString" -> "java.util.function.Predicate[From Lambda]@" + System.identityHashCode(proxy);
+                        case "toString" -> "Lambda[as=Predicate]";
                         case "hashCode" -> System.identityHashCode(proxy);
                         case "equals" -> Objects.equals(params[0], proxy);
                         case "getClass" -> Predicate.class;

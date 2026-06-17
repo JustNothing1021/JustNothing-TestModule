@@ -148,6 +148,8 @@ public enum TokenType {
     LITERAL_DECIMAL("decimal literal"),
     LITERAL_STRING("string literal"),
     LITERAL_INTERPOLATED_STRING("interpolated string literal"),
+    LITERAL_MULTI_LINE_STRING("multi-line string literal"),
+    LITERAL_MULTI_LINE_INTERPOLATED_STRING("multi-line interpolated string literal"),
     LITERAL_CHAR("char literal"),
     LITERAL_BOOLEAN("boolean literal"),
     LITERAL_NULL("null literal"),
