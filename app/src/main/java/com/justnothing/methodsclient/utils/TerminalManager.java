@@ -12,6 +12,7 @@ import org.jline.reader.LineReaderBuilder;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
 import org.jline.terminal.Attributes;
+import org.jline.terminal.impl.jna.JnaTerminalProvider;
 import org.jline.terminal.spi.SystemStream;
 import org.jline.utils.InfoCmp;
 
@@ -21,6 +22,7 @@ import com.justnothing.testmodule.constants.FileDirectory;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.lang.reflect.Method;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.lang.reflect.Field;
@@ -154,10 +156,10 @@ public class TerminalManager {
 
         if (!jniLoaded) {
             try {
-                String providerClassName = org.jline.terminal.impl.jna.JnaTerminalProvider.class.getName();
+                String providerClassName = JnaTerminalProvider.class.getName();
                 Class<?> providerClass = Class.forName(providerClassName);
                 Object providerInstance = providerClass.getDeclaredConstructor().newInstance();
-                java.lang.reflect.Method sysTerminalMethod = providerClass.getMethod(
+                Method sysTerminalMethod = providerClass.getMethod(
                         "sysTerminal",
                         String.class, String.class, boolean.class,
                         Charset.class, Charset.class, Charset.class,
@@ -227,6 +229,7 @@ public class TerminalManager {
 
         KeyMap<Binding> keyMap = reader.getKeyMaps().get(LineReader.MAIN);
         assert keyMap != null;
+
         keyMap.bind(new org.jline.reader.Reference("up-line-or-history"), "\033[A");
         keyMap.bind(new org.jline.reader.Reference("up-line-or-history"), "\033OA");
         keyMap.bind(new org.jline.reader.Reference("down-line-or-history"), "\033[B");

@@ -1,3 +1,4 @@
+#pragma typeCheck(false)
 // 地牢探险 - Roguelike游戏
 // 随机生成地牢，探索战斗，收集宝藏！
 

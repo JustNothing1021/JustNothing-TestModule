@@ -10,8 +10,8 @@ import com.justnothing.testmodule.command.functions.script.request.ScriptPermPre
 import com.justnothing.testmodule.command.functions.script.request.ScriptPermResetRequest;
 import com.justnothing.testmodule.command.functions.script.request.ScriptPermShowConfigRequest;
 import com.justnothing.testmodule.command.output.Colors;
-import com.justnothing.javainterpreter.security.PermissionType;
-import com.justnothing.javainterpreter.security.SandboxConfig;
+import com.justnothing.engine.security.PermissionType;
+import com.justnothing.engine.security.SandboxConfig;
 
 @SubCommandInfo(
     description = "管理脚本执行权限配置, 支持授权/拒绝/预设/重置/列表/查看",

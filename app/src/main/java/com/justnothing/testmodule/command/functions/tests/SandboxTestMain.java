@@ -1,8 +1,8 @@
 package com.justnothing.testmodule.command.functions.tests;
 
-import com.justnothing.javainterpreter.ScriptRunner;
-import com.justnothing.javainterpreter.api.DefaultOutputHandler;
-import com.justnothing.javainterpreter.security.SandboxConfig;
+import com.justnothing.engine.ScriptRunner;
+import com.justnothing.engine.api.DefaultOutputHandler;
+import com.justnothing.engine.security.SandboxConfig;
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.base.MainCommand;
 import com.justnothing.testmodule.command.base.protocol.CommandResult;
@@ -635,8 +635,8 @@ public class SandboxTestMain extends MainCommand<CommandResult> {
             context.print(name + ": ", Colors.CYAN);
 
             try {
-                runner.getExecutionContext().setPermissionChecker(config.getAstPermissionChecker());
-                runner.getExecutionContext().clearVariables();
+                runner.setPermissionChecker(config.getAstPermissionChecker());
+                runner.clearVariables();
                 Object result = BlockGuardSandbox.execute(config, () -> 
                     runner.executeWithResult(code, outputHandler, outputHandler)
                 );

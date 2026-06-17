@@ -76,10 +76,11 @@ public class CommandArgumentParser {
                     else inSingleQuotes = false;
                 }
             } else if (inBackticks) {
-                // 反引号内部：原样追加，直到遇到配对的反引号
-                current.append(c);
+                // 反引号内部：原样追加空格，直到遇到配对的反引号
                 if (c == '`') {
                     inBackticks = false;
+                } else {
+                    current.append(c);
                 }
             } else {
                 if (c == '"' || c == '\'') {
@@ -90,7 +91,6 @@ public class CommandArgumentParser {
                 } else if (c == '`') {
                     // 反引号开始：进入反引号模式，保护内部空格不被拆分
                     inBackticks = true;
-                    current.append(c);
                 } else if (c == ' ' || c == '\t') {
                     if (current.length() > 0) {
                         args.add(current.toString());

@@ -1,3 +1,4 @@
+#pragma typeCheck(false)
 // Service启动监控Hook - Before阶段
 // 使用方法：hook add android.app.ActivityThread handleCreateService before codebase service_create_monitor
 // 脚本默认位于：/data/local/tmp/methods/scripts/

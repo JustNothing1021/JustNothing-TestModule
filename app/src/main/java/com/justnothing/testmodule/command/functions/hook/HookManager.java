@@ -5,10 +5,12 @@ package com.justnothing.testmodule.command.functions.hook;
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.output.SystemOutputRedirector;
-import com.justnothing.testmodule.command.output.VoidOutputHandler;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
-import com.justnothing.javainterpreter.ScriptRunner;
-import com.justnothing.javainterpreter.evaluator.ExecutionContext;
+import com.justnothing.engine.ScriptRunner;
+import com.justnothing.engine.eval.EvalContext;
+import com.justnothing.engine.eval.Value;
+import com.justnothing.engine.eval.Value.NullValue;
+import com.justnothing.engine.eval.Value.VoidValue;
 import com.justnothing.testmodule.command.output.ICommandOutputHandler;
 import com.justnothing.testmodule.command.output.HookOutputHandler;
 import com.justnothing.testmodule.hooks.HookAPI;
@@ -68,7 +70,7 @@ public class HookManager {
             }
         }
 
-    public static void addHookBuiltIn(ExecutionContext context,
+    public static void addHookBuiltIn(EvalContext context,
                                       MethodHookParam methodHookParam,
                                       LoadPackageParam loadPackageParam,
                                       HookInfo hookInfo,
@@ -79,66 +81,66 @@ public class HookManager {
                 if (!args.isEmpty()) {
                     logger.warn("getMethodHookParam() 不接受任何参数，忽略参数");
                 }
-                return methodHookParam;
+                return Value.of(methodHookParam);
             });
 
             context.addBuiltIn("getPhase", args -> {
                 if (!args.isEmpty()) {
                     logger.warn("getPhase() 不接受任何参数，忽略参数");
                 }
-                return phase;
+                return Value.of(phase);
             });
 
             context.addBuiltIn("getHookId", args -> {
                 if (!args.isEmpty()) {
                     logger.warn("getHookId() 不接受任何参数，忽略参数");
                 }
-                return hookInfo.getId();
+                return Value.of(hookInfo.getId());
             });
 
             context.addBuiltIn("getLoadPackageParam", args -> {
                 if (!args.isEmpty()) {
                     logger.warn("getLoadPackageParam() 不接受任何参数，忽略参数");
                 }
-                return loadPackageParam;
+                return Value.of(loadPackageParam);
             });
 
             context.addBuiltIn("getHookInfo", args -> {
                 if (!args.isEmpty()) {
                     logger.warn("getHookInfo() 不接受任何参数，忽略参数");
                 }
-                return hookInfo;
+                return Value.of(hookInfo);
             });
 
             context.addBuiltIn("setReturnValue", args -> {
                 if (args.isEmpty()) {
                     logger.warn("setReturnValue() 必须提供一个返回值");
-                    return null;
+                    return NullValue.INSTANCE;
                 } else if (args.size() > 1) {
                     logger.warn("setReturnValue() 只接受一个参数，忽略其他参数");
                 }
-                methodHookParam.setResult(args.get(0));
+                methodHookParam.setResult(args.get(0).asJavaObject());
                 if (returnValueSet != null) {
                     returnValueSet.set(true);
                 }
-                return null;
+                return VoidValue.INSTANCE;
             });
             context.addBuiltIn("setThrowable", args -> {
                 if (args.isEmpty()) {
                     logger.warn("setThrowable() 必须提供一个异常");
-                    return null;
+                    return NullValue.INSTANCE;
                 } else if (args.size() > 1) {
                     logger.warn("setThrowable() 只接受一个参数，忽略其他参数");
                 }
-                methodHookParam.setThrowable((Throwable) args.get(0));
-                return null;
+                methodHookParam.setThrowable((Throwable) args.get(0).asJavaObject());
+                return VoidValue.INSTANCE;
             });
 
             context.addBuiltIn("getReturnValue", args -> {
                 if (!args.isEmpty()) {
                     logger.warn("getReturnValue() 不接受任何参数，忽略参数");
                 }
-                return methodHookParam.getResult();
+                return Value.of(methodHookParam.getResult());
             });
     }
 
@@ -156,7 +158,7 @@ public class HookManager {
     public static AddHookResult addHook(String className, String methodName, String signature,
                                String beforeCode, String afterCode, String replaceCode,
                                String beforeCodebase, String afterCodebase, String replaceCodebase,
-                               CommandExecutor.CmdExecContext context) {
+                               CommandExecutor.CmdExecContext<?> context) {
         ClassLoader classLoader = context.classLoader();
         HookInfo hookInfo = new HookInfo(className, methodName, signature,
                                         beforeCode, afterCode, replaceCode,
@@ -510,12 +512,11 @@ public class HookManager {
                 });
             logger.debug("运行代码, hook id = " + hookInfo.getId() + "\n" + code);
 
-            ExecutionContext context = new ExecutionContext(cl, outputHandler, errorHandler);
-            for (String item : imports) context.addImport(item);
-            addHookBuiltIn(context, param, getLoadPackageParam(), hookInfo, phase, returnValueSet);
-            runner.setExecutionContext(context);
-            runner.clearVariables(); // 以防上一次的变量给当前Hook执行带来影响
-            runner.execute(code, false, "<code in phase " + phase + " of " + hookInfo.getId() + ">");
+            EvalContext evalContext = runner.getEvalContext();
+            for (String item : imports) runner.addImport(item);
+            addHookBuiltIn(evalContext, param, getLoadPackageParam(), hookInfo, phase, returnValueSet);
+            runner.clearVariables();
+            runner.execute(code, "<code in phase " + phase + " of " + hookInfo.getId() + ">");
         } catch (Exception e) {
             logger.error("Hook代码执行失败: " + hookInfo.getId(), e);
         } finally {
@@ -640,7 +641,7 @@ public class HookManager {
         logger.info("Hook移除成功: " + hookId);
     }
 
-    public static void removeHook(String hookId, CommandExecutor.CmdExecContext ctx) {
+    public static void removeHook(String hookId, CommandExecutor.CmdExecContext<?> ctx) {
         HookInfo hookInfo = hooks.get(hookId);
         if (hookInfo == null) {
             ctx.print("Hook不存在: ", Colors.RED);
@@ -666,7 +667,7 @@ public class HookManager {
         ctx.println(hookId, Colors.YELLOW);
     }
 
-    public static void listHooks(CommandExecutor.CmdExecContext ctx) {
+    public static void listHooks(CommandExecutor.CmdExecContext<?> ctx) {
         if (hooks.isEmpty()) {
             ctx.println("没有活动的Hook", Colors.GRAY);
             return;
@@ -686,7 +687,7 @@ public class HookManager {
         ctx.println(" 个Hook", Colors.CYAN);
     }
 
-    public static void getHookInfo(String hookId, CommandExecutor.CmdExecContext ctx) {
+    public static void getHookInfo(String hookId, CommandExecutor.CmdExecContext<?> ctx) {
         HookInfo hookInfo = hooks.get(hookId);
         if (hookInfo == null) {
             ctx.print("Hook不存在: ", Colors.RED);
@@ -697,7 +698,7 @@ public class HookManager {
         hookInfo.printDisplayInfo(ctx);
     }
 
-    public static void enableHook(String hookId, CommandExecutor.CmdExecContext ctx) {
+    public static void enableHook(String hookId, CommandExecutor.CmdExecContext<?> ctx) {
         HookInfo hookInfo = hooks.get(hookId);
         if (hookInfo == null) {
             ctx.print("Hook不存在: ", Colors.RED);
@@ -711,7 +712,7 @@ public class HookManager {
         ctx.println(hookId, Colors.YELLOW);
     }
 
-    public static void disableHook(String hookId, CommandExecutor.CmdExecContext ctx) {
+    public static void disableHook(String hookId, CommandExecutor.CmdExecContext<?> ctx) {
         HookInfo hookInfo = hooks.get(hookId);
         if (hookInfo == null) {
             ctx.print("Hook不存在: ", Colors.RED);
@@ -725,7 +726,7 @@ public class HookManager {
         ctx.println(hookId, Colors.YELLOW);
     }
 
-    public static void getHookOutput(String hookId, CommandExecutor.CmdExecContext ctx, int count) {
+    public static void getHookOutput(String hookId, CommandExecutor.CmdExecContext<?> ctx, int count) {
         HookInfo hookInfo = hooks.get(hookId);
         if (hookInfo == null) {
             ctx.print("Hook不存在: ", Colors.RED);
@@ -775,19 +776,6 @@ public class HookManager {
             removeHook(hookId);
         }
         logger.info("所有Hook已清除");
-    }
-
-    public static CommandExecutor.CmdExecContext createDummyContext() {
-        return new CommandExecutor.CmdExecContext(
-                "protocol",
-                new String[0],
-                "",
-                null,
-                Thread.currentThread().getContextClassLoader(),
-                new VoidOutputHandler(),
-                null,
-                null
-        );
     }
 
     public static List<Map<String, Object>> getAllHooksAsMap() {

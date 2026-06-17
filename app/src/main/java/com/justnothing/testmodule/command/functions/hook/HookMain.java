@@ -2,7 +2,7 @@ package com.justnothing.testmodule.command.functions.hook;
 
 import static com.justnothing.testmodule.constants.CommandServer.CMD_HOOK_VER;
 
-import com.justnothing.javainterpreter.evaluator.DynamicClassGenerator;
+import com.justnothing.engine.codegen.DynamicClassGenerator;
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.base.MainCommand;
 import com.justnothing.testmodule.command.base.protocol.CommandRequest;

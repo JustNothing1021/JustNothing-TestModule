@@ -1,3 +1,4 @@
+#pragma typeCheck(false)
 // BroadcastReceiver监控Hook - Before阶段
 // 使用方法：hook add android.app.ActivityThread handleReceiver before codebase broadcast_monitor
 // 脚本默认位于：/data/local/tmp/methods/scripts/

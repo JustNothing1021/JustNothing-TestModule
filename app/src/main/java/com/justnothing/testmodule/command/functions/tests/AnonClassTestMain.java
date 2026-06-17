@@ -1,14 +1,14 @@
 package com.justnothing.testmodule.command.functions.tests;
 
-import com.justnothing.javainterpreter.ScriptRunner;
-import com.justnothing.javainterpreter.api.DefaultOutputHandler;
+import com.justnothing.engine.ScriptRunner;
+import com.justnothing.engine.api.DefaultOutputHandler;
 import com.justnothing.testmodule.command.base.MainCommand;
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.base.protocol.CommandResult;
 import com.justnothing.testmodule.command.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.utils.reflect.DexClassDefiner;
-import com.justnothing.javainterpreter.evaluator.DynamicClassGenerator;
+import com.justnothing.engine.codegen.DynamicClassGenerator;
 
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -81,8 +81,8 @@ public class AnonClassTestMain extends MainCommand<CommandResult> {
         
     private void testAnonymousClassInternal(CommandExecutor.CmdExecContext context, 
                                           boolean quickMode) {
-        ScriptRunner runner = new ScriptRunner();
         DynamicClassGenerator.setDefaultClassDefiner(DexClassDefiner.getInstance());
+        ScriptRunner runner = new ScriptRunner();
 
         var outputHandler = new DefaultOutputHandler() {
             @Override
@@ -147,7 +147,7 @@ public class AnonClassTestMain extends MainCommand<CommandResult> {
             context.print(name + ": ", nameColor);
 
             try {
-                runner.getExecutionContext().clearVariables();
+                runner.clearVariables();
                 
                 long startTime = System.nanoTime();
                 Object result;
@@ -223,7 +223,7 @@ public class AnonClassTestMain extends MainCommand<CommandResult> {
         if (cause instanceof java.lang.IncompatibleClassChangeError) {
             return msg != null && msg.contains("declared final");
         }
-        if (cause instanceof com.justnothing.javainterpreter.exception.EvaluationException) {
+        if (cause instanceof com.justnothing.engine.eval.EvalException) {
             return msg != null && (msg.contains("private") || msg.contains("final"));
         }
         return msg != null && (msg.contains("declared final") || msg.contains("constructor is private"));

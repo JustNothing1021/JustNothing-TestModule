@@ -1,6 +1,6 @@
 package com.justnothing.testmodule.command.functions.classcmd.util;
 
-import com.justnothing.javainterpreter.ScriptRunner;
+import com.justnothing.engine.ScriptRunner;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.reflect.AppClassFinder;
 

@@ -1,6 +1,6 @@
 package com.justnothing.testmodule.utils.reflect;
 
-import com.justnothing.javainterpreter.evaluator.ClassDefiner;
+import com.justnothing.engine.codegen.ClassDefiner;
 import com.justnothing.testmodule.constants.FileDirectory;
 
 import com.android.tools.r8.D8;
@@ -52,14 +52,14 @@ public class DexClassDefiner implements ClassDefiner {
     private static ClassLoader resolveEffectiveParent(ClassLoader parent) {
         if (parent != null) {
             try {
-                parent.loadClass("com.justnothing.javainterpreter.evaluator.MethodBodyExecutor");
+                parent.loadClass(com.justnothing.engine.ScriptRunner.class.getName());
                 return parent;
             } catch (ClassNotFoundException ignored) {}
         }
 
         ClassLoader fallback = DexClassDefiner.class.getClassLoader();
         try {
-            fallback.loadClass("com.justnothing.javainterpreter.evaluator.MethodBodyExecutor");
+            fallback.loadClass(com.justnothing.engine.ScriptRunner.class.getName());
             return fallback;
         } catch (ClassNotFoundException ignored) {}
 
@@ -73,7 +73,7 @@ public class DexClassDefiner implements ClassDefiner {
         String optimizedDirPath = optimizedDir.getAbsolutePath();
 
         return (ClassLoader) Class
-                .forName("dalvik.system.DexClassLoader")
+                .forName(dalvik.system.DexClassLoader.class.getName())
                 .getConstructor(String.class, String.class, String.class, ClassLoader.class)
                 .newInstance(dexPath, optimizedDirPath, null, parent);
     }

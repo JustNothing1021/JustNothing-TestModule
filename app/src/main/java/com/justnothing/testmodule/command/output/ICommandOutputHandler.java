@@ -1,6 +1,6 @@
 package com.justnothing.testmodule.command.output;
 
-import com.justnothing.javainterpreter.api.IOutputHandler;
+import com.justnothing.engine.api.IOutputHandler;
 import com.justnothing.testmodule.command.output.InputMode;
 
 

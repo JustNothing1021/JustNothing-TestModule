@@ -18,10 +18,10 @@ import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 import com.justnothing.testmodule.utils.reflect.AppClassFinder;
 import com.justnothing.testmodule.utils.sandbox.BlockGuardSandbox;
 
-import com.justnothing.javainterpreter.ScriptRunner;
-import com.justnothing.javainterpreter.exception.EvaluationException;
-import com.justnothing.javainterpreter.exception.ParseException;
-import com.justnothing.javainterpreter.security.SandboxConfig;
+import com.justnothing.engine.ScriptRunner;
+import com.justnothing.engine.eval.EvalException;
+import com.justnothing.engine.parser.CythavaParseException;
+import com.justnothing.engine.security.SandboxConfig;
 
 import com.justnothing.testmodule.command.functions.script.request.*;
 import com.justnothing.testmodule.command.functions.script.impl.AbstractScriptCommand;
@@ -240,7 +240,7 @@ public class ScriptExecutorMain extends MainCommand<ScriptResult> {
                         ScriptRunner runner = new ScriptRunner(context.classLoader());
                         runner.setClassFinder(new AppClassFinder());
                         if (config.getAstPermissionChecker() != null) {
-                            runner.getExecutionContext().setPermissionChecker(config.getAstPermissionChecker());
+                            runner.setPermissionChecker(config.getAstPermissionChecker());
                         }
                         runner.execute(code, context.output(), context.output());
                         return null;
@@ -378,7 +378,7 @@ public class ScriptExecutorMain extends MainCommand<ScriptResult> {
                 context.println("输入处理出错: " + errorMessage, Colors.RED);
                 multiLineBuffer.setLength(0);
             } else {
-                handleExecutionException(e, context, runner.getExecutionContext());
+                handleExecutionException(e, context, runner);
             }
         }
         context.println("交互式模式已退出", Colors.GREEN);
@@ -389,7 +389,7 @@ public class ScriptExecutorMain extends MainCommand<ScriptResult> {
         try {
             if (config != null) {
                 if (config.getAstPermissionChecker() != null) {
-                    runner.getExecutionContext().setPermissionChecker(config.getAstPermissionChecker());
+                    runner.setPermissionChecker(config.getAstPermissionChecker());
                 }
                 BlockGuardSandbox.execute(config, () -> {
                     Object result = runner.executeWithResult(code, context.output(), context.output());
@@ -398,36 +398,35 @@ public class ScriptExecutorMain extends MainCommand<ScriptResult> {
                     }
                 });
             } else {
-                runner.getExecutionContext().setPermissionChecker(null);
+                runner.setPermissionChecker(null);
                 Object result = runner.executeWithResult(code, context.output(), context.output());
                 if (result != null) {
                     context.println(formatValue(result, new HashSet<>()), Colors.GRAY);
                 }
             }
         } catch (Throwable e) {
-            handleExecutionException(e, context, runner.getExecutionContext());
+            handleExecutionException(e, context, runner);
         }
     }
 
     private void handleExecutionException(Throwable e, CommandExecutor.CmdExecContext<?> context,
-            com.justnothing.javainterpreter.evaluator.ExecutionContext executionContext) {
+            ScriptRunner runner) {
         Throwable cause = e.getCause();
         String message = e.getMessage();
         boolean isParseError = message != null && message.startsWith("Parse error:");
         byte errorColor = isParseError ? Colors.ORANGE : Colors.RED;
 
-        if (cause instanceof EvaluationException evalEx) {
+        if (cause instanceof EvalException evalEx) {
             Throwable innerCause = evalEx.getCause();
             context.print("执行错误: ", errorColor);
             context.println(evalEx.getMessage(), errorColor);
-            if (executionContext.isPrintAST() && evalEx.getNode() != null) {
-                context.println("出错的AST: ", Colors.GRAY);
-                context.println(evalEx.getNode().formatString(), Colors.GRAY);
+            if (runner.isPrintAST()) {
+                context.println("（AST 节点信息在此版本中不可用）", Colors.GRAY);
             }
             if (innerCause != null) {
                 context.output().printStackTrace(innerCause, Colors.GRAY);
             }
-        } else if (cause instanceof ParseException parseEx) {
+        } else if (cause instanceof CythavaParseException parseEx) {
             context.print("语法错误: ", errorColor);
             context.println(parseEx.getMessage(), errorColor);
         } else if (cause != null) {
