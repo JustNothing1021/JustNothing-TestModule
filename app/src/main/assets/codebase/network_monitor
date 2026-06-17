@@ -1,3 +1,4 @@
+#pragma typeCheck(false)
 // 网络请求监控Hook - Before阶段
 // 使用方法：hook add java.net.URL openConnection before codebase network_monitor
 // 脚本默认位于：/data/local/tmp/methods/scripts/

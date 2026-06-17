@@ -1,3 +1,4 @@
+#pragma typeCheck(false)
 // 心理测试 - 简单问答游戏
 
 auto score = 0;

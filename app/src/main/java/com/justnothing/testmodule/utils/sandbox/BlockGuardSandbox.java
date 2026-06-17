@@ -2,7 +2,7 @@ package com.justnothing.testmodule.utils.sandbox;
 
 import android.os.StrictMode;
 
-import com.justnothing.javainterpreter.security.SandboxConfig;
+import com.justnothing.engine.security.SandboxConfig;
 import com.justnothing.testmodule.command.protocol.InteractiveProtocol;
 import com.justnothing.testmodule.utils.logging.Logger;
 

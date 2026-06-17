@@ -1,3 +1,4 @@
+#pragma typeCheck(false)
 // 文字冒险游戏 - The Lost Kingdom
 // 这是一个完整的RPG游戏示例，展示脚本引擎的各种功能
 //

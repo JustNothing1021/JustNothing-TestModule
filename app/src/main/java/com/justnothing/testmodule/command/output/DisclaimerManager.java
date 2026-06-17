@@ -1,9 +1,9 @@
 package com.justnothing.testmodule.command.output;
 
-import com.justnothing.javainterpreter.ScriptRunner;
-import com.justnothing.javainterpreter.security.BasicPermissionChecker;
-import com.justnothing.javainterpreter.security.IPermissionChecker;
-import com.justnothing.javainterpreter.security.SandboxGuard;
+import com.justnothing.engine.ScriptRunner;
+import com.justnothing.engine.security.BasicPermissionChecker;
+import com.justnothing.engine.security.IPermissionChecker;
+import com.justnothing.engine.security.SandboxConfig;
 import com.justnothing.testmodule.utils.data.DataBridge;
 import com.justnothing.testmodule.utils.io.IOManager;
 import com.justnothing.testmodule.utils.logging.Logger;
@@ -23,8 +23,6 @@ public class DisclaimerManager {
     private static final String KEY_ACCEPTED_AT = "acceptedAt";
     private static final String KEY_VERSION = "version";
     private static final String KEY_SKILL_VERIFIED = "skillVerified";
-    private static IPermissionChecker exprChecker = BasicPermissionChecker.createMinimal();
-
     private static final int DISCLAIMER_VERSION = 2;
 
     private static final String DISCLAIMER_TEXT = """
@@ -183,10 +181,8 @@ public class DisclaimerManager {
 
     private static Object evaluateCode(String expression) {
         ScriptRunner runner = new ScriptRunner();
-        runner.getExecutionContext().setPermissionChecker(exprChecker);
-        AtomicReference<Object> resultRef = new AtomicReference<>();
-        SandboxGuard.executeMinimal(() -> resultRef.set(runner.executeWithResult(expression)));
-        return resultRef.get();
+        runner.applySandboxConfig(SandboxConfig.MINIMAL);
+        return runner.executeWithResult(expression);
     }
 
     public static boolean promptForSkillVerification(ICommandOutputHandler output) {

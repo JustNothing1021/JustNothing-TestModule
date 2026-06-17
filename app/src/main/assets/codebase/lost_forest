@@ -1,3 +1,4 @@
+#pragma typeCheck(false)
 // 迷失森林 - 文字冒险游戏
 // 分支剧情，你的选择决定命运！
 

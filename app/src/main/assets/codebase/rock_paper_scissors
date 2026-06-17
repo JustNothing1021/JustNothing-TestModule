@@ -1,3 +1,4 @@
+#pragma typeCheck(false)
 // 石头剪刀布 - 经典游戏
 
 auto random = Random.new();

@@ -1,3 +1,4 @@
+#pragma typeCheck(false)
 // 21点 - 简化版
 // 尽量接近21点但不超过
 

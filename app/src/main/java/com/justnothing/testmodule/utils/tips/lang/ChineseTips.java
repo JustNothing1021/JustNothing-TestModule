@@ -929,6 +929,30 @@ public class ChineseTips {
                     NAME_JUSTNOTHING
             ));
 
+            addDidYouKnowTip(new SimpleTipCallback(
+                    """
+                    我至今都没给这个项目上国际化 (就是支持多国家文本)
+                    如果说有英语的话, 我也不反对, 因为你看完我那堪比一根成年香蕉的英语表达能力就知道为什么了
+                    (可以给语言切成英文试下)
+                    """,
+                    NAME_JUSTNOTHING
+            ));
+
+            addDidYouKnowTip(new SimpleTipCallback(
+                    """
+                    啊啊啊啊啊啊啊啊啊啊我不想学微积分线性代数和数论, 救救孩子吧
+                    """,
+                    NAME_JUSTNOTHING
+            ));
+
+            addDidYouKnowTip(new SimpleTipCallback(
+                    """
+                    因为国家语言环境问题很多我们这边的梗都没法翻译成英文, 所以我干脆直接删掉了那些我不会表达的\
+                    提示的英语版本 (也算是解决问题了吧?)
+                    """,
+                    NAME_JUSTNOTHING
+            ));
+
             return map;
         }
 

@@ -12,10 +12,10 @@ import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
-import com.justnothing.javainterpreter.ScriptRunner;
-import com.justnothing.javainterpreter.security.SandboxConfig;
-import com.justnothing.javainterpreter.security.PermissionType;
-import com.justnothing.javainterpreter.evaluator.DynamicClassGenerator;
+import com.justnothing.engine.ScriptRunner;
+import com.justnothing.engine.security.SandboxConfig;
+import com.justnothing.engine.security.PermissionType;
+import com.justnothing.engine.codegen.DynamicClassGenerator;
 import com.justnothing.testmodule.utils.reflect.AppClassFinder;
 import com.justnothing.testmodule.utils.reflect.DexClassDefiner;
 import com.justnothing.testmodule.utils.data.DataBridge;
@@ -28,9 +28,9 @@ public abstract class AbstractScriptCommand<Req extends CommandRequest, Res exte
     public static final AtomicReference<SandboxConfig> currentPermissionConfig = new AtomicReference<>(null);
 
     static {
+        DynamicClassGenerator.setDefaultClassDefiner(DexClassDefiner.getInstance());
         systemScriptRunner = new ScriptRunner(null);
         systemScriptRunner.setClassFinder(new AppClassFinder());
-        DynamicClassGenerator.setDefaultClassDefiner(DexClassDefiner.getInstance());
     }
 
     protected CommandExecutor.CmdExecContext<?> context;

@@ -156,6 +156,12 @@ public class CmdParamProcessor {
             String arg = args[i];
 
             if (arg.startsWith("`")) {
+                // 单参数自闭合反引号：如 `java.lang.String`，直接去掉首尾反引号
+                if (arg.endsWith("`") && arg.length() > 1) {
+                    result.add(arg.substring(1, arg.length() - 1));
+                    i++;
+                    continue;
+                }
                 // 发现反引号开始
                 StringBuilder merged = new StringBuilder();
                 

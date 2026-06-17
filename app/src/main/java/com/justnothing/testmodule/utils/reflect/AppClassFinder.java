@@ -1,6 +1,6 @@
 package com.justnothing.testmodule.utils.reflect;
 
-import com.justnothing.javainterpreter.api.IClassFinder;
+import com.justnothing.engine.api.IClassFinder;
 
 import java.util.List;
 

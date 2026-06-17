@@ -6,6 +6,7 @@ import com.justnothing.methodsclient.executor.FileCommandExecutor;
 import com.justnothing.methodsclient.executor.SocketCommandExecutor;
 import com.justnothing.methodsclient.monitor.ClientPortManager;
 import com.justnothing.methodsclient.monitor.PerformanceMonitor;
+import com.justnothing.methodsclient.repl.ReplClient;
 import com.justnothing.testmodule.utils.logging.Logger;
 
 
@@ -170,6 +171,7 @@ public class StreamClient {
                     -i, --interactive        通过Socket二进制交互式协议执行命令
                     -ip, --interactive-plain 通过Socket二进制交互式协议执行命令, 不带颜色
                     -f, --file               通过文件中转命令(原始模式)
+                    -r, --repl               进入持久化交互式 REPL 模式（推荐）
                     --update-port <port>     更新Socket服务器端口
                     --auto                   自动选择最佳模式(默认)
                     --check-socket           检查Socket服务器状态
@@ -187,6 +189,8 @@ public class StreamClient {
                     StreamClient --check-socket
                     StreamClient --perf-stats
                     StreamClient --clear-perf-data
+                    StreamClient -r
+                    StreamClient --repl
                 
                 (JavaClient %s)
                 """, CLIENT_VER);
@@ -303,6 +307,11 @@ public class StreamClient {
                     if (!success) {
                         System.exit(1);
                     }
+                }
+                case "--repl", "-r" -> {
+                    // 持久化 REPL 模式：保持长连接，JLine 交互
+                    ReplClient repl = new ReplClient();
+                    repl.start();
                 }
 
                 default -> {

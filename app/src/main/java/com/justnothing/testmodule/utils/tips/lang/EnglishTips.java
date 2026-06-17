@@ -25,7 +25,9 @@ public class EnglishTips {
                     "Kind of charity, isn't it?",
                     "Good luck!",
                     "Getting in bootloader doesn't means the system is corrupted \n(I believe you know this, but some people don't)",
-                    "JustNothing's module is just nothing"
+                    "JustNothing's module is just nothing",
+                    "Requires internationalization fr",
+                    ""
                 );
                 return stringList.get(Math.abs(random.nextInt()) % stringList.size());
             };
@@ -751,6 +753,25 @@ public class EnglishTips {
             addDidYouKnowTip(new SimpleTipCallback(
                     "In fact, I made a lot of grammar mistakes in translation, but so do the AI " + 
                     "(I used AI to translate all tips and edited some of them, seems like AI is also not good in grammar)",
+                    NAME_JUSTNOTHING
+            ));
+
+
+            addDidYouKnowTip(new SimpleTipCallback(
+                    """
+                            Just for my English translation training, I wrote this "Did you know" tip
+                            (Maybe a kind of improvement?)
+                            """,
+                    NAME_JUSTNOTHING
+            ));
+
+
+            addDidYouKnowTip(new SimpleTipCallback(
+                    """
+                            Study during coding is good for coding experience accumulation but also lefts \
+                            huge technological debts
+                            (Guess why do I know)
+                            """,
                     NAME_JUSTNOTHING
             ));
 

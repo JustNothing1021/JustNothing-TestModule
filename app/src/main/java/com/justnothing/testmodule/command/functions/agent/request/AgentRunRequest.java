@@ -9,11 +9,11 @@ import com.justnothing.testmodule.command.base.command.CmdParam;
 @SerializeKeyName("AgentRun")
 public class AgentRunRequest extends CommandRequest {
     @Expose @SerializedName("packageName")
-    @CmdParam(name = "pkg", position = 1, description = "目标应用包名")
+    @CmdParam(name = "pkg", position = 1, required = true, description = "目标应用包名")
     private String packageName;
 
     @Expose @SerializedName("command")
-    @CmdParam(name = "command", position = 2, varArgs = true,
+    @CmdParam(name = "command", position = 2, varArgs = true, required = true,
               description = "要在目标应用上执行的命令（剩余所有参数）")
     private String command;
 

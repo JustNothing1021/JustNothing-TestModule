@@ -145,7 +145,6 @@ public class ClientPortManager {
                 FileCommandExecutor.cleanupTempDir(tempDir);
             }
         }
-
         return success;
     }
 

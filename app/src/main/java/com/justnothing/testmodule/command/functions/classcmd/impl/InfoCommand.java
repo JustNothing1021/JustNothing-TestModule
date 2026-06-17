@@ -69,7 +69,7 @@ public class InfoCommand extends AbstractClassCommand<ClassInfoRequest, ClassInf
 
         Class<?> targetClass = ClassResolver.findClassOrFail(className, context.classLoader());
 
-        if (showAll || showModifiers) {
+        if ((showAll && !request.wasModifiersExplicitlySet()) || showModifiers) {
             context.execContext().print("类名: ", Colors.CYAN);
             context.execContext().println(targetClass.getName(), Colors.WHITE);
             context.execContext().print("修饰符: ", Colors.CYAN);
@@ -100,7 +100,7 @@ public class InfoCommand extends AbstractClassCommand<ClassInfoRequest, ClassInf
             classInfo.setFinal(Modifier.isFinal(targetClass.getModifiers()));
         }
 
-        if (showAll || showSuper) {
+        if ((showAll && !request.wasSuperExplicitlySet()) || showSuper) {
             Class<?> superClass = targetClass.getSuperclass();
             context.execContext().print("父类: ", Colors.CYAN);
             if (superClass != null) {
@@ -112,7 +112,7 @@ public class InfoCommand extends AbstractClassCommand<ClassInfoRequest, ClassInf
             context.execContext().println("");
         }
 
-        if (showAll || showInterfaces) {
+        if ((showAll && !request.wasInterfacesExplicitlySet()) || showInterfaces) {
             Class<?>[] interfaces = targetClass.getInterfaces();
             context.execContext().print("实现的接口", Colors.CYAN);
             context.execContext().println(" (" + interfaces.length + "个):", Colors.CYAN);
@@ -132,7 +132,7 @@ public class InfoCommand extends AbstractClassCommand<ClassInfoRequest, ClassInf
             classInfo.setInterfaces(interfaceList);
         }
 
-        if (showAll || showConstructors) {
+        if ((showAll && !request.wasConstructorsExplicitlySet()) || showConstructors) {
             Constructor<?>[] constructors = targetClass.getDeclaredConstructors();
             context.execContext().print("构造函数", Colors.CYAN);
             context.execContext().println(" (" + constructors.length + "个):", Colors.CYAN);

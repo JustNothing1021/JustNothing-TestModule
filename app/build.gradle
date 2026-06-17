@@ -113,6 +113,7 @@ dependencies {
     implementation libs.jline.console
     implementation libs.jline.builtins
     implementation project(':engine')
+    implementation project(':engine_new')
     implementation files("libs/NCW-Logger-1.0.3-hotfix3.jar")
 
     compileOnly libs.xposed.api

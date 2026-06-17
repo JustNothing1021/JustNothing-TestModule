@@ -71,9 +71,16 @@ public class InvokeMethodRequest extends ClassCommandRequest implements CustomCo
     )
     private boolean accessInterfaces = false;
 
+    @CmdParam(
+        name = "--instance",
+        description = "实例表达式（用于非静态方法的实例）",
+        aliases = {"-i"},
+        serializedName = "targetInstance"
+    )
+    private String targetInstance;
+
     // --- 非注解字段（运行时解析结果） ---
     private String signature;
-    private String targetInstance;
     private List<String> params;
     private List<String> paramTypes;
 
@@ -137,16 +144,19 @@ public class InvokeMethodRequest extends ClassCommandRequest implements CustomCo
 
     /**
      * CLI 解析入口:
-     * 1. 用 ParamParser 解析 className, methodName, 标志选项
-     * 2. 手动收集位置3及之后的剩余参数 → paramsRaw (String[])
-     * 3. 解析每个参数 token → params + paramTypes 列表
+     * 1. 预处理：合并反引号包裹的参数（支持带空格的表达式）
+     * 2. 用 ParamParser 解析 className, methodName, 标志选项（含 --instance/-i）
+     * 3. 手动收集位置3及之后的剩余参数 → paramsRaw (String[])
+     * 4. 解析每个参数 token → params + paramTypes 列表
      */
     @Override
     public InvokeMethodRequest fromCommandLine(String[] args) throws IllegalCommandLineArgumentException {
+        // 预处理：合并反引号包裹的参数（如 `new String[2] {"114514", "1919810"}`）
+        args = preprocessBacktickArgs(args);
+
         InvokeMethodRequest parsed = ParamParser.parse(InvokeMethodRequest.class, args);
 
-        // 从原始参数中提取位置3之后的剩余参数（跳过选项）
-        // 注意：ParamParser 消费了位置1(className)和位置2(methodName)，所以 startPos=2
+        // 从原始参数中提取位置3之后的剩余参数（跳过选项及其值）
         List<String> remaining = collectRemainingPositionalArgs(args, 2);
         if (!remaining.isEmpty()) {
             parsed.paramsRaw = remaining.toArray(new String[0]);
@@ -189,13 +199,63 @@ public class InvokeMethodRequest extends ClassCommandRequest implements CustomCo
         List<String> result = new ArrayList<>();
         int positionalCount = 0;
 
-        for (String arg : args) {
-            if (arg.startsWith("-")) continue;  // 跳过选项
+        for (int i = 0; i < args.length; i++) {
+            String arg = args[i];
+            if (arg.startsWith("-")) {
+                if (isStringOption(arg)) {
+                    i++; // 跳过选项的值（如 -i "114514" 中的 "114514"）
+                }
+                continue;
+            }
             positionalCount++;
             if (positionalCount > startPos) {
                 result.add(arg);
             }
         }
         return result;
+    }
+
+    private static boolean isStringOption(String arg) {
+        String lower = arg.toLowerCase();
+        return lower.equals("-i") || lower.equals("--instance");
+    }
+
+    /**
+     * 将反引号包裹的参数序列合并为单个参数（如 `new String[2] {"114514", "1919810"}`）
+     * 使得包含空格的表达式在 re-tokenization 后不被拆散
+     */
+    private static String[] preprocessBacktickArgs(String[] args) {
+        List<String> result = new ArrayList<>();
+        StringBuilder backtickBuf = null;
+
+        for (String arg : args) {
+            if (backtickBuf != null) {
+                // 正在累积反引号表达式
+                if (backtickBuf.length() > 0) backtickBuf.append(" ");
+                backtickBuf.append(arg);
+                if (arg.endsWith("`")) {
+                    // 反引号闭合
+                    String merged = backtickBuf.toString();
+                    // 去掉首尾反引号
+                    merged = merged.substring(1, merged.length() - 1);
+                    result.add(merged);
+                    backtickBuf = null;
+                }
+            } else if (arg.startsWith("`")) {
+                // 遇反引号起始
+                if (arg.endsWith("`")) {
+                    // 单个参数内完成（如 `foo`）
+                    result.add(arg.substring(1, arg.length() - 1));
+                } else {
+                    backtickBuf = new StringBuilder(arg);
+                }
+            } else {
+                result.add(arg);
+            }
+        }
+        // 未闭合的处理：原样保留
+        if (backtickBuf != null) result.add(backtickBuf.toString());
+
+        return result.toArray(new String[0]);
     }
 }

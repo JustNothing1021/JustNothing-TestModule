@@ -1,8 +1,10 @@
 package com.justnothing.testmodule.command.base;
 
 import com.justnothing.testmodule.command.CommandExecutor;
+import com.justnothing.testmodule.command.base.command.Cmd;
 import com.justnothing.testmodule.command.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.utils.CmdParamProcessor;
 import com.justnothing.testmodule.utils.logging.Logger;
 
 @SuppressWarnings("rawtypes")
@@ -30,7 +32,29 @@ public abstract class MainCommand<Res extends CommandResult> {
         this.responseType = type;
     }
 
+    /**
+     * 生成帮助文本。
+     * <p>
+     * 默认实现：自动从 {@link Cmd} / {@link com.justnothing.testmodule.command.base.command.CmdRoutes}
+     * 注解生成完整的帮助文档，包括：
+     * <ul>
+     *   <li>命令描述（来自 @Cmd.description）</li>
+     *   <li>子命令列表 + 签名 + 描述</li>
+     *   <li>参数说明（来自 @CmdParam）</li>
+     * </ul>
+     * <p>
+     * 子类可以覆盖此方法以提供自定义帮助文本。
+     */
     public String getHelpText() {
+        Cmd cmdAnnotation = getClass().getAnnotation(Cmd.class);
+        if (cmdAnnotation != null) {
+            // 有 @Cmd 注解 → 自动从注解体系生成完整帮助
+            try {
+                return CmdParamProcessor.generateHelpText(getClass());
+            } catch (Exception e) {
+                // 注解读取失败时降级到简单帮助
+            }
+        }
         return "用法: " + getCommandName() + " [args...]\n" +
                "输入 " + getCommandName() + " --help 查看详细帮助";
     }
@@ -62,7 +86,4 @@ public abstract class MainCommand<Res extends CommandResult> {
         return result;
     }
 
-    protected boolean shouldReturnStructuredData(CommandExecutor.CmdExecContext<?> context) {
-        return context.isGui() || context.isAgent();
-    }
 }

@@ -3,6 +3,7 @@ package com.justnothing.testmodule.command.output;
 import androidx.annotation.NonNull;
 
 import com.justnothing.testmodule.command.base.protocol.GsonFactory;
+import com.justnothing.testmodule.command.output.InputMode;
 import com.justnothing.testmodule.command.protocol.InteractiveProtocol;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
@@ -71,6 +72,23 @@ public class InteractiveOutputHandler implements ICommandOutputHandler {
     
     public String getCommand() {
         return command;
+    }
+
+    @Override
+    public void switchInputMode(String mode) {
+        if (closed.get() || mode == null || mode.isEmpty()) {
+            return;
+        }
+        try {
+            synchronized (writeLock) {
+                InteractiveProtocol.writeMessage(outputStream,
+                        InteractiveProtocol.TYPE_SET_HIGHLIGHT_MODE,
+                        mode.getBytes(StandardCharsets.UTF_8));
+            }
+            logger.debug("已发送输入模式切换请求: " + mode + " (" + InputMode.getDescription(mode) + ")");
+        } catch (IOException e) {
+            logger.error("发送输入模式切换失败: " + mode, e);
+        }
     }
 
     @Override
@@ -253,12 +271,6 @@ public class InteractiveOutputHandler implements ICommandOutputHandler {
         }
     }
     
-
-    public void setStructuredResult(Object result) {
-        // 覆盖缓冲区内容
-        buffer.setLength(0);
-        buffer.append(GsonFactory.getInstance().toJson(result));
-    }
 
     @Override
     public String readPasswordFromClient(String prompt) {

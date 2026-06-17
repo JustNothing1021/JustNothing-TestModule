@@ -48,19 +48,20 @@ public class CommandArgumentParser {
         if (cmdline == null || cmdline.trim().isEmpty()) {
             return new String[0];
         }
-        
+
         List<String> args = new ArrayList<>();
         StringBuilder current = new StringBuilder();
         boolean inQuotes = false;
         boolean inSingleQuotes = false;
+        boolean inBackticks = false;  // 支持反引号包裹表达式
         char quoteChar = '"';
-        
+
         for (int i = 0; i < cmdline.length(); i++) {
             char c = cmdline.charAt(i);
-            
+
             if (inQuotes || inSingleQuotes) {
                 current.append(c);
-                
+
                 if (c == '\\' && i + 1 < cmdline.length()) {
                     char next = cmdline.charAt(i + 1);
                     if (next == quoteChar || next == '\\') {
@@ -69,10 +70,17 @@ public class CommandArgumentParser {
                         continue;
                     }
                 }
-                
+
                 if (c == quoteChar) {
                     if (inQuotes) inQuotes = false;
                     else inSingleQuotes = false;
+                }
+            } else if (inBackticks) {
+                // 反引号内部：原样追加空格，直到遇到配对的反引号
+                if (c == '`') {
+                    inBackticks = false;
+                } else {
+                    current.append(c);
                 }
             } else {
                 if (c == '"' || c == '\'') {
@@ -80,6 +88,9 @@ public class CommandArgumentParser {
                     inSingleQuotes = (c == '\'');
                     quoteChar = c;
                     current.append(c);
+                } else if (c == '`') {
+                    // 反引号开始：进入反引号模式，保护内部空格不被拆分
+                    inBackticks = true;
                 } else if (c == ' ' || c == '\t') {
                     if (current.length() > 0) {
                         args.add(current.toString());
@@ -90,11 +101,11 @@ public class CommandArgumentParser {
                 }
             }
         }
-        
+
         if (current.length() > 0) {
             args.add(current.toString());
         }
-        
+
         return args.toArray(new String[0]);
     }
     

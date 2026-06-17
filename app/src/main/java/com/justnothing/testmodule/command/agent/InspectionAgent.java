@@ -381,6 +381,15 @@ public class InspectionAgent {
                                 logger.debug("_dispatch 收到 INPUT_PONG");
                                 break;
 
+                            case com.justnothing.testmodule.command.protocol.InteractiveProtocol.TYPE_SET_HIGHLIGHT_MODE:
+                                // 客户端发来的模式切换请求：转发给命令执行上下文
+                                // 当前通过日志记录，未来可接入上下文感知的模式管理
+                                if (packetData != null) {
+                                    String mode = new String(packetData, StandardCharsets.UTF_8);
+                                    logger.debug("_dispatch 收到客户端模式切换请求: " + mode);
+                                }
+                                break;
+
                             default:
                                 logger.debug("_dispatch 收到未知帧类型: " +
                                         com.justnothing.testmodule.command.protocol.InteractiveProtocol
