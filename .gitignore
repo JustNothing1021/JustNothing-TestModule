@@ -12,6 +12,7 @@
 /build
 /app/build
 /engine/build
+/engine_new/build
 /captures
 .externalNativeBuild
 .cxx
@@ -33,6 +34,7 @@ testmodule-keystore.jks
 # VSCode 生成的bin文件
 /app/bin
 /engine/bin
+/engine_new/bin
 
 # 我拿来研究的log
 /tmp.log
