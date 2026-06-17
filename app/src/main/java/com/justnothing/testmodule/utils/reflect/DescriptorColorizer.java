@@ -19,7 +19,7 @@ import java.util.Objects;
 
 public class DescriptorColorizer {
 
-    public static void printColoredDescriptor(CommandExecutor.CmdExecContext ctx, Member member, boolean simple) {
+    public static void printColoredDescriptor(CommandExecutor.CmdExecContext<?> ctx, Member member, boolean simple) {
         if (member instanceof Method method) {
             printMethodDescriptor(ctx, method, simple);
         } else if (member instanceof Field field) {
@@ -29,7 +29,7 @@ public class DescriptorColorizer {
         }
     }
 
-    private static void printMethodDescriptor(CommandExecutor.CmdExecContext ctx, Method method, boolean simple) {
+    private static void printMethodDescriptor(CommandExecutor.CmdExecContext<?> ctx, Method method, boolean simple) {
         int modifiers = method.getModifiers();
         
         printModifiers(ctx, modifiers);
@@ -82,7 +82,7 @@ public class DescriptorColorizer {
         }
     }
 
-    private static void printFieldDescriptor(CommandExecutor.CmdExecContext ctx, Field field, boolean simple) {
+    private static void printFieldDescriptor(CommandExecutor.CmdExecContext<?> ctx, Field field, boolean simple) {
         int modifiers = field.getModifiers();
         
         printModifiers(ctx, modifiers);
@@ -103,7 +103,7 @@ public class DescriptorColorizer {
         }
     }
 
-    private static void printConstructorDescriptor(CommandExecutor.CmdExecContext ctx, Constructor<?> constructor, boolean simple) {
+    private static void printConstructorDescriptor(CommandExecutor.CmdExecContext<?> ctx, Constructor<?> constructor, boolean simple) {
         int modifiers = constructor.getModifiers();
         
         printModifiers(ctx, modifiers);
@@ -189,11 +189,11 @@ public class DescriptorColorizer {
         return baseType;
     }
 
-    private static void printType(CommandExecutor.CmdExecContext ctx, Type type) {
+    private static void printType(CommandExecutor.CmdExecContext<?> ctx, Type type) {
         printType(ctx, type, Colors.GREEN, false);
     }
 
-    private static void printType(CommandExecutor.CmdExecContext ctx, Type type, byte color, boolean simple) {
+    private static void printType(CommandExecutor.CmdExecContext<?> ctx, Type type, byte color, boolean simple) {
         if (type instanceof Class<?> clazz) {
             printClassType(ctx, clazz, color, simple);
         } else if (type instanceof GenericArrayType gat) {
@@ -240,7 +240,7 @@ public class DescriptorColorizer {
         }
     }
 
-    private static void printTypeString(CommandExecutor.CmdExecContext ctx, String typeStr, byte color) {
+    private static void printTypeString(CommandExecutor.CmdExecContext<?> ctx, String typeStr, byte color) {
         int arrayIdx = typeStr.indexOf("[]");
         if (arrayIdx != -1) {
             String baseType = typeStr.substring(0, arrayIdx);
@@ -292,7 +292,7 @@ public class DescriptorColorizer {
         ctx.print(formatTypeName(typeStr.substring(genericStart)), color);
     }
 
-    private static void printTypeArg(CommandExecutor.CmdExecContext ctx, String arg, byte color) {
+    private static void printTypeArg(CommandExecutor.CmdExecContext<?> ctx, String arg, byte color) {
         arg = arg.trim();
         if (arg.equals("?")) {
             ctx.print("?", Colors.CYAN);
@@ -309,7 +309,7 @@ public class DescriptorColorizer {
         }
     }
 
-    private static void printClassType(CommandExecutor.CmdExecContext ctx, Class<?> clazz, byte color, boolean simple) {
+    private static void printClassType(CommandExecutor.CmdExecContext<?> ctx, Class<?> clazz, byte color, boolean simple) {
         if (clazz.isArray()) {
             printClassType(ctx, Objects.requireNonNull(clazz.getComponentType()), color, simple);
             ctx.print("[]", Colors.CYAN);
@@ -319,7 +319,7 @@ public class DescriptorColorizer {
         }
     }
 
-    private static void printModifiers(CommandExecutor.CmdExecContext ctx, int modifiers) {
+    private static void printModifiers(CommandExecutor.CmdExecContext<?> ctx, int modifiers) {
         StringBuilder sb = new StringBuilder();
         
         if (Modifier.isPublic(modifiers)) sb.append("public ");
@@ -342,7 +342,7 @@ public class DescriptorColorizer {
         }
     }
 
-    private static void printTypeParameters(CommandExecutor.CmdExecContext ctx, TypeVariable<?>[] typeParms, boolean simple) {
+    private static void printTypeParameters(CommandExecutor.CmdExecContext<?> ctx, TypeVariable<?>[] typeParms, boolean simple) {
         ctx.print("<", Colors.WHITE);
         for (int i = 0; i < typeParms.length; i++) {
             if (i > 0) {
@@ -353,7 +353,7 @@ public class DescriptorColorizer {
         ctx.print(">", Colors.WHITE);
     }
 
-    private static void printTypeVariable(CommandExecutor.CmdExecContext ctx, TypeVariable<?> typeVar, boolean simple) {
+    private static void printTypeVariable(CommandExecutor.CmdExecContext<?> ctx, TypeVariable<?> typeVar, boolean simple) {
         ctx.print(typeVar.getName(), Colors.GREEN);
         
         Type[] bounds = typeVar.getBounds();
@@ -368,7 +368,7 @@ public class DescriptorColorizer {
         }
     }
 
-    private static void printParameters(CommandExecutor.CmdExecContext ctx, Method method, boolean simple) {
+    private static void printParameters(CommandExecutor.CmdExecContext<?> ctx, Method method, boolean simple) {
         if (simple) {
             Class<?>[] params = method.getParameterTypes();
             for (int i = 0; i < params.length; i++) {

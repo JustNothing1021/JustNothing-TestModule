@@ -70,6 +70,26 @@ public class CommandRouter {
 
         RouteNode currentNode = routeTree.computeIfAbsent(parentPath, k -> new RouteNode(parentPath, cmdClass));
 
+        // 空路径路由（path=""）：直接挂载到根节点，不创建子节点
+        // 这样匹配时不会消费任何参数，所有参数都作为 remainingArgs 传给 CmdParamProcessor
+        if (segments.length == 1 && segments[0].isEmpty()) {
+            RouteConfig config = new RouteConfig(
+                fullPath,
+                route.request(),
+                route.result(),
+                route.handler(),
+                route.description()
+            );
+            currentNode.addConfig(config);
+            requestRegistry.put(route.request(), config);
+            pathRegistry.put(fullPath, config);
+
+            logger.debug("  └─ 注册路由(空路径): " + fullPath +
+                       " → " + route.request().getSimpleName() +
+                       " [" + route.handler().getSimpleName() + "]");
+            return;
+        }
+
         for (int i = 0; i < segments.length; i++) {
             String segment = segments[i];
             boolean isLast = (i == segments.length - 1);

@@ -17,7 +17,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
-@SuppressWarnings("unused")
 public final class BlockGuardSandbox {
 
     private static final Logger logger = Logger.getLoggerForName("BlockGuardSandbox");

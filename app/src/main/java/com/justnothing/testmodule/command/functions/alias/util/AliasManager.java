@@ -71,6 +71,7 @@ public class AliasManager {
         addDefaultAlias("sclear", "script clear");
         addDefaultAlias("svars", "script vars");
         addDefaultAlias("sinteractive", "script interactive");
+        addDefaultAlias("dyk", "did-you-know");
     }
     
     private void addDefaultAlias(String name, String command) {

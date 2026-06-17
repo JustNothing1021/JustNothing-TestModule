@@ -7,7 +7,6 @@ import com.justnothing.testmodule.command.base.protocol.CommandResult;
 import com.justnothing.testmodule.command.utils.CmdParamProcessor;
 import com.justnothing.testmodule.utils.logging.Logger;
 
-@SuppressWarnings("rawtypes")
 public abstract class MainCommand<Res extends CommandResult> {
 
     public static class CommandLogger extends Logger {

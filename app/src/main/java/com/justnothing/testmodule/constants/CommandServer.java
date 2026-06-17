@@ -20,5 +20,6 @@ public class CommandServer {
     public static final String CMD_PERFORMANCE_VER = "v0.1.1";
     public static final String CMD_ALIAS_VER = "v0.1.0";
     public static final String CMD_NETWORK_VER = "v0.1.0";
+    public static final String CMD_DYK_VER = "v0.1.0";
     public static final int DEFAULT_SOCKET_PORT = 11451;
 }

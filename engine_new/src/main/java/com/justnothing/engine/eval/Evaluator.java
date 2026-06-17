@@ -406,20 +406,45 @@ public class Evaluator implements ASTVisitor<Value> {
         if (clazz == null) {
             throw new EvalException("Cannot resolve method: " + methodName, ErrorCode.METHOD_NOT_FOUND);
         }
+        // 遍历所有重载，尝试匹配（支持 varargs）
+        Method bestMatch = null;
+        int bestScore = Integer.MAX_VALUE;
         for (Method m : clazz.getMethods()) {
-            if (m.getName().equals(methodName) && m.getParameterCount() == args.size()) {
-                try {
-                    checkMethod(m); // ★ 安全检查
-                    Object result = m.invoke(target, args.stream().map(Value::asJavaObject).toArray());
-                    return Value.of(result);
-                } catch (InvocationTargetException e) {
-                    throw new EvalException("Exception in " + methodName + ": " + e.getCause().getMessage(), e.getCause(), ErrorCode.EVAL_EXCEPTION_THROWN);
-                } catch (IllegalArgumentException | IllegalAccessException e) {
-                    // argument or access mismatch, try next overload
-                }
+            if (!m.getName().equals(methodName)) continue;
+            // 构造参数类型数组用于 isApplicable 判断
+            Class<?>[] argTypes = new Class<?>[args.size()];
+            for (int i = 0; i < args.size(); i++) {
+                Object argObj = args.get(i).asJavaObject();
+                argTypes[i] = argObj != null ? argObj.getClass() : Object.class;
+            }
+            if (!MethodResolver.isApplicable(m, argTypes)) continue;
+            // 计算匹配分数（优先非 varargs 精确匹配）
+            int score = computeMethodMatchScore(m, argTypes);
+            if (score < bestScore) {
+                bestScore = score;
+                bestMatch = m;
             }
         }
-            throw new EvalException("Method not found: " + methodName + " on " + clazz.getSimpleName(), ErrorCode.METHOD_NO_APPLICABLE_METHOD);
+        if (bestMatch != null) {
+            try {
+                checkMethod(bestMatch);
+                Object[] javaArgs = prepareInvokeArgs(bestMatch, args);
+                Object result = bestMatch.invoke(target, javaArgs);
+                return Value.of(result);
+            } catch (InvocationTargetException e) {
+                throw new EvalException("Exception in " + methodName + ": " + e.getCause().getMessage(), e.getCause(), ErrorCode.EVAL_EXCEPTION_THROWN);
+            } catch (IllegalArgumentException | IllegalAccessException e) {
+                // 类型不匹配，不应该发生（isApplicable 已通过），但防万一
+            }
+        }
+        // 构建友好的错误信息
+        String typeList = args.isEmpty() ? "[]"
+                : "[" + String.join(", ",
+                    args.stream().map(a -> {
+                        Object o = a.asJavaObject();
+                        return o != null ? o.getClass().getSimpleName() : "null";
+                    }).toArray(String[]::new)) + "]";
+        throw new EvalException("No applicable method: " + methodName + typeList, ErrorCode.METHOD_NO_APPLICABLE_METHOD);
     }
 
     Object resolveTarget(ASTNode targetNode) {
@@ -435,6 +460,76 @@ public class Evaluator implements ASTVisitor<Value> {
         } catch (ClassNotFoundException e) {
             return null;
         }
+    }
+
+    /**
+     * 计算方法匹配分数（越低越好）。
+     * 非varargs精确匹配优先于varargs匹配。
+     */
+    private static int computeMethodMatchScore(Method method, Class<?>[] argTypes) {
+        Class<?>[] paramTypes = method.getParameterTypes();
+        if (!method.isVarArgs()) {
+            // 精确匹配：每个参数的转换代价
+            int score = 0;
+            for (int i = 0; i < paramTypes.length; i++) {
+                score += paramTypeScore(paramTypes[i], argTypes[i]);
+            }
+            return score;
+        }
+        // varargs 匹配：加分（优先选择非 varargs 重载）
+        int fixedCount = paramTypes.length - 1;
+        int score = 1000;  // varargs 基础惩罚分
+        for (int i = 0; i < fixedCount && i < argTypes.length; i++) {
+            score += paramTypeScore(paramTypes[i], argTypes[i]);
+        }
+        Class<?> componentType = paramTypes[fixedCount].getComponentType();
+        for (int i = fixedCount; i < argTypes.length; i++) {
+            score += paramTypeScore(componentType, argTypes[i]);
+        }
+        return score;
+    }
+
+    private static int paramTypeScore(Class<?> paramType, Class<?> argType) {
+        if (paramType == argType) return 0;
+        if (paramType.isAssignableFrom(argType)) {
+            if (paramType == Object.class) return 10;
+            return 1;
+        }
+        return 100; // 需要装箱/拆箱
+    }
+
+    /**
+     * 准备方法调用的参数数组，处理 varargs 打包。
+     * 对于非 varargs 方法：直接逐个 coerce。
+     * 对于 varargs 方法：固定参数逐个 coerce，可变参数打包成数组。
+     */
+    private static Object[] prepareInvokeArgs(Method method, List<Value> args) {
+        Class<?>[] paramTypes = method.getParameterTypes();
+        if (!method.isVarArgs()) {
+            // 非 varargs：直接 1 对 1
+            Object[] result = new Object[args.size()];
+            for (int i = 0; i < args.size(); i++) {
+                result[i] = MethodResolver.coerceArg(paramTypes[i], args.get(i).asJavaObject());
+            }
+            return result;
+        }
+        // varargs：固定部分 + 打包的可变部分
+        int fixedCount = paramTypes.length - 1;
+        Object[] result = new Object[fixedCount + 1];
+        for (int i = 0; i < fixedCount; i++) {
+            result[i] = MethodResolver.coerceArg(paramTypes[i],
+                    i < args.size() ? args.get(i).asJavaObject() : null);
+        }
+        // 打包剩余参数为 varargs 数组
+        Class<?> componentType = paramTypes[fixedCount].getComponentType();
+        int varargsCount = args.size() - fixedCount;
+        Object varargsArray = java.lang.reflect.Array.newInstance(componentType, Math.max(0, varargsCount));
+        for (int i = 0; i < varargsCount; i++) {
+            Object coerced = MethodResolver.coerceArg(componentType, args.get(fixedCount + i).asJavaObject());
+            java.lang.reflect.Array.set(varargsArray, i, coerced);
+        }
+        result[fixedCount] = varargsArray;
+        return result;
     }
 
     private Value visitClassReference(ClassReferenceNode node) {
@@ -1069,8 +1164,14 @@ public class Evaluator implements ASTVisitor<Value> {
         // ★ 旧版风格的 refFunc：动态方法重载选择 + 自动装箱/拆箱
         Function<Object[], Object> refFunc = args -> {
             Object target = fnTargetNode != null ? evaluate(fnTargetNode).asJavaObject() : null;
-            Class<?> clazz = target != null ? target.getClass()
-                    : (fnStaticTargetClass != null ? fnStaticTargetClass : findClassForMethod(fnMethodName));
+            Class<?> clazz;
+            if (target instanceof Class<?> c) {
+                clazz = c;  // 静态方法引用：target 本身就是 Class 对象（如 Runtime.class）
+            } else if (target != null) {
+                clazz = target.getClass();
+            } else {
+                clazz = fnStaticTargetClass != null ? fnStaticTargetClass : findClassForMethod(fnMethodName);
+            }
             if (clazz == null)
                 throw new EvalException("Cannot resolve method: " + fnMethodName, ErrorCode.METHOD_NOT_FOUND);
 
@@ -1083,7 +1184,7 @@ public class Evaluator implements ASTVisitor<Value> {
             }
             try {
                 checkMethod(method);
-                return method.invoke(target, MethodResolver.coerceArgs(method.getParameterTypes(), args));
+                return method.invoke(target, MethodResolver.coerceArgsForInvoke(method, args));
             } catch (EvalException e) {
                 throw e;
             } catch (Exception e) {

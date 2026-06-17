@@ -24,6 +24,7 @@ import com.justnothing.testmodule.command.functions.nativecmd.NativeMain;
 import com.justnothing.testmodule.command.functions.network.NetworkMain;
 import com.justnothing.testmodule.command.functions.packages.PackagesMain;
 import com.justnothing.testmodule.command.functions.agent.AgentCliMain;
+import com.justnothing.testmodule.command.functions.didyouknow.DidYouKnowMain;
 import com.justnothing.testmodule.command.functions.performance.PerformanceMain;
 import com.justnothing.testmodule.command.functions.script.ScriptExecutorMain;
 import com.justnothing.testmodule.command.functions.system.SystemMain;
@@ -93,7 +94,8 @@ public class CommandExecutor {
             AnonClassTestMain.class,
             ClassMain.class,
             PackagesMain.class,
-            AgentCliMain.class
+            AgentCliMain.class,
+            DidYouKnowMain.class
         );
     }
 
@@ -602,29 +604,35 @@ public class CommandExecutor {
             
             可用命令:
               help                              - 显示所有命令的帮助或特定命令的帮助
+              agent                             - 跨应用 InspectionAgent IPC 桥接
               alias                             - 管理命令别名
-              packages                          - 列出已知包名
+              class                             - 查看类信息
               export-context                    - 导出设备context上下文信息
-              bsh                               - 通过BeanShell执行代码
               script                            - 脚本管理系统
               hook                              - 动态Hook注入器
-              class                             - 查看类信息
+              trace                             - 跟踪方法调用链
               reflect                           - 使用反射访问和操作类的私有成员
               breakpoint                        - 设置和管理断点
+              threads                           - 列出所有线程及其状态
               watch                             - 监控字段或方法的变化
-              trace                             - 跟踪方法调用链
               native                            - 查看和调试Native代码
               system                            - 显示系统信息
               profile                           - 性能分析
-              threads                           - 列出所有线程及其状态
               bytecode                          - 查看和分析Java字节码 (未正式使用, 很可能实现不了)
+              bsh                               - 通过BeanShell执行代码
               memory                            - 显示详细内存使用情况
               network                           - 进行网络调试
-              agent                             - 跨应用 InspectionAgent IPC 桥接
+              packages                          - 列出已知包名
+              
+            娱乐性命令:
+              did-you-know                      - 你知道吗?
 
             测试类命令:
               output_test                       - 对命令行输出进行测试
               interactive_test                  - 对命令行交互进行测试
+              anonclasstest                     - 针对匿名类生成的测试
+              sandboxtest                       - 针对沙盒机制防御的测试
+              tui_test                          - 针对终端用户界面的测试
             
             获取一个子命令的帮助:
               help <cmd_name>

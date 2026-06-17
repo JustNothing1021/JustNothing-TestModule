@@ -414,7 +414,7 @@ public class MethodResolver {
      *   <li>可变参数（varargs）</li>
      * </ul>
      */
-    public boolean isApplicable(Method method, Class<?>[] argTypes) {
+    public static boolean isApplicable(Method method, Class<?>[] argTypes) {
         Class<?>[] paramTypes = method.getParameterTypes();
 
         if (!method.isVarArgs()) {
@@ -454,7 +454,7 @@ public class MethodResolver {
     /**
      * 判断 fromType 是否可以赋值给 toType（含 widening、装箱转换和 lambda/FI 隐式转换）。
      */
-    public boolean isAssignable(Class<?> fromType, Class<?> toType) {
+    public static boolean isAssignable(Class<?> fromType, Class<?> toType) {
         if (toType.isAssignableFrom(fromType)) {
             return true;
         }
@@ -749,20 +749,38 @@ public class MethodResolver {
 
         for (Method m : clazz.getMethods()) {
             if (!m.getName().equals(methodName)) continue;
-            Class<?>[] paramTypes = m.getParameterTypes();
-            if (paramTypes.length != argTypes.length) continue;
-            if (argTypes.length == 0) return m;  // 无参直接匹配
+            if (!isApplicable(m, argTypes)) continue;
 
-            int score = computeRuntimeScore(paramTypes, argTypes);
-            if (score >= 0 && score < bestScore) {
+            // 计算匹配分数（非 varargs 优先）
+            int score = computeRuntimeMatchScore(m, argTypes);
+            if (score < bestScore) {
                 bestScore = score;
                 bestMatch = m;
             }
         }
 
         if (bestMatch != null) return bestMatch;
-        throw new IllegalArgumentException("No applicable method: " + methodName
-                + java.util.Arrays.toString(argTypes));
+
+        // 构建友好的错误信息
+        StringBuilder sb = new StringBuilder("No applicable method: ").append(methodName);
+        sb.append("[");
+        for (int i = 0; i < argTypes.length; i++) {
+            if (i > 0) sb.append(", ");
+            sb.append(argTypes[i].getSimpleName());
+        }
+        sb.append("]");
+        throw new IllegalArgumentException(sb.toString());
+    }
+
+    /** 运行时方法匹配分数（varargs 惩罚） */
+    private static int computeRuntimeMatchScore(Method method, Class<?>[] argTypes) {
+        Class<?>[] paramTypes = method.getParameterTypes();
+        if (!method.isVarArgs() && paramTypes.length == argTypes.length) {
+            // 精确匹配（非 varargs）：最低分
+            return computeRuntimeScore(paramTypes, argTypes);
+        }
+        // varargs 匹配：加基础惩罚
+        return 1000 + computeRuntimeScore(paramTypes, argTypes);
     }
 
     /** 运行时参数类型匹配分数（复用 isAssignable 逻辑） */
@@ -835,6 +853,44 @@ public class MethodResolver {
         for (int i = 0; i < args.length; i++) {
             result[i] = coerceArg(paramTypes[i], args[i]);
         }
+        return result;
+    }
+
+    /**
+     * 为 Method.invoke() 准备参数数组（支持 varargs 打包）。
+     * <p>
+     * 对于 varargs 方法，将多余参数打包成对应类型的数组。
+     * 这是 {@link #coerceArgs} 的 varargs 安全版本。
+     *
+     * @param method 目标方法
+     * @param args   实际参数值数组
+     * @return 可直接传给 Method.invoke() 的参数数组
+     */
+    public static Object[] coerceArgsForInvoke(Method method, Object[] args) {
+        if (args == null) args = new Object[0];
+        Class<?>[] paramTypes = method.getParameterTypes();
+
+        if (!method.isVarArgs()) {
+            return coerceArgs(paramTypes, args);
+        }
+
+        // varargs 方法：固定参数 + 打包的可变参数
+        int fixedCount = paramTypes.length - 1;
+        Object[] result = new Object[Math.min(args.length, fixedCount) + 1];
+
+        for (int i = 0; i < fixedCount; i++) {
+            result[i] = coerceArg(paramTypes[i], i < args.length ? args[i] : null);
+        }
+
+        // 将剩余参数打包成 varargs 数组
+        Class<?> componentType = paramTypes[fixedCount].getComponentType();
+        int varargsCount = Math.max(0, args.length - fixedCount);
+        Object varargsArray = java.lang.reflect.Array.newInstance(componentType, varargsCount);
+        for (int i = 0; i < varargsCount; i++) {
+            java.lang.reflect.Array.set(varargsArray, i,
+                    coerceArg(componentType, args[fixedCount + i]));
+        }
+        result[fixedCount] = varargsArray;
         return result;
     }
 
