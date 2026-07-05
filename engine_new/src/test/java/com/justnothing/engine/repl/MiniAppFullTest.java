@@ -3,9 +3,12 @@ package com.justnothing.engine.repl;
 import com.justnothing.engine.ScriptRunner;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
+
+import java.lang.reflect.Array;
 
 public class MiniAppFullTest {
 
@@ -431,7 +434,7 @@ public class MiniAppFullTest {
             }
             """);
         // 再使用
-        Object[] res = (Object[]) runner.executeWithResult("""
+        Object res = runner.executeWithResult("""
             auto v1 = new Vec();
             v1.x = 1; v1.y = 2;
             auto v2 = new Vec();
@@ -440,7 +443,9 @@ public class MiniAppFullTest {
             println(v3.x);
             {v3.x, v3.y};
             """);
-        assertArrayEquals(new Object[] {4, 6}, res);
+        Object[] resArr = new Object[Array.getLength(res)];
+        for (int i = 0; i < resArr.length; i++) resArr[i] = Array.get(res, i);
+        assertArrayEquals(new Object[] {4, 6}, resArr);
     }
 
     // ==================== 关键字 Token ====================
@@ -457,7 +462,6 @@ public class MiniAppFullTest {
             enum Color { RED, GREEN, BLUE }
             Color.RED;
             """);
-        System.out.println(res);
     }
 
     // ==================== 复杂运行时测试 ====================
@@ -597,16 +601,18 @@ public class MiniAppFullTest {
     @Test
     public void nestedScope_shadowing() {
         Object res = runner.executeWithResult("""
+            auto res = 0;
             auto x = 1;
             {
                 auto x = 2;
                 {
                     auto x = 3;
-                    x;
                 }
+                res = x;
             }
+            res;
             """);
-        assertEquals(3, res);
+        assertEquals(2, res);
     }
 
     /** 跨 execute 调用保持类 + 函数 */

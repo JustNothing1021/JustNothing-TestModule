@@ -1,13 +1,16 @@
 package com.justnothing.engine.repl;
 
+import com.justnothing.engine.ScriptRunner;
 import com.justnothing.engine.ast.ASTNode;
 import com.justnothing.engine.ast.nodes.*;
+import com.justnothing.engine.exception.EvalException;
 import com.justnothing.engine.exception.ParseException;
 import com.justnothing.engine.lexer.Lexer;
 import com.justnothing.engine.parser.CythavaParseException;
 import com.justnothing.engine.parser.ParseContext;
 import com.justnothing.engine.parser.Parser;
 import com.justnothing.engine.parser.StmtParser;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -24,6 +27,9 @@ import static org.junit.Assert.*;
  *   <li>三元表达式常量折叠不生效 — {@code 1 + 1 == 3 ? 1 : 2} 应折叠为 LiteralNode(2)</li>
  *   <li>REPL 中重复声明变量不报错 — {@code int a; int a;} 第二次应抛 "already declared"</li>
  *   <li>VariableNode.formatString 缺少类型信息</li>
+ *   <li>Varargs 未打包 — {@code String.format("%d %d", 1, 2)} 参数数量错误</li>
+ *   <li>方法引用不验证存在性 — {@code Runtime::getRunti} 不应成功</li>
+ *   <li>实例方法引用被标为 static — {@code Runtime::exec} 应为 unbound</li>
  * </ol>
  *
  * @author JustNothing1021
@@ -259,5 +265,77 @@ public class StubbornBugRegressionTest {
         }
         LiteralNode lit = assertNodeType(LiteralNode.class, init);
         assertEquals(20, lit.getValue());
+    }
+
+    // =====================================================================
+    //  Varargs 与方法引用 Bug 回归测试（运行时级）
+    // =====================================================================
+
+    private ScriptRunner runner;
+
+    @Before
+    public void setUpRunner() {
+        runner = new ScriptRunner();
+        runner.addImport("java.lang.*");
+    }
+
+    @After
+    public void tearDownRunner() {
+        runner = null;
+    }
+
+    private Object eval(String script) {
+        return runner.executeWithResult(script);
+    }
+
+    /** BUG: String.format("%d %d", 1, 2) 报 "wrong number of arguments" — varargs 未打包 */
+    @Test
+    public void varargs_StringFormat() {
+        Object result = eval("String.format(\"%d %d\", 1, 2);");
+        assertEquals("1 2", result);
+    }
+
+    /** varargs 与固定参数混合 */
+    @Test
+    public void varargs_mixedFixedAndVarargs() {
+        Object result = eval("String.format(\"%s = %d\", \"x\", 42);");
+        assertEquals("x = 42", result);
+    }
+
+    /** varargs 单个可变参数 */
+    @Test
+    public void varargs_singleVararg() {
+        Object result = eval("String.format(\"%d\", 99);");
+        assertEquals("99", result);
+    }
+
+    /** varargs 零个可变参数 */
+    @Test
+    public void varargs_zeroVarargs() {
+        Object result = eval("String.format(\"hello\");");
+        assertEquals("hello", result);
+    }
+
+    /** BUG: Runtime::getRunti 不存在，应报错而非返回 MethodReference */
+    @Test(expected = EvalException.class)
+    public void methodRef_nonexistentMethod_throws() {
+        eval("Runtime::getRunti;");
+    }
+
+    /** BUG: Runtime::exec 是实例方法，不应标为 static */
+    @Test
+    public void methodRef_instanceMethod_labeledCorrectly() {
+        Object ref = eval("Runtime::exec;");
+        String str = ref.toString();
+        assertTrue("Should not contain 'static': " + str, !str.contains("static"));
+        assertTrue("Should contain 'unbound': " + str, str.contains("unbound"));
+    }
+
+    /** 静态方法引用仍正确标为 static */
+    @Test
+    public void methodRef_staticMethod_stillStatic() {
+        Object ref = eval("String::valueOf;");
+        String str = ref.toString();
+        assertTrue("Should contain 'static': " + str, str.contains("static"));
     }
 }

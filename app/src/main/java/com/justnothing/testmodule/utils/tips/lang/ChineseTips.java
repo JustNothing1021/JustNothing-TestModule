@@ -37,7 +37,7 @@ public class ChineseTips {
                         "怎么不算是一种公益呢？"
                 );
                 // Random.nextInt(int, int) -> int 在设备上找不到。。。
-                return stringList.get(Math.abs(random.nextInt()) % stringList.size());
+                return stringList.get(random.nextInt(stringList.size()));
             };
             specialTips.add(new SpecialTipCallback(
                     t.get(),
@@ -949,6 +949,43 @@ public class ChineseTips {
                     """
                     因为国家语言环境问题很多我们这边的梗都没法翻译成英文, 所以我干脆直接删掉了那些我不会表达的\
                     提示的英语版本 (也算是解决问题了吧?)
+                    """,
+                    NAME_JUSTNOTHING
+            ));
+
+            addDidYouKnowTip(new SimpleTipCallback(
+                    """
+                    methods> agent list
+                    
+                    在线 InspectionAgent (3):
+                      包名                                       状态           启动时间
+                      ----------------------------------------------------------------------
+                      com.xtc.i3launcher                       ONLINE       11:51:25
+                      com.xtc.weichat                          DEAD         -
+                        原因: 应用已下线
+                      com.android.phone                        ONLINE       11:51:55
+                    
+                    methods> agent run com.xtc.i3launcher agent run com.android.phone agent run com.xtc.i3launcher agent run com.android.phone agent run com.xtc.i3launcher agent run com.android.phone sinteractive
+                    [代理执行] com.xtc.i3launcher → agent run com.android.phone agent run com.xtc.i3launcher agent run com.android.phone agent run com.xtc.i3launcher agent run com.android.phone sinteractive (交互模式)
+                    ---
+                    [代理执行] com.android.phone → agent run com.xtc.i3launcher agent run com.android.phone agent run com.xtc.i3launcher agent run com.android.phone sinteractive (交互模式)
+                    ---
+                    [代理执行] com.xtc.i3launcher → agent run com.android.phone agent run com.xtc.i3launcher agent run com.android.phone sinteractive (交互模式)
+                    ---
+                    [代理执行] com.android.phone → agent run com.xtc.i3launcher agent run com.android.phone sinteractive (交互模式)
+                    ---
+                    [代理执行] com.xtc.i3launcher → agent run com.android.phone sinteractive (交互模式)
+                    ---
+                    [代理执行] com.android.phone → sinteractive (交互模式)
+                    ---
+                    ====== 脚本交互执行模式 =====
+                    输入 'exit' 或 'quit' 退出 (你不会闲到拿这俩做变量名, 对吧)
+                    输入 ':multi' 进入多行模式, ':eval' 执行, ':clear' 清空
+                    输入 'setPrintAST(true)' 开启 AST 打印
+                    
+                    >>>
+                    
+                    嗯，很好玩，所以意义是什么？
                     """,
                     NAME_JUSTNOTHING
             ));

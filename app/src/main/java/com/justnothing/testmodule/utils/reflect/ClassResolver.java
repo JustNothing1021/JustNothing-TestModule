@@ -140,33 +140,15 @@ public class ClassResolver {
 
     public static Class<?> findClass(String className, ClassLoader classLoader) {
         switch (className) {
-            case "int":
-                logger.debug("基本类型: int");
-                return int.class;
-            case "long":
-                logger.debug("基本类型: long");
-                return long.class;
-            case "float":
-                logger.debug("基本类型: float");
-                return float.class;
-            case "double":
-                logger.debug("基本类型: double");
-                return double.class;
-            case "boolean":
-                logger.debug("基本类型: boolean");
-                return boolean.class;
-            case "char":
-                logger.debug("基本类型: char");
-                return char.class;
-            case "byte":
-                logger.debug("基本类型: byte");
-                return byte.class;
-            case "short":
-                logger.debug("基本类型: short");
-                return short.class;
-            case "void":
-                logger.debug("基本类型: void");
-                return void.class;
+            case "int": return int.class;
+            case "long": return long.class;
+            case "float": return float.class;
+            case "double": return double.class;
+            case "boolean": return boolean.class;
+            case "char": return char.class;
+            case "byte": return byte.class;
+            case "short": return short.class;
+            case "void": return void.class;
         }
         
         Class<?> clazz = findClassInternal(className, classLoader);
@@ -203,38 +185,19 @@ public class ClassResolver {
     public static Class<?> findClassWithImports(String className, ClassLoader classLoader, List<String> imports) {
 
         switch (className) {
-            case "int":
-                logger.debug("基本类型: int");
-                return int.class;
-            case "long":
-                logger.debug("基本类型: long");
-                return long.class;
-            case "float":
-                logger.debug("基本类型: float");
-                return float.class;
-            case "double":
-                logger.debug("基本类型: double");
-                return double.class;
-            case "boolean":
-                logger.debug("基本类型: boolean");
-                return boolean.class;
-            case "char":
-                logger.debug("基本类型: char");
-                return char.class;
-            case "byte":
-                logger.debug("基本类型: byte");
-                return byte.class;
-            case "short":
-                logger.debug("基本类型: short");
-                return short.class;
-            case "void":
-                logger.debug("基本类型: void");
-                return void.class;
+            case "int": return int.class;
+            case "long": return long.class;
+            case "float": return float.class;
+            case "double": return double.class;
+            case "boolean": return boolean.class;
+            case "char": return char.class;
+            case "byte": return byte.class;
+            case "short": return short.class;
+            case "void": return void.class;
         }
 
         Class<?> clazz;
         if (className.contains(".")) {
-            logger.debug("尝试完整类名: " + className);
             clazz = findClassInternal(className, classLoader);
 
             if (clazz != null) {
@@ -401,16 +364,15 @@ public class ClassResolver {
                 return Class.forName(className, false, loader);
             } else {
                 if (AppEnvironment.isHookEnv()) {
-                    Class<?> clazz = XposedBasicHook.HookClassFinder.withCl(null).find(className);
+                    Class<?> clazz = XposedBasicHook.HookClassFinder.find(className);
                     if (clazz != null) return clazz;
                 }
                 try {
                     return Class.forName(className);
                 } catch (ClassNotFoundException e) {
                     ClassLoader contextLoader = Thread.currentThread().getContextClassLoader();
-                    if (contextLoader != null) {
+                    if (contextLoader != null)
                         return Class.forName(className, false, contextLoader);
-                    }
                     throw e;
                 }
             }
@@ -574,6 +536,7 @@ public class ClassResolver {
     public static Object getStaticFieldInternal(Class<?> clazz, String fieldName,
              boolean accessSuper, boolean accessInterfaces) throws IllegalAccessException {
         Field field = findStaticField(clazz, fieldName, accessSuper, accessInterfaces);
+        assert field != null : "找不到字段 " + clazz.getName() + "." + fieldName;
         field.setAccessible(true);
         return field.get(null);
     }

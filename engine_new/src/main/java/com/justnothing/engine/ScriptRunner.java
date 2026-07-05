@@ -5,13 +5,14 @@ import com.justnothing.engine.api.IClassFinder;
 import com.justnothing.engine.api.IOutputHandler;
 import com.justnothing.engine.ast.ASTNode;
 import com.justnothing.engine.ast.nodes.ClassDeclarationNode;
+import com.justnothing.engine.ast.nodes.ImportNode;
 import com.justnothing.engine.codegen.DynamicClassGenerator;
 import com.justnothing.engine.builtins.BuiltinRegistry;
 import com.justnothing.engine.builtins.Builtins;
 import com.justnothing.engine.eval.CustomClassExecutor;
 import com.justnothing.engine.parser.OperatorRegistry;
 import com.justnothing.engine.eval.EvalContext;
-import com.justnothing.engine.eval.EvalException;
+import com.justnothing.engine.exception.EvalException;
 import com.justnothing.engine.eval.Evaluator;
 import com.justnothing.engine.eval.Value;
 import com.justnothing.engine.lexer.Lexer;
@@ -32,12 +33,14 @@ import java.util.Map;
 public class ScriptRunner {
 
     private Preprocessor preprocessor;
-    private final ParseContext parseContext;
+    private ParseContext parseContext;
     private final EvalContext evalContext;
     private final DynamicClassGenerator codegen;
     private final ClassLoader classLoader;
     private IOutputHandler outputHandler;
     private IOutputHandler errorHandler;
+    private final BuiltinRegistry builtinRegistry;
+    private final OperatorRegistry operatorRegistry;
     private boolean enablePreprocessor = true;
 
     public ScriptRunner() {
@@ -57,8 +60,8 @@ public class ScriptRunner {
         this.outputHandler = outputHandler != null ? outputHandler : new DefaultOutputHandler(System.out, System.in);
         this.errorHandler = errorHandler != null ? errorHandler : new DefaultOutputHandler(System.err, System.in);
 
-        BuiltinRegistry registry = new BuiltinRegistry();
-        OperatorRegistry operatorRegistry = new OperatorRegistry();
+        builtinRegistry = new BuiltinRegistry();
+        operatorRegistry = new OperatorRegistry();
         operatorRegistry.registerAllBuiltins();  // 预注册所有内置运算符
 
         // DCG 仍以原始 classLoader（目标应用）为 parent，确保内部 Loader 可委托到目标应用
@@ -71,10 +74,8 @@ public class ScriptRunner {
         composite.addFirst(codegen.getLoader());
         this.classLoader = composite;
 
-        this.parseContext = new ParseContext(this.classLoader);
-        this.parseContext.setBuiltinRegistry(registry);
-        this.parseContext.setOperatorRegistry(operatorRegistry);
-        this.evalContext = new EvalContext(registry, this.outputHandler);
+        resetParseContext();
+        this.evalContext = new EvalContext(builtinRegistry, this.outputHandler);
         this.codegen.setClassDeclarations(parseContext.getClassDeclarations());
         this.preprocessor = new Preprocessor();
         this.parseContext.setCodeGenerator(codegen);
@@ -99,6 +100,8 @@ public class ScriptRunner {
         return builtins != null ? builtins.getRegistry() : null;
     }
 
+
+
     /** 获取共享的 OperatorRegistry（供动态注册运算符重载）。 */
     public OperatorRegistry getOperatorRegistry() {
         return parseContext.getOperatorRegistry();
@@ -122,6 +125,7 @@ public class ScriptRunner {
 
     public Object executeWithResult(String code, String sourceFileName) {
         try {
+            resetParseContext();
             String processedCode = preprocess(code);
             Lexer lexer = new Lexer(processedCode, sourceFileName);
             Parser parser = new Parser(lexer.tokenize(), parseContext, sourceFileName);
@@ -173,22 +177,94 @@ public class ScriptRunner {
 
     /**
      * 执行代码并返回结果（兼容旧版 API，支持每次调用指定输出/错误处理器）。
-     * <p>临时替换 outputHandler/errorHandler，执行后恢复。
+     * <p>临时替换 outputHandler/errorHandler 以及 EvalContext 的 output，执行后恢复。
      */
     public Object executeWithResult(String code, IOutputHandler out, IOutputHandler err) {
         IOutputHandler oldOut = this.outputHandler;
         IOutputHandler oldErr = this.errorHandler;
+        IOutputHandler oldEvalOut = evalContext.getOutput();
         try {
             this.outputHandler = out != null ? out : oldOut;
             this.errorHandler = err != null ? err : oldErr;
+            // 同步更新 EvalContext.output，确保 println 等输出走指定的 handler
+            if (out != null) evalContext.setOutput(out);
             return executeWithResult(code);
         } finally {
             this.outputHandler = oldOut;
             this.errorHandler = oldErr;
+            evalContext.setOutput(oldEvalOut);
         }
     }
 
+    // ==================== Pre-compiled AST Execution ====================
+
+    /**
+     * 执行预解析的 AST 节点列表（跳过词法/语法分析阶段）。
+     * <p>用于 HookManager 等场景：代码在验证期已解析为 AST，运行时直接求值避免重复解析。
+     */
+    public Object executeNodes(List<ASTNode> nodes, IOutputHandler out, IOutputHandler err) {
+        IOutputHandler oldOut = this.outputHandler;
+        IOutputHandler oldErr = this.errorHandler;
+        IOutputHandler oldEvalOut = evalContext.getOutput();
+        try {
+            this.outputHandler = out != null ? out : oldOut;
+            this.errorHandler = err != null ? err : oldErr;
+            if (out != null) evalContext.setOutput(out);
+
+            resetParseContext();
+
+            for (ASTNode node : nodes) {
+                if (node instanceof ClassDeclarationNode classDecl) {
+                    parseContext.declareClass(classDecl);
+                    try {
+                        codegen.generate(classDecl);
+                    } catch (Exception e) {
+                        // skip
+                    }
+                }
+                // 注册 import 语句，使运行时类解析可用
+                if (node instanceof ImportNode importNode) {
+                    String importStr = importNode.getPackageName();
+                    if (importStr != null && importStr.startsWith("import ")) {
+                        parseContext.addImport(importStr.substring("import ".length()).trim());
+                    }
+                }
+            }
+
+            CustomClassExecutor.setContext(evalContext, parseContext);
+            Evaluator evaluator = new Evaluator(evalContext, parseContext);
+            List<Value> results = evaluator.evaluateAll(nodes);
+            CustomClassExecutor.clearContext();
+
+            if (results.isEmpty()) return null;
+            Value last = results.get(results.size() - 1);
+            return last instanceof Value.VoidValue ? null : last.asJavaObject();
+        } catch (EvalException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage(), e);
+        } finally {
+            this.outputHandler = oldOut;
+            this.errorHandler = oldErr;
+            evalContext.setOutput(oldEvalOut);
+        }
+    }
+
+    public void executeNodes(List<ASTNode> nodes) {
+        executeNodes(nodes, outputHandler, errorHandler);
+    }
+
     // ==================== Parsing ====================
+
+    public void resetParseContext() {
+        IClassFinder oldFinder = this.parseContext != null ? this.parseContext.getClassFinder() : null;
+        this.parseContext = new ParseContext(this.classLoader);
+        this.parseContext.setBuiltinRegistry(this.builtinRegistry);
+        this.parseContext.setOperatorRegistry(this.operatorRegistry);
+        if (oldFinder != null) {
+            this.parseContext.setClassFinder(oldFinder);
+        }
+    }
 
     public List<ASTNode> tryParse(String code) {
         return tryParse(code, "<stdin>");
@@ -196,6 +272,7 @@ public class ScriptRunner {
 
     public List<ASTNode> tryParse(String code, String sourceFileName) {
         try {
+            resetParseContext();
             String processedCode = preprocess(code);
             Lexer lexer = new Lexer(processedCode, sourceFileName);
             Parser parser = new Parser(lexer.tokenize(), parseContext, sourceFileName);
@@ -219,7 +296,7 @@ public class ScriptRunner {
     // ==================== Variables ====================
 
     public void setVariable(String name, Object value) {
-        evalContext.setVariable(name, Value.of(value));
+        evalContext.declareVariable(name, Value.of(value));
     }
 
     public Object getVariable(String name) {

@@ -147,7 +147,6 @@ public class AnalyzeCommand extends AbstractClassCommand<AnalyzeClassRequest, An
 
                     String signature = methodInfo.getSignature();
                     List<String> interfaceSources = methodInterfaceMap.get(signature);
-                    boolean hasExtraInfo = false;
 
                     if (showHierarchy && interfaceSources != null && !interfaceSources.isEmpty()) {
                         cmd.println("");
@@ -160,18 +159,16 @@ public class AnalyzeCommand extends AbstractClassCommand<AnalyzeClassRequest, An
                             cmd.print(iface, Colors.GREEN);
                             first = false;
                         }
-                        hasExtraInfo = true;
                     }
 
                     if (showHierarchy && methodInfo.getDeclaringClass() != null && !methodInfo.getDeclaringClass().equals(targetClass.getName())) {
-                        if (hasExtraInfo) {
-                            cmd.println("");
-                        }
+                        cmd.println("");
                         cmd.print("      └─> 继承自: ", Colors.CYAN);
-                        cmd.println(methodInfo.getDeclaringClass(), Colors.GREEN);
+                        cmd.print(methodInfo.getDeclaringClass(), Colors.GREEN);
                     }
 
                     cmd.println("");
+
                 }
             }
             cmd.print("方法总数: ", Colors.CYAN);
@@ -226,7 +223,7 @@ public class AnalyzeCommand extends AbstractClassCommand<AnalyzeClassRequest, An
             cmd.println("=== 统计信息 ===", Colors.CYAN);
             Map<String, FieldInfo> fieldMap = collectAllFields(targetClass, context);
             Map<String, MethodInfo> methodMap = collectAllMethods(targetClass, context);
-            java.lang.reflect.Constructor<?>[] constructors = targetClass.getDeclaredConstructors();
+            Constructor<?>[] constructors = targetClass.getDeclaredConstructors();
             Class<?>[] interfaces = targetClass.getInterfaces();
 
             int staticFieldCount = 0, instanceFieldCount = 0;

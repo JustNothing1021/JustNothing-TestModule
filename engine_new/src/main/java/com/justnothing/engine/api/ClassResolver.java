@@ -18,9 +18,16 @@ public class ClassResolver {
     private static ClassLoader primaryClassLoader = null;
     private static final Object loaderLock = new Object();
     private static final Map<String, Object> classCache = new ConcurrentHashMap<>();
+    /** 哨兵对象，标记"已查找但不存在"的类（黑名单） */
+    private static final Object NOT_FOUND = new Object();
 
     public static void clearClassCache() {
         classCache.clear();
+    }
+
+    /** 仅清空黑名单（找不到的类的缓存），保留已找到的类的缓存 */
+    public static void clearBlacklist() {
+        classCache.entrySet().removeIf(e -> e.getValue() == NOT_FOUND);
     }
 
     public static int getCacheSize() {
@@ -108,25 +115,39 @@ public class ClassResolver {
             case "short": return short.class;
             case "void": return void.class;
         }
-        
+
+        // 查缓存
+        Object cached = classCache.get(className);
+        if (cached != null) return cached == NOT_FOUND ? null : (Class<?>) cached;
+
         Class<?> clazz = findClassInternal(className, classLoader);
-        if (clazz != null) return clazz;
+        if (clazz != null) {
+            classCache.put(className, clazz);
+            return clazz;
+        }
 
         if (className.contains(".")) {
             clazz = tryNestedVariants(className, classLoader);
-            return clazz;
+            if (clazz != null) {
+                classCache.put(className, clazz);
+                return clazz;
+            }
         }
-        
+
+        // 黑名单缓存
+        classCache.put(className, NOT_FOUND);
         return null;
     }
 
     public static Class<?> findClassWithImports(String className, ClassLoader classLoader, List<String> imports) {
         Object cached = classCache.get(className);
-        if (cached != null) return (Class<?>) cached;
+        if (cached != null) return cached == NOT_FOUND ? null : (Class<?>) cached;
 
         Class<?> result = findClassWithImportsInternal(className, classLoader, imports);
         if (result != null) {
             classCache.put(className, result);
+        } else {
+            classCache.put(className, NOT_FOUND);
         }
         return result;
     }

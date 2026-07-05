@@ -4,6 +4,7 @@ import com.justnothing.methodsclient.model.ColoredSegment;
 import com.justnothing.methodsclient.monitor.ClientPortManager;
 import com.justnothing.methodsclient.StreamClient;
 import com.justnothing.methodsclient.monitor.PerformanceMonitor;
+import com.justnothing.methodsclient.utils.TerminalManager;
 import com.justnothing.testmodule.command.protocol.InteractiveProtocol;
 import com.justnothing.testmodule.command.output.ClientRequirements;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
@@ -219,7 +220,7 @@ public class SocketCommandExecutor {
         try {
             socket = createSocket();
             // 发送能力协商
-            ClientRequirements requirements = new ClientRequirements(true, false);
+            ClientRequirements requirements = buildRequirements(true, false);
             InteractiveProtocol.writeMessage(socket.getOutputStream(), InteractiveProtocol.TYPE_CLIENT_CAPABILITY,
                     InteractiveProtocol.encodeCapability(requirements));
             // 发送交互式命令
@@ -258,7 +259,7 @@ public class SocketCommandExecutor {
         try {
             socket = createSocket();
             // 发送能力协商
-            ClientRequirements requirements = new ClientRequirements(supportsInput, false);
+            ClientRequirements requirements = buildRequirements(supportsInput, false);
             InteractiveProtocol.writeMessage(socket.getOutputStream(), InteractiveProtocol.TYPE_CLIENT_CAPABILITY,
                     InteractiveProtocol.encodeCapability(requirements));
             // 发送命令
@@ -297,7 +298,7 @@ public class SocketCommandExecutor {
         try {
             socket = createSocket();
             // 发送能力协商
-            ClientRequirements requirements = new ClientRequirements(false, false);
+            ClientRequirements requirements = buildRequirements(false, false);
             InteractiveProtocol.writeMessage(socket.getOutputStream(), InteractiveProtocol.TYPE_CLIENT_CAPABILITY,
                     InteractiveProtocol.encodeCapability(requirements));
             // 发送命令请求
@@ -325,5 +326,35 @@ public class SocketCommandExecutor {
         } finally {
             closeSocketQuietly(socket);
         }
+    }
+
+    /**
+     * 创建带终端信息的 ClientRequirements。
+     * 自动从 JLine Terminal 检测宽度、高度、ANSI 支持和颜色系统。
+     */
+    private static ClientRequirements buildRequirements(boolean supportsInput, boolean isJsonMode) {
+        ClientRequirements req = new ClientRequirements(supportsInput, isJsonMode);
+        var terminal = TerminalManager.getTerminal();
+        if (terminal != null) {
+            try {
+                org.jline.terminal.Size size = terminal.getSize();
+                if (size != null && size.getColumns() > 0) {
+                    req.setWidth(size.getColumns());
+                    req.setHeight(size.getRows());
+                }
+            } catch (Exception ignored) {}
+            req.setSupportsAnsi(!org.jline.terminal.Terminal.TYPE_DUMB.equals(terminal.getType()));
+        }
+        // 颜色系统检测
+        String colorTerm = System.getenv("COLORTERM");
+        String term = System.getenv("TERM");
+        if ("truecolor".equals(colorTerm) || "24bit".equals(colorTerm)) {
+            req.setColorSystem(ClientRequirements.COLOR_TRUECOLOR);
+        } else if (term != null && term.contains("256color")) {
+            req.setColorSystem(ClientRequirements.COLOR_EIGHT_BIT);
+        } else {
+            req.setColorSystem(ClientRequirements.COLOR_STANDARD);
+        }
+        return req;
     }
 }

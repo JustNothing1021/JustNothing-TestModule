@@ -796,8 +796,6 @@ public class ExprParserTest {
     @Test
     public void testSystemOutPrintln() throws CythavaParseException {
         ASTNode node = parse("System.out.println(1)");
-        System.out.println("[DEBUG] type = " + node.getClass().getSimpleName());
-        System.out.println("[DEBUG] formatString = \n" + node.formatString(1));
         // 应该是 MethodCallNode，不是 ClassReferenceNode
         assertTrue("Expected MethodCallNode but got " + node.getClass().getSimpleName(),
                 node instanceof MethodCallNode);
@@ -809,8 +807,6 @@ public class ExprParserTest {
     @Test
     public void testSystemOut() throws CythavaParseException {
         ASTNode node = parse("System.out");
-        System.out.println("[DEBUG] type = " + node.getClass().getSimpleName());
-        System.out.println("[DEBUG] formatString = \n" + node.formatString(1));
         // 应该是 FieldAccessNode(ClassReferenceNode(System), "out")
         assertTrue("Expected FieldAccessNode but got " + node.getClass().getSimpleName(),
                 node instanceof FieldAccessNode);

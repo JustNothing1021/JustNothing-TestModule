@@ -7,6 +7,7 @@ import com.justnothing.engine.ast.nodes.PipelineNode;
 import com.justnothing.engine.builtins.Lambda;
 import com.justnothing.engine.builtins.MethodReference;
 import com.justnothing.engine.exception.ErrorCode;
+import com.justnothing.engine.exception.EvalException;
 import com.justnothing.engine.util.MethodResolver;
 
 import java.lang.reflect.Field;

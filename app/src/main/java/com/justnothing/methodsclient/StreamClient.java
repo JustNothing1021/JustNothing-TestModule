@@ -7,6 +7,7 @@ import com.justnothing.methodsclient.executor.SocketCommandExecutor;
 import com.justnothing.methodsclient.monitor.ClientPortManager;
 import com.justnothing.methodsclient.monitor.PerformanceMonitor;
 import com.justnothing.methodsclient.repl.ReplClient;
+import com.justnothing.methodsclient.test.TerminalCapabilityTest;
 import com.justnothing.testmodule.utils.logging.Logger;
 
 
@@ -178,6 +179,7 @@ public class StreamClient {
                     --quick-test             快速连接测试
                     --perf-stats             打印性能统计信息
                     --clear-perf-data        清除性能统计数据
+                    --terminal-test          终端能力诊断测试（客户端侧）
                     --help                   显示此帮助信息
                 
                 示例:
@@ -187,6 +189,8 @@ public class StreamClient {
                     StreamClient --file "invoke java.lang.System currentTimeMillis"
                     StreamClient --update-port 12345
                     StreamClient --check-socket
+                    StreamClient --terminal-test
+                    StreamClient --terminal-test --quick
                     StreamClient --perf-stats
                     StreamClient --clear-perf-data
                     StreamClient -r
@@ -229,6 +233,12 @@ public class StreamClient {
         if (args.length > 0 && args[0].equals("--quick-test")) {
             boolean result = tryConnect();
             System.exit(result ? 0 : 1);
+            return;
+        }
+
+        if (args.length > 0 && args[0].equals("--terminal-test")) {
+            boolean quick = args.length > 1 && args[1].equals("--quick");
+            new TerminalCapabilityTest(quick).run();
             return;
         }
 

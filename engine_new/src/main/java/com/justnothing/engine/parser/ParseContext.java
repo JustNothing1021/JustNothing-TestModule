@@ -39,6 +39,9 @@ public class ParseContext {
     private ClassLoader classLoader;
     private IClassFinder classFinder;
 
+    /** 数组类型缓存：避免 getRawType() 每次都 Array.newInstance 反射创建 */
+    private final Map<String, Class<?>> arrayTypeCache = new HashMap<>();
+
     // ==================== 作用域 / 符号表 ====================
 
     /** 作用域栈。每个 Scope 包含该层级的变量声明。 */
@@ -134,6 +137,10 @@ public class ParseContext {
     public void addImport(String importStmt) {
         if (!imports.contains(importStmt)) {
             imports.add(importStmt);
+            // 新增 import 后，之前找不到的类可能通过新 import 找到了，清空黑名单
+            if (classFinder != null) {
+                classFinder.clearBlacklist();
+            }
         }
     }
 
@@ -542,9 +549,9 @@ public class ParseContext {
         int arrayDepth = jtype.getArrayDepth();
         if (arrayDepth > 0) {
             Class<?> componentType = jtype.getRawType();
-            // 使用 Array.newInstance 创建正确的数组类型
-            // 例如: Array.newInstance(int.class, 0).getClass() → int[]
-            return java.lang.reflect.Array.newInstance(componentType, new int[arrayDepth]).getClass();
+            String cacheKey = componentType.getName() + "[".repeat(arrayDepth);
+            return arrayTypeCache.computeIfAbsent(cacheKey, k ->
+                    java.lang.reflect.Array.newInstance(componentType, new int[arrayDepth]).getClass());
         }
         return jtype.getRawType();
     }

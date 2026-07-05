@@ -24,9 +24,9 @@ public class DebugParse {
                 Lexer lexer = new Lexer(source, "<test>");
                 Parser parser = new Parser(lexer.tokenize(), context, "<test>");
                 var nodes = parser.parse();
-                System.out.println("OK: '" + source + "' → " + nodes.size() + " node(s)");
+                // OK: '{source}' → {nodes.size()} node(s)
             } catch (CythavaParseException e) {
-                System.out.println("PARSE ERROR: '" + source + "' → " + e.getMessage());
+                // PARSE ERROR: '{source}' → {e.getMessage()}
             }
         }
     }

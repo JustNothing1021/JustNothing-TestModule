@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.tests;
 
 import com.justnothing.engine.ScriptRunner;
 import com.justnothing.engine.api.DefaultOutputHandler;
+import com.justnothing.engine.exception.EvalException;
 import com.justnothing.testmodule.command.base.MainCommand;
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.base.protocol.CommandResult;
@@ -10,6 +11,7 @@ import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.utils.reflect.DexClassDefiner;
 import com.justnothing.engine.codegen.DynamicClassGenerator;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.justnothing.testmodule.command.base.command.Cmd;
@@ -65,7 +67,7 @@ public class AnonClassTestMain extends MainCommand<CommandResult> {
         void run() throws Exception;
     }
 
-    private void executeInIsolatedThread(CommandExecutor.CmdExecContext context, String testName, TestRunnable test) {
+    private void executeInIsolatedThread(CommandExecutor.CmdExecContext<?> context, String testName, TestRunnable test) {
         context.println("[" + testName + " 测试] 在独立线程中执行...", Colors.CYAN);
         context.println("", Colors.WHITE);
         
@@ -79,7 +81,7 @@ public class AnonClassTestMain extends MainCommand<CommandResult> {
         }
     }
         
-    private void testAnonymousClassInternal(CommandExecutor.CmdExecContext context, 
+    private void testAnonymousClassInternal(CommandExecutor.CmdExecContext<?> context,
                                           boolean quickMode) {
         DynamicClassGenerator.setDefaultClassDefiner(DexClassDefiner.getInstance());
         ScriptRunner runner = new ScriptRunner();
@@ -208,7 +210,7 @@ public class AnonClassTestMain extends MainCommand<CommandResult> {
     }
 
 
-    private void printDiagnosisSummary(CommandExecutor.CmdExecContext context,
+    private void printDiagnosisSummary(CommandExecutor.CmdExecContext<?> context,
                                        int failed, int warned) {
         if (failed == 0 && warned == 0) {
             context.println("所有测试通过! 匿名类生成功能正常工作", Colors.GREEN);
@@ -220,13 +222,16 @@ public class AnonClassTestMain extends MainCommand<CommandResult> {
     }
 
     private static boolean isExpectedClassLimitation(Throwable cause, String msg) {
-        if (cause instanceof java.lang.IncompatibleClassChangeError) {
+        if (cause instanceof InvocationTargetException ite && ite.getCause() != null) {
+            cause = ite.getCause();
+            msg = cause.getMessage();
+        }
+        if (cause instanceof IncompatibleClassChangeError) {
             return msg != null && msg.contains("declared final");
         }
-        if (cause instanceof com.justnothing.engine.eval.EvalException) {
+        if (cause instanceof EvalException) {
             return msg != null && (msg.contains("private") || msg.contains("final"));
         }
-        // ★ DCG 提前检测到全 private 构造器时抛出的异常（字节码生成阶段即止损）
         if (cause instanceof UnsupportedOperationException) {
             return msg != null && (msg.contains("Cannot extend")
                     || msg.contains("private")

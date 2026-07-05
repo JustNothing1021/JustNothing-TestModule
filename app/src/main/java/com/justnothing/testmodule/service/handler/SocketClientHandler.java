@@ -98,13 +98,9 @@ public class SocketClientHandler {
                     
                 case InteractiveProtocol.TYPE_CLIENT_COMMAND:
                 case InteractiveProtocol.TYPE_JSON_COMMAND_REQUEST:
-                    if (!hasCommand) {
-                        result.commandPacket = packet;
-                        hasCommand = true;
-                        logger.debug("收到命令包: " + InteractiveProtocol.getMessageTypeName(packetType));
-                    } else {
-                        logger.warn("收到重复的COMMAND包，忽略");
-                    }
+                    result.commandPacket = packet;
+                    hasCommand = true;
+                    logger.debug("收到命令包: " + InteractiveProtocol.getMessageTypeName(packetType));
                     break;
                     
                 default:
@@ -239,6 +235,10 @@ public class SocketClientHandler {
                             InteractiveProtocol.writeMessage(output, InteractiveProtocol.TYPE_SERVER_PONG, null);
                             break;
 
+                        case InteractiveProtocol.TYPE_TERMINAL_RPC:
+                            finalOutputHandler.handleTerminalRpc(packetData);
+                            break;
+
                         default:
                             logger.warn("未知的客户端消息类型: " + packetType);
                     }
@@ -304,6 +304,11 @@ public class SocketClientHandler {
                 InteractiveOutputHandler outputHandler = new InteractiveOutputHandler(output);
                 outputHandler.setSupportsInput(requirements.isSupportsInput());
                 outputHandler.setJsonMode(requirements.isJsonMode());
+                outputHandler.setClientTerminalInfo(
+                        requirements.getWidth(), requirements.getHeight(),
+                        requirements.isSupportsAnsi(), requirements.getColorSystem()
+                );
+                outputHandler.initRemoteTerminal(); // 交互模式：创建 RPC 通道
 
                 final AtomicBoolean readerRunning = new AtomicBoolean(true);
                 final AtomicLong lastResponseTime = new AtomicLong(System.currentTimeMillis());
@@ -336,7 +341,10 @@ public class SocketClientHandler {
                     }
                 } else if (type == InteractiveProtocol.TYPE_JSON_COMMAND_REQUEST) {
                     logger.debug("接收到的为JSON命令请求");
-                    handleCommandRequest(data, output);
+                    handleCommandRequest(data, output, requirements);
+                    // JSON 命令路径没有 reader 线程，外层 outputHandler 永远不会被 close，
+                    // 直接关闭避免等待逻辑空转
+                    outputHandler.close();
                 }
                 
                 if (requirements.isJsonMode()) {
@@ -469,7 +477,7 @@ public class SocketClientHandler {
         }
     }
     
-    private void handleCommandRequest(byte[] data, OutputStream output) {
+    private void handleCommandRequest(byte[] data, OutputStream output, ClientRequirements requirements) {
         try {
             String jsonRequest = new String(data, StandardCharsets.UTF_8);
             logger.info("命令请求: " + jsonRequest);
@@ -488,10 +496,16 @@ public class SocketClientHandler {
                 return;
             }
 
-            ClientRequirements requirements = new ClientRequirements(false, true);
             InteractiveOutputHandler outputHandler = new InteractiveOutputHandler(output);
             outputHandler.setSupportsInput(requirements.isSupportsInput());
             outputHandler.setJsonMode(requirements.isJsonMode());
+            // 文件模式：只设置客户端信息（宽高等），不创建 RPC 通道
+            // getConsole() 会自动创建 System.out-backed fallback Console (noColor)
+            // SystemOutputRedirector 会捕获 System.out 转发到 outputHandler
+            outputHandler.setClientTerminalInfo(
+                    requirements.getWidth(), requirements.getHeight(),
+                    requirements.isSupportsAnsi(), requirements.getColorSystem()
+            );
             commandExecutor.execute(
                     request, outputHandler, requirements, CommandType.USER_INTERFACE
             ); // 这里不用再管了, commandExecutor会自己判断模式然后给输出写进InteractiveOutputHandler

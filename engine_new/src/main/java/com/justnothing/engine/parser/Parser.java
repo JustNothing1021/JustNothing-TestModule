@@ -56,6 +56,13 @@ public class Parser extends BaseParser {
                 if (node instanceof com.justnothing.engine.ast.nodes.ClassDeclarationNode cd) {
                     context.declareClass(cd);
                 }
+                // 立即注册 import，使同一次 parse 中后续语句可引用导入的类
+                if (node instanceof com.justnothing.engine.ast.nodes.ImportNode importNode) {
+                    String importStr = importNode.getPackageName();
+                    if (importStr != null && importStr.startsWith("import ")) {
+                        context.addImport(importStr.substring("import ".length()).trim());
+                    }
+                }
                 stmtParser.setPosition(declParser.getPosition());
                 this.setPosition(declParser.getPosition());
                 continue;

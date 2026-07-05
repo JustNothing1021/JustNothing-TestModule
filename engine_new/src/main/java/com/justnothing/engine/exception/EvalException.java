@@ -1,6 +1,4 @@
-package com.justnothing.engine.eval;
-
-import com.justnothing.engine.exception.ErrorCode;
+package com.justnothing.engine.exception;
 
 public class EvalException extends RuntimeException {
     private final ErrorCode errorCode;

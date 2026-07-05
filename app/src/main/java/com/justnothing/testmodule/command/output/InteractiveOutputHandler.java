@@ -2,13 +2,15 @@ package com.justnothing.testmodule.command.output;
 
 import androidx.annotation.NonNull;
 
-import com.justnothing.testmodule.command.base.protocol.GsonFactory;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonArray;
 import com.justnothing.testmodule.command.output.InputMode;
 import com.justnothing.testmodule.command.protocol.InteractiveProtocol;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -19,6 +21,12 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+
+import com.justnothing.richconsole.console.Console;
+import com.justnothing.testmodule.command.protocol.TerminalRpcChannel;
+import org.jline.terminal.Size;
+import org.jline.terminal.Terminal;
+import org.jline.terminal.TerminalBuilder;
 
 
 public class InteractiveOutputHandler implements ICommandOutputHandler {
@@ -40,6 +48,19 @@ public class InteractiveOutputHandler implements ICommandOutputHandler {
     private volatile boolean supportsInput = true;
     private volatile boolean isJsonMode = false;
     private volatile String command;
+
+    // 客户端终端信息
+    private volatile int clientWidth;
+    private volatile int clientHeight;
+    private volatile boolean clientSupportsAnsi;
+    private volatile byte clientColorSystem;
+
+    // ExternalTerminal + Protocol 流适配
+    private TerminalRpcChannel rpcChannel;
+    private RemoteServerTerminal remoteTerminal;
+
+    // Console 实例（RichConsole 渲染用，基于 ExternalTerminal）
+    private volatile Console console;
 
     public InteractiveOutputHandler(OutputStream outputStream) {
         this.outputStream = outputStream;
@@ -72,6 +93,208 @@ public class InteractiveOutputHandler implements ICommandOutputHandler {
     
     public String getCommand() {
         return command;
+    }
+
+    /**
+     * 设置客户端终端信息（由 SocketClientHandler 在能力协商后调用）。
+     *
+     * <p>仅设置客户端信息字段（宽度、高度、ANSI 支持、颜色系统），
+     * 不创建 RemoteServerTerminal。交互模式需额外调用 {@link #initRemoteTerminal()}。</p>
+     */
+    public void setClientTerminalInfo(int width, int height, boolean supportsAnsi, byte colorSystem) {
+        this.clientWidth = width;
+        this.clientHeight = height;
+        this.clientSupportsAnsi = supportsAnsi;
+        this.clientColorSystem = colorSystem;
+        if (remoteTerminal != null) {
+            remoteTerminal.updateCachedSize(width, height);
+        }
+    }
+
+    /**
+     * 初始化 RemoteServerTerminal（交互模式专用）。
+     *
+     * <p>创建 TerminalRpcChannel + RemoteServerTerminal，
+     * 使 Console 输出通过 JSON-RPC 通道发送给客户端终端。
+     * 文件模式（JSON 命令请求）不需要调用此方法，
+     * {@link #getConsole()} 会自动创建基于 System.out 的 fallback Console。</p>
+     */
+    public void initRemoteTerminal() {
+        if (remoteTerminal != null) return;
+        try {
+            rpcChannel = new TerminalRpcChannel(outputStream, writeLock);
+            String termType = clientSupportsAnsi ? "xterm-256color" : Terminal.TYPE_DUMB;
+            remoteTerminal = new RemoteServerTerminal(rpcChannel, termType, clientWidth, clientHeight);
+            logger.info("RemoteServerTerminal 创建成功: type=" + termType + ", size=" + clientWidth + "x" + clientHeight);
+        } catch (Exception e) {
+            logger.error("创建 RemoteServerTerminal 失败，将使用 fallback Console", e);
+        }
+    }
+
+    /**
+     * 获取 RemoteServerTerminal 实例（供 JLine LineReader 等使用）
+     */
+    public RemoteServerTerminal getRemoteTerminal() {
+        return remoteTerminal;
+    }
+
+    /**
+     * 获取 Console 实例（供命令代码使用 RichConsole 渲染）。
+     *
+     * <p>有两种路径：</p>
+     * <ul>
+     *   <li><b>交互模式</b>：Console 基于 RemoteServerTerminal，渲染结果通过 JSON-RPC 通道发送</li>
+     *   <li><b>文件模式/JSON 模式</b>：Fallback Console 基于 System.out-backed DumbTerminal + noColor，
+     *       输出经 SystemOutputRedirector 自动转发到 OutputHandler</li>
+     * </ul>
+     */
+    @Override
+    public Console getConsole() {
+        if (console == null && remoteTerminal != null) {
+            // 交互模式：通过 RPC 通道发送
+            console = Console.of(c -> c.withTerminal(remoteTerminal).withForceTerminal(true));
+        }
+        if (console == null && remoteTerminal == null) {
+            // 文件模式：通过 System.out (已被 SystemOutputRedirector 捕获) 发送，禁用 ANSI
+            console = createFallbackConsole();
+        }
+        return console;
+    }
+
+    /**
+     * 创建 fallback Console：基于 System.out 的 DumbTerminal + noColor。
+     *
+     * <p>在 CommandExecutor 执行期间，System.out 已被 SystemOutputRedirector 重定向到
+     * 本 InteractiveOutputHandler，所以 Console 的输出会自动走 TYPE_SERVER_OUTPUT 协议。</p>
+     */
+    private Console createFallbackConsole() {
+        try {
+            // System.in 是 system_server 的 stdin，不可用；
+            // 用一个读取就抛异常的 InputStream，因为文件模式不需要输入
+            InputStream noInput = new InputStream() {
+                @Override
+                public int read() {
+                    throw new UnsupportedOperationException("文件模式不支持终端输入");
+                }
+                @Override
+                public int available() {
+                    return 0;
+                }
+            };
+            Terminal dumbTerminal = TerminalBuilder.builder()
+                .system(false)
+                .dumb(true)
+                .streams(noInput, System.out)
+                .type(Terminal.TYPE_DUMB)
+                .build();
+            Console c = Console.of(cfg -> cfg
+                .withTerminal(dumbTerminal)
+                .withNoColor(true)
+                .withWidth(clientWidth > 0 ? clientWidth : null)
+                .withHeight(clientHeight > 0 ? clientHeight : null)
+            );
+            logger.info("已创建 fallback Console (System.out + noColor), size=" + clientWidth + "x" + clientHeight);
+            return c;
+        } catch (Exception e) {
+            logger.error("创建 fallback Console 失败", e);
+            return null;
+        }
+    }
+
+    public int getClientWidth() { return clientWidth; }
+    public int getClientHeight() { return clientHeight; }
+    public boolean isClientSupportsAnsi() { return clientSupportsAnsi; }
+
+
+
+    /**
+     * 处理 TYPE_TERMINAL_RPC 帧数据（由 SocketClientHandler 调用）
+     */
+    public void handleTerminalRpc(byte[] data) {
+        if (rpcChannel != null) {
+            rpcChannel.handleMessage(data);
+        }
+    }
+
+    /**
+     * 向客户端发送交互式提示请求，等待客户端响应。
+     * 通过 RPC call 实现请求-响应模式。
+     *
+     * @param promptType 提示类型: "input" | "confirm" | "list" | "checkbox"
+     * @param title 提示标题
+     * @param options 选项列表（list/checkbox 用），可为 null
+     * @param defaultValue 默认值，可为 null
+     * @param timeoutSeconds 超时时间（秒）
+     * @return PromptResult 包含取消状态、值、选中索引
+     */
+    public PromptResult promptClient(String promptType, String title, String[] options,
+                                     String defaultValue, int timeoutSeconds) {
+        if (closed.get() || rpcChannel == null) {
+            return PromptResult.cancelled();
+        }
+
+        try {
+            // 构造请求参数
+            JsonObject params = new JsonObject();
+            params.addProperty("type", promptType);
+            if (title != null) params.addProperty("title", title);
+            if (options != null && options.length > 0) {
+                JsonArray arr = new JsonArray();
+                for (String opt : options) arr.add(opt);
+                params.add("options", arr);
+            }
+            if (defaultValue != null) params.addProperty("defaultValue", defaultValue);
+
+            logger.debug("发送 promptRequest RPC: " + promptType);
+            JsonObject result = rpcChannel.call("promptRequest", params, timeoutSeconds * 1000L);
+
+            if (result != null) {
+                logger.debug("收到 promptRequest 响应");
+                return PromptResult.fromJsonObject(result);
+            }
+
+            logger.warn("Prompt 请求超时: " + promptType);
+            return PromptResult.cancelled();
+
+        } catch (Exception e) {
+            logger.error("Prompt 请求异常: " + promptType, e);
+            return PromptResult.cancelled();
+        }
+    }
+
+    /**
+     * Prompt 结果封装
+     */
+    public static class PromptResult {
+        public final boolean cancelled;
+        public final String value;
+        public final int[] selectedIndices;
+
+        private PromptResult(boolean cancelled, String value, int[] selectedIndices) {
+            this.cancelled = cancelled;
+            this.value = value;
+            this.selectedIndices = selectedIndices;
+        }
+
+        public static PromptResult cancelled() {
+            return new PromptResult(true, null, null);
+        }
+
+        /** 从 RPC 响应 JsonObject 解析结果 */
+        public static PromptResult fromJsonObject(JsonObject obj) {
+            boolean cancelled = obj.has("cancelled") && obj.get("cancelled").getAsBoolean();
+            String value = obj.has("value") && !obj.get("value").isJsonNull()
+                    ? obj.get("value").getAsString() : null;
+            int[] indices = null;
+            if (obj.has("selectedIndices") && obj.get("selectedIndices").isJsonArray()) {
+                JsonArray arr = obj.getAsJsonArray("selectedIndices");
+                indices = new int[arr.size()];
+                for (int i = 0; i < arr.size(); i++) {
+                    indices[i] = arr.get(i).getAsInt();
+                }
+            }
+            return new PromptResult(cancelled, value, indices);
+        }
     }
 
     @Override
@@ -267,6 +490,18 @@ public class InteractiveOutputHandler implements ICommandOutputHandler {
                 }
             } catch (IOException e) {
                 logger.debug("关闭输出处理器失败: " + e.getMessage());
+            }
+            // 关闭 RemoteServerTerminal
+            if (remoteTerminal != null) {
+                try {
+                    remoteTerminal.close();
+                } catch (Exception e) {
+                    logger.debug("关闭 RemoteServerTerminal 失败: " + e.getMessage());
+                }
+            }
+            // 关闭 RPC 通道
+            if (rpcChannel != null) {
+                rpcChannel.close();
             }
         }
     }

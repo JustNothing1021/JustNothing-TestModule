@@ -1,6 +1,7 @@
 package com.justnothing.engine.parser;
 
 import java.util.List;
+import java.lang.reflect.Array;
 import java.util.stream.Collectors;
 
 import com.justnothing.engine.ast.GenericType;
@@ -36,6 +37,20 @@ public interface JType {
 
     /** 是否可空（用于 ?? 安全相关操作符的语义分析）。 */
     boolean isNullable();
+
+    /**
+     * 获取运行时 Java Class 对象。
+     * <p>与 {@link #getRawType()} 的区别：对数组类型会合成数组 Class（如 int[] 而非 int）。</p>
+     *
+     * @return 运行时类型，数组类型返回对应的数组 Class
+     */
+    default Class<?> getRuntimeType() {
+        Class<?> raw = getRawType();
+        for (int i = 0; i < getArrayDepth(); i++) {
+            raw = Array.newInstance(raw, 0).getClass();
+        }
+        return raw;
+    }
 
     /**
      * 获取类型的显示名称。
@@ -81,7 +96,7 @@ public interface JType {
         @Override
         public List<JType> getTypeArguments() {
             return delegate.getTypeArguments().stream()
-                    .<JType>map(GenericTypeWrapper::new)
+                    .map(GenericTypeWrapper::new)
                     .collect(Collectors.toList());
         }
 

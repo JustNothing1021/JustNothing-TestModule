@@ -229,7 +229,6 @@ public class TerminalManager {
 
         KeyMap<Binding> keyMap = reader.getKeyMaps().get(LineReader.MAIN);
         assert keyMap != null;
-
         keyMap.bind(new org.jline.reader.Reference("up-line-or-history"), "\033[A");
         keyMap.bind(new org.jline.reader.Reference("up-line-or-history"), "\033OA");
         keyMap.bind(new org.jline.reader.Reference("down-line-or-history"), "\033[B");

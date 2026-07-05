@@ -2,13 +2,12 @@ package com.justnothing.engine.util;
 
 import com.justnothing.engine.builtins.Lambda;
 import com.justnothing.engine.builtins.MethodReference;
-import com.justnothing.engine.eval.EvalException;
+import com.justnothing.engine.exception.EvalException;
 import com.justnothing.engine.eval.Value;
 import com.justnothing.engine.exception.ErrorCode;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Function;
 
 public final class CastUtils {
 

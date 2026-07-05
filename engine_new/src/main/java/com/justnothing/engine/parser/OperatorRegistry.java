@@ -2,11 +2,12 @@ package com.justnothing.engine.parser;
 
 import com.justnothing.engine.ast.ASTNode;
 import com.justnothing.engine.ast.OperatorCallback;
-import com.justnothing.engine.eval.EvalException;
+import com.justnothing.engine.exception.EvalException;
 import com.justnothing.engine.eval.Value;
 import com.justnothing.engine.exception.ErrorCode;
 import com.justnothing.engine.lexer.Operators;
 
+import java.lang.reflect.Array;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
@@ -247,7 +248,7 @@ public final class OperatorRegistry {
      * <h3>设计原则</h3>
      * <ul>
      *   <li>只注册包装类型/父类型（如 {@code Number}, {@code Integer}, {@code Object}）</li>
-     *   <li>基本类型（{@code int}, {@code long} 等）通过 {@link #boxPrimitive()} 自动拆箱匹配</li>
+     *   <li>基本类型（{@code int}, {@code long} 等）通过 {@link #boxPrimitive(Class)} ()} 自动拆箱匹配</li>
      *   <li>所有算术回调使用"智能类型提升"（Double > Long > Int），与 Evaluator 行为一致</li>
      * </ul>
      */
@@ -255,11 +256,10 @@ public final class OperatorRegistry {
         // ===== 算术运算符 =====
         // + : 字符串拼接优先，否则数值加法（智能提升）
         registerBuiltinBinary(Operators.ADD, String.class, Object.class, String.class,
-                (l, r) -> new Value.StringValue(l.asJavaObject().toString() + r.asJavaObject().toString()));
+                (l, r) -> new Value.StringValue(str(l) + str(r)));
         registerBuiltinBinary(Operators.ADD, String.class, String.class, Object.class,
-                (l, r) -> new Value.StringValue(l.asJavaObject().toString() + r.asJavaObject().toString()));
-        registerBuiltinBinary(Operators.ADD, Number.class, Number.class, Object.class,
-                (l, r) -> numericAdd(l, r));
+                (l, r) -> new Value.StringValue(str(l) + str(r)));
+        registerBuiltinBinary(Operators.ADD, Number.class, Number.class, Object.class, OperatorRegistry::numericAdd);
 
         // -, *, /, % : 统一用智能数值运算（Double > Long > Int）
         registerBuiltinBinary(Operators.SUBTRACT, Number.class, Number.class, Object.class,
@@ -292,6 +292,26 @@ public final class OperatorRegistry {
                 (l, r) -> { int b = r.asInt(); if (b == 0) throw new EvalException("Division by zero", ErrorCode.EVAL_DIVISION_BY_ZERO); return new Value.LongValue((long) l.asInt() / b); });
         registerBuiltinBinary(Operators.MATH_MODULO, Integer.class, Integer.class, Long.class,
                 (l, r) -> { int b = r.asInt(); if (b == 0) throw new EvalException("Division by zero", ErrorCode.EVAL_DIVISION_BY_ZERO); return new Value.LongValue(Math.floorMod(l.asInt(), b)); });
+
+        // ===== 数组集合运算（注册为 Object[] 通配，compatibilityScore 自动匹配任意数组）=====
+        // + : 数组拼接 (concat)
+        registerBuiltinBinary(Operators.ADD, Object[].class, Object[].class, Object.class,
+                OperatorRegistry::arrayConcat);
+        // - : 数组差集 (difference)
+        registerBuiltinBinary(Operators.SUBTRACT, Object[].class, Object[].class, Object.class,
+                OperatorRegistry::arrayDifference);
+        // & : 数组交集 (intersection)
+        registerBuiltinBinary(Operators.BITWISE_AND, Object[].class, Object[].class, Object.class,
+                OperatorRegistry::arrayIntersection);
+        // | : 数组并集 (union)
+        registerBuiltinBinary(Operators.BITWISE_OR, Object[].class, Object[].class, Object.class,
+                OperatorRegistry::arrayUnion);
+        // ^ : 数组对称差集 (symmetric difference)
+        registerBuiltinBinary(Operators.BITWISE_XOR, Object[].class, Object[].class, Object.class,
+                OperatorRegistry::arraySymmetricDifference);
+        // ** : 数组笛卡尔积 (cartesian product)
+        registerBuiltinBinary(Operators.POWER, Object[].class, Object[].class, Object.class,
+                OperatorRegistry::arrayCartesianProduct);
 
         // ===== 比较运算符 =====
         registerBuiltinBinary(Operators.EQUAL, Object.class, Object.class, Boolean.class,
@@ -361,6 +381,12 @@ public final class OperatorRegistry {
     private interface LongBiOp { Value apply(long a, long b); }
     @FunctionalInterface
     private interface IntBiOp { Value apply(int a, int b); }
+
+    /** null-safe 的 Value → String 转换 */
+    private static String str(Value v) {
+        Object o = v.asJavaObject();
+        return o != null ? o.toString() : "null";
+    }
 
     private static Value smartNumericOp(Value l, Value r,
                                        DoubleBiOp doubleOp, LongBiOp longOp, IntBiOp intOp) {
@@ -439,18 +465,188 @@ public final class OperatorRegistry {
     }
 
     /**
+     * 寻找两个类的最小公共父类（Least Upper Bound）。
+     * <p>沿父类链向上爬，找到第一个同时是 {@code b} 的父类的类。</p>
+     */
+    static Class<?> leastCommonSupertype(Class<?> a, Class<?> b) {
+        if (a == null || b == null) return Object.class;
+        if (a == b || a.isAssignableFrom(b)) return a;
+        if (b.isAssignableFrom(a)) return b;
+        if (a.isInterface() || b.isInterface()) return Object.class;
+        Set<Class<?>> ancestors = new HashSet<>();
+        Class<?> cursor = a;
+        while (cursor != null) {
+            ancestors.add(cursor);
+            cursor = cursor.getSuperclass();
+        }
+        cursor = b;
+        while (cursor != null) {
+            if (ancestors.contains(cursor)) return cursor;
+            cursor = cursor.getSuperclass();
+        }
+        return Object.class;
+    }
+
+    /**
      * 兼容性评分：精确匹配=2，包装类型匹配=1.5，父类匹配=1，不兼容=0。
      * <p>
      * 相比原始版本，增加了基本类型→包装类型的自动拆箱支持：
      * {@code int} 可以匹配到注册的 {@code Integer} 或 {@code Number}。
+     * 数组类型：{@code Object[]} 匹配任意数组（包括基本类型数组）分数 1。
      */
     static int compatibilityScore(Class<?> declared, Class<?> actual) {
         if (declared == actual) return 2;
         // 基本类型 → 包装类型匹配（如 int → Integer, Number）
         Class<?> boxedActual = boxPrimitive(actual);
         if (declared == boxedActual) return 2;  // 精确匹配（含拆箱）
+        // 数组通配匹配：declared 是 Object[] 则匹配任意数组
+        if (declared == Object[].class && actual.isArray()) return 1;
+        // 数组间赋性匹配（String[] → Object[]）
+        if (declared.isArray() && actual.isArray()) {
+            Class<?> declaredComp = declared.getComponentType();
+            Class<?> actualComp = actual.getComponentType();
+            if (actualComp.isPrimitive()) actualComp = boxPrimitive(actualComp);
+            if (declaredComp == actualComp) return 1;
+            if (declaredComp.isAssignableFrom(actualComp)) return 1;
+        }
         if (declared.isAssignableFrom(boxedActual)) return 1;  // 父类匹配（含拆箱）
         return 0;
+    }
+
+    /**
+     * 将任意数组（含基本类型数组）转为 Object[]。
+     * 非数组对象以单元素数组返回。
+     */
+    static Object[] toObjectArray(Object array) {
+        if (array instanceof Object[] oa) return oa;
+        int len = Array.getLength(array);
+        Object[] result = new Object[len];
+        for (int i = 0; i < len; i++) {
+            result[i] = Array.get(array, i);
+        }
+        return result;
+    }
+
+    static Value arrayConcat(Value left, Value right) {
+        Object[] lArr = toObjectArray(left.asJavaObject());
+        Object[] rArr = toObjectArray(right.asJavaObject());
+        Class<?> comp = resolveComponentType(left.asJavaObject(), right.asJavaObject());
+        Object[] result = new Object[lArr.length + rArr.length];
+        System.arraycopy(lArr, 0, result, 0, lArr.length);
+        System.arraycopy(rArr, 0, result, lArr.length, rArr.length);
+        return Value.of(toTypedArray(result, comp));
+    }
+
+    static Value arrayDifference(Value left, Value right) {
+        Object[] lArr = toObjectArray(left.asJavaObject());
+        Object[] rArr = toObjectArray(right.asJavaObject());
+        Class<?> comp = resolveComponentType(left.asJavaObject(), right.asJavaObject());
+        Set<Object> rightSet = new HashSet<>(Arrays.asList(rArr));
+        List<Object> result = new ArrayList<>();
+        for (Object obj : lArr) {
+            if (!rightSet.contains(obj)) {
+                result.add(obj);
+            }
+        }
+        return Value.of(toTypedArray(result.toArray(), comp));
+    }
+
+    static Value arrayIntersection(Value left, Value right) {
+        Object[] lArr = toObjectArray(left.asJavaObject());
+        Object[] rArr = toObjectArray(right.asJavaObject());
+        Class<?> comp = resolveComponentType(left.asJavaObject(), right.asJavaObject());
+        Set<Object> rightSet = new HashSet<>(Arrays.asList(rArr));
+        List<Object> result = new ArrayList<>();
+        Set<Object> seen = new HashSet<>();
+        for (Object obj : lArr) {
+            if (rightSet.contains(obj) && !seen.contains(obj)) {
+                result.add(obj);
+                seen.add(obj);
+            }
+        }
+        return Value.of(toTypedArray(result.toArray(), comp));
+    }
+
+    static Value arrayUnion(Value left, Value right) {
+        Object[] lArr = toObjectArray(left.asJavaObject());
+        Object[] rArr = toObjectArray(right.asJavaObject());
+        Class<?> comp = resolveComponentType(left.asJavaObject(), right.asJavaObject());
+        Set<Object> resultSet = new LinkedHashSet<>();
+        resultSet.addAll(Arrays.asList(lArr));
+        resultSet.addAll(Arrays.asList(rArr));
+        return Value.of(toTypedArray(resultSet.toArray(), comp));
+    }
+
+    static Value arraySymmetricDifference(Value left, Value right) {
+        Object[] lArr = toObjectArray(left.asJavaObject());
+        Object[] rArr = toObjectArray(right.asJavaObject());
+        Class<?> comp = resolveComponentType(left.asJavaObject(), right.asJavaObject());
+        Set<Object> lSet = new HashSet<>(Arrays.asList(lArr));
+        Set<Object> rSet = new HashSet<>(Arrays.asList(rArr));
+        List<Object> result = new ArrayList<>();
+        for (Object obj : lArr) {
+            if (!rSet.contains(obj)) result.add(obj);
+        }
+        for (Object obj : rArr) {
+            if (!lSet.contains(obj)) result.add(obj);
+        }
+        return Value.of(toTypedArray(result.toArray(), comp));
+    }
+
+    static Value arrayCartesianProduct(Value left, Value right) {
+        Object[] lArr = toObjectArray(left.asJavaObject());
+        Object[] rArr = toObjectArray(right.asJavaObject());
+        Object[] result = new Object[lArr.length * rArr.length];
+        int idx = 0;
+        for (Object l : lArr) {
+            for (Object r : rArr) {
+                result[idx++] = new Object[]{l, r};
+            }
+        }
+        return Value.of(result);
+    }
+
+    /** 推导两个数组的 LUB 组件类型。 */
+    private static Class<?> resolveComponentType(Object leftArr, Object rightArr) {
+        if (leftArr == null || rightArr == null) return Object.class;
+        Class<?> lc = leftArr.getClass().getComponentType();
+        Class<?> rc = rightArr.getClass().getComponentType();
+        if (lc == null || rc == null) return Object.class;
+        return unboxIfPossible(leastCommonSupertype(boxPrimitive(lc), boxPrimitive(rc)));
+    }
+
+    /**
+     * 从两个数组类型的运行时 Class 推导运算结果的最精确数组类型。
+     * <p>例如 int[] + int[] → int[]；int[] + double[] → Number[]；String[] + int[] → Object[]。
+     */
+    static Class<?> computeArrayReturnType(Class<?> lhsArrayType, Class<?> rhsArrayType) {
+        if (!lhsArrayType.isArray() || !rhsArrayType.isArray()) return Object.class;
+        Class<?> lc = lhsArrayType.getComponentType();
+        Class<?> rc = rhsArrayType.getComponentType();
+        Class<?> comp = unboxIfPossible(leastCommonSupertype(boxPrimitive(lc), boxPrimitive(rc)));
+        return Array.newInstance(comp, 0).getClass();
+    }
+
+    /** 将 Object[] 转为指定组件类型的数组。 */
+    private static Object toTypedArray(Object[] arr, Class<?> componentType) {
+        Object result = Array.newInstance(componentType, arr.length);
+        for (int i = 0; i < arr.length; i++) {
+            Array.set(result, i, arr[i]);
+        }
+        return result;
+    }
+
+    /** 包装类型 → 基本类型的反向映射。 */
+    static Class<?> unboxIfPossible(Class<?> type) {
+        if (type == Integer.class) return int.class;
+        if (type == Long.class) return long.class;
+        if (type == Double.class) return double.class;
+        if (type == Float.class) return float.class;
+        if (type == Short.class) return short.class;
+        if (type == Byte.class) return byte.class;
+        if (type == Character.class) return char.class;
+        if (type == Boolean.class) return boolean.class;
+        return type;
     }
 
     // ==================== Key 类型 ====================

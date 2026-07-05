@@ -775,6 +775,44 @@ public class EnglishTips {
                     NAME_JUSTNOTHING
             ));
 
+
+            addDidYouKnowTip(new SimpleTipCallback(
+                    """
+                    methods> agent list
+                    
+                    Online InspectionAgents (3):
+                      pkgName                                  status       boot time
+                      ----------------------------------------------------------------------
+                      com.xtc.i3launcher                       ONLINE       11:51:25
+                      com.xtc.weichat                          DEAD         -
+                        Reason: app offline
+                      com.android.phone                        ONLINE       11:51:55
+                    
+                    methods> agent run com.xtc.i3launcher agent run com.android.phone agent run com.xtc.i3launcher agent run com.android.phone agent run com.xtc.i3launcher agent run com.android.phone sinteractive
+                    [delegate exec] com.xtc.i3launcher → agent run com.android.phone agent run com.xtc.i3launcher agent run com.android.phone agent run com.xtc.i3launcher agent run com.android.phone sinteractive (interactive mode)
+                    ---
+                    [delegate exec] com.android.phone → agent run com.xtc.i3launcher agent run com.android.phone agent run com.xtc.i3launcher agent run com.android.phone sinteractive (interactive mode)
+                    ---
+                    [delegate exec] com.xtc.i3launcher → agent run com.android.phone agent run com.xtc.i3launcher agent run com.android.phone sinteractive (interactive mode)
+                    ---
+                    [delegate exec] com.android.phone → agent run com.xtc.i3launcher agent run com.android.phone sinteractive (interactive mode)
+                    ---
+                    [delegate exec] com.xtc.i3launcher → agent run com.android.phone sinteractive (interactive mode)
+                    ---
+                    [delegate exec] com.android.phone → sinteractive (interactive mode)
+                    ---
+                    ====== Script REPL =====
+                    Type 'exit' or 'quit' to quit (You won't use these as variable names, right?)
+                    Type ':multi' to enter multi-line mode, ':eval' to evaluate, ':clear' to clear entered content
+                    Type 'setPrintAST(true)' to enable AST printing
+                    
+                    >>>
+                    
+                    Hmm, interesting, but for what?
+                    """,
+                    NAME_JUSTNOTHING
+            ));
+
             return map;
         }
         

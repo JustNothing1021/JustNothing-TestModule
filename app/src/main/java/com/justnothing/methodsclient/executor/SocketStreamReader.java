@@ -8,7 +8,9 @@ import com.justnothing.methodsclient.highlighter.HighlighterManager;
 import com.justnothing.testmodule.command.output.InputMode;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.protocol.InteractiveProtocol;
+import com.justnothing.testmodule.command.protocol.TerminalRpcChannel;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
+import org.jline.terminal.Terminal;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -148,12 +150,18 @@ public class SocketStreamReader {
 
                     if (chars > 0) {
                         String text = new String(buffer, 0, chars);
-                        
+
                         if (outputBuilder != null) {
                             outputBuilder.append(text);
                         } else {
-                            System.out.print(text);
-                            System.out.flush();
+                            Terminal term = TerminalManager.getTerminal();
+                            if (term != null) {
+                                term.writer().print(text);
+                                term.writer().flush();
+                            } else {
+                                System.out.print(text);
+                                System.out.flush();
+                            }
                         }
 
                         bytesRead.addAndGet(chars * 2L);
@@ -197,8 +205,10 @@ public class SocketStreamReader {
 
             startPingThread(output, lastResponseTime, writeLock, reading);
 
-            return runInteractiveMainLoop(input, output, reading, bytesRead, socket, 
-                                        lastResponseTime, writeLock, null);
+            TerminalRpcChannel rpcChannel = createRpcChannel(output, writeLock);
+
+            return runInteractiveMainLoop(input, output, reading, bytesRead, socket,
+                                        lastResponseTime, writeLock, null, rpcChannel);
 
         } catch (IOException e) {
             logger.error("读取流失败", e);
@@ -218,8 +228,10 @@ public class SocketStreamReader {
 
             startPingThread(output, lastResponseTime, writeLock, reading);
 
-            return runInteractiveMainLoop(input, output, reading, bytesRead, socket, 
-                                        lastResponseTime, writeLock, segments);
+            TerminalRpcChannel rpcChannel = createRpcChannel(output, writeLock);
+
+            return runInteractiveMainLoop(input, output, reading, bytesRead, socket,
+                                        lastResponseTime, writeLock, segments, rpcChannel);
 
         } catch (IOException e) {
             logger.error("读取流失败", e);
@@ -229,10 +241,11 @@ public class SocketStreamReader {
         }
     }
 
-    private static boolean runInteractiveMainLoop(InputStream input, OutputStream output, 
-                                                AtomicBoolean reading, AtomicLong bytesRead, 
+    private static boolean runInteractiveMainLoop(InputStream input, OutputStream output,
+                                                AtomicBoolean reading, AtomicLong bytesRead,
                                                 Socket socket, AtomicLong lastResponseTime,
-                                                  Object writeLock, List<ColoredSegment> segments) throws IOException {
+                                                  Object writeLock, List<ColoredSegment> segments,
+                                                  TerminalRpcChannel rpcChannel) throws IOException {
         while (reading.get() && !Thread.currentThread().isInterrupted()) {
             try {
                 socket.setSoTimeout(1000);
@@ -252,7 +265,7 @@ public class SocketStreamReader {
                 lastResponseTime.set(System.currentTimeMillis());
 //                logger.debug("处理包: " + InteractiveProtocol.getMessageTypeName(type));
                 Boolean result = handleInteractivePacket(type, data, output, bytesRead,
-                        reading, writeLock, segments);
+                        reading, writeLock, segments, rpcChannel);
                 if (result != null) {
                     return result;
                 }
@@ -272,9 +285,9 @@ public class SocketStreamReader {
         return true;
     }
 
-    private static Boolean handleInteractivePacket(byte type, byte[] data, OutputStream output, 
+    private static Boolean handleInteractivePacket(byte type, byte[] data, OutputStream output,
                                                  AtomicLong bytesRead, AtomicBoolean reading, Object writeLock,
-                                                 List<ColoredSegment> segments) {
+                                                 List<ColoredSegment> segments, TerminalRpcChannel rpcChannel) {
         switch (type) {
             case InteractiveProtocol.TYPE_SERVER_OUTPUT:
                 handleServerOutput(data, bytesRead, segments);
@@ -308,10 +321,21 @@ public class SocketStreamReader {
                 handleSetHighlightMode(data);
                 return null;
 
+            case InteractiveProtocol.TYPE_TERMINAL_RPC:
+                if (rpcChannel != null) {
+                    rpcChannel.handleMessage(data);
+                }
+                return null;
+
             case InteractiveProtocol.TYPE_COMMAND_END:
                 logger.info("收到COMMAND_END标记，退出程序");
                 if (segments == null) {
-                    System.out.println();
+                    Terminal term = TerminalManager.getTerminal();
+                    if (term != null) {
+                        term.writer().println();
+                    } else {
+                        System.out.println();
+                    }
                 }
                 reading.set(false);
                 return true;
@@ -323,6 +347,18 @@ public class SocketStreamReader {
     }
 
     // ==================== 输出处理 ====================
+
+    /**
+     * 创建 TerminalRpcChannel 并绑定 RemoteClientTerminal。
+     */
+    private static TerminalRpcChannel createRpcChannel(OutputStream output, Object writeLock) {
+        TerminalRpcChannel rpcChannel = new TerminalRpcChannel(output, writeLock);
+        Terminal term = TerminalManager.getTerminal();
+        if (term != null) {
+            new RemoteClientTerminal(term, rpcChannel);
+        }
+        return rpcChannel;
+    }
 
     private static void handleServerOutput(byte[] data, AtomicLong bytesRead, List<ColoredSegment> segments) {
         if (data != null) {
@@ -371,8 +407,14 @@ public class SocketStreamReader {
         String ansiCode = getANSICode(color);
         String resetCode = "\u001B[0m";
 
-        System.out.print(ansiCode + text + resetCode);
-        System.out.flush();
+        Terminal term = TerminalManager.getTerminal();
+        if (term != null) {
+            term.writer().print(ansiCode + text + resetCode);
+            term.writer().flush();
+        } else {
+            System.out.print(ansiCode + text + resetCode);
+            System.out.flush();
+        }
     }
 
     private static String getANSICode(byte color) {
@@ -435,7 +477,12 @@ public class SocketStreamReader {
                 prompt = prompt.substring(9);
             }
             try {
-                System.out.flush();
+                Terminal term = TerminalManager.getTerminal();
+                if (term != null) {
+                    term.writer().flush();
+                } else {
+                    System.out.flush();
+                }
 
                 String userInput;
                 if (isPassword) {

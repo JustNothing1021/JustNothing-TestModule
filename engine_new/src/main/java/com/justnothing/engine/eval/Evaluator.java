@@ -11,9 +11,11 @@ import com.justnothing.engine.codegen.DynamicClassGenerator;
 import com.justnothing.engine.exception.BreakException;
 import com.justnothing.engine.exception.ContinueException;
 import com.justnothing.engine.exception.ErrorCode;
+import com.justnothing.engine.exception.EvalException;
 import com.justnothing.engine.exception.LabeledBreakException;
 import com.justnothing.engine.exception.ReturnException;
 import com.justnothing.engine.util.MethodResolver;
+import com.justnothing.engine.parser.JType;
 import com.justnothing.engine.parser.OperatorRegistry;
 import com.justnothing.engine.parser.ParseContext;
 import com.justnothing.engine.security.SecurityGate;
@@ -141,6 +143,13 @@ public class Evaluator implements ASTVisitor<Value> {
         }
         if (node.isFieldAccess() && node.getDeclaredType() != null) {
             return Value.NullValue.INSTANCE;
+        }
+        // 回退：尝试将变量名解析为类引用（如 import 的类名在运行时使用）
+        if (parseContext != null && parseContext.isKnownClass(name)) {
+            Class<?> resolved = parseContext.resolveClass(name);
+            if (resolved != null) {
+                return Value.of(resolved);
+            }
         }
         throw new EvalException("Undefined variable: " + name, ErrorCode.EVAL_UNDEFINED_VARIABLE);
     }
@@ -273,7 +282,7 @@ public class Evaluator implements ASTVisitor<Value> {
     private Value visitAssignment(AssignmentNode node) {
         Value value = evaluate(node.getValue());
         if (node.isDeclaration()) {
-            evalContext.setVariable(node.getVariableName(), value);
+            evalContext.declareVariable(node.getVariableName(), value);
         } else {
             if (!evalContext.hasVariable(node.getVariableName())) {
                 throw new EvalException("Variable not declared: " + node.getVariableName(), ErrorCode.SCOPE_VARIABLE_NOT_FOUND);
@@ -294,7 +303,7 @@ public class Evaluator implements ASTVisitor<Value> {
             Class<?> type = node.getDeclaredType() != null ? node.getDeclaredType().getRawType() : null;
             value = defaultForType(type);
         }
-        evalContext.setVariable(node.getVarName(), value);
+        evalContext.declareVariable(node.getVarName(), value);
         return value;
     }
 
@@ -311,6 +320,7 @@ public class Evaluator implements ASTVisitor<Value> {
         List<Value> args = evaluateAll(node.getArguments());
         Object target = resolveTarget(node.getTarget());
         String methodName = node.getMethodName();
+
 
         // forEach on Iterable: snapshot to avoid ConcurrentModificationException
         if ("forEach".equals(methodName) && target instanceof Iterable<?> iterable
@@ -386,7 +396,8 @@ public class Evaluator implements ASTVisitor<Value> {
             }
             try {
                 checkMethod(method); // ★ 安全检查
-                Object result = method.invoke(target, args.stream().map(Value::asJavaObject).toArray());
+                Object[] javaArgs = prepareInvokeArgs(method, args);
+                Object result = method.invoke(target, javaArgs);
                 return Value.of(result);
             } catch (InvocationTargetException e) {
                 throw new EvalException("Exception in " + methodName + ": " + e.getCause().getMessage(), e.getCause(), ErrorCode.EVAL_EXCEPTION_THROWN);
@@ -397,7 +408,18 @@ public class Evaluator implements ASTVisitor<Value> {
 
         Class<?> clazz;
         if (target instanceof Class<?> c) {
-            clazz = c;
+            // ★ Class 对象的二义性：
+            //   1. Class.getName() / getDeclaredFields() 等 → 在 Class.class 上查找实例方法
+            //   2. SomeClass.staticMethod() → 在 c 上查找静态方法
+            //   策略：先尝试 Class.class 实例方法，找不到再回退到 c
+            boolean foundOnClassClass = false;
+            for (Method m : Class.class.getMethods()) {
+                if (m.getName().equals(methodName)) {
+                    foundOnClassClass = true;
+                    break;
+                }
+            }
+            clazz = foundOnClassClass ? Class.class : c;
         } else if (target != null) {
             clazz = target.getClass();
         } else {
@@ -438,13 +460,15 @@ public class Evaluator implements ASTVisitor<Value> {
             }
         }
         // 构建友好的错误信息
-        String typeList = args.isEmpty() ? "[]"
-                : "[" + String.join(", ",
+        String typeList = args.isEmpty() ? "()"
+                : "(" + String.join(", ",
                     args.stream().map(a -> {
                         Object o = a.asJavaObject();
-                        return o != null ? o.getClass().getSimpleName() : "null";
-                    }).toArray(String[]::new)) + "]";
-        throw new EvalException("No applicable method: " + methodName + typeList, ErrorCode.METHOD_NO_APPLICABLE_METHOD);
+                        return o != null ? o.getClass().getName() : "null";
+                    }).toArray(String[]::new)) + ")";
+        assert target != null;
+        throw new EvalException("No applicable method found: " +
+                target.getClass().getName() + "." +  methodName + typeList, ErrorCode.METHOD_NO_APPLICABLE_METHOD);
     }
 
     Object resolveTarget(ASTNode targetNode) {
@@ -496,6 +520,13 @@ public class Evaluator implements ASTVisitor<Value> {
             return 1;
         }
         return 100; // 需要装箱/拆箱
+    }
+
+    private static boolean hasMethodNamed(Class<?> clazz, String name) {
+        for (Method m : clazz.getMethods()) {
+            if (m.getName().equals(name)) return true;
+        }
+        return false;
     }
 
     /**
@@ -713,6 +744,18 @@ public class Evaluator implements ASTVisitor<Value> {
 
     private Value visitArrayLiteral(ArrayLiteralNode node) {
         List<Value> elements = evaluateAll(node.getElements());
+        // 根据解析期类型注释创建对应类型的数组（int[] / double[] / Object[] 等）
+        JType type = parseContext != null ? parseContext.getType(node) : null;
+        if (type != null && type.getArrayDepth() > 0) {
+            Class<?> baseType = type.getRawType();
+            if (baseType.isPrimitive()) {
+                Object arr = Array.newInstance(baseType, elements.size());
+                for (int i = 0; i < elements.size(); i++) {
+                    Array.set(arr, i, elements.get(i).asJavaObject());
+                }
+                return new Value.ArrayValue(arr);
+            }
+        }
         return new Value.ArrayValue(elements.stream().map(Value::asJavaObject).toArray());
     }
 
@@ -812,13 +855,6 @@ public class Evaluator implements ASTVisitor<Value> {
         for (ASTNode stmt : node.getStatements()) {
             result = childEval.evaluate(stmt);
         }
-        // 块结束后将子作用域中匹配父作用域的变量变更传播回去
-        // （支持 CustomClassExecutor 方法体内字段写回）
-        for (var entry : childCtx.getVariables().entrySet()) {
-            if (evalContext.hasVariable(entry.getKey())) {
-                evalContext.assignVariable(entry.getKey(), entry.getValue());
-            }
-        }
         return result;
     }
 
@@ -891,8 +927,9 @@ public class Evaluator implements ASTVisitor<Value> {
         EvalContext loopCtx = evalContext.createChild();
         Evaluator loopEval = new Evaluator(loopCtx, parseContext);
         Value result = Value.VoidValue.INSTANCE;
+        loopCtx.declareVariable(node.getItemName(), Value.of(null)); // 先在这一层声明
         for (Object item : items) {
-            loopCtx.setVariable(node.getItemName(), Value.of(item));
+            loopCtx.assignVariable(node.getItemName(), Value.of(item));
             try {
                 result = loopEval.evaluate(node.getBody());
             } catch (BreakException e) {
@@ -965,7 +1002,7 @@ public class Evaluator implements ASTVisitor<Value> {
             EvalContext lambdaCtx = evalContext.createChild();
             List<LambdaNode.Parameter> params = node.getParameters();
             for (int i = 0; i < params.size() && i < args.length; i++) {
-                lambdaCtx.setVariable(params.get(i).name(), args[i]);
+                lambdaCtx.declareVariable(params.get(i).name(), args[i]);
             }
             Evaluator lambdaEval = new Evaluator(lambdaCtx, parseContext);
             try {
@@ -994,7 +1031,7 @@ public class Evaluator implements ASTVisitor<Value> {
             EvalContext funcCtx = evalContext.createChild();
             List<LambdaNode.Parameter> params = node.getParameters();
             for (int i = 0; i < params.size() && i < args.length; i++) {
-                funcCtx.setVariable(params.get(i).name(), args[i]);
+                funcCtx.declareVariable(params.get(i).name(), args[i]);
             }
             Evaluator funcEval = new Evaluator(funcCtx, parseContext);
             try {
@@ -1004,7 +1041,7 @@ public class Evaluator implements ASTVisitor<Value> {
             }
             return Value.VoidValue.INSTANCE;
         };
-        evalContext.setVariable(node.getFunctionName(), Value.of(func));
+        evalContext.declareVariable(node.getFunctionName(), Value.of(func));
         return Value.VoidValue.INSTANCE;
     }
 
@@ -1156,6 +1193,15 @@ public class Evaluator implements ASTVisitor<Value> {
             boundTarget = null;
         }
 
+        // ★ 验证方法名在目标类上存在
+        if (staticTargetClass != null && !hasMethodNamed(staticTargetClass, methodName)) {
+            throw new EvalException("Method '" + methodName + "' not found in class "
+                    + staticTargetClass.getName(), ErrorCode.METHOD_NOT_FOUND);
+        } else if (boundTarget != null && !hasMethodNamed(boundTarget.getClass(), methodName)) {
+            throw new EvalException("Method '" + methodName + "' not found in class "
+                    + boundTarget.getClass().getName(), ErrorCode.METHOD_NOT_FOUND);
+        }
+
         // ★ 确保所有被 lambda 引用的变量都是 effectively final
         final String fnMethodName = methodName;
         final ASTNode fnTargetNode = targetNode;
@@ -1242,7 +1288,7 @@ public class Evaluator implements ASTVisitor<Value> {
         if (impl instanceof FunctionDefNode fn) {
             List<LambdaNode.Parameter> params = fn.getParameters();
             for (int i = 0; i < params.size() && i < argValues.size(); i++) {
-                childCtx.setVariable(params.get(i).name(), argValues.get(i));
+                childCtx.declareVariable(params.get(i).name(), argValues.get(i));
             }
             try {
                 return childEval.evaluate(fn.getBody());
@@ -1254,7 +1300,7 @@ public class Evaluator implements ASTVisitor<Value> {
         if (impl instanceof MethodDeclarationNode md) {
             List<ParameterNode> params = md.getParameters();
             for (int i = 0; i < params.size() && i < argValues.size(); i++) {
-                childCtx.setVariable(params.get(i).getParameterName(), argValues.get(i));
+                childCtx.declareVariable(params.get(i).getParameterName(), argValues.get(i));
             }
             ASTNode body = md.getBody();
             if (body != null) {
@@ -1373,13 +1419,12 @@ public class Evaluator implements ASTVisitor<Value> {
     private Value visitDelete(DeleteNode node) {
         if (node.isDeleteAll()) {
             evalContext.getVariables().clear();
-            parseContext.clearAllVariables();  // ★ 同步清除解析上下文
+            parseContext.clearAllVariables();
         } else {
             String name = node.getVariableName();
             if (evalContext.getVariables().containsKey(name)) {
                 evalContext.getVariables().remove(name);
             } else if (evalContext.getParent() != null) {
-                // Walk up to find and delete from the defining scope
                 EvalContext ctx = evalContext;
                 while (ctx != null) {
                     if (ctx.getVariables().containsKey(name)) {
@@ -1389,6 +1434,7 @@ public class Evaluator implements ASTVisitor<Value> {
                     ctx = ctx.getParent();
                 }
             }
+            parseContext.undeclareVariable(name);
         }
         return Value.VoidValue.INSTANCE;
     }
@@ -1412,7 +1458,7 @@ public class Evaluator implements ASTVisitor<Value> {
         } catch (Exception e) {
             for (CatchClause catchClause : node.getCatchClauses()) {
                 EvalContext catchCtx = evalContext.createChild();
-                catchCtx.setVariable(catchClause.getVariableName(), Value.of(e));
+                catchCtx.declareVariable(catchClause.getVariableName(), Value.of(e));
                 Evaluator catchEval = new Evaluator(catchCtx, parseContext);
                 return catchEval.evaluate(catchClause.getBody());
             }

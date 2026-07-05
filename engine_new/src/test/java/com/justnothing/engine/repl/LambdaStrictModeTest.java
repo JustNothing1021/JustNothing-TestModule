@@ -62,8 +62,6 @@ public class LambdaStrictModeTest {
             fail("预期类型错误");
         } catch (Exception e) {
             String msg = e.getMessage();
-            // 打印实际错误用于调试
-            System.out.println("[Case3] 实际错误: " + msg);
             assertFalse("不应报告 Cannot find symbol（lambda 回退 bug）",
                     msg.contains("Cannot find symbol"));
         }
@@ -78,8 +76,6 @@ public class LambdaStrictModeTest {
             fail("预期类型错误");
         } catch (Exception e) {
             String msg = e.getMessage();
-            // 打印实际错误用于调试
-            System.out.println("[Case4] 实际错误: " + msg);
             assertFalse("BUG! 不应报告 Cannot find symbol: 'x'，说明 lambda 回退到了普通括号表达式",
                     msg.contains("Cannot find symbol"));
         }

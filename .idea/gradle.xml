@@ -13,6 +13,7 @@
             <option value="$PROJECT_DIR$/app" />
             <option value="$PROJECT_DIR$/engine" />
             <option value="$PROJECT_DIR$/engine_new" />
+            <option value="$PROJECT_DIR$/engine_v2" />
           </set>
         </option>
       </GradleProjectSettings>

@@ -17,6 +17,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -61,6 +62,9 @@ public class ExprParser extends BaseParser {
 
     /** 泛型闭合括号缓存：当遇到 >> 时拆分为两个 >，多余的存于此。 */
     private int pendingAngleBrackets = 0;
+
+    /** 嵌套类解析缓存：避免重复 Class.forName + getDeclaredClasses */
+    private final Map<String, Class<?>> nestedClassCache = new HashMap<>();
 
     /**
      * 构造器。
@@ -138,8 +142,8 @@ public class ExprParser extends BaseParser {
         JType lhsJType = context.getType(binaryOp.getLeft());
         JType rhsJType = context.getType(binaryOp.getRight());
 
-        Class<?> lhsType = lhsJType != null ? lhsJType.getRawType() : null;
-        Class<?> rhsType = rhsJType != null ? rhsJType.getRawType() : null;
+        Class<?> lhsType = lhsJType != null ? lhsJType.getRuntimeType() : null;
+        Class<?> rhsType = rhsJType != null ? rhsJType.getRuntimeType() : null;
 
         if (lhsType == null || rhsType == null) return; // 类型未知时跳过
 
@@ -147,14 +151,13 @@ public class ExprParser extends BaseParser {
                 registry.findBinaryCompatible(opSymbol, lhsType, rhsType);
 
         if (overload != null) {
-            context.setType(binaryOp, JType.of(overload.returnType()));
-            // 内置运算符：解析期直接写 callback，运行期零查找
-            // 但对于 + 运算符，如果任一参数类型太模糊（Object），延迟到运行时决定
-            // （避免 int+Object 被错误绑定为字符串拼接而非数值加法）
-            boolean skipBind = opSymbol.equals("+") && (isAmbiguousType(lhsType) || isAmbiguousType(rhsType));
-            if (overload.isBuiltin() && !skipBind) {
-                binaryOp.setOperatorCallback(overload.toOperatorCallback(null));
+            // 从运算符注册信息推导精确的返回值类型
+            Class<?> returnType = overload.returnType();
+            // 数组运算：根据操作数的实际数组类型计算 LUB，而非直接用注册的 Object.class
+            if (lhsType.isArray() && rhsType.isArray()) {
+                returnType = OperatorRegistry.computeArrayReturnType(lhsType, rhsType);
             }
+            context.setType(binaryOp, JType.of(returnType));
             return;
         }
 
@@ -1523,18 +1526,25 @@ public class ExprParser extends BaseParser {
     private Class<?> resolveNestedClass(Class<?> outerClass, String simpleName) {
         // 1. 尝试直接用 $ 分隔的完全限定名
         String fqn = outerClass.getName() + "$" + simpleName;
+        Class<?> cached = nestedClassCache.get(fqn);
+        if (cached != null) return cached;
+
         try {
-            return Class.forName(fqn);
+            cached = Class.forName(fqn);
+            nestedClassCache.put(fqn, cached);
+            return cached;
         } catch (ClassNotFoundException ignored) {
         }
 
         // 2. 遍历外部类的声明内部类（含 public/protected/package/private）
         for (Class<?> declared : outerClass.getDeclaredClasses()) {
             if (declared.getSimpleName().equals(simpleName)) {
+                nestedClassCache.put(fqn, declared);
                 return declared;
             }
         }
 
+        nestedClassCache.put(fqn, null); // 缓存"找不到"，避免重复查找
         return null;
     }
 

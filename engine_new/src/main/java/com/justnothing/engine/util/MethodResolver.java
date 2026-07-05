@@ -11,8 +11,11 @@ import com.justnothing.engine.parser.JType;
 import com.justnothing.engine.parser.ParseContext;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Array;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.lang.reflect.ParameterizedType;
@@ -47,6 +50,9 @@ import java.util.Map;
 public class MethodResolver {
 
     private final ParseContext context;
+
+    /** isFunctionalInterface 结果缓存：避免每次赋值都遍历 getMethods() */
+    private static final Map<Class<?>, Boolean> fiCache = new ConcurrentHashMap<>();
 
     public MethodResolver(ParseContext context) {
         this.context = context;
@@ -606,15 +612,19 @@ public class MethodResolver {
      */
     public static boolean isFunctionalInterface(Class<?> clazz) {
         if (clazz == null || !clazz.isInterface()) return false;
+        Boolean cached = fiCache.get(clazz);
+        if (cached != null) return cached;
         int count = 0;
         for (Method m : clazz.getMethods()) {
             if (m.getDeclaringClass() == Object.class) continue;
             if (Modifier.isAbstract(m.getModifiers()) && !m.isDefault()) {
                 count++;
-                if (count > 1) return false;
+                if (count > 1) { fiCache.put(clazz, false); return false; }
             }
         }
-        return count == 1;
+        boolean result = count == 1;
+        fiCache.put(clazz, result);
+        return result;
     }
 
     /**
@@ -885,9 +895,9 @@ public class MethodResolver {
         // 将剩余参数打包成 varargs 数组
         Class<?> componentType = paramTypes[fixedCount].getComponentType();
         int varargsCount = Math.max(0, args.length - fixedCount);
-        Object varargsArray = java.lang.reflect.Array.newInstance(componentType, varargsCount);
+        Object varargsArray = Array.newInstance(componentType, varargsCount);
         for (int i = 0; i < varargsCount; i++) {
-            java.lang.reflect.Array.set(varargsArray, i,
+            Array.set(varargsArray, i,
                     coerceArg(componentType, args[fixedCount + i]));
         }
         result[fixedCount] = varargsArray;
@@ -898,6 +908,10 @@ public class MethodResolver {
     public static <T> T coerceArg(Class<T> targetType, Object value) {
         if (value == null) return null;
         if (targetType.isInstance(value)) return (T) value;
+        if (targetType == boolean.class || targetType == Boolean.class) {
+            if (value instanceof Boolean) return (T) value;
+            return (T) value;
+        }
         if (targetType.isPrimitive()) {
             Number n = (Number) value;
             if (targetType == int.class) return (T) (Integer) n.intValue();
@@ -907,7 +921,6 @@ public class MethodResolver {
             if (targetType == short.class) return (T) (Short) n.shortValue();
             if (targetType == byte.class) return (T) (Byte) n.byteValue();
             if (targetType == char.class) return (T) (Character) (char) ((Number) value).intValue();
-            if (targetType == boolean.class) return (T) value;
         }
         return (T) value;
     }

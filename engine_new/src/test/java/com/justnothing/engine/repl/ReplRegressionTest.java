@@ -216,6 +216,34 @@ public class ReplRegressionTest {
         assertEquals("n", forEach.getItemName());
     }
 
+    // ==================== 传统 for 循环 auto/var 关键字 ====================
+
+    @Test
+    public void traditionalFor_autoKeyword() throws Exception {
+        List<ASTNode> nodes = parse("for (auto i = 0; i < 10; i++) println(i); ");
+        ForNode forNode = (ForNode) last(nodes);
+        assertNotNull("应有初始化", forNode.getInitialization());
+        assertNotNull("应有条件", forNode.getCondition());
+        assertNotNull("应有更新", forNode.getUpdate());
+        assertNotNull("应有循环体", forNode.getBody());
+    }
+
+    @Test
+    public void traditionalFor_varKeyword() throws Exception {
+        List<ASTNode> nodes = parse("for (var j = 0; j < 5; j = j + 1) println(j);");
+        ForNode forNode = (ForNode) last(nodes);
+        assertNotNull("应有初始化", forNode.getInitialization());
+        assertNotNull("应有条件", forNode.getCondition());
+    }
+
+    @Test
+    public void traditionalFor_intType() throws Exception {
+        List<ASTNode> nodes = parse("for (int k = 0; k < 3; k = k + 1) { println(k); }");
+        ForNode forNode = (ForNode) last(nodes);
+        assertNotNull("应有初始化", forNode.getInitialization());
+        assertNotNull("应有条件", forNode.getCondition());
+    }
+
     @Test
     public void forEach_explicitType_withArray() throws Exception {
         // 显式类型的 for-each: for (String s : array)
@@ -368,10 +396,12 @@ public class ReplRegressionTest {
         // 类内定义 operator+ 并验证注册
         // ★ 注意：实例方法的 operator+ 只有 1 个显式参数(other)，
         //   所以被注册为**一元**运算符（隐含 this 不计入）
-        parse("class Vector2d {\n" +
-                "    double x, y;\n" +
-                "    Vector2d operator+(Vector2d other) { return null; }\n" +
-                "}");
+        parse("""
+                class Vector2d {
+                    double x, y;
+                    Vector2d operator+(Vector2d other) { return null; }
+                }
+                """);
 
         // operator+ 应被注册到 OperatorRegistry（作为一元或二元）
         boolean found = context.getOperatorRegistry().findBinary("+", Object.class, Object.class) != null
@@ -404,7 +434,7 @@ public class ReplRegressionTest {
         ConstructorCallNode ctor = (ConstructorCallNode) decl.getInitializer();
         assertNotNull("匿名类应有 ClassDeclarationNode", ctor.getAnonymousClass());
         ClassDeclarationNode anonCls = ctor.getAnonymousClass();
-        assertTrue("匿名类应有至少 1 个字段", anonCls.getFields().size() >= 1);
+        assertFalse("匿名类应有至少 1 个字段", anonCls.getFields().isEmpty());
     }
 
     @Test

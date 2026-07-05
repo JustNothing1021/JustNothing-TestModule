@@ -663,8 +663,8 @@ public class InspectionClient {
 
     public static class AgentNotFoundException extends Exception {
         public AgentNotFoundException(String pkg) {
-            super("目标应用 " + pkg + " 未注册 InspectionAgent。" +
-                    "可能原因: 应用未运行或者应用未被 Xposed 注入 Agent" +
+            super("目标应用 " + pkg + " 未注册 InspectionAgent, " +
+                    "可能原因: 应用未运行或者应用未被 Xposed 注入 Agent;" +
                     " 请确认应用已重启（Xposed Hook 需要应用重新启动才生效）");
         }
     }

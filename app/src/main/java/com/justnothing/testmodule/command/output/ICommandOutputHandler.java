@@ -96,4 +96,15 @@ public interface ICommandOutputHandler extends IOutputHandler {
     default void printStackTrace(Throwable t, byte color) {
         printStackTrace(t);
     }
+
+    /**
+     * 获取 RichConsole Console 实例（用于高级渲染：表格、面板、进度条等）。
+     *
+     * <p>仅 InteractiveOutputHandler 支持此方法，其他实现返回 null。</p>
+     *
+     * @return Console 实例，或 null（如果当前输出目标不支持 RichConsole 渲染）
+     */
+    default com.justnothing.richconsole.console.Console getConsole() {
+        return null;
+    }
 }

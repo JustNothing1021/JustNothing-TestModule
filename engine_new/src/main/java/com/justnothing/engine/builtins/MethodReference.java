@@ -2,6 +2,7 @@ package com.justnothing.engine.builtins;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.Proxy;
 import java.util.List;
 import java.util.function.Function;
@@ -50,7 +51,11 @@ public class MethodReference {
         if (boundTarget != null) {
             sb.append("bound=").append(boundTarget).append(" ");
         } else if (targetNodeIsClass()) {
-            sb.append("static ");
+            if (isStaticRef()) {
+                sb.append("static ");
+            } else {
+                sb.append("unbound ");
+            }
         } else {
             sb.append("unbound ");
         }
@@ -78,8 +83,24 @@ public class MethodReference {
 
     /** 判断目标是否是 Class 对象（静态引用） */
     private boolean targetNodeIsClass() {
-        // boundTarget 为 null 且 targetClassName 非空时，通常是静态引用
         return boundTarget == null && targetClassName != null;
+    }
+
+    /** 通过方法修饰符判断实际是 static 还是实例方法引用 */
+    private boolean isStaticRef() {
+        if (boundMethod != null) {
+            return Modifier.isStatic(boundMethod.getModifiers());
+        }
+        if (targetClassName == null) return true;
+        try {
+            Class<?> clazz = Class.forName(targetClassName);
+            for (Method m : clazz.getMethods()) {
+                if (m.getName().equals(methodName)) {
+                    return Modifier.isStatic(m.getModifiers());
+                }
+            }
+        } catch (Exception ignored) {}
+        return true;
     }
 
     @SuppressWarnings("unchecked")

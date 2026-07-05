@@ -1,11 +1,13 @@
 package com.justnothing.testmodule.command.functions.hook;
 
+import com.justnothing.engine.ast.ASTNode;
 import com.justnothing.testmodule.command.CommandExecutor;
 import com.justnothing.testmodule.command.output.Colors;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -28,6 +30,10 @@ public class HookInfo {
     private final AtomicInteger callCount;
     private volatile boolean active;
     private volatile boolean enabled;
+
+    private List<ASTNode> beforeParsed;
+    private List<ASTNode> afterParsed;
+    private List<ASTNode> replaceParsed;
 
     public HookInfo(String className, String methodName, String signature, 
                    String beforeCode, String afterCode, String replaceCode,
@@ -100,6 +106,30 @@ public class HookInfo {
 
     public ClassLoader getClassLoader() {
         return classLoader;
+    }
+
+    public List<ASTNode> getBeforeParsed() {
+        return beforeParsed;
+    }
+
+    public void setBeforeParsed(List<ASTNode> nodes) {
+        this.beforeParsed = nodes;
+    }
+
+    public List<ASTNode> getAfterParsed() {
+        return afterParsed;
+    }
+
+    public void setAfterParsed(List<ASTNode> nodes) {
+        this.afterParsed = nodes;
+    }
+
+    public List<ASTNode> getReplaceParsed() {
+        return replaceParsed;
+    }
+
+    public void setReplaceParsed(List<ASTNode> nodes) {
+        this.replaceParsed = nodes;
     }
 
     public void incrementCallCount() {

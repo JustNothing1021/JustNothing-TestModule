@@ -37,4 +37,14 @@ public class DefaultClassFinder implements IClassFinder {
     public Class<?> findClassOrFail(String className, ClassLoader classLoader) throws ClassNotFoundException {
         return ClassResolver.findClassOrFail(className, classLoader);
     }
+
+    @Override
+    public void clearBlacklist() {
+        ClassResolver.clearBlacklist();
+    }
+
+    @Override
+    public void clearCache() {
+        ClassResolver.clearClassCache();
+    }
 }

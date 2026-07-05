@@ -129,7 +129,9 @@ public abstract class XposedBasicHook<ParamType> extends Logger {
                         clazz = HookAPI.findClassIfExists(className, null);
                     } else {
                         clazz = HookAPI.findClassIfExists(className, classLoader);
-                        mapping.put(className, clazz);
+                        if (clazz != null) {
+                            mapping.put(className, clazz);
+                        }
                     }
                 }
                 return clazz;

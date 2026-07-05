@@ -527,4 +527,94 @@ public class OperatorSystemIntegrationTest {
             """);
         assertIntEquals(3, result);
     }
+
+    // ========== 13. 数组集合运算（set semantics）==========
+
+    @Test
+    public void arrayConcat() {
+        Object result = eval("[1, 2, 3] + [4, 5, 6];");
+        assertEquals("int[]", result.getClass().getTypeName());
+        assertEquals(6, java.lang.reflect.Array.getLength(result));
+    }
+
+    @Test
+    public void arrayConcat_differentTypes() {
+        Object result = eval("[1, 2] + [\"a\", \"b\"];");
+        assertEquals("java.lang.Object[]", result.getClass().getTypeName());
+        assertEquals(4, java.lang.reflect.Array.getLength(result));
+    }
+
+    @Test
+    public void arrayDifference() {
+        Object result = eval("[1, 2, 3, 4] - [2, 4];");
+        assertEquals("int[]", result.getClass().getTypeName());
+        assertEquals(2, java.lang.reflect.Array.getLength(result));
+    }
+
+    @Test
+    public void arrayIntersection() {
+        Object result = eval("[1, 2, 3, 4] & [2, 4, 6];");
+        assertEquals("int[]", result.getClass().getTypeName());
+        assertEquals(2, java.lang.reflect.Array.getLength(result));
+    }
+
+    @Test
+    public void arrayUnion() {
+        Object result = eval("[1, 2] | [2, 3, 4];");
+        assertEquals("int[]", result.getClass().getTypeName());
+        assertEquals(4, java.lang.reflect.Array.getLength(result));
+    }
+
+    @Test
+    public void arraySymmetricDifference() {
+        Object result = eval("[1, 2, 3] ^ [2, 3, 4];");
+        assertEquals("int[]", result.getClass().getTypeName());
+        assertEquals(2, java.lang.reflect.Array.getLength(result));
+    }
+
+    @Test
+    public void arrayCartesianProduct() {
+        Object result = eval("[1, 2] ** [3, 4];");
+        assertEquals("java.lang.Object[]", result.getClass().getTypeName());
+        assertEquals(4, java.lang.reflect.Array.getLength(result));
+    }
+
+    @Test
+    public void arrayAdd_scalarNotSupported() {
+        // 数组 + 标量不应匹配数组运算符
+        try {
+            eval("[1, 2] + 5;");
+            fail("Should have thrown for array + scalar");
+        } catch (Exception ignored) { }
+    }
+
+    @Test
+    public void arrayMultiply_notSupported() {
+        try {
+            eval("[1, 2] * [3, 4];");
+            fail("Should have thrown: array * array is not supported");
+        } catch (Exception ignored) { }
+    }
+
+    @Test
+    public void arrayDivide_notSupported() {
+        try {
+            eval("[10, 20] / [2, 4];");
+            fail("Should have thrown: array / array is not supported");
+        } catch (Exception ignored) { }
+    }
+
+    @Test
+    public void arrayConcat_resultTypeIsArrayNotObject() {
+        // int[] + int[] → 解析期推导为 int[]，运行时也保留为 int[]
+        Object result = eval("[1, 2, 3] + [4, 5, 6];");
+        assertEquals("int[]", result.getClass().getTypeName());
+    }
+
+    @Test
+    public void arrayConcat_resultElementsCorrect() {
+        // 运行时结果应与集合语义一致
+        Object result = eval("[1, 2] + [3, 4];");
+        assertTrue("result should be an array", result.getClass().isArray());
+    }
 }

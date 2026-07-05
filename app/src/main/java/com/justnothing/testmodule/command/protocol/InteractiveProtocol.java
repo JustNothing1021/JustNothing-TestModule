@@ -35,6 +35,10 @@ public class InteractiveProtocol {
     public static final byte TYPE_JSON_COMMAND_RESPONSE = 0x16;
     public static final byte TYPE_SET_HIGHLIGHT_MODE = 0x17;
 
+    // ─── RichConsole 扩展消息类型 ──────────────────────────
+    // 0x1A-0x1F 已废弃，统一迁移至 TYPE_TERMINAL_RPC (0x20) JSON-RPC
+    public static final byte TYPE_TERMINAL_RPC = 0x20;  // JSON-RPC Terminal 通信
+
 
 
     public static String getMessageTypeName(byte type) {
@@ -56,6 +60,7 @@ public class InteractiveProtocol {
             case TYPE_JSON_COMMAND_REQUEST -> "COMMAND_REQUEST";
             case TYPE_JSON_COMMAND_RESPONSE -> "COMMAND_RESPONSE";
             case TYPE_SET_HIGHLIGHT_MODE -> "SET_HIGHLIGHT_MODE";
+            case TYPE_TERMINAL_RPC -> "TERMINAL_RPC";
             default -> "UNKNOWN(" + type + ")";
         };
     }
@@ -319,29 +324,30 @@ public class InteractiveProtocol {
     }
 
     /**
-     * 编码客户端能力
-     * @param requirements 客户端能力需求
-     * @return 编码后的字节数组
+     * 编码客户端能力（8 字节）
+     * [supportsInput(1B)][isJsonMode(1B)][width(2B)][height(2B)][supportsAnsi(1B)][colorSystem(1B)]
      */
     public static byte[] encodeCapability(ClientRequirements requirements) {
         if (requirements == null) {
-            return new byte[]{0, 0};
+            return new byte[]{0, 0, 0, 0, 0, 0, 0, 0};
         }
-        return new byte[]{
-            (byte) (requirements.isSupportsInput() ? 1 : 0),
-            (byte) (requirements.isJsonMode() ? 1 : 0)
-        };
+        ByteBuffer buf = ByteBuffer.allocate(8);
+        buf.put((byte) (requirements.isSupportsInput() ? 1 : 0));
+        buf.put((byte) (requirements.isJsonMode() ? 1 : 0));
+        buf.putShort((short) requirements.getWidth());
+        buf.putShort((short) requirements.getHeight());
+        buf.put((byte) (requirements.isSupportsAnsi() ? 1 : 0));
+        buf.put((byte) requirements.getColorSystem());
+        return buf.array();
     }
 
     /**
-     * 解码客户端能力
-     * @param data 原始数据
-     * @return 客户端能力需求
+     * 解码客户端能力（兼容 1/2/8 字节格式）
      */
     public static ClientRequirements decodeCapability(byte[] data) {
         if (data == null) return new ClientRequirements();
         if (data.length == 1) {
-            // 是旧版本的
+            // 旧版 v1：仅 supportsInput
             return new ClientRequirements(data[0] == 0x01, false);
         }
         if (data.length < 2) {
@@ -349,6 +355,16 @@ public class InteractiveProtocol {
         }
         boolean supportsInput = data[0] == 1;
         boolean isJsonMode = data[1] == 1;
-        return new ClientRequirements(supportsInput, isJsonMode);
+        ClientRequirements req = new ClientRequirements(supportsInput, isJsonMode);
+
+        if (data.length >= 8) {
+            // v2 扩展：含终端尺寸 + ANSI + 颜色系统
+            ByteBuffer buf = ByteBuffer.wrap(data, 2, 6);
+            req.setWidth(buf.getShort() & 0xFFFF);
+            req.setHeight(buf.getShort() & 0xFFFF);
+            req.setSupportsAnsi(buf.get() == 1);
+            req.setColorSystem(buf.get());
+        }
+        return req;
     }
 }

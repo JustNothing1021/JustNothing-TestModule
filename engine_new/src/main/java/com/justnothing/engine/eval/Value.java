@@ -1,6 +1,8 @@
 package com.justnothing.engine.eval;
 
 import com.justnothing.engine.exception.ErrorCode;
+import com.justnothing.engine.exception.EvalException;
+
 import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.Objects;
@@ -37,11 +39,7 @@ public abstract class Value {
         if (obj instanceof Short s) return new IntValue(s.intValue());
         if (obj instanceof String s) return new StringValue(s);
         if (obj.getClass().isArray()) {
-            Object[] arr = new Object[Array.getLength(obj)];
-            for (int i = 0; i < arr.length; i++) {
-                arr[i] = Array.get(obj, i);
-            }
-            return new ArrayValue(arr);
+            return new ArrayValue(obj);
         }
         return new ObjectValue(obj);
     }
@@ -160,17 +158,26 @@ public abstract class Value {
     }
 
     public static class ArrayValue extends Value {
-        private final Object[] elements;
-        public ArrayValue(Object[] elements) { this.elements = Objects.requireNonNull(elements); }
-        public Object[] getElements() { return elements; }
-        public Object[] asArray() { return elements; }
-        public int length() { return elements.length; }
-        public Object asJavaObject() { return elements; }
-        public String asString() { return Arrays.toString(elements); }
-        public String toString() { return Arrays.toString(elements); }
-        public boolean equals(Object o) {
-            return this == o || (o instanceof ArrayValue a && Arrays.equals(a.elements, elements));
+        private final Object rawArray;
+        public ArrayValue(Object rawArray) {
+            this.rawArray = Objects.requireNonNull(rawArray);
+            if (!rawArray.getClass().isArray())
+                throw new IllegalArgumentException("Not an array: " + rawArray.getClass());
         }
-        public int hashCode() { return Arrays.hashCode(elements); }
+        public Object[] asArray() {
+            if (rawArray instanceof Object[] oa) return oa;
+            int len = Array.getLength(rawArray);
+            Object[] result = new Object[len];
+            for (int i = 0; i < len; i++) result[i] = Array.get(rawArray, i);
+            return result;
+        }
+        public int length() { return Array.getLength(rawArray); }
+        public Object asJavaObject() { return rawArray; }
+        public String asString() { return Arrays.toString(asArray()); }
+        public String toString() { return Arrays.toString(asArray()); }
+        public boolean equals(Object o) {
+            return this == o || (o instanceof ArrayValue a && Arrays.equals(a.asArray(), asArray()));
+        }
+        public int hashCode() { return Arrays.hashCode(asArray()); }
     }
 }

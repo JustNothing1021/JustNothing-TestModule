@@ -7,6 +7,7 @@ import com.justnothing.methodsclient.highlighter.HighlighterManager;
 import com.justnothing.methodsclient.highlighter.SwitchableHighlighter;
 import com.justnothing.methodsclient.monitor.ClientPortManager;
 import com.justnothing.methodsclient.tailtip.TailTipManager;
+import com.justnothing.methodsclient.test.TerminalCapabilityTest;
 import com.justnothing.methodsclient.utils.TerminalManager;
 import com.justnothing.testmodule.command.protocol.InteractiveProtocol;
 import com.justnothing.testmodule.command.output.ClientRequirements;
@@ -140,6 +141,10 @@ public class ReplClient {
                 printReplHelp();
                 return true;
             }
+            case "terminal_test" -> {
+                new TerminalCapabilityTest(false).run();
+                return true;
+            }
             default -> {
                 return false;
             }
@@ -149,9 +154,10 @@ public class ReplClient {
     private void printReplHelp() {
         System.out.println("""
                 内置命令:
-                  client_help  - 显示客户端帮助（本信息）
-                  exit/quit    - 退出 REPL
-                  clear/cls    - 清屏
+                  client_help   - 显示客户端帮助（本信息）
+                  terminal_test - 终端能力诊断测试
+                  exit/quit     - 退出 REPL
+                  clear/cls     - 清屏
                 
                 其他输入将发送到服务端执行（包括 help 等服务端命令）。
                 使用 Tab 补全命令和参数，↑↓ 浏览历史。
@@ -208,6 +214,28 @@ public class ReplClient {
 
     private void negotiateCapability(OutputStream output) throws IOException {
         ClientRequirements req = new ClientRequirements(true, false);
+        // 填入终端尺寸和能力
+        var terminal = TerminalManager.getTerminal();
+        if (terminal != null) {
+            try {
+                org.jline.terminal.Size size = terminal.getSize();
+                if (size != null && size.getColumns() > 0) {
+                    req.setWidth(size.getColumns());
+                    req.setHeight(size.getRows());
+                }
+            } catch (Exception ignored) {}
+            req.setSupportsAnsi(!org.jline.terminal.Terminal.TYPE_DUMB.equals(terminal.getType()));
+        }
+        // 颜色系统检测
+        String colorTerm = System.getenv("COLORTERM");
+        String term = System.getenv("TERM");
+        if ("truecolor".equals(colorTerm) || "24bit".equals(colorTerm)) {
+            req.setColorSystem(ClientRequirements.COLOR_TRUECOLOR);
+        } else if (term != null && term.contains("256color")) {
+            req.setColorSystem(ClientRequirements.COLOR_EIGHT_BIT);
+        } else {
+            req.setColorSystem(ClientRequirements.COLOR_STANDARD);
+        }
         InteractiveProtocol.writeMessage(output,
                 InteractiveProtocol.TYPE_CLIENT_CAPABILITY,
                 InteractiveProtocol.encodeCapability(req));

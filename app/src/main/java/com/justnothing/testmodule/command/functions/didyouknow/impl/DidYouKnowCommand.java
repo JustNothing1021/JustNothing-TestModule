@@ -252,7 +252,7 @@ public class DidYouKnowCommand extends AbstractCommand<DidYouKnowRequest, DidYou
         String title = isSpecial ? "* 今日特别 *" : "> 你知道吗 <";
         String footer = buildFooterSingleLine(tip, index, CliTips.totalCount());
 
-        String boxStr = TerminalFormatter.box(title, tip.content, footer, BOX_WIDTH);
+        String boxStr = TerminalFormatter.box(title, tip.content + "\n", footer, BOX_WIDTH);
 
         ctx.println("", Colors.WHITE);
         ctx.println(boxStr, color);

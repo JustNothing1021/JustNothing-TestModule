@@ -13,6 +13,7 @@
 /app/build
 /engine/build
 /engine_new/build
+/engine_v2/build
 /captures
 .externalNativeBuild
 .cxx
@@ -35,6 +36,7 @@ testmodule-keystore.jks
 /app/bin
 /engine/bin
 /engine_new/bin
+/engine_v2/bin
 
 # 我拿来研究的log
 /tmp.log

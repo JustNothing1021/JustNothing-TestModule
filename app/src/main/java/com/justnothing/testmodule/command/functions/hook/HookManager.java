@@ -7,6 +7,7 @@ import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.output.SystemOutputRedirector;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.engine.ScriptRunner;
+import com.justnothing.engine.ast.ASTNode;
 import com.justnothing.engine.eval.EvalContext;
 import com.justnothing.engine.eval.Value;
 import com.justnothing.engine.eval.Value.NullValue;
@@ -233,22 +234,34 @@ public class HookManager {
         }
     }
 
+    private static final String[] HOOK_BUILTIN_NAMES = {
+        "getMethodHookParam", "getPhase", "getHookId", "getLoadPackageParam",
+        "getHookInfo", "setReturnValue", "setThrowable", "getReturnValue"
+    };
+
+    private static void registerHookBuiltinPlaceholders(ScriptRunner runner) {
+        for (String name : HOOK_BUILTIN_NAMES) {
+            runner.addBuiltin(name, args -> com.justnothing.engine.eval.Value.NullValue.INSTANCE);
+        }
+    }
+
     private static void validateHookCode(HookInfo hookInfo, ClassLoader classLoader) throws RuntimeException {
         ScriptRunner runner = new ScriptRunner(classLoader);
         runner.setClassFinder(new AppClassFinder());
+        registerHookBuiltinPlaceholders(runner);
         if (hookInfo.getBeforeCode() != null && !hookInfo.getBeforeCode().isEmpty()) {
             logger.info("验证before代码");
-            validateCode(runner, hookInfo.getBeforeCode(), "before");
+            hookInfo.setBeforeParsed(validateCode(runner, hookInfo.getBeforeCode(), "before"));
         }
 
         if (hookInfo.getAfterCode() != null && !hookInfo.getAfterCode().isEmpty()) {
             logger.info("验证after代码");
-            validateCode(runner, hookInfo.getAfterCode(), "after");
+            hookInfo.setAfterParsed(validateCode(runner, hookInfo.getAfterCode(), "after"));
         }
 
         if (hookInfo.getReplaceCode() != null && !hookInfo.getReplaceCode().isEmpty()) {
             logger.info("验证replace代码");
-            validateCode(runner, hookInfo.getReplaceCode(), "replace");
+            hookInfo.setReplaceParsed(validateCode(runner, hookInfo.getReplaceCode(), "replace"));
         }
 
         if (hookInfo.getBeforeCodebase() != null && !hookInfo.getBeforeCodebase().isEmpty()) {
@@ -257,7 +270,7 @@ public class HookManager {
             if (code == null) {
                 throw new IllegalArgumentException("无法加载codebase文件: " + hookInfo.getBeforeCodebase());
             }
-            validateCode(runner, code, "before");
+            hookInfo.setBeforeParsed(validateCode(runner, code, "before"));
         }
 
         if (hookInfo.getAfterCodebase() != null && !hookInfo.getAfterCodebase().isEmpty()) {
@@ -266,7 +279,7 @@ public class HookManager {
             if (code == null) {
                 throw new IllegalArgumentException("无法加载codebase文件: " + hookInfo.getAfterCodebase());
             }
-            validateCode(runner, code, "after");
+            hookInfo.setAfterParsed(validateCode(runner, code, "after"));
         }
 
         if (hookInfo.getReplaceCodebase() != null && !hookInfo.getReplaceCodebase().isEmpty()) {
@@ -275,13 +288,13 @@ public class HookManager {
             if (code == null) {
                 throw new IllegalArgumentException("无法加载codebase文件: " + hookInfo.getReplaceCodebase());
             }
-            validateCode(runner, code, "replace");
+            hookInfo.setReplaceParsed(validateCode(runner, code, "replace"));
         }
     }
 
-    private static void validateCode(ScriptRunner runner, String code, String phase) throws RuntimeException {
+    private static List<ASTNode> validateCode(ScriptRunner runner, String code, String phase) throws RuntimeException {
         try {
-            runner.tryParse(code);
+            return runner.tryParse(code);
         } catch (Exception e) {
             throw new RuntimeException(phase + " 代码验证失败: " + e.getMessage(), e);
         }
@@ -338,30 +351,14 @@ public class HookManager {
                     if (hasBefore) {
                         logger.info("准备执行before Hook，id = " + hookInfo.getId());
                         hookInfo.incrementCallCount();
-
-                        if (hookInfo.getBeforeCode() != null && !hookInfo.getBeforeCode().isEmpty()) {
-                            executeHookCode(hookInfo, hookInfo.getBeforeCode(), param, "before");
-                        } else if (hookInfo.getBeforeCodebase() != null && !hookInfo.getBeforeCodebase().isEmpty()) {
-                            String code = loadCodeFromCodebase(hookInfo.getBeforeCodebase());
-                            if (code != null) {
-                                executeHookCode(hookInfo, code, param, "before");
-                            }
-                        }
+                        executeHookCode(hookInfo, hookInfo.getBeforeParsed(), param, "before");
                     }
 
                     logger.info("准备执行replace Hook，id = " + hookInfo.getId());
                     hookInfo.incrementCallCount();
 
                     AtomicBoolean returnValueSet = new AtomicBoolean(false);
-
-                    if (hookInfo.getReplaceCode() != null && !hookInfo.getReplaceCode().isEmpty()) {
-                        executeHookCodeWithReturnFlag(hookInfo, hookInfo.getReplaceCode(), param, "replace", returnValueSet);
-                    } else if (hookInfo.getReplaceCodebase() != null && !hookInfo.getReplaceCodebase().isEmpty()) {
-                        String code = loadCodeFromCodebase(hookInfo.getReplaceCodebase());
-                        if (code != null) {
-                            executeHookCodeWithReturnFlag(hookInfo, code, param, "replace", returnValueSet);
-                        }
-                    }
+                    executeHookCodeWithReturnFlag(hookInfo, hookInfo.getReplaceParsed(), param, "replace", returnValueSet);
                 }
 
                 @Override
@@ -376,15 +373,7 @@ public class HookManager {
 
                     logger.info("准备执行after Hook，id = " + hookInfo.getId());
                     hookInfo.incrementCallCount();
-
-                    if (hookInfo.getAfterCode() != null && !hookInfo.getAfterCode().isEmpty()) {
-                        executeHookCode(hookInfo, hookInfo.getAfterCode(), param, "after");
-                    } else if (hookInfo.getAfterCodebase() != null && !hookInfo.getAfterCodebase().isEmpty()) {
-                        String code = loadCodeFromCodebase(hookInfo.getAfterCodebase());
-                        if (code != null) {
-                            executeHookCode(hookInfo, code, param, "after");
-                        }
-                    }
+                    executeHookCode(hookInfo, hookInfo.getAfterParsed(), param, "after");
                 }
             };
 
@@ -426,15 +415,7 @@ public class HookManager {
 
                     logger.info("准备执行before Hook，id = " + hookInfo.getId());
                     hookInfo.incrementCallCount();
-
-                    if (hookInfo.getBeforeCode() != null && !hookInfo.getBeforeCode().isEmpty()) {
-                        executeHookCode(hookInfo, hookInfo.getBeforeCode(), param, "before");
-                    } else if (hookInfo.getBeforeCodebase() != null && !hookInfo.getBeforeCodebase().isEmpty()) {
-                        String code = loadCodeFromCodebase(hookInfo.getBeforeCodebase());
-                        if (code != null) {
-                            executeHookCode(hookInfo, code, param, "before");
-                        }
-                    }
+                    executeHookCode(hookInfo, hookInfo.getBeforeParsed(), param, "before");
                 }
 
                 @Override
@@ -448,15 +429,7 @@ public class HookManager {
                     }
                     logger.info("准备执行after Hook，id = " + hookInfo.getId());
                     hookInfo.incrementCallCount();
-
-                    if (hookInfo.getAfterCode() != null && !hookInfo.getAfterCode().isEmpty()) {
-                        executeHookCode(hookInfo, hookInfo.getAfterCode(), param, "after");
-                    } else if (hookInfo.getAfterCodebase() != null && !hookInfo.getAfterCodebase().isEmpty()) {
-                        String code = loadCodeFromCodebase(hookInfo.getAfterCodebase());
-                        if (code != null) {
-                            executeHookCode(hookInfo, code, param, "after");
-                        }
-                    }
+                    executeHookCode(hookInfo, hookInfo.getAfterParsed(), param, "after");
                 }
             };
 
@@ -489,14 +462,16 @@ public class HookManager {
         logger.info("Hook状态设置为活跃: " + hookInfo.getId());
     }
 
-    private static void executeHookCode(HookInfo hookInfo, String code,
+    private static void executeHookCode(HookInfo hookInfo, List<ASTNode> nodes,
                                         MethodHookParam param, String phase) {
-        executeHookCodeWithReturnFlag(hookInfo, code, param, phase, null);
+        executeHookCodeWithReturnFlag(hookInfo, nodes, param, phase, null);
     }
 
-    private static void executeHookCodeWithReturnFlag(HookInfo hookInfo, String code,
+    private static void executeHookCodeWithReturnFlag(HookInfo hookInfo, List<ASTNode> nodes,
                                         MethodHookParam param, String phase,
                                         AtomicBoolean returnValueSet) {
+        if (nodes == null || nodes.isEmpty()) return;
+
         String prefix = "[" + hookInfo.getId() + "][" + phase + "] ";
         ICommandOutputHandler outputHandler = outputHandlers.computeIfAbsent(hookInfo.getId(), k -> new HookOutputHandler(logger, prefix));
         ICommandOutputHandler errorHandler = errorHandlers.computeIfAbsent(hookInfo.getId(), k -> new HookOutputHandler(logger, prefix));
@@ -510,13 +485,13 @@ public class HookManager {
                     r.setClassFinder(new AppClassFinder());
                     return r;
                 });
-            logger.debug("运行代码, hook id = " + hookInfo.getId() + "\n" + code);
+            logger.debug("运行预编译AST, hook id = " + hookInfo.getId());
 
             EvalContext evalContext = runner.getEvalContext();
             for (String item : imports) runner.addImport(item);
             addHookBuiltIn(evalContext, param, getLoadPackageParam(), hookInfo, phase, returnValueSet);
             runner.clearVariables();
-            runner.execute(code, "<code in phase " + phase + " of " + hookInfo.getId() + ">");
+            runner.executeNodes(nodes, outputHandler, errorHandler);
         } catch (Exception e) {
             logger.error("Hook代码执行失败: " + hookInfo.getId(), e);
         } finally {

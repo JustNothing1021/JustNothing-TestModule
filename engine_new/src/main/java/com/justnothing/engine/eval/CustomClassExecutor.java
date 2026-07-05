@@ -68,14 +68,14 @@ public class CustomClassExecutor {
 
         // this
         if (instance != null) {
-            methodCtx.setVariable("this", Value.of(instance));
+            methodCtx.declareVariable("this", Value.of(instance));
         }
 
         // 参数
         List<ParameterNode> params = method.getParameters();
         if (params != null && args != null) {
             for (int i = 0; i < params.size() && i < args.length; i++) {
-                methodCtx.setVariable(params.get(i).getParameterName(), Value.of(args[i]));
+                methodCtx.declareVariable(params.get(i).getParameterName(), Value.of(args[i]));
             }
         }
 
@@ -83,7 +83,7 @@ public class CustomClassExecutor {
         Map<String, Field> fields = collectFields(instance != null ? instance.getClass() : null);
         for (Field f : fields.values()) {
             try {
-                methodCtx.setVariable(f.getName(), Value.of(f.get(instance)));
+                methodCtx.declareVariable(f.getName(), Value.of(f.get(instance)));
             } catch (Exception ignored) {
             }
         }

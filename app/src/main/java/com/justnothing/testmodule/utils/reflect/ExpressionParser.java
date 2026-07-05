@@ -1,8 +1,7 @@
-package com.justnothing.testmodule.command.functions.classcmd.util;
+package com.justnothing.testmodule.utils.reflect;
 
 import com.justnothing.engine.ScriptRunner;
 import com.justnothing.testmodule.utils.logging.Logger;
-import com.justnothing.testmodule.utils.reflect.AppClassFinder;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -31,7 +30,6 @@ public class ExpressionParser {
         return parse(expression, classLoader, expectedType, new ArrayList<>());
     }
 
-    @SuppressWarnings("unused")
     public static ParseResult parse(String expression, ClassLoader classLoader, Class<?> expectedType, List<String> imports) {
         if (expression == null || expression.trim().isEmpty()) {
             return new ParseResult(null, Void.class, false);
@@ -207,6 +205,52 @@ public class ExpressionParser {
         }
         
         return colonIndex;
+    }
+
+
+    public static String[] parseParams(String paramsStr) {
+        if (paramsStr == null || paramsStr.trim().isEmpty()) {
+            return new String[0];
+        }
+
+        List<String> params = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        boolean inQuotes = false;
+
+        for (char c : paramsStr.toCharArray()) {
+            if (c == '"') {
+                inQuotes = !inQuotes;
+            } else if (c == ' ' && !inQuotes) {
+                if (current.length() > 0) {
+                    params.add(current.toString());
+                    current = new StringBuilder();
+                }
+            } else {
+                current.append(c);
+            }
+        }
+
+        if (current.length() > 0) {
+            params.add(current.toString());
+        }
+
+        return params.toArray(new String[0]);
+    }
+
+    public static Object[] convertParams(String[] params, Class<?>[] paramTypes, ClassLoader cl) {
+        if (params == null || params.length == 0) {
+            return new Object[0];
+        }
+
+        if (params.length != paramTypes.length)
+            throw new RuntimeException("convertParams 时 param.length (" + params.length + ")" +
+                    " 和 paramTypes.length (" + paramTypes.length + ") 不一致");
+
+        Object[] result = new Object[params.length];
+        for (int i = 0; i < params.length; i++)
+            result[i] = ExpressionParser.parse(params[i], cl, paramTypes[i]);
+
+        return result;
     }
     
     private static boolean isTypeCompatible(String typeHint, Class<?> actualType, ClassLoader classLoader) {

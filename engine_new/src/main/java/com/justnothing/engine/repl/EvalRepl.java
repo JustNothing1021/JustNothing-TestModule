@@ -5,7 +5,7 @@ import com.justnothing.engine.ast.nodes.ClassDeclarationNode;
 import com.justnothing.engine.codegen.DynamicClassGenerator;
 import com.justnothing.engine.eval.CustomClassExecutor;
 import com.justnothing.engine.eval.EvalContext;
-import com.justnothing.engine.eval.EvalException;
+import com.justnothing.engine.exception.EvalException;
 import com.justnothing.engine.eval.Evaluator;
 import com.justnothing.engine.eval.Value;
 import com.justnothing.engine.lexer.Lexer;
@@ -107,7 +107,7 @@ public class EvalRepl {
                 yield false;
             }
             case ":vars" -> {
-                System.out.println("TODO: list variables");
+                // TODO: list variables
                 yield false;
             }
             default -> {
@@ -146,7 +146,7 @@ public class EvalRepl {
                     try {
                         codegen.generate(classDecl);
                     } catch (Exception e) {
-                        System.out.println("  [CodeGen] skipped: " + e.getMessage());
+                        // codegen skipped: {e.getMessage()}
                     }
                 }
             }

@@ -6,7 +6,7 @@ import com.justnothing.testmodule.command.functions.classcmd.AbstractClassComman
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandContext;
 import com.justnothing.testmodule.command.functions.classcmd.request.InvokeMethodRequest;
 import com.justnothing.testmodule.command.functions.classcmd.response.InvokeMethodResult;
-import com.justnothing.testmodule.command.functions.classcmd.util.ExpressionParser;
+import com.justnothing.testmodule.utils.reflect.ExpressionParser;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
@@ -14,6 +14,7 @@ import com.justnothing.testmodule.utils.reflect.DescriptorColorizer;
 import com.justnothing.testmodule.utils.reflect.ReflectionUtils;
 
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -98,9 +99,9 @@ public class InvokeCommand extends AbstractClassCommand<InvokeMethodRequest, Inv
                     paramType = ClassResolver.findClassWithImportsOrFail(
                             paramTypeStr, context.classLoader(), imports
                     );
-                    parseResult = ExpressionParser.parse(paramStr, context.classLoader(), paramType);
+                    parseResult = ExpressionParser.parse(paramStr, context.classLoader(), paramType, imports);
                 } else {
-                    parseResult = ExpressionParser.parse(paramStr, context.classLoader());
+                    parseResult = ExpressionParser.parse(paramStr, context.classLoader(), imports);
                     paramType = parseResult.value() == null ? Void.class : parseResult.value().getClass();
                 }
 
@@ -199,7 +200,8 @@ public class InvokeCommand extends AbstractClassCommand<InvokeMethodRequest, Inv
             if (!isStaticMode) {
                 context.logger().info("检测到静态方法，自动切换为静态调用模式");
             }
-            returnValue = ReflectionUtils.callStaticMethod(className, methodName, params);
+            // 直接用已找到的 Method 对象调用，避免重复查找
+            returnValue = ReflectionUtils.callMethod(null, method, params);
         } else {
             if (isStaticMode) {
                 CommandExceptionHandler.handleException(
@@ -222,8 +224,15 @@ public class InvokeCommand extends AbstractClassCommand<InvokeMethodRequest, Inv
             } else {
                 targetInstance = findSingletonInstance(targetClass, context);
                 if (targetInstance == null) {
+                    // 单例字段为 null，尝试调用 getInstance() 静态方法初始化单例
+                    targetInstance = tryInitializeSingleton(targetClass, context);
+                }
+                if (targetInstance == null) {
                     try {
-                        targetInstance = targetClass.getDeclaredConstructor().newInstance();
+                        // 单例字段为 null，且无法通过 getInstance() 初始化，尝试通过无参构造创建实例
+                        Constructor<?> constructor = targetClass.getDeclaredConstructor();
+                        constructor.setAccessible(true);
+                        targetInstance = constructor.newInstance();
                         context.logger().info("通过无参构造创建实例: " + targetInstance);
                     } catch (Exception e) {
                         Map<String, Object> errContext = Map.of(
@@ -238,8 +247,9 @@ public class InvokeCommand extends AbstractClassCommand<InvokeMethodRequest, Inv
                     }
                 }
             }
-            returnValue = ReflectionUtils.callMethod(targetInstance, methodName, params);
-            
+            // 直接用已找到的 Method 对象调用，避免重复查找导致找到错误的方法
+            returnValue = ReflectionUtils.callMethod(targetInstance, method, params);
+
             // 设置实例信息（用于调试）
             result.setInstanceAfterInvocation(targetInstance.getClass().getName() + "@" + System.identityHashCode(targetInstance));
             result.setInstanceHash(System.identityHashCode(targetInstance));
@@ -295,6 +305,30 @@ public class InvokeCommand extends AbstractClassCommand<InvokeMethodRequest, Inv
                 }
             } catch (Exception e) {
                 context.logger().debug("未找到单例字段: " + fieldName);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * 尝试调用 getInstance() 静态方法初始化单例。
+     * 当单例字段为 null 时（尚未初始化），调用此方法会触发单例的懒加载。
+     */
+    private Object tryInitializeSingleton(Class<?> clazz, ClassCommandContext<InvokeMethodRequest> context) {
+        String[] factoryMethodNames = {"getInstance", "get", "getDefault", "newInstance"};
+
+        for (String methodName : factoryMethodNames) {
+            try {
+                Method method = clazz.getDeclaredMethod(methodName);
+                if (Modifier.isStatic(method.getModifiers())) {
+                    method.setAccessible(true);
+                    Object instance = method.invoke(null);
+                    context.logger().info("通过 " + methodName + "() 初始化单例: " + instance);
+                    return instance;
+                }
+            } catch (Exception e) {
+                context.logger().debug("无法通过 " + methodName + "() 初始化单例");
             }
         }
 

@@ -370,7 +370,8 @@ public class StmtParser extends BaseParser {
         boolean initConsumedSemicolon = false; // 变量声明会自带分号
         if (!check(TokenType.DELIMITER_SEMICOLON)) {
             // 前瞻判断：如果以类型关键字开头，尝试解析为变量声明
-            if (isPrimitiveTypeKeyword(peek().type()) || peek().type() == TokenType.IDENTIFIER) {
+            if (isPrimitiveTypeKeyword(peek().type()) || peek().type() == TokenType.IDENTIFIER
+                    || peek().type() == TokenType.KEYWORD_AUTO || peek().type() == TokenType.KEYWORD_VAR) {
                 savePosition();
                 try {
                     initialization = parseLocalVariableDeclaration(null, false);
@@ -793,8 +794,8 @@ public class StmtParser extends BaseParser {
             SourceLocation location = createLocation();
             ASTNode value = parseExpr();
 
-            if (context.isVariableDeclared(firstName)) {
-                // 已声明的变量 → 纯赋值，检查类型兼容性（在消费分号之前检查，确保类型错误优先报告）
+            if (context.isKnownVariable(firstName) || context.isFieldOfCurrentClass(firstName)) {
+                // 已声明的变量 / 当前类的字段 → 赋值（非新声明）
                 GenericType declaredType = context.getDeclaredType(firstName);
                 if (declaredType != null) {
                     checkTypeCompatibility(firstName, declaredType, value);
@@ -850,9 +851,13 @@ public class StmtParser extends BaseParser {
             throws CythavaParseException {
         SourceLocation location = createLocation();
 
+        // 消费 auto/var 关键字（类型推断，无需显式类型）
+        boolean isAuto = match(TokenType.KEYWORD_AUTO) || match(TokenType.KEYWORD_VAR);
+
         // 使用 TypeParser 解析完整类型（支持泛型、数组、通配符等）
+        // auto/var 已消费，不需要显式类型，跳过类型解析
         GenericType declaredType = null;
-        if (isTypeStart(peek())) {
+        if (!isAuto && isTypeStart(peek())) {
             int savedPos = position;
             try {
                 TypeParser typeParser = new TypeParser(tokens, context, fileName);
@@ -863,7 +868,7 @@ public class StmtParser extends BaseParser {
                 // 防御性检查：如果类型名是 "var" 或 "auto"，说明这些关键字被误当类型名解析了
                 //   （可能因 DeclParser 安全网未拦截到），应降级为 auto 类型推断
                 String origName = declaredType.getOriginalTypeName();
-                if (origName != null && (Keywords.VAR.equals(origName) || Keywords.AUTO.equals(origName))) {
+                if ((Keywords.VAR.equals(origName) || Keywords.AUTO.equals(origName))) {
                     declaredType = null; // 降级为 auto：类型从初始化器推断
                 }
             } catch (CythavaParseException e) {
@@ -1130,8 +1135,20 @@ public class StmtParser extends BaseParser {
             if (unboxed != null && targetType.isAssignableFrom(unboxed)) return;
         }
 
-        // 非严格模式：Object（泛型擦除/无法精确推断）可赋给任意引用类型
-        if (!context.isStrictMode() && valueType == Object.class && !targetType.isPrimitive()) {
+        // Lambda/方法引用隐式转换为函数式接口（必须在 Object 放行之前处理）
+        if (MethodResolver.isLambdaOrMethodRefNode(valueNode)
+                && MethodResolver.isFunctionalInterface(targetType)) {
+            if (valueNode instanceof LambdaNode lambda) {
+                lambda.setFunctionalInterfaceType(targetType);
+            } else if (valueNode instanceof MethodReferenceNode methodRef) {
+                methodRef.setFunctionalInterfaceType(targetType);
+            }
+            return;
+        }
+
+        // 类型推断返回 Object（泛型擦除/无法精确推断）时允许赋给任意类型
+        // 因为此时没有足够信息做静态检查，信任运行时行为
+        if (valueType == Object.class) {
             return;
         }
 
@@ -1145,17 +1162,6 @@ public class StmtParser extends BaseParser {
                 Class<?> resolved = context.resolveClass(ctorTypeName);
                 if (resolved != null && targetType.isAssignableFrom(resolved)) return;
             }
-        }
-
-        // Lambda/方法引用隐式转换为函数式接口
-        if (MethodResolver.isLambdaOrMethodRefNode(valueNode)
-                && MethodResolver.isFunctionalInterface(targetType)) {
-            if (valueNode instanceof LambdaNode lambda) {
-                lambda.setFunctionalInterfaceType(targetType);
-            } else if (valueNode instanceof MethodReferenceNode methodRef) {
-                methodRef.setFunctionalInterfaceType(targetType);
-            }
-            return;
         }
 
         // 非严格模式：所有类型不匹配静默放行（兼容旧版 raw class 代码）
@@ -1237,25 +1243,63 @@ public class StmtParser extends BaseParser {
     /** x += expr ; 等复合赋值 */
     private ASTNode parseCompoundAssignment(String varName) throws CythavaParseException {
         SourceLocation location = createLocation();
-        advance(); // +=, -= 等
+
+        // 读取并消费复合赋值操作符
+        BinaryOpNode.Operator op = consumeCompoundOperator();
+        if (op == null) {
+            throw error("Expected compound assignment operator", ErrorCode.PARSE_UNEXPECTED_TOKEN);
+        }
+
         ASTNode value = parseExpr();
         consumeSemicolon();
 
-        // 复合赋值（+=, -= 等）统一用 AssignmentNode 表示：
-        // 操作符信息保留在 value 表达式（BinaryOpNode）中，
-        // Evaluator 层读取 operator 字段来决定执行 += 还是 = + 赋值。
+        // 创建变量引用节点（带类型标注），使 read-modify-write 的 BinaryOpNode 能正确读取当前值
+        VariableNode varRef = (VariableNode) new VariableNode.Builder().name(varName).location(location).build();
+        GenericType declaredType = context.getDeclaredType(varName);
+        if (declaredType != null) {
+            context.setType(varRef, JType.fromGenericType(declaredType));
+        }
+
+        // 包装为 BinaryOpNode：Evaluator 在 visitAssignment 中 evaluate 此节点时，
+        // 会递归 evaluate(varRef) 读取当前值，再与 RHS 做运算
+        ASTNode combinedValue = new BinaryOpNode.Builder()
+                .operator(op)
+                .left(varRef)
+                .right(value)
+                .location(location)
+                .build();
+
+        // 复合赋值的结果类型与 LHS 变量类型一致（如 int += int → int）
+        JType assignType = declaredType != null ? JType.fromGenericType(declaredType) : null;
+
         AssignmentNode assignNode = (AssignmentNode) new AssignmentNode.Builder()
                                 .variableName(varName)
-                                .value(value)
+                                .value(combinedValue)
                                 .isDeclaration(false)
-                                .declaredType(null)
+                                .declaredType(declaredType)
                                 .location(location)
                                 .build();
-        JType valueType = context.getType(value);
-        if (valueType != null) {
-            context.setType(assignNode, valueType);
+        if (assignType != null) {
+            context.setType(assignNode, assignType);
         }
         return assignNode;
+    }
+
+    /** 消费复合赋值操作符并返回对应的 BinaryOpNode.Operator，无匹配则返回 null。 */
+    private BinaryOpNode.Operator consumeCompoundOperator() {
+        if (match(TokenType.OPERATOR_PLUS_ASSIGN)) return BinaryOpNode.Operator.ADD;
+        if (match(TokenType.OPERATOR_MINUS_ASSIGN)) return BinaryOpNode.Operator.SUBTRACT;
+        if (match(TokenType.OPERATOR_MULTIPLY_ASSIGN)) return BinaryOpNode.Operator.MULTIPLY;
+        if (match(TokenType.OPERATOR_DIVIDE_ASSIGN)) return BinaryOpNode.Operator.DIVIDE;
+        if (match(TokenType.OPERATOR_MODULO_ASSIGN)) return BinaryOpNode.Operator.MODULO;
+        if (match(TokenType.OPERATOR_BITWISE_AND_ASSIGN)) return BinaryOpNode.Operator.BITWISE_AND;
+        if (match(TokenType.OPERATOR_BITWISE_OR_ASSIGN)) return BinaryOpNode.Operator.BITWISE_OR;
+        if (match(TokenType.OPERATOR_BITWISE_XOR_ASSIGN)) return BinaryOpNode.Operator.BITWISE_XOR;
+        if (match(TokenType.OPERATOR_LEFT_SHIFT_ASSIGN)) return BinaryOpNode.Operator.LEFT_SHIFT;
+        if (match(TokenType.OPERATOR_RIGHT_SHIFT_ASSIGN)) return BinaryOpNode.Operator.RIGHT_SHIFT;
+        if (match(TokenType.OPERATOR_UNSIGNED_RIGHT_SHIFT_ASSIGN)) return BinaryOpNode.Operator.UNSIGNED_RIGHT_SHIFT;
+        if (match(TokenType.OPERATOR_NULL_COALESCING_ASSIGN)) return BinaryOpNode.Operator.NULL_COALESCING;
+        return null;
     }
 
     // ==================== 函数定义 ====================
@@ -1462,8 +1506,7 @@ public class StmtParser extends BaseParser {
                     continue;
                 }
 
-                boolean result = hadDot && t == TokenType.IDENTIFIER;
-                return result;
+                return hadDot && t == TokenType.IDENTIFIER;
             }
         }
 
@@ -1494,10 +1537,7 @@ public class StmtParser extends BaseParser {
                 return false;
             }
             // [][] 后跟标识符 → 变量声明
-            if (t == TokenType.IDENTIFIER) {
-                return true;
-            }
-            return false;
+            return t == TokenType.IDENTIFIER;
         }
         return false;
     }

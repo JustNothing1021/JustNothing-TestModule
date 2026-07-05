@@ -1,6 +1,7 @@
 package com.justnothing.testmodule.command.functions.classcmd;
 
 import com.justnothing.testmodule.command.CommandExecutor;
+import com.justnothing.testmodule.utils.reflect.ExpressionParser;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.reflect.ReflectionUtils;
 
@@ -30,15 +31,15 @@ public record ClassCommandContext<Req extends ClassCommandRequest>
     }
 
     public Object parseValue(String value, Class<?> type) {
-        return ReflectionUtils.parseValue(value, type);
+        return ExpressionParser.parse(value, classLoader, type).value();
     }
 
     public String[] parseParams(String paramsStr) {
-        return ReflectionUtils.parseParams(paramsStr);
+        return ExpressionParser.parseParams(paramsStr);
     }
 
     public Object[] convertParams(String[] params, Class<?>[] paramTypes) {
-        return ReflectionUtils.convertParams(params, paramTypes);
+        return ExpressionParser.convertParams(params, paramTypes, classLoader);
     }
 
     public static Method findMethod(@NotNull Class<?> clazz, String methodName, Class<?>[] paramTypes,
@@ -46,7 +47,8 @@ public record ClassCommandContext<Req extends ClassCommandRequest>
         Class<?> currentClass = clazz;
 
         while (currentClass != null) {
-            Method[] methods = clazz.getMethods();
+            // 使用 getDeclaredMethods() 而非 getMethods()，以便能找到 private/protected/包级私有方法
+            Method[] methods = currentClass.getDeclaredMethods();
 
             for (Method m : methods) {
                 if (!m.getName().equals(methodName)) continue;

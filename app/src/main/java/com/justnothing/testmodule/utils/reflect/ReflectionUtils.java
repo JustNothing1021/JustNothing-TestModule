@@ -222,86 +222,7 @@ public class ReflectionUtils {
     }
 
 
-    public static Object parseValue(String value, Class<?> type) {
-        if (value == null) {
-            return null;
-        }
 
-        try {
-            if (type == String.class) {
-                return value;
-            } else if (type == int.class || type == Integer.class) {
-                return Integer.parseInt(value);
-            } else if (type == long.class || type == Long.class) {
-                return Long.parseLong(value);
-            } else if (type == float.class || type == Float.class) {
-                return Float.parseFloat(value);
-            } else if (type == double.class || type == Double.class) {
-                return Double.parseDouble(value);
-            } else if (type == boolean.class || type == Boolean.class) {
-                return Boolean.parseBoolean(value);
-            } else if (type == byte.class || type == Byte.class) {
-                return Byte.parseByte(value);
-            } else if (type == short.class || type == Short.class) {
-                return Short.parseShort(value);
-            } else if (type == char.class || type == Character.class) {
-                if (value.length() == 1) {
-                    return value.charAt(0);
-                }
-                throw new IllegalArgumentException("字符值必须是一个字符");
-            }
-        } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("无法将 '" + value + "' 转换为 " + type.getSimpleName());
-        }
-
-        return value;
-    }
-
-    public static String[] parseParams(String paramsStr) {
-        if (paramsStr == null || paramsStr.trim().isEmpty()) {
-            return new String[0];
-        }
-
-        List<String> params = new ArrayList<>();
-        StringBuilder current = new StringBuilder();
-        boolean inQuotes = false;
-
-        for (char c : paramsStr.toCharArray()) {
-            if (c == '"') {
-                inQuotes = !inQuotes;
-            } else if (c == ' ' && !inQuotes) {
-                if (current.length() > 0) {
-                    params.add(current.toString());
-                    current = new StringBuilder();
-                }
-            } else {
-                current.append(c);
-            }
-        }
-
-        if (current.length() > 0) {
-            params.add(current.toString());
-        }
-
-        return params.toArray(new String[0]);
-    }
-
-    public static Object[] convertParams(String[] params, Class<?>[] paramTypes) {
-        if (params == null || params.length == 0) {
-            return new Object[0];
-        }
-
-        Object[] result = new Object[params.length];
-        for (int i = 0; i < params.length; i++) {
-            if (i < paramTypes.length) {
-                result[i] = parseValue(params[i], paramTypes[i]);
-            } else {
-                result[i] = parseValue(params[i], String.class);
-            }
-        }
-
-        return result;
-    }
 
 
     static String typeVarBounds(TypeVariable<?> typeVar) {
@@ -409,6 +330,43 @@ public class ReflectionUtils {
     public static Object callMethod(Object obj, String methodName, Object... args) throws Exception {
         return callMethod(obj, methodName, Arrays.asList(args));
     }
+
+    /**
+     * 使用已找到的 Method 对象直接调用，避免重复查找。
+     * 用于 InvokeCommand 等场景：先 findMethod 找到 Method，再 callMethod 执行，
+     * 保证查找和调用使用同一个 Method 对象。
+     */
+    public static Object callMethod(Object target, Method method, List<Object> args) throws Exception {
+        if (method == null) {
+            throw new NoSuchMethodException("Method is null");
+        }
+        if (!Modifier.isStatic(method.getModifiers()) && target == null) {
+            throw new NullPointerException(
+                    "Attempt to invoke method " + method.getName() + " on a null object reference");
+        }
+
+        logger.debug("直接调用方法: " + method + ", 可变参数: " + method.isVarArgs());
+
+        Object[] invokeArgs = prepareInvokeArguments(method, args);
+
+        try {
+            method.setAccessible(true);
+        } catch (SecurityException ignored) {
+        }
+        try {
+            return method.invoke(target, invokeArgs);
+        } catch (InvocationTargetException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof Exception) {
+                throw (Exception) cause;
+            } else if (cause instanceof Error) {
+                throw (Error) cause;
+            } else {
+                throw e;
+            }
+        }
+    }
+
     public static Object callMethod(Object object, String methodName, List<Object> args) throws Exception {
         if (methodName == null)
             methodName = "call";

@@ -52,12 +52,10 @@ public class MultiLineStringTest {
               .append("[").append(t.location().getLine()).append(":")
               .append(t.location().getColumn()).append("] ");
         }
-        System.out.println("TOKENS: " + sb.toString());
         boolean found = false;
         for (var t : tokens) {
             if (t.type() == com.justnothing.engine.lexer.TokenType.LITERAL_MULTI_LINE_STRING) {
                 found = true;
-                System.out.println("ML-STRING value: [" + t.value() + "]");
             }
         }
         assertTrue("Should have LITERAL_MULTI_LINE_STRING token", found);
@@ -68,9 +66,6 @@ public class MultiLineStringTest {
         String input = "\"\"\"hello\"\"\"";
         var lexer = new com.justnothing.engine.lexer.Lexer(input, "<test>");
         var tokens = lexer.tokenize();
-        for (var t : tokens) {
-            System.out.println("  " + t.type() + " => " + t.value());
-        }
         assertEquals(2, tokens.size()); // ML_STRING + EOF
     }
 
@@ -80,8 +75,6 @@ public class MultiLineStringTest {
         String input = "auto s = \"\"\"\n    hello\n    world\n\"\"\";\ns;";
         var pp = new com.justnothing.engine.preprocessor.Preprocessor();
         String output = pp.process(input);
-        System.out.println("PREPROCESSOR OUTPUT:");
-        System.out.println("[" + output + "]");
         // 预处理器不应破坏 """ 结构
         assertTrue("Output should contain triple quote", output.contains("\"\"\""));
     }
@@ -92,13 +85,9 @@ public class MultiLineStringTest {
         String input = "auto s = \"\"\"\n    hello\n    world\n\"\"\";\ns;";
         var pp = new com.justnothing.engine.preprocessor.Preprocessor();
         String processed = pp.process(input);
-        System.out.println("PROCESSED: [" + processed + "]");
 
         var lexer = new com.justnothing.engine.lexer.Lexer(processed, "<test>");
         var tokens = lexer.tokenize();
-        for (var t : tokens) {
-            System.out.println("  TOKEN " + t.type() + " => [" + t.value() + "]");
-        }
         boolean foundML = false;
         for (var t : tokens) {
             if (t.type() == com.justnothing.engine.lexer.TokenType.LITERAL_MULTI_LINE_STRING) {
@@ -112,10 +101,8 @@ public class MultiLineStringTest {
     public void testMLStringConcat() throws Exception {
         // 最小复现：两个单行 ML 字符串拼接
         Object r1 = eval("auto a = \"\"\"hello\"\"\";");
-        System.out.println("a = [" + r1 + "] class=" + (r1 != null ? r1.getClass() : "null"));
         Object r2 = eval("auto b = \"\"\"world\"\"\";");
         Object r3 = eval("a + b;");
-        System.out.println("a+b = [" + r3 + "]");
         assertEquals("helloworld", r3);
     }
 

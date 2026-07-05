@@ -4,7 +4,10 @@ import com.justnothing.engine.api.IOutputHandler;
 import com.justnothing.engine.builtins.BuiltinRegistry;
 import com.justnothing.engine.builtins.Builtins;
 import com.justnothing.engine.exception.ErrorCode;
+import com.justnothing.engine.exception.EvalException;
 import com.justnothing.engine.security.SecurityGate;
+
+import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.List;
@@ -13,7 +16,7 @@ import java.util.Map;
 public class EvalContext implements AutoCloseable {
     private final Map<String, Value> variables = new HashMap<>();
     private final EvalContext parent;
-    private final IOutputHandler output;
+    private IOutputHandler output;
     /** 共享的 BuiltinRegistry，与 ParseContext 使用同一实例。 */
     private final BuiltinRegistry builtinRegistry;
     private final Builtins builtins;
@@ -57,20 +60,22 @@ public class EvalContext implements AutoCloseable {
         return child;
     }
 
-    public void setVariable(String name, Value value) {
+
+    public void assignVariable(String name, Value value) {
+        EvalContext ctx = this;
+        // 只查当前层的 variables map（不含父链），找到真正声明该变量的作用域
+        while (ctx != null && !ctx.variables.containsKey(name)) ctx = ctx.getParent();
+        if (ctx == null) throw new EvalException("Variable not defined: " + name, ErrorCode.SCOPE_VARIABLE_NOT_FOUND);
+        ctx.variables.put(name, value);
+    }
+
+
+    /** 从当前作用域向上查找变量的定义位置并赋值。如果不存在则创建。 */
+    public void declareVariable(String name, Value value) {
+//        if (variables.containsKey(name)) throw new EvalException("Variable already declared: " + name, ErrorCode.SCOPE_VARIABLE_ALREADY_DECLARED);
         variables.put(name, value);
     }
 
-    /** 从当前作用域向上查找变量的定义位置并赋值。如果不存在则创建。 */
-    public void assignVariable(String name, Value value) {
-        if (variables.containsKey(name)) {
-            variables.put(name, value);
-        } else if (parent != null && parent.hasVariable(name)) {
-            parent.assignVariable(name, value);
-        } else {
-            variables.put(name, value);
-        }
-    }
 
     public Value getVariable(String name) {
         if (variables.containsKey(name)) {
@@ -107,6 +112,18 @@ public class EvalContext implements AutoCloseable {
             output.println(text);
         } else {
             System.out.println(text);
+        }
+    }
+
+    public IOutputHandler getOutput() {
+        return output;
+    }
+
+    public void setOutput(IOutputHandler output) {
+        this.output = output;
+        // 同步更新 Builtins 的 outputHandler，确保 println() 等内置函数的输出走新 handler
+        if (builtins != null) {
+            builtins.setOutputHandler(output);
         }
     }
 

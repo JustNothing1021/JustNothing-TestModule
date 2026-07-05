@@ -33,6 +33,15 @@ import com.justnothing.testmodule.command.functions.trace.TraceMain;
 import com.justnothing.testmodule.command.functions.watch.WatchMain;
 import com.justnothing.testmodule.command.functions.tests.SandboxTestMain;
 import com.justnothing.testmodule.command.functions.tests.AnonClassTestMain;
+import com.justnothing.testmodule.command.functions.tests.RichDemoMain;
+import com.justnothing.testmodule.command.functions.tests.TableDemoMain;
+import com.justnothing.testmodule.command.functions.tests.ProgressDemoMain;
+import com.justnothing.testmodule.command.functions.tests.LayoutPanelDemoMain;
+import com.justnothing.testmodule.command.functions.tests.TreeDemoMain;
+import com.justnothing.testmodule.command.functions.tests.NonePromptDemoMain;
+import com.justnothing.testmodule.command.functions.tests.TestCardDemoMain;
+import com.justnothing.testmodule.command.functions.tests.LiveDemoMain;
+import com.justnothing.testmodule.command.functions.tests.MarkdownSyntaxDemoMain;
 import com.justnothing.testmodule.command.output.ClientRequirements;
 import com.justnothing.testmodule.command.output.Colors;
 import com.justnothing.testmodule.command.output.StringBuilderCollector;
@@ -92,6 +101,15 @@ public class CommandExecutor {
             InteractiveExampleMain.class,
             SandboxTestMain.class,
             AnonClassTestMain.class,
+            RichDemoMain.class,
+            TableDemoMain.class,
+            ProgressDemoMain.class,
+            LayoutPanelDemoMain.class,
+            TreeDemoMain.class,
+            NonePromptDemoMain.class,
+            TestCardDemoMain.class,
+            LiveDemoMain.class,
+            MarkdownSyntaxDemoMain.class,
             ClassMain.class,
             PackagesMain.class,
             AgentCliMain.class,
@@ -389,6 +407,12 @@ public class CommandExecutor {
     private void dispatchAndExecute(CmdExecContext<CommandRequest> context, CommandType executionType,
                             ICommandOutputHandler origOutput)
             throws Throwable {
+        // 非 CLI 模式下，context.output 是 VoidOutputHandler（丢弃直接输出），
+        // 但 Console 应来自 origOutput（InteractiveOutputHandler），让 RichConsole 可用
+        if (executionType != CommandType.COMMAND_LINE && origOutput != null) {
+            context.setConsole(origOutput.getConsole());
+        }
+
         String command = context.cmdName();
         ICommandOutputHandler output = context.output();
         MainCommand<? extends CommandResult> commandObj = getCommand(command);
@@ -510,6 +534,7 @@ public class CommandExecutor {
         public ICommandOutputHandler output;
         public ArgumentGroup argGroup;
         public ClientRequirements requirements;
+        private com.justnothing.richconsole.console.Console console;
 
         private T request;
         private CommandType executionType = CommandType.COMMAND_LINE;
@@ -589,6 +614,19 @@ public class CommandExecutor {
         }
         public String readPassword(String prompt) {
             return output.readPasswordFromClient(prompt);
+        }
+
+        /**
+         * 获取 RichConsole Console 实例（用于高级渲染：表格、面板、进度条等）。
+         * 仅在 InteractiveOutputHandler 下可用，其他输出目标返回 null。
+         */
+        public com.justnothing.richconsole.console.Console console() {
+            if (console != null) return console;
+            return output.getConsole();
+        }
+
+        public void setConsole(com.justnothing.richconsole.console.Console console) {
+            this.console = console;
         }
 
     }

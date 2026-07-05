@@ -19,7 +19,7 @@ import com.justnothing.testmodule.utils.reflect.AppClassFinder;
 import com.justnothing.testmodule.utils.sandbox.BlockGuardSandbox;
 
 import com.justnothing.engine.ScriptRunner;
-import com.justnothing.engine.eval.EvalException;
+import com.justnothing.engine.exception.EvalException;
 import com.justnothing.engine.parser.CythavaParseException;
 import com.justnothing.engine.security.SandboxConfig;
 
