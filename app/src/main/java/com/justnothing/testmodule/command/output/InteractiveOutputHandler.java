@@ -152,7 +152,11 @@ public class InteractiveOutputHandler implements ICommandOutputHandler {
     public Console getConsole() {
         if (console == null && remoteTerminal != null) {
             // 交互模式：通过 RPC 通道发送
-            console = Console.of(c -> c.withTerminal(remoteTerminal).withForceTerminal(true));
+            console = Console.of(c -> c
+                    .withTerminal(remoteTerminal)
+                    .withForceTerminal(true)
+                    .withColorSystem(mapColorSystem(clientColorSystem))
+            );
         }
         if (console == null && remoteTerminal == null) {
             // 文件模式：通过 System.out (已被 SystemOutputRedirector 捕获) 发送，禁用 ANSI
@@ -204,6 +208,19 @@ public class InteractiveOutputHandler implements ICommandOutputHandler {
     public int getClientWidth() { return clientWidth; }
     public int getClientHeight() { return clientHeight; }
     public boolean isClientSupportsAnsi() { return clientSupportsAnsi; }
+
+    /**
+     * 将客户端上报的 colorSystem byte 映射为 Console 的颜色系统名称。
+     * 0=NONE, 1=STANDARD(16色), 2=EIGHT_BIT(256色), 3=TRUECOLOR(真彩色)
+     */
+    private static String mapColorSystem(byte colorSystem) {
+        switch (colorSystem) {
+            case ClientRequirements.COLOR_TRUECOLOR: return "truecolor";
+            case ClientRequirements.COLOR_EIGHT_BIT: return "256";
+            case ClientRequirements.COLOR_STANDARD: return "standard";
+            default: return null; // auto
+        }
+    }
 
 
 

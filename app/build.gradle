@@ -109,8 +109,7 @@ dependencies {
     implementation libs.commonmark
     implementation libs.commonmark.ext.gfm.tables
     implementation libs.commonmark.ext.gfm.strikethrough
-    implementation project(':engine')
-    implementation project(':engine_new')
+    implementation files("libs/engine_new.jar")
     implementation files("libs/NCW-Logger-1.0.3-hotfix3.jar")
     implementation files("libs/richconsole-0.1.0.jar")
 

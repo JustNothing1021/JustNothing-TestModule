@@ -412,6 +412,25 @@ public class TerminalRpcChannel {
                 data = buffer.toByteArray();
                 buffer.reset();
             }
+            // 检测尾部不完整的 UTF-8 序列，保留在缓冲区等待下次拼接
+            int incomplete = trailingIncompleteUtf8Bytes(data);
+            if (incomplete > 0) {
+                int completeLen = data.length - incomplete;
+                if (completeLen == 0) {
+                    // 整个缓冲都是不完整序列，放回缓冲区等待更多数据
+                    synchronized (bufferLock) {
+                        buffer.write(data, 0, data.length);
+                    }
+                    return;
+                }
+                byte[] toSend = new byte[completeLen];
+                System.arraycopy(data, 0, toSend, 0, completeLen);
+                // 保留残余字节
+                synchronized (bufferLock) {
+                    buffer.write(data, completeLen, incomplete);
+                }
+                data = toSend;
+            }
             // 在锁外发送，避免持锁期间做 I/O
             JsonObject params = new JsonObject();
             params.addProperty("data", new String(data, StandardCharsets.UTF_8));
@@ -434,5 +453,34 @@ public class TerminalRpcChannel {
         public boolean isAutoFlushEveryWrite() {
             return autoFlushEveryWrite;
         }
+    }
+
+    /**
+     * 检查字节数组末尾有多少字节属于不完整的 UTF-8 序列。
+     * 用于防止多字节字符在 flush 边界被拆碎产生乱码。
+     *
+     * @return 末尾不完整序列的字节数（0 表示全部完整）
+     */
+    static int trailingIncompleteUtf8Bytes(byte[] data) {
+        if (data.length == 0) return 0;
+        int n = data.length;
+        int last = data[n - 1] & 0xFF;
+        if (last < 0x80) return 0; // ASCII，完整
+        if (last >= 0xF0) return 1; // 4字节序列起始，缺续字节
+        if (last >= 0xE0) return 1; // 3字节序列起始，缺续字节
+        if (last >= 0xC0) return 1; // 2字节序列起始，缺续字节
+        // 末尾是续字节 (0x80-0xBF)：向前查找起始字节
+        int pos = n - 1;
+        while (pos > 0 && (data[pos] & 0xC0) == 0x80 && (n - pos) < 4) {
+            pos--;
+        }
+        int startByte = data[pos] & 0xFF;
+        int expected;
+        if (startByte >= 0xF0) expected = 4;
+        else if (startByte >= 0xE0) expected = 3;
+        else if (startByte >= 0xC0) expected = 2;
+        else return 0;
+        int actual = n - pos;
+        return actual < expected ? actual : 0;
     }
 }
