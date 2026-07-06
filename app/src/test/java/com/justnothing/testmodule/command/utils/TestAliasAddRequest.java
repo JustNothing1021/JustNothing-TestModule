@@ -1,11 +1,12 @@
 package com.justnothing.testmodule.command.utils;
 
-import com.justnothing.testmodule.command.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.base.protocol.SerializeKeyName;
 import com.justnothing.testmodule.command.base.parser.FlagParam;
-import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
+import com.justnothing.testmodule.command.framework.base.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.base.parser.KeywordParam;
 import com.justnothing.testmodule.command.base.parser.PositionalParam;
+import com.justnothing.testmodule.command.framework.utils.ParamParser;
 
 import org.json.JSONException;
 import org.json.JSONObject;

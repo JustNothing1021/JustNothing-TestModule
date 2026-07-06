@@ -2,7 +2,7 @@ package com.justnothing.testmodule.command.functions.trace;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import com.justnothing.testmodule.command.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandResult;
 
 public class TraceResult extends CommandResult {
 

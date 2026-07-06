@@ -2,17 +2,18 @@ package com.justnothing.testmodule.command.functions.memory;
 
 import static com.justnothing.testmodule.constants.CommandServer.CMD_MEMORY_VER;
 
-import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.MainCommand;
-import com.justnothing.testmodule.command.base.command.Cmd;
-import com.justnothing.testmodule.command.base.command.CmdRoutes;
-import com.justnothing.testmodule.command.base.command.CommandRouter;
-import com.justnothing.testmodule.command.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.base.MainCommand;
+import com.justnothing.testmodule.command.framework.base.command.Cmd;
+import com.justnothing.testmodule.command.framework.base.command.CmdRoutes;
+import com.justnothing.testmodule.command.framework.base.command.CommandRouter;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.framework.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.command.functions.memory.impl.InfoCommand;
 import com.justnothing.testmodule.command.functions.memory.impl.GcCommand;
 import com.justnothing.testmodule.command.functions.memory.impl.DumpCommand;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.output.Colors;
 
 @Cmd(
     name = "memory",
@@ -90,7 +91,7 @@ public class MemoryMain extends MainCommand<CommandResult> {
             context.println(subCommand, Colors.YELLOW);
             return createErrorResult("未知子命令: " + subCommand);
         } catch (Throwable t) {
-            com.justnothing.testmodule.command.utils.CommandExceptionHandler.handleException(
+            CommandExceptionHandler.handleException(
                 "memory", t instanceof Exception ? (Exception) t : new RuntimeException(t), context, "执行memory命令失败"
             );
             return createErrorResult("执行memory命令失败: " + t.getMessage());

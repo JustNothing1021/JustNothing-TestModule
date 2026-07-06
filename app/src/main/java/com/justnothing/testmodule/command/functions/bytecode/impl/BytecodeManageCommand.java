@@ -1,13 +1,13 @@
 package com.justnothing.testmodule.command.functions.bytecode.impl;
 
-import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.functions.bytecode.request.BytecodeDumpRequest;
 import com.justnothing.testmodule.command.functions.bytecode.request.BytecodeBatchExportRequest;
 import com.justnothing.testmodule.command.functions.bytecode.request.BytecodeListClassesRequest;
 import com.justnothing.testmodule.command.functions.bytecode.response.BytecodeResult;
-import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.utils.CommandExceptionHandler;
+import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.functions.bytecode.util.SystemBytecodeExtractor;
 import com.justnothing.testmodule.utils.io.IOManager;
 

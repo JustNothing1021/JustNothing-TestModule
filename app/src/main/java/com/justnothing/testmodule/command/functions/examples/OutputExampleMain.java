@@ -1,13 +1,13 @@
 package com.justnothing.testmodule.command.functions.examples;
 
-import com.justnothing.testmodule.command.base.MainCommand;
-import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.protocol.CommandResult;
-import com.justnothing.testmodule.command.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.output.Colors;
-import com.justnothing.testmodule.command.output.ICommandOutputHandler;
+import com.justnothing.testmodule.command.framework.base.MainCommand;
+import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.framework.output.ICommandOutputHandler;
 
-import com.justnothing.testmodule.command.base.command.Cmd;
+import com.justnothing.testmodule.command.framework.base.command.Cmd;
 
 @Cmd(name = "output_test", description = "输出处理器测试", defaultResultType = CommandResult.class)
 public class OutputExampleMain extends MainCommand<CommandResult> {

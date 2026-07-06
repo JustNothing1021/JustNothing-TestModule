@@ -1,10 +1,10 @@
 package com.justnothing.testmodule.command.functions.nativecmd.impl;
 
-import com.justnothing.testmodule.command.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.functions.nativecmd.NativeManager;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.command.functions.nativecmd.NativeResult;
 import com.justnothing.testmodule.command.functions.nativecmd.request.*;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.output.Colors;
 
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
 
@@ -52,7 +52,7 @@ public class NativeManageCommand extends AbstractNativeCommand<CommandRequest, N
             }
 
         } catch (Exception e) {
-            com.justnothing.testmodule.command.utils.CommandExceptionHandler.handleException(
+            CommandExceptionHandler.handleException(
                 "native cli", e, context, "获取native方法失败");
         }
 
@@ -79,7 +79,7 @@ public class NativeManageCommand extends AbstractNativeCommand<CommandRequest, N
             outln(stackTrace, Colors.GRAY);
 
         } catch (Exception e) {
-            com.justnothing.testmodule.command.utils.CommandExceptionHandler.handleException(
+            CommandExceptionHandler.handleException(
                 "native stack", e, context, "获取native栈失败");
         }
 
@@ -122,7 +122,7 @@ public class NativeManageCommand extends AbstractNativeCommand<CommandRequest, N
             }
 
         } catch (Exception e) {
-            com.justnothing.testmodule.command.utils.CommandExceptionHandler.handleException(
+            CommandExceptionHandler.handleException(
                 "native search", e, context, "搜索失败");
         }
 

@@ -1,17 +1,17 @@
 package com.justnothing.testmodule.command.functions.classcmd.impl;
 
-import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
-import com.justnothing.testmodule.command.base.command.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.base.IllegalCommandLineArgumentException;
+import com.justnothing.testmodule.command.framework.base.command.SubCommandInfo;
 import com.justnothing.testmodule.command.functions.classcmd.AbstractClassCommand;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandContext;
 import com.justnothing.testmodule.command.functions.classcmd.model.FieldInfo;
 import com.justnothing.testmodule.command.functions.classcmd.request.ReflectClassRequest;
 import com.justnothing.testmodule.command.functions.classcmd.response.ReflectOperationResult;
 import com.justnothing.testmodule.command.functions.classcmd.model.MethodInfo;
-import com.justnothing.testmodule.command.output.Colors;
-import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
+import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.framework.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
-import com.justnothing.testmodule.utils.reflect.DescriptorColorizer;
+import com.justnothing.testmodule.utils.format.DescriptorColorizer;
 
 import org.jetbrains.annotations.NotNull;
 

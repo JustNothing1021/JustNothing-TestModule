@@ -1,13 +1,13 @@
 package com.justnothing.testmodule.command.functions.breakpoint.impl;
 
-import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.base.command.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.base.command.SubCommandInfo;
 import com.justnothing.testmodule.command.functions.breakpoint.request.BreakpointListRequest;
 import com.justnothing.testmodule.command.functions.breakpoint.request.BreakpointHitsRequest;
 import com.justnothing.testmodule.command.functions.breakpoint.response.BreakpointResult;
 import com.justnothing.testmodule.command.functions.intercept.BreakpointInterceptTask;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.output.Colors;
 
 import java.util.Date;
 import java.util.List;

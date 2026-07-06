@@ -1,13 +1,13 @@
 package com.justnothing.testmodule.command.functions.performance.impl;
 
-import com.justnothing.testmodule.command.base.command.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.base.command.SubCommandInfo;
 import com.justnothing.testmodule.command.functions.performance.PerformanceRequest;
 import com.justnothing.testmodule.command.functions.performance.PerfTaskManager;
 import com.justnothing.testmodule.command.functions.performance.request.*;
 import com.justnothing.testmodule.command.functions.performance.response.SampleResult;
 import com.justnothing.testmodule.command.functions.performance.sampler.SimpleSampleData;
 import com.justnothing.testmodule.command.functions.performance.sampler.SimpleSampler;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.output.Colors;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -15,7 +15,6 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.Locale;
 import java.util.Map;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 @SubCommandInfo(

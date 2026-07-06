@@ -1,7 +1,7 @@
 package com.justnothing.testmodule.command.functions.hook.request;
 
-import com.justnothing.testmodule.command.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.base.protocol.SerializeKeyName;
 import org.json.JSONObject;
 
 @SerializeKeyName("hook:clear")

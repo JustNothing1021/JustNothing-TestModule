@@ -1,8 +1,8 @@
 package com.justnothing.testmodule.command.functions.memory;
 
-import com.justnothing.testmodule.command.base.command.CmdParam;
-import com.justnothing.testmodule.command.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
+import com.justnothing.testmodule.command.framework.base.command.CmdParam;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.base.protocol.SerializeKeyName;
 
 @SerializeKeyName("memory:info")
 public class MemoryInfoRequest extends CommandRequest {

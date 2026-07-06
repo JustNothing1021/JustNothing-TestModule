@@ -10,7 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 
-import de.robv.android.xposed.XC_MethodHook;
+import com.justnothing.testmodule.hooks.api.UnhookHandle;
 
 public class NetworkManager {
 
@@ -24,7 +24,7 @@ public class NetworkManager {
     private volatile boolean recordEnabled = true;
     private final ConcurrentHashMap<Integer, NetworkRequestInfo> requests = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, MockRule> mockRules = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, XC_MethodHook.Unhook> activeHooks = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, UnhookHandle> activeHooks = new ConcurrentHashMap<>();
     private final AtomicInteger idGenerator = new AtomicInteger(1);
     private final List<NetworkListener> listeners = Collections.synchronizedList(new ArrayList<>());
 
@@ -172,13 +172,13 @@ public class NetworkManager {
         return mockRules.size();
     }
 
-    public void addHook(String key, XC_MethodHook.Unhook unhook) {
+    public void addHook(String key, UnhookHandle unhook) {
         activeHooks.put(key, unhook);
         logger.debug("添加 Hook: " + key);
     }
 
     public void removeHook(String key) {
-        XC_MethodHook.Unhook unhook = activeHooks.remove(key);
+        UnhookHandle unhook = activeHooks.remove(key);
         if (unhook != null) {
             unhook.unhook();
             logger.debug("移除 Hook: " + key);
@@ -186,7 +186,7 @@ public class NetworkManager {
     }
 
     public void clearHooks() {
-        for (Map.Entry<String, XC_MethodHook.Unhook> entry : activeHooks.entrySet()) {
+        for (Map.Entry<String, UnhookHandle> entry : activeHooks.entrySet()) {
             try {
                 entry.getValue().unhook();
             } catch (Exception e) {

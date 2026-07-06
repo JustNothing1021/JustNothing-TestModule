@@ -1,13 +1,13 @@
 package com.justnothing.testmodule.command.functions.performance.impl;
 
-import com.justnothing.testmodule.command.base.command.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.base.command.SubCommandInfo;
 import com.justnothing.testmodule.command.functions.performance.PerformanceRequest;
 import com.justnothing.testmodule.command.functions.performance.PerfTaskManager;
 import com.justnothing.testmodule.command.functions.performance.request.*;
 import com.justnothing.testmodule.command.functions.performance.response.TraceResult;
 import com.justnothing.testmodule.command.functions.performance.trace.TraceData;
 import com.justnothing.testmodule.command.functions.performance.trace.Tracer;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.output.Colors;
 
 import org.json.JSONArray;
 import org.json.JSONException;

@@ -1,11 +1,11 @@
 package com.justnothing.testmodule.command.functions.hook.impl;
 
-import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandResult;
 import com.justnothing.testmodule.command.functions.hook.HookAddResult;
 import com.justnothing.testmodule.command.functions.hook.HookListResult;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.utils.logging.Logger;
 
 public abstract class AbstractHookCommand<Req extends CommandRequest, Res extends CommandResult> {

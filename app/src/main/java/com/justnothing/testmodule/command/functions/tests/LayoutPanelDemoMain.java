@@ -8,12 +8,11 @@ import com.justnothing.richconsole.layout.Layout;
 import com.justnothing.richconsole.panel.Panel;
 import com.justnothing.richconsole.table.Table;
 
-import com.justnothing.testmodule.command.base.MainCommand;
-import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.protocol.CommandResult;
-import com.justnothing.testmodule.command.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.output.Colors;
-import com.justnothing.testmodule.command.base.command.Cmd;
+import com.justnothing.testmodule.command.framework.base.MainCommand;
+import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.base.command.Cmd;
 
 @Cmd(name = "layoutdemo", description = "RichConsole layout and panel demo", defaultResultType = CommandResult.class)
 public class LayoutPanelDemoMain extends MainCommand<CommandResult> {

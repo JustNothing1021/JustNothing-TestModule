@@ -20,12 +20,11 @@ import com.justnothing.richconsole.syntax.Syntax;
 import com.justnothing.richconsole.table.Table;
 import com.justnothing.richconsole.text.Text;
 
-import com.justnothing.testmodule.command.base.MainCommand;
-import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.protocol.CommandResult;
-import com.justnothing.testmodule.command.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.output.Colors;
-import com.justnothing.testmodule.command.base.command.Cmd;
+import com.justnothing.testmodule.command.framework.base.MainCommand;
+import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.base.command.Cmd;
 
 @Cmd(name = "testcarddemo", description = "RichConsole test card demo", defaultResultType = CommandResult.class)
 public class TestCardDemoMain extends MainCommand<CommandResult> {

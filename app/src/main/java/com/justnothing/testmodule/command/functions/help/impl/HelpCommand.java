@@ -1,10 +1,9 @@
 package com.justnothing.testmodule.command.functions.help.impl;
 
-import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.MainCommand;
-import com.justnothing.testmodule.command.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.base.protocol.CommandResult;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.base.MainCommand;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.framework.output.Colors;
 
 public class HelpCommand {
 

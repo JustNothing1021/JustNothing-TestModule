@@ -1,9 +1,9 @@
 package com.justnothing.testmodule.command.functions.classcmd.request;
 
-import com.justnothing.testmodule.command.base.command.CmdParam;
-import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
-import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
-import com.justnothing.testmodule.command.utils.ParamParser;
+import com.justnothing.testmodule.command.framework.base.command.CmdParam;
+import com.justnothing.testmodule.command.framework.base.IllegalCommandLineArgumentException;
+import com.justnothing.testmodule.command.framework.base.protocol.SerializeKeyName;
+import com.justnothing.testmodule.command.framework.utils.ParamParser;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandRequest;
 
 @SerializeKeyName("class:methods")

@@ -1,9 +1,10 @@
 package com.justnothing.methodsclient.metadata;
 
-import com.justnothing.testmodule.command.base.command.Cmd;
-import com.justnothing.testmodule.command.base.command.CmdParam;
-import com.justnothing.testmodule.command.base.command.CommandRouter;
-import com.justnothing.testmodule.command.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.base.MainCommand;
+import com.justnothing.testmodule.command.framework.base.command.Cmd;
+import com.justnothing.testmodule.command.framework.base.command.CmdParam;
+import com.justnothing.testmodule.command.framework.base.command.CommandRouter;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.functions.alias.AliasMain;
 import com.justnothing.testmodule.command.functions.agent.AgentCliMain;
 import com.justnothing.testmodule.command.functions.bytecode.impl.BytecodeMain;
@@ -144,7 +145,7 @@ public final class CommandMetadataScanner {
                 try {
                     // registerCommand 接受 Class<? extends MainCommand<?>>，需要强制转换
                     @SuppressWarnings("unchecked")
-                    var mainCmdClass = (Class<? extends com.justnothing.testmodule.command.base.MainCommand<?>>) cmdClass;
+                    var mainCmdClass = (Class<? extends MainCommand<?>>) cmdClass;
                     router.registerCommand(mainCmdClass);
                 } catch (Exception e) {
                     logger.warn("注册命令元数据失败（已跳过）: " + cmdClass.getSimpleName() + " - " + e.getMessage());

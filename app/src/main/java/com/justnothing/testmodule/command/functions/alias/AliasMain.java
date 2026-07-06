@@ -2,21 +2,22 @@ package com.justnothing.testmodule.command.functions.alias;
 
 import java.util.Arrays;
 
-import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.MainCommand;
-import com.justnothing.testmodule.command.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.base.command.Cmd;
-import com.justnothing.testmodule.command.base.command.CmdRoutes;
-import com.justnothing.testmodule.command.utils.CmdParamProcessor;
-import com.justnothing.testmodule.command.base.command.CommandRouter;
-import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
+import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.base.MainCommand;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.base.command.Cmd;
+import com.justnothing.testmodule.command.framework.base.command.CmdRoutes;
+import com.justnothing.testmodule.command.framework.utils.CommandExceptionHandler;
+import com.justnothing.testmodule.command.framework.utils.CmdParamProcessor;
+import com.justnothing.testmodule.command.framework.base.command.CommandRouter;
+import com.justnothing.testmodule.command.framework.base.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.functions.alias.impl.AbstractAliasCommand;
 import com.justnothing.testmodule.command.functions.alias.impl.AliasAddCommand;
 import com.justnothing.testmodule.command.functions.alias.impl.AliasClearCommand;
 import com.justnothing.testmodule.command.functions.alias.impl.AliasCommandRegistry;
 import com.justnothing.testmodule.command.functions.alias.impl.AliasListCommand;
 import com.justnothing.testmodule.command.functions.alias.impl.AliasRemoveCommand;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.functions.alias.request.AliasAddRequest;
 import com.justnothing.testmodule.command.functions.alias.request.AliasListRequest;
 import com.justnothing.testmodule.command.functions.alias.request.AliasRemoveRequest;
@@ -26,7 +27,7 @@ import com.justnothing.testmodule.command.functions.alias.util.AliasManager;
 import com.justnothing.testmodule.constants.CommandServer;
 import com.justnothing.testmodule.utils.data.DataDirectoryManager;
 import com.justnothing.testmodule.utils.logging.Logger;
-import com.justnothing.testmodule.command.base.AbstractCommand;
+import com.justnothing.testmodule.command.framework.base.AbstractCommand;
 
 import java.io.File;
 import java.util.Map;
@@ -148,7 +149,7 @@ public class AliasMain extends MainCommand<AliasResult> {
         } catch (IllegalCommandLineArgumentException e) {
             throw e;
         } catch (Exception e) {
-            com.justnothing.testmodule.command.utils.CommandExceptionHandler.handleException(
+            CommandExceptionHandler.handleException(
                 "alias", e, context, "执行 alias 命令失败"
             );
             return createErrorResult("执行 alias 命令失败: " + e.getMessage());

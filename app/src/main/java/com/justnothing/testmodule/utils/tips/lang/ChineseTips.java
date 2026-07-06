@@ -990,6 +990,15 @@ public class ChineseTips {
                     NAME_JUSTNOTHING
             ));
 
+            addDidYouKnowTip(new SimpleTipCallback(
+                    """
+                    在跑 richdemo 命令, 然后发现 system_server 给不知道什么东西的 Stacktrace 直接\
+                    打到 System.err (也可能是out吧?) 了, 然后我终端光标控制直接炸了。。。
+                    我好绝望, e.printStackTrace(System.out) 的受众到底是谁
+                    """,
+                    NAME_JUSTNOTHING
+            ));
+
             return map;
         }
 

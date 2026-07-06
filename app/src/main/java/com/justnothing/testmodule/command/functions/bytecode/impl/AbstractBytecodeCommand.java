@@ -1,14 +1,12 @@
 package com.justnothing.testmodule.command.functions.bytecode.impl;
 
-import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.AbstractCommand;
-import com.justnothing.testmodule.command.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.base.AbstractCommand;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.functions.bytecode.response.BytecodeResult;
-import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.utils.CommandExceptionHandler;
+import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.functions.bytecode.util.SystemBytecodeExtractor;
-import com.justnothing.testmodule.utils.io.IOManager;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
 import com.justnothing.testmodule.utils.logging.Logger;
 
@@ -25,14 +23,10 @@ import org.objectweb.asm.util.Textifier;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Method;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.Arrays;
 
 public abstract class AbstractBytecodeCommand<Req extends CommandRequest> extends AbstractCommand<Req, BytecodeResult> {
 

@@ -1,13 +1,13 @@
 package com.justnothing.testmodule.command.functions.performance.impl;
 
-import com.justnothing.testmodule.command.base.command.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.base.command.SubCommandInfo;
 import com.justnothing.testmodule.command.functions.performance.PerformanceRequest;
 import com.justnothing.testmodule.command.functions.performance.PerfTaskManager;
 import com.justnothing.testmodule.command.functions.performance.request.*;
 import com.justnothing.testmodule.command.functions.performance.response.MultiThreadResult;
 import com.justnothing.testmodule.command.functions.performance.sampler.MultiThreadSampleData;
 import com.justnothing.testmodule.command.functions.performance.sampler.MultiThreadSampler;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.output.Colors;
 
 import org.json.JSONException;
 import org.json.JSONObject;

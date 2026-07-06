@@ -3,12 +3,12 @@ package com.justnothing.testmodule.command.functions.memory.impl;
 import android.app.ActivityManager;
 import android.content.Context;
 
-import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.command.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.base.command.SubCommandInfo;
 import com.justnothing.testmodule.command.functions.memory.GcRequest;
 import com.justnothing.testmodule.command.functions.memory.GcResult;
 import com.justnothing.testmodule.command.functions.memory.MemoryUtils;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.output.Colors;
 
 import java.util.Locale;
 

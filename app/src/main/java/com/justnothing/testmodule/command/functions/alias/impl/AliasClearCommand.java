@@ -1,14 +1,14 @@
 package com.justnothing.testmodule.command.functions.alias.impl;
 
-import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.AbstractCommand;
-import com.justnothing.testmodule.command.base.command.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.base.AbstractCommand;
+import com.justnothing.testmodule.command.framework.base.command.SubCommandInfo;
 import com.justnothing.testmodule.command.functions.alias.request.AliasClearRequest;
 import com.justnothing.testmodule.command.functions.alias.response.AliasResult;
 import com.justnothing.testmodule.command.functions.alias.util.AliasManager;
 import com.justnothing.testmodule.utils.data.DataDirectoryManager;
 import com.justnothing.testmodule.utils.logging.Logger;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.output.Colors;
 
 import java.io.File;
 

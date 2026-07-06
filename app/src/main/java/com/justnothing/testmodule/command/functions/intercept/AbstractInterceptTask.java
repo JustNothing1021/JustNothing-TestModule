@@ -2,7 +2,10 @@ package com.justnothing.testmodule.command.functions.intercept;
 
 import androidx.annotation.NonNull;
 
-import com.justnothing.testmodule.hooks.HookAPI;
+import com.justnothing.testmodule.hooks.api.HookAPI;
+import com.justnothing.testmodule.hooks.api.HookParam;
+import com.justnothing.testmodule.hooks.api.MethodHook;
+import com.justnothing.testmodule.hooks.api.UnhookHandle;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
 import com.justnothing.testmodule.utils.reflect.ReflectionUtils;
@@ -14,8 +17,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import de.robv.android.xposed.XC_MethodHook;
 
 public abstract class AbstractInterceptTask implements InterceptTask {
 
@@ -31,7 +32,7 @@ public abstract class AbstractInterceptTask implements InterceptTask {
     protected volatile boolean enabled = true;
     protected final AtomicBoolean running = new AtomicBoolean(false);
     protected final AtomicInteger hitCount = new AtomicInteger(0);
-    protected final List<XC_MethodHook.Unhook> activeHooks = new ArrayList<>();
+    protected final List<UnhookHandle> activeHooks = new ArrayList<>();
 
     protected Class<?> targetClass;
     protected List<Method> targetMethods = new ArrayList<>();
@@ -90,8 +91,8 @@ public abstract class AbstractInterceptTask implements InterceptTask {
     protected void installHooks() {
         onInstall();
         for (Method method : targetMethods) {
-            XC_MethodHook hook = createMethodHook();
-            XC_MethodHook.Unhook unhook = HookAPI.findAndHookMethod(
+            MethodHook hook = createMethodHook();
+            UnhookHandle unhook = HookAPI.findAndHookMethod(
                     targetClass,
                     methodName,
                     method.getParameterTypes(),
@@ -104,13 +105,13 @@ public abstract class AbstractInterceptTask implements InterceptTask {
         onActivated();
     }
 
-    protected abstract XC_MethodHook createMethodHook();
+    protected abstract MethodHook createMethodHook();
 
-    protected HookContext createHookContext(XC_MethodHook.MethodHookParam param) {
+    protected HookContext createHookContext(HookParam param) {
         return new HookContext(this, param);
     }
 
-    protected void executeWithHookContext(XC_MethodHook.MethodHookParam param, HookCallback callback) {
+    protected void executeWithHookContext(HookParam param, HookCallback callback) {
         if (!enabled || !running.get()) {
             return;
         }
@@ -134,7 +135,7 @@ public abstract class AbstractInterceptTask implements InterceptTask {
         running.set(false);
         logger.info("停止任务: " + id);
 
-        for (XC_MethodHook.Unhook unhook : activeHooks) {
+        for (UnhookHandle unhook : activeHooks) {
             try {
                 unhook.unhook();
                 logger.debug("Hook已移除: " + unhook.getHookedMethod());
@@ -148,7 +149,7 @@ public abstract class AbstractInterceptTask implements InterceptTask {
     }
 
     @Override
-    public void onHook(XC_MethodHook.MethodHookParam param) {
+    public void onHook(HookParam param) {
         if (!enabled || !running.get()) {
             return;
         }
@@ -223,7 +224,7 @@ public abstract class AbstractInterceptTask implements InterceptTask {
     }
 
     @Override
-    public List<XC_MethodHook.Unhook> getActiveHooks() {
+    public List<UnhookHandle> getActiveHooks() {
         return new ArrayList<>(activeHooks);
     }
 

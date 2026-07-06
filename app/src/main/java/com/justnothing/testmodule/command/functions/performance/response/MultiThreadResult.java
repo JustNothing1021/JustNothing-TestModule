@@ -1,7 +1,7 @@
 package com.justnothing.testmodule.command.functions.performance.response;
 
-import com.justnothing.testmodule.command.base.protocol.CommandResult;
-import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.framework.base.protocol.SerializeKeyName;
 
 import java.util.List;
 

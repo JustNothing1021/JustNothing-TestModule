@@ -1,7 +1,6 @@
 package com.justnothing.methodsclient.completer;
 
 import com.justnothing.methodsclient.metadata.CommandMetadataScanner;
-import com.justnothing.testmodule.command.base.command.CommandRouter;
 import com.justnothing.testmodule.utils.logging.Logger;
 
 import org.jline.reader.Candidate;

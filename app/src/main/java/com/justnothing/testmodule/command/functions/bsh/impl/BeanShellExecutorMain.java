@@ -4,14 +4,14 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_BEAN_SHELL_
 
 import java.util.Arrays;
 
-import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.MainCommand;
-import com.justnothing.testmodule.command.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.base.command.Cmd;
-import com.justnothing.testmodule.command.utils.CmdParamProcessor;
-import com.justnothing.testmodule.command.base.command.CmdRoutes;
-import com.justnothing.testmodule.command.base.command.CommandRouter;
-import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
+import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.base.MainCommand;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.base.command.Cmd;
+import com.justnothing.testmodule.command.framework.utils.CmdParamProcessor;
+import com.justnothing.testmodule.command.framework.base.command.CmdRoutes;
+import com.justnothing.testmodule.command.framework.base.command.CommandRouter;
+import com.justnothing.testmodule.command.framework.base.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.functions.bsh.request.BshClearRequest;
 import com.justnothing.testmodule.command.functions.bsh.request.BshExecuteRequest;
 import com.justnothing.testmodule.command.functions.bsh.request.BshScriptCreateRequest;
@@ -24,7 +24,7 @@ import com.justnothing.testmodule.command.functions.bsh.request.BshScriptRunRequ
 import com.justnothing.testmodule.command.functions.bsh.request.BshScriptShowRequest;
 import com.justnothing.testmodule.command.functions.bsh.request.BshVarsRequest;
 import com.justnothing.testmodule.command.functions.bsh.response.BeanShellResult;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.output.Colors;
 
 @Cmd(
     name = "bsh",

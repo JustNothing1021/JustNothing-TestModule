@@ -6,7 +6,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-import de.robv.android.xposed.XC_MethodHook;
+import com.justnothing.testmodule.hooks.api.HookParam;
+import com.justnothing.testmodule.hooks.api.MethodHook;
 
 public class PerformanceInterceptTask extends AbstractInterceptTask {
 
@@ -24,20 +25,20 @@ public class PerformanceInterceptTask extends AbstractInterceptTask {
     }
 
     @Override
-    protected XC_MethodHook createMethodHook() {
-        return new XC_MethodHook() {
+    protected MethodHook createMethodHook() {
+        return new MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) {
+            protected void beforeHookedMethod(HookParam param) {
                 param.setObjectExtra("perfStartTime", System.nanoTime());
             }
 
             @Override
-            protected void afterHookedMethod(MethodHookParam param) {
+            protected void afterHookedMethod(HookParam param) {
                 Long startNs = (Long) param.getObjectExtra("perfStartTime");
                 if (startNs == null) return;
 
                 long duration = System.nanoTime() - startNs;
-                recordDuration(param.method, duration);
+                recordDuration(param.getHookedMethod(), duration);
             }
         };
     }

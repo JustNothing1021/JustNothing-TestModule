@@ -2,14 +2,14 @@ package com.justnothing.testmodule.command.functions.intercept;
 
 import androidx.annotation.NonNull;
 
-import com.justnothing.testmodule.utils.reflect.SignatureUtils;
+import com.justnothing.testmodule.hooks.api.HookParam;
+import com.justnothing.testmodule.hooks.api.MethodHook;
+import com.justnothing.testmodule.utils.expr.SignatureUtils;
 
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Locale;
-
-import de.robv.android.xposed.XC_MethodHook;
 
 public class BreakpointInterceptTask extends AbstractInterceptTask {
 
@@ -21,17 +21,17 @@ public class BreakpointInterceptTask extends AbstractInterceptTask {
     }
 
     @Override
-    protected XC_MethodHook createMethodHook() {
-        return new XC_MethodHook() {
+    protected MethodHook createMethodHook() {
+        return new MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) {
+            protected void beforeHookedMethod(HookParam param) {
                 if (!enabled) return;
 
                 lastHitAt = System.currentTimeMillis();
                 hitCount.incrementAndGet();
 
                 String timestamp = new SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault()).format(new Date());
-                String actualSignature = SignatureUtils.formatReadableParamList(param.method);
+                String actualSignature = SignatureUtils.formatReadableParamList(param.getHookedMethod());
 
                 logger.info("=== 断点命中 ===");
                 logger.info("ID: " + id);
@@ -41,10 +41,11 @@ public class BreakpointInterceptTask extends AbstractInterceptTask {
                 logger.info("签名: " + actualSignature);
                 logger.info("命中次数: " + hitCount.get());
 
-                if (param.args != null && param.args.length > 0) {
+                Object[] args = param.getArgs();
+                if (args != null && args.length > 0) {
                     logger.info("参数:");
-                    for (int i = 0; i < param.args.length; i++) {
-                        Object arg = param.args[i];
+                    for (int i = 0; i < args.length; i++) {
+                        Object arg = args[i];
                         String argStr = arg != null ? arg.toString() : "null";
                         if (arg != null && arg.getClass().isArray()) {
                             argStr = Arrays.toString((Object[]) arg);

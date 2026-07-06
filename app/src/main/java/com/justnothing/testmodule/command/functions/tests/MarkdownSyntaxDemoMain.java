@@ -4,12 +4,11 @@ import com.justnothing.richconsole.console.Console;
 import com.justnothing.richconsole.markdown.Markdown;
 import com.justnothing.richconsole.syntax.Syntax;
 
-import com.justnothing.testmodule.command.base.MainCommand;
-import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.protocol.CommandResult;
-import com.justnothing.testmodule.command.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.output.Colors;
-import com.justnothing.testmodule.command.base.command.Cmd;
+import com.justnothing.testmodule.command.framework.base.MainCommand;
+import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.base.command.Cmd;
 
 @Cmd(name = "syntaxdemo", description = "RichConsole markdown and syntax highlighting demo", defaultResultType = CommandResult.class)
 public class MarkdownSyntaxDemoMain extends MainCommand<CommandResult> {

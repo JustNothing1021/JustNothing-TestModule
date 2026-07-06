@@ -1,5 +1,6 @@
 package com.justnothing.testmodule.command.utils;
 
+import com.justnothing.testmodule.command.framework.utils.ParamParser;
 import com.justnothing.testmodule.command.functions.classcmd.request.InvokeMethodRequest;
 import org.junit.Test;
 

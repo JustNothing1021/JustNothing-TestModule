@@ -12,7 +12,7 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.justnothing.testmodule.R;
 import com.justnothing.testmodule.ui.viewmodel.analysis.FieldDetailViewModel;
-import com.justnothing.testmodule.utils.reflect.DescriptorColorizer;
+import com.justnothing.testmodule.utils.format.DescriptorColorizer;
 
 public class FieldDetailActivity extends AppCompatActivity {
     

@@ -1,6 +1,6 @@
 package com.justnothing.testmodule.command.functions.intercept;
 
-import com.justnothing.testmodule.command.output.ICommandOutputHandler;
+import com.justnothing.testmodule.command.framework.output.ICommandOutputHandler;
 
 import java.util.List;
 

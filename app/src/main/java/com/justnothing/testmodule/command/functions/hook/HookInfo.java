@@ -1,8 +1,8 @@
 package com.justnothing.testmodule.command.functions.hook;
 
 import com.justnothing.engine.ast.ASTNode;
-import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.output.Colors;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;

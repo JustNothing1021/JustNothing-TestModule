@@ -2,9 +2,9 @@ package com.justnothing.testmodule.command.functions.agent.request;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import com.justnothing.testmodule.command.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
-import com.justnothing.testmodule.command.base.command.CmdParam;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.base.protocol.SerializeKeyName;
+import com.justnothing.testmodule.command.framework.base.command.CmdParam;
 
 @SerializeKeyName("AgentStart")
 public class AgentStartRequest extends CommandRequest {

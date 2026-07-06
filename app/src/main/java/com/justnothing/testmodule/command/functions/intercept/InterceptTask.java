@@ -2,7 +2,8 @@ package com.justnothing.testmodule.command.functions.intercept;
 
 import java.util.List;
 
-import de.robv.android.xposed.XC_MethodHook;
+import com.justnothing.testmodule.hooks.api.HookParam;
+import com.justnothing.testmodule.hooks.api.UnhookHandle;
 
 public interface InterceptTask {
 
@@ -32,7 +33,7 @@ public interface InterceptTask {
 
     void stop();
 
-    void onHook(XC_MethodHook.MethodHookParam param);
+    void onHook(HookParam param);
 
 
     default String getDisplayName() {
@@ -48,5 +49,5 @@ public interface InterceptTask {
 
     default void onUninstall() {}
 
-    List<XC_MethodHook.Unhook> getActiveHooks();
+    List<UnhookHandle> getActiveHooks();
 }

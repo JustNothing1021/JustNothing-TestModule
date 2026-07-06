@@ -1,12 +1,12 @@
 package com.justnothing.testmodule.command.functions.bsh.impl;
 
-import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.functions.bsh.request.BshScriptListRequest;
 import com.justnothing.testmodule.command.functions.bsh.request.BshScriptShowRequest;
 import com.justnothing.testmodule.command.functions.bsh.request.BshVarsRequest;
 import com.justnothing.testmodule.command.functions.bsh.response.BeanShellResult;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.utils.data.DataBridge;
 import com.justnothing.testmodule.utils.io.IOManager;
 

@@ -1,15 +1,15 @@
 package com.justnothing.testmodule.command.functions.breakpoint.impl;
 
-import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.base.command.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.base.command.SubCommandInfo;
 import com.justnothing.testmodule.command.functions.breakpoint.request.BreakpointAddRequest;
 import com.justnothing.testmodule.command.functions.breakpoint.request.BreakpointEnableRequest;
 import com.justnothing.testmodule.command.functions.breakpoint.request.BreakpointDisableRequest;
 import com.justnothing.testmodule.command.functions.breakpoint.request.BreakpointRemoveRequest;
 import com.justnothing.testmodule.command.functions.breakpoint.request.BreakpointClearRequest;
 import com.justnothing.testmodule.command.functions.breakpoint.response.BreakpointResult;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.output.Colors;
 
 @SubCommandInfo(
     description = "断点管理命令（添加、启用、禁用、移除、清除）",

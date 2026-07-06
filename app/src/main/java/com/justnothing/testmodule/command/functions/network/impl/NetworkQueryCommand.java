@@ -1,10 +1,10 @@
 package com.justnothing.testmodule.command.functions.network.impl;
 
-import com.justnothing.testmodule.command.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandResult;
 import com.justnothing.testmodule.command.functions.network.*;
 import com.justnothing.testmodule.command.functions.network.request.*;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.output.Colors;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;

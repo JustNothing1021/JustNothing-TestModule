@@ -4,18 +4,13 @@ import android.app.ActivityManager;
 import android.content.Context;
 import android.os.Debug;
 
-import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.command.SubCommandInfo;
-import com.justnothing.testmodule.command.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.output.Colors;
-import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
+import com.justnothing.testmodule.command.framework.base.command.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.functions.memory.MemoryInfoRequest;
 import com.justnothing.testmodule.command.functions.memory.MemoryInfoResult;
 import com.justnothing.testmodule.command.functions.memory.MemoryUtils;
 
-import java.lang.reflect.Method;
 import java.util.Locale;
-import java.util.Map;
 
 @SubCommandInfo(
     description = "显示详细的内存使用情况, 包括Java堆、原生堆、进程内存等",

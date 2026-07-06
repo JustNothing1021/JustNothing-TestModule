@@ -1,6 +1,6 @@
 package com.justnothing.testmodule.command.functions.script.impl;
 
-import com.justnothing.testmodule.command.base.command.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.base.command.SubCommandInfo;
 import com.justnothing.testmodule.command.functions.script.ScriptResult;
 import com.justnothing.testmodule.command.functions.script.request.ScriptBaseRequest;
 import com.justnothing.testmodule.command.functions.script.request.ScriptPermDenyRequest;
@@ -9,7 +9,7 @@ import com.justnothing.testmodule.command.functions.script.request.ScriptPermLis
 import com.justnothing.testmodule.command.functions.script.request.ScriptPermPresetRequest;
 import com.justnothing.testmodule.command.functions.script.request.ScriptPermResetRequest;
 import com.justnothing.testmodule.command.functions.script.request.ScriptPermShowConfigRequest;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.engine.security.PermissionType;
 import com.justnothing.engine.security.SandboxConfig;
 

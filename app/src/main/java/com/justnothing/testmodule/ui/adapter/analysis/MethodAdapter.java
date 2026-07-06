@@ -16,7 +16,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.justnothing.testmodule.R;
 import com.justnothing.testmodule.command.functions.classcmd.model.MethodInfo;
-import com.justnothing.testmodule.utils.reflect.DescriptorColorizer;
+import com.justnothing.testmodule.utils.format.DescriptorColorizer;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;

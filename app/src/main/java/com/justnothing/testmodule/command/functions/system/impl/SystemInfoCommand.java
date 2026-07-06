@@ -5,13 +5,13 @@ import android.app.ActivityManager;
 import android.content.Context;
 import android.os.Build;
 
-import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.AbstractCommand;
-import com.justnothing.testmodule.command.base.command.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.base.AbstractCommand;
+import com.justnothing.testmodule.command.framework.base.command.SubCommandInfo;
 import com.justnothing.testmodule.command.functions.script.SystemInfoRequest;
 import com.justnothing.testmodule.command.functions.system.SystemFieldInfo;
 import com.justnothing.testmodule.command.functions.system.SystemInfoResult;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.output.Colors;
 
 import java.io.BufferedReader;
 import java.io.FileReader;

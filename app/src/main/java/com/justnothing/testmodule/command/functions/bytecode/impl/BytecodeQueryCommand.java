@@ -1,7 +1,7 @@
 package com.justnothing.testmodule.command.functions.bytecode.impl;
 
-import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.functions.bytecode.request.BytecodeInfoRequest;
 import com.justnothing.testmodule.command.functions.bytecode.request.BytecodeMethodRequest;
 import com.justnothing.testmodule.command.functions.bytecode.request.BytecodeAnalyzeRequest;
@@ -10,7 +10,7 @@ import com.justnothing.testmodule.command.functions.bytecode.request.BytecodeCon
 import com.justnothing.testmodule.command.functions.bytecode.request.BytecodeVerifyRequest;
 import com.justnothing.testmodule.command.functions.bytecode.request.BytecodeDecompileRequest;
 import com.justnothing.testmodule.command.functions.bytecode.response.BytecodeResult;
-import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
+import com.justnothing.testmodule.command.framework.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
 import com.justnothing.testmodule.utils.io.IOManager;
 
@@ -20,7 +20,6 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
-import java.util.Map;
 
 public class BytecodeQueryCommand extends AbstractBytecodeCommand<CommandRequest> {
 

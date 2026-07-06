@@ -2,6 +2,9 @@ package com.justnothing.testmodule.command.functions.intercept;
 
 import androidx.annotation.NonNull;
 
+import com.justnothing.testmodule.hooks.api.HookParam;
+import com.justnothing.testmodule.hooks.api.MethodHook;
+import com.justnothing.testmodule.hooks.api.UnhookHandle;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
 import java.lang.reflect.Field;
@@ -14,8 +17,6 @@ import java.util.Objects;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import de.robv.android.xposed.XC_MethodHook;
 
 public class WatchInterceptTask extends AbstractInterceptTask {
 
@@ -136,10 +137,10 @@ public class WatchInterceptTask extends AbstractInterceptTask {
     }
 
     @Override
-    protected XC_MethodHook createMethodHook() {
-        return new XC_MethodHook() {
+    protected MethodHook createMethodHook() {
+        return new MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) {
+            protected void beforeHookedMethod(HookParam param) {
                 String timestamp = new SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault()).format(new Date());
                 String output = String.format("[%s] 方法 %s.%s 被调用",
                         timestamp,
@@ -147,18 +148,19 @@ public class WatchInterceptTask extends AbstractInterceptTask {
                         methodName);
                 addOutput(output);
 
-                if (param.args.length > 0) {
+                Object[] args = param.getArgs();
+                if (args.length > 0) {
                     StringBuilder argsStr = new StringBuilder("  参数: ");
-                    for (int i = 0; i < param.args.length; i++) {
-                        argsStr.append(param.args[i] != null ? param.args[i].toString() : "null");
-                        if (i < param.args.length - 1) argsStr.append(", ");
+                    for (int i = 0; i < args.length; i++) {
+                        argsStr.append(args[i] != null ? args[i].toString() : "null");
+                        if (i < args.length - 1) argsStr.append(", ");
                     }
                     addOutput(argsStr.toString());
                 }
             }
 
             @Override
-            protected void afterHookedMethod(MethodHookParam param) {
+            protected void afterHookedMethod(HookParam param) {
                 String timestamp = new SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault()).format(new Date());
                 Object result = param.getResult();
                 String output = String.format("[%s] 方法 %s.%s 返回: %s",
@@ -196,7 +198,7 @@ public class WatchInterceptTask extends AbstractInterceptTask {
             scheduledFuture = null;
         }
 
-        for (XC_MethodHook.Unhook unhook : activeHooks) {
+        for (UnhookHandle unhook : activeHooks) {
             try {
                 unhook.unhook();
                 logger.debug("Hook已移除: " + unhook.getHookedMethod());

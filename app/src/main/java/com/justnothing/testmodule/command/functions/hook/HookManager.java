@@ -2,25 +2,25 @@ package com.justnothing.testmodule.command.functions.hook;
 
 
 
-import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.output.Colors;
-import com.justnothing.testmodule.command.output.SystemOutputRedirector;
-import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
+import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.framework.output.SystemOutputRedirector;
+import com.justnothing.testmodule.command.framework.utils.CommandExceptionHandler;
 import com.justnothing.engine.ScriptRunner;
 import com.justnothing.engine.ast.ASTNode;
 import com.justnothing.engine.eval.EvalContext;
 import com.justnothing.engine.eval.Value;
 import com.justnothing.engine.eval.Value.NullValue;
 import com.justnothing.engine.eval.Value.VoidValue;
-import com.justnothing.testmodule.command.output.ICommandOutputHandler;
-import com.justnothing.testmodule.command.output.HookOutputHandler;
-import com.justnothing.testmodule.hooks.HookAPI;
-import com.justnothing.testmodule.hooks.HookEntry;
+import com.justnothing.testmodule.command.framework.output.ICommandOutputHandler;
+import com.justnothing.testmodule.command.framework.output.HookOutputHandler;
+import com.justnothing.testmodule.hooks.api.HookAPI;
+import com.justnothing.testmodule.hooks.base.HookEntry;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
 import com.justnothing.testmodule.utils.data.DataBridge;
 import com.justnothing.testmodule.utils.io.IOManager;
 import com.justnothing.testmodule.utils.logging.Logger;
-import com.justnothing.testmodule.utils.reflect.SignatureUtils;
+import com.justnothing.testmodule.utils.expr.SignatureUtils;
 import com.justnothing.testmodule.utils.reflect.AppClassFinder;
 
 import java.io.File;
@@ -36,8 +36,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import de.robv.android.xposed.XC_MethodHook;
-import de.robv.android.xposed.XC_MethodHook.MethodHookParam;
+import com.justnothing.testmodule.hooks.api.HookParam;
+import com.justnothing.testmodule.hooks.api.MethodHook;
+import com.justnothing.testmodule.hooks.api.UnhookHandle;
+
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam;
 
@@ -45,7 +47,7 @@ public class HookManager {
     private static final String TAG = "HookManager";
 
     private static final ConcurrentHashMap<String, HookInfo> hooks = new ConcurrentHashMap<>();
-    private static final ConcurrentHashMap<String, XC_MethodHook.Unhook> activeHooks = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, UnhookHandle> activeHooks = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, ScriptRunner> scriptRunners = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, ICommandOutputHandler> outputHandlers = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, ICommandOutputHandler> errorHandlers = new ConcurrentHashMap<>();
@@ -72,7 +74,7 @@ public class HookManager {
         }
 
     public static void addHookBuiltIn(EvalContext context,
-                                      MethodHookParam methodHookParam,
+                                      HookParam methodHookParam,
                                       LoadPackageParam loadPackageParam,
                                       HookInfo hookInfo,
                                       String phase,
@@ -340,9 +342,9 @@ public class HookManager {
 
         if (hasReplace) {
             logger.info("创建替换Hook");
-            XC_MethodHook replacementHook = new XC_MethodHook() {
+            MethodHook replacementHook = new MethodHook() {
                 @Override
-                protected void beforeHookedMethod(MethodHookParam param) {
+                protected void beforeHookedMethod(HookParam param) {
                     if (!hookInfo.isEnabled() || !hookInfo.isActive()) {
                         logger.debug("hook未启用或未激活，跳过Hook执行，id = " + hookInfo.getId());
                         return;
@@ -362,7 +364,7 @@ public class HookManager {
                 }
 
                 @Override
-                protected void afterHookedMethod(MethodHookParam param) {
+                protected void afterHookedMethod(HookParam param) {
                     if (!hasAfter) {
                         return;
                     }
@@ -378,7 +380,7 @@ public class HookManager {
             };
 
             logger.info("开始应用替换Hook: " + hookInfo.getMethodName());
-            XC_MethodHook.Unhook unhook;
+            UnhookHandle unhook;
             if (isConstructor) {
                 if (paramTypes.length == 0) {
                     unhook = HookAPI.findAndHookConstructor(targetClass, replacementHook);
@@ -402,9 +404,9 @@ public class HookManager {
             logger.info("替换Hook应用成功: " + hookInfo.getId());
         } else {
             logger.info("创建普通Hook (before: " + hasBefore + ", after: " + hasAfter + ")");
-            XC_MethodHook methodHook = new XC_MethodHook() {
+            MethodHook methodHook = new MethodHook() {
                 @Override
-                protected void beforeHookedMethod(MethodHookParam param) {
+                protected void beforeHookedMethod(HookParam param) {
                     if (!hasBefore) {
                         return;
                     }
@@ -419,7 +421,7 @@ public class HookManager {
                 }
 
                 @Override
-                protected void afterHookedMethod(MethodHookParam param) {
+                protected void afterHookedMethod(HookParam param) {
                     if (!hasAfter) {
                         return;
                     }
@@ -434,7 +436,7 @@ public class HookManager {
             };
 
             logger.info("开始应用普通Hook: " + hookInfo.getMethodName());
-            XC_MethodHook.Unhook unhook;
+            UnhookHandle unhook;
             if (isConstructor) {
                 if (paramTypes.length == 0) {
                     unhook = HookAPI.findAndHookConstructor(targetClass, methodHook);
@@ -463,12 +465,12 @@ public class HookManager {
     }
 
     private static void executeHookCode(HookInfo hookInfo, List<ASTNode> nodes,
-                                        MethodHookParam param, String phase) {
+                                        HookParam param, String phase) {
         executeHookCodeWithReturnFlag(hookInfo, nodes, param, phase, null);
     }
 
     private static void executeHookCodeWithReturnFlag(HookInfo hookInfo, List<ASTNode> nodes,
-                                        MethodHookParam param, String phase,
+                                        HookParam param, String phase,
                                         AtomicBoolean returnValueSet) {
         if (nodes == null || nodes.isEmpty()) return;
 
@@ -600,7 +602,7 @@ public class HookManager {
             return;
         }
 
-        XC_MethodHook.Unhook unhook = activeHooks.remove(hookId);
+        UnhookHandle unhook = activeHooks.remove(hookId);
         if (unhook != null) {
             unhook.unhook();
         }
@@ -624,7 +626,7 @@ public class HookManager {
             return;
         }
 
-        XC_MethodHook.Unhook unhook = activeHooks.remove(hookId);
+        UnhookHandle unhook = activeHooks.remove(hookId);
         if (unhook != null) {
             unhook.unhook();
         }

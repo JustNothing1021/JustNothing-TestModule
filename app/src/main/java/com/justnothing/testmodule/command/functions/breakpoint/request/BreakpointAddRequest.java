@@ -1,8 +1,8 @@
 package com.justnothing.testmodule.command.functions.breakpoint.request;
 
-import com.justnothing.testmodule.command.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
-import com.justnothing.testmodule.command.base.command.CmdParam;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.base.protocol.SerializeKeyName;
+import com.justnothing.testmodule.command.framework.base.command.CmdParam;
 
 @SerializeKeyName("breakpoint:add")
 public class BreakpointAddRequest extends CommandRequest {

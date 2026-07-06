@@ -16,7 +16,7 @@ import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.google.android.material.textfield.TextInputLayout;
 import com.justnothing.testmodule.R;
 import com.justnothing.testmodule.ui.viewmodel.analysis.ConstructorDetailViewModel;
-import com.justnothing.testmodule.utils.reflect.DescriptorColorizer;
+import com.justnothing.testmodule.utils.format.DescriptorColorizer;
 
 import java.util.ArrayList;
 import java.util.List;

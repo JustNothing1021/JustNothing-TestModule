@@ -1,7 +1,7 @@
 package com.justnothing.testmodule.utils.reflect;
 
 import com.justnothing.testmodule.constants.AppEnvironment;
-import com.justnothing.testmodule.hooks.XposedBasicHook;
+import com.justnothing.testmodule.hooks.base.XposedBasicHook;
 import com.justnothing.testmodule.utils.logging.Logger;
 
 import java.lang.reflect.Array;

@@ -1,11 +1,10 @@
 package com.justnothing.testmodule.command.functions.trace.impl;
 
-import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.functions.trace.TraceManager;
 import com.justnothing.testmodule.command.functions.trace.TraceResult;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.utils.logging.Logger;
 
 public abstract class AbstractTraceCommand<Req extends CommandRequest, Res extends TraceResult> {

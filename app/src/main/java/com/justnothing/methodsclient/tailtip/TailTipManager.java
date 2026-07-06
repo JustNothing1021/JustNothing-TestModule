@@ -2,13 +2,12 @@ package com.justnothing.methodsclient.tailtip;
 
 import com.justnothing.methodsclient.completer.CommandCompleter;
 import com.justnothing.methodsclient.metadata.CommandMetadataScanner;
-import com.justnothing.testmodule.command.output.InputMode;
+import com.justnothing.testmodule.command.framework.output.InputMode;
 import com.justnothing.testmodule.utils.logging.Logger;
 
 import org.jline.console.CmdDesc;
 import org.jline.reader.LineReader;
 import org.jline.utils.AttributedString;
-import org.jline.utils.AttributedStringBuilder;
 import org.jline.widget.TailTipWidgets;
 
 import java.util.*;

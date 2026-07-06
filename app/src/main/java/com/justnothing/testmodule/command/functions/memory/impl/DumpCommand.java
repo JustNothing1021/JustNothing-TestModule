@@ -1,10 +1,10 @@
 package com.justnothing.testmodule.command.functions.memory.impl;
 
-import com.justnothing.testmodule.command.base.command.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.base.command.SubCommandInfo;
 import com.justnothing.testmodule.command.functions.memory.DumpRequest;
 import com.justnothing.testmodule.command.functions.memory.DumpResult;
 import com.justnothing.testmodule.command.functions.memory.MemoryUtils;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.utils.io.IOManager;
 
 import java.io.File;

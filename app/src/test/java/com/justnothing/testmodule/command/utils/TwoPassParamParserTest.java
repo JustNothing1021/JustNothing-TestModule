@@ -1,6 +1,8 @@
 package com.justnothing.testmodule.command.utils;
 
-import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
+import com.justnothing.testmodule.command.framework.base.IllegalCommandLineArgumentException;
+import com.justnothing.testmodule.command.framework.utils.ParamParser;
+
 import org.junit.Before;
 import org.junit.Test;
 

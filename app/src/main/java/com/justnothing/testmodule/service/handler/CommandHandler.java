@@ -4,9 +4,9 @@ import android.os.Parcel;
 import android.os.ParcelFileDescriptor;
 import android.util.Log;
 
-import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.output.ICommandOutputHandler;
-import com.justnothing.testmodule.command.output.StreamOutputWriter;
+import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.output.ICommandOutputHandler;
+import com.justnothing.testmodule.command.framework.output.StreamOutputWriter;
 import com.justnothing.testmodule.utils.data.DataDirectoryManager;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;

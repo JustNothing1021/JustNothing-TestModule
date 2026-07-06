@@ -1,12 +1,12 @@
 package com.justnothing.testmodule.command.functions.trace.impl;
 
-import com.justnothing.testmodule.command.base.command.SubCommandInfo;
-import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
+import com.justnothing.testmodule.command.framework.base.command.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.functions.trace.TraceResult;
 import com.justnothing.testmodule.command.functions.trace.request.TraceAddRequest;
 import com.justnothing.testmodule.command.functions.trace.request.TraceStopRequest;
 import com.justnothing.testmodule.command.functions.trace.request.TraceClearRequest;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.output.Colors;
 
 @SubCommandInfo(
     description = "Trace 管理操作 - 添加/停止/清除",
@@ -16,10 +16,10 @@ import com.justnothing.testmodule.command.output.Colors;
         "trace clear                        清除所有任务"
     }
 )
-public class TraceManageCommand extends AbstractTraceCommand<com.justnothing.testmodule.command.base.protocol.CommandRequest, TraceResult> {
+public class TraceManageCommand extends AbstractTraceCommand<CommandRequest, TraceResult> {
 
     @Override
-    protected TraceResult executeInternal(com.justnothing.testmodule.command.base.protocol.CommandRequest request) throws Exception {
+    protected TraceResult executeInternal(CommandRequest request) throws Exception {
         if (request instanceof TraceAddRequest r) return handleAdd(r);
         if (request instanceof TraceStopRequest r) return handleStop(r);
         if (request instanceof TraceClearRequest r) return handleClear(r);

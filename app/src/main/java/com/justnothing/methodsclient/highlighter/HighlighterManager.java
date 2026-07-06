@@ -1,12 +1,10 @@
 package com.justnothing.methodsclient.highlighter;
 
-import com.justnothing.testmodule.command.output.InputMode;
+import com.justnothing.testmodule.command.framework.output.InputMode;
 
 import org.jline.reader.Highlighter;
 import org.jline.reader.LineReader;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.function.Supplier;
 
 /**

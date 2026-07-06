@@ -8,7 +8,7 @@ import androidx.lifecycle.MutableLiveData;
 
 import com.justnothing.testmodule.ui.viewmodel.BaseViewModel;
 import com.justnothing.testmodule.R;
-import com.justnothing.testmodule.command.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.functions.hook.request.HookAddRequest;
 import com.justnothing.testmodule.command.functions.hook.request.HookListRequest;
 import com.justnothing.testmodule.command.functions.hook.request.HookRemoveRequest;

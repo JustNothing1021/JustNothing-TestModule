@@ -6,13 +6,15 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.MainCommand;
-import com.justnothing.testmodule.command.base.command.Cmd;
-import com.justnothing.testmodule.command.utils.CmdParamProcessor;
-import com.justnothing.testmodule.command.base.command.CmdRoutes;
-import com.justnothing.testmodule.command.base.command.CommandRouter;
-import com.justnothing.testmodule.command.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.base.MainCommand;
+import com.justnothing.testmodule.command.framework.base.IllegalCommandLineArgumentException;
+import com.justnothing.testmodule.command.framework.base.command.Cmd;
+import com.justnothing.testmodule.command.framework.utils.CommandExceptionHandler;
+import com.justnothing.testmodule.command.framework.utils.CmdParamProcessor;
+import com.justnothing.testmodule.command.framework.base.command.CmdRoutes;
+import com.justnothing.testmodule.command.framework.base.command.CommandRouter;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.functions.threads.impl.DeadlockCommand;
 import com.justnothing.testmodule.command.functions.threads.impl.ListCommand;
 import com.justnothing.testmodule.command.functions.threads.impl.ProfileExportCommand;
@@ -26,7 +28,7 @@ import com.justnothing.testmodule.command.functions.threads.request.ThreadProfil
 import com.justnothing.testmodule.command.functions.threads.request.ThreadProfileStartRequest;
 import com.justnothing.testmodule.command.functions.threads.request.ThreadProfileStopRequest;
 import com.justnothing.testmodule.command.functions.threads.response.ThreadCommandResult;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.output.Colors;
 
 @Cmd(
     name = "threads",
@@ -130,10 +132,10 @@ public class ThreadsMain extends MainCommand<ThreadCommandResult> {
             context.setRequest(parseRequestForCommand(subCommand, remainingArgs));
             return (ThreadCommandResult) command.execute(context);
 
-        } catch (com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException e) {
+        } catch (IllegalCommandLineArgumentException e) {
             throw e;
         } catch (Exception e) {
-            com.justnothing.testmodule.command.utils.CommandExceptionHandler.handleException(
+            CommandExceptionHandler.handleException(
                 "threads", e, context, "执行threads命令失败"
             );
             return createErrorResult("执行threads命令失败: " + e.getMessage());

@@ -1,12 +1,12 @@
 package com.justnothing.testmodule.command.functions.performance.impl;
 
-import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.AbstractCommand;
-import com.justnothing.testmodule.command.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.base.AbstractCommand;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandResult;
 import com.justnothing.testmodule.command.functions.performance.PerfTaskManager;
 import com.justnothing.testmodule.command.functions.performance.PerformanceCommand;
 import com.justnothing.testmodule.command.functions.performance.PerformanceRequest;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.utils.io.IOManager;
 import com.justnothing.testmodule.utils.logging.Logger;
 

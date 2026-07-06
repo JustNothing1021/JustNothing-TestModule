@@ -1,12 +1,12 @@
 package com.justnothing.testmodule.command.functions.classcmd.impl;
 
-import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
-import com.justnothing.testmodule.command.base.command.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.base.IllegalCommandLineArgumentException;
+import com.justnothing.testmodule.command.framework.base.command.SubCommandInfo;
 import com.justnothing.testmodule.command.functions.classcmd.AbstractClassCommand;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandContext;
 import com.justnothing.testmodule.command.functions.classcmd.request.ClassGraphRequest;
 import com.justnothing.testmodule.command.functions.classcmd.response.ClassGraphResult;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
 
 import java.util.ArrayList;

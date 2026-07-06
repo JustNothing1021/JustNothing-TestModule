@@ -1,6 +1,6 @@
 package com.justnothing.methodsclient.executor;
 
-import com.justnothing.testmodule.command.protocol.TerminalRpcChannel;
+import com.justnothing.testmodule.command.framework.protocol.TerminalRpcChannel;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.methodsclient.utils.TerminalManager;
 import com.google.gson.JsonArray;

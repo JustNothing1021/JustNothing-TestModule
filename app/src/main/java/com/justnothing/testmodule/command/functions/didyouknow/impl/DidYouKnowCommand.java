@@ -1,13 +1,13 @@
 package com.justnothing.testmodule.command.functions.didyouknow.impl;
 
-import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.AbstractCommand;
-import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
-import com.justnothing.testmodule.command.base.command.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.base.AbstractCommand;
+import com.justnothing.testmodule.command.framework.base.IllegalCommandLineArgumentException;
+import com.justnothing.testmodule.command.framework.base.command.SubCommandInfo;
 import com.justnothing.testmodule.command.functions.didyouknow.CliTips;
 import com.justnothing.testmodule.command.functions.didyouknow.request.DidYouKnowRequest;
 import com.justnothing.testmodule.command.functions.didyouknow.response.DidYouKnowResult;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.utils.format.TerminalFormatter;
 
 import java.util.ArrayList;

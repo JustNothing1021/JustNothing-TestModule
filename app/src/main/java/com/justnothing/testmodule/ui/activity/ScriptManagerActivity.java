@@ -27,7 +27,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.justnothing.methodsclient.model.ColoredSegment;
 import com.justnothing.methodsclient.executor.SocketCommandExecutor;
 import com.justnothing.testmodule.R;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.constants.FileDirectory;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.io.IOManager;

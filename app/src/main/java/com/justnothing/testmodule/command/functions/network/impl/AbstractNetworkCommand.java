@@ -1,12 +1,11 @@
 package com.justnothing.testmodule.command.functions.network.impl;
 
-import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.base.protocol.CommandResult;
-import com.justnothing.testmodule.command.functions.network.NetworkMain;
+import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandResult;
 import com.justnothing.testmodule.command.functions.network.NetworkManager;
 import com.justnothing.testmodule.command.functions.network.NetworkResult;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.utils.logging.Logger;
 
 public abstract class AbstractNetworkCommand<Req extends CommandRequest, Res extends CommandResult> {

@@ -1,9 +1,8 @@
 package com.justnothing.testmodule.command.functions.watch;
 
-import com.justnothing.testmodule.command.base.AbstractCommand;
-import com.justnothing.testmodule.command.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.base.protocol.CommandResult;
-import com.justnothing.testmodule.command.CommandExecutor;
+import com.justnothing.testmodule.command.framework.base.AbstractCommand;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.functions.watch.response.WatchCommandResult;
 import com.justnothing.testmodule.utils.logging.Logger;
 

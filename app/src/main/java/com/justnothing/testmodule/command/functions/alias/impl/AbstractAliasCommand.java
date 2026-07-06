@@ -1,7 +1,7 @@
 package com.justnothing.testmodule.command.functions.alias.impl;
 
-import com.justnothing.testmodule.command.base.AbstractCommand;
-import com.justnothing.testmodule.command.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.framework.base.AbstractCommand;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandResult;
 import com.justnothing.testmodule.command.functions.alias.request.AliasRequest;
 
 public abstract class AbstractAliasCommand<Req extends AliasRequest, Res extends CommandResult>

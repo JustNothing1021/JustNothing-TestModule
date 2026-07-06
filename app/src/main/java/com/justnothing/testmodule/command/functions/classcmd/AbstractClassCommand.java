@@ -1,8 +1,8 @@
 package com.justnothing.testmodule.command.functions.classcmd;
 
-import com.justnothing.testmodule.command.base.AbstractCommand;
-import com.justnothing.testmodule.command.base.protocol.CommandResult;
-import com.justnothing.testmodule.command.CommandExecutor;
+import com.justnothing.testmodule.command.framework.base.AbstractCommand;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.utils.logging.Logger;
 
 import java.util.Arrays;

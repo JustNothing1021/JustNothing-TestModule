@@ -1,10 +1,10 @@
 package com.justnothing.testmodule.command.functions.agent;
 
-import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.AbstractCommand;
-import com.justnothing.testmodule.command.agent.InspectionClient;
-import com.justnothing.testmodule.command.agent.SpListResult;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.base.AbstractCommand;
+import com.justnothing.testmodule.command.functions.agent.handlers.InspectionClient;
+import com.justnothing.testmodule.command.functions.agent.handlers.SpListResult;
+import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.functions.agent.request.AgentSpListRequest;
 
 public class AgentSpListCommand extends AbstractCommand<AgentSpListRequest, SpListResult> {

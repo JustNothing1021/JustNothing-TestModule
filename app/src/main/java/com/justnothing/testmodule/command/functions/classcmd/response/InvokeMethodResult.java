@@ -1,6 +1,6 @@
 package com.justnothing.testmodule.command.functions.classcmd.response;
 
-import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
+import com.justnothing.testmodule.command.framework.base.protocol.SerializeKeyName;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandResult;
 
 @SerializeKeyName("InvokeMethod")

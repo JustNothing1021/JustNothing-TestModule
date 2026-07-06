@@ -1,6 +1,6 @@
 package com.justnothing.testmodule.command.functions.performance.impl;
 
-import com.justnothing.testmodule.command.base.command.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.base.command.SubCommandInfo;
 import com.justnothing.testmodule.command.functions.performance.PerfTaskManager;
 import com.justnothing.testmodule.command.functions.performance.PerformanceRequest;
 import com.justnothing.testmodule.command.functions.performance.request.*;
@@ -8,7 +8,7 @@ import com.justnothing.testmodule.command.functions.performance.response.Systrac
 import com.justnothing.testmodule.command.functions.performance.systrace.SystraceData;
 import com.justnothing.testmodule.command.functions.performance.systrace.SystraceParser;
 import com.justnothing.testmodule.command.functions.performance.systrace.SystraceRunner;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.output.Colors;
 
 import java.util.Arrays;
 import java.util.Locale;

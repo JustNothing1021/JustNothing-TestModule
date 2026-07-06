@@ -18,7 +18,7 @@ import com.google.android.material.card.MaterialCardView;
 import com.justnothing.testmodule.R;
 import com.justnothing.testmodule.command.functions.classcmd.response.ClassHierarchyResult;
 import com.justnothing.testmodule.ui.viewmodel.analysis.ClassGraphViewModel;
-import com.justnothing.testmodule.utils.reflect.DescriptorColorizer;
+import com.justnothing.testmodule.utils.format.DescriptorColorizer;
 
 import java.util.ArrayList;
 import java.util.List;

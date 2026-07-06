@@ -1,7 +1,7 @@
 package com.justnothing.testmodule.command.functions.classcmd;
 
-import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.utils.reflect.ExpressionParser;
+import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.utils.expr.ExpressionParser;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.reflect.ReflectionUtils;
 

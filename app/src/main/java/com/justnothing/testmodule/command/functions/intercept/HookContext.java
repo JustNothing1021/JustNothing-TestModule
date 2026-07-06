@@ -7,17 +7,17 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.Locale;
 
-import de.robv.android.xposed.XC_MethodHook;
+import com.justnothing.testmodule.hooks.api.HookParam;
 
 public class HookContext {
 
     private final InterceptTask task;
-    private final XC_MethodHook.MethodHookParam methodParam;
+    private final HookParam methodParam;
     private final long timestamp;
     private final Thread thread;
     private final int callDepth;
 
-    public HookContext(InterceptTask task, XC_MethodHook.MethodHookParam methodParam) {
+    public HookContext(InterceptTask task, HookParam methodParam) {
         this.task = task;
         this.methodParam = methodParam;
         this.timestamp = System.currentTimeMillis();
@@ -52,7 +52,7 @@ public class HookContext {
         return task;
     }
 
-    public XC_MethodHook.MethodHookParam getMethodParam() {
+    public HookParam getMethodParam() {
         return methodParam;
     }
 
@@ -69,11 +69,11 @@ public class HookContext {
     }
 
     public Object[] getArguments() {
-        return methodParam.args;
+        return methodParam.getArgs();
     }
 
     public Object getThisObject() {
-        return methodParam.thisObject;
+        return methodParam.getThisObject();
     }
 
     public Object getReturnValue() {
@@ -101,13 +101,14 @@ public class HookContext {
     }
 
     public String getArgumentsString() {
-        if (methodParam.args == null || methodParam.args.length == 0) {
+        Object[] args = methodParam.getArgs();
+        if (args == null || args.length == 0) {
             return "无参数";
         }
 
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < methodParam.args.length; i++) {
-            Object arg = methodParam.args[i];
+        for (int i = 0; i < args.length; i++) {
+            Object arg = args[i];
             sb.append("[").append(i).append("] ");
             if (arg == null) {
                 sb.append("null");
@@ -116,7 +117,7 @@ public class HookContext {
             } else {
                 sb.append(arg.toString());
             }
-            if (i < methodParam.args.length - 1) {
+            if (i < args.length - 1) {
                 sb.append(", ");
             }
         }

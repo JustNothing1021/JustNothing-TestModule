@@ -3,7 +3,7 @@ package com.justnothing.testmodule.constants;
 import android.annotation.SuppressLint;
 
 
-public class FileDirectory {
+public final class FileDirectory {
     public static final String APPLICATION_VERSION = "0.4.8";
     @SuppressLint("SdCardPath") // hook端如果用Environment会出现未定义行为
     public static final String SDCARD = "/sdcard";

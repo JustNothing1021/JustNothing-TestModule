@@ -1,13 +1,14 @@
 package com.justnothing.testmodule.command.functions.trace.impl;
 
-import com.justnothing.testmodule.command.base.command.SubCommandInfo;
-import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
+import com.justnothing.testmodule.command.framework.base.command.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.base.IllegalCommandLineArgumentException;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.functions.intercept.TraceInterceptTask;
 import com.justnothing.testmodule.command.functions.trace.TraceResult;
 import com.justnothing.testmodule.command.functions.trace.request.TraceListRequest;
 import com.justnothing.testmodule.command.functions.trace.request.TraceShowRequest;
 import com.justnothing.testmodule.command.functions.trace.request.TraceExportRequest;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.output.Colors;
 
 import java.util.List;
 
@@ -19,10 +20,10 @@ import java.util.List;
         "trace export <id> <file>          导出到文件"
     }
 )
-public class TraceQueryCommand extends AbstractTraceCommand<com.justnothing.testmodule.command.base.protocol.CommandRequest, TraceResult> {
+public class TraceQueryCommand extends AbstractTraceCommand<CommandRequest, TraceResult> {
 
     @Override
-    protected TraceResult executeInternal(com.justnothing.testmodule.command.base.protocol.CommandRequest request) throws Exception {
+    protected TraceResult executeInternal(CommandRequest request) throws Exception {
         if (request instanceof TraceListRequest) return handleList();
         if (request instanceof TraceShowRequest r) return handleShow(r);
         if (request instanceof TraceExportRequest r) return handleExport(r);

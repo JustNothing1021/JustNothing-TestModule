@@ -22,7 +22,6 @@ public abstract class Logger {
     private static final String YELLOW = "\u001B[33m";
     private static final String RED = "\u001B[31m";
 
-//    private Context context;
     private boolean bUseXPosedLog = false;
 
     public static class LoggerWrapper extends Logger {

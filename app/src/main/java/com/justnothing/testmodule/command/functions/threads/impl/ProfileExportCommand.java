@@ -1,8 +1,8 @@
 package com.justnothing.testmodule.command.functions.threads.impl;
 
-import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.command.SubCommandInfo;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.base.command.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.functions.threads.AbstractThreadsCommand;
 import com.justnothing.testmodule.command.functions.threads.ProfileManager;
 import com.justnothing.testmodule.command.functions.threads.request.ThreadProfileExportRequest;

@@ -1,16 +1,16 @@
 package com.justnothing.testmodule.command.functions.classcmd.impl;
 
-import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
-import com.justnothing.testmodule.command.base.command.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.base.IllegalCommandLineArgumentException;
+import com.justnothing.testmodule.command.framework.base.command.SubCommandInfo;
 import com.justnothing.testmodule.command.functions.classcmd.AbstractClassCommand;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandContext;
 import com.justnothing.testmodule.command.functions.classcmd.request.InvokeMethodRequest;
 import com.justnothing.testmodule.command.functions.classcmd.response.InvokeMethodResult;
-import com.justnothing.testmodule.utils.reflect.ExpressionParser;
-import com.justnothing.testmodule.command.output.Colors;
-import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
+import com.justnothing.testmodule.utils.expr.ExpressionParser;
+import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.framework.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
-import com.justnothing.testmodule.utils.reflect.DescriptorColorizer;
+import com.justnothing.testmodule.utils.format.DescriptorColorizer;
 import com.justnothing.testmodule.utils.reflect.ReflectionUtils;
 
 

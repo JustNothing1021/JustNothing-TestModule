@@ -4,14 +4,15 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_BREAKPOINT_
 
 import java.util.Arrays;
 
-import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.MainCommand;
-import com.justnothing.testmodule.command.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.base.command.Cmd;
-import com.justnothing.testmodule.command.base.command.CmdRoutes;
-import com.justnothing.testmodule.command.utils.CmdParamProcessor;
-import com.justnothing.testmodule.command.base.command.CommandRouter;
-import com.justnothing.testmodule.command.base.AbstractCommand;
+import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.base.MainCommand;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.base.command.Cmd;
+import com.justnothing.testmodule.command.framework.base.command.CmdRoutes;
+import com.justnothing.testmodule.command.framework.utils.CommandExceptionHandler;
+import com.justnothing.testmodule.command.framework.utils.CmdParamProcessor;
+import com.justnothing.testmodule.command.framework.base.command.CommandRouter;
+import com.justnothing.testmodule.command.framework.base.AbstractCommand;
 import com.justnothing.testmodule.command.functions.breakpoint.request.BreakpointAddRequest;
 import com.justnothing.testmodule.command.functions.breakpoint.request.BreakpointListRequest;
 import com.justnothing.testmodule.command.functions.breakpoint.request.BreakpointEnableRequest;
@@ -20,7 +21,7 @@ import com.justnothing.testmodule.command.functions.breakpoint.request.Breakpoin
 import com.justnothing.testmodule.command.functions.breakpoint.request.BreakpointClearRequest;
 import com.justnothing.testmodule.command.functions.breakpoint.request.BreakpointHitsRequest;
 import com.justnothing.testmodule.command.functions.breakpoint.response.BreakpointResult;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.output.Colors;
 
 @Cmd(
     name = "breakpoint",
@@ -86,7 +87,7 @@ public class BreakpointMain extends MainCommand<BreakpointResult> {
             return createErrorResult("未知子命令: " + subCommand);
 
         } catch (Exception e) {
-            com.justnothing.testmodule.command.utils.CommandExceptionHandler.handleException(
+            CommandExceptionHandler.handleException(
                 "breakpoint " + subCommand, e, context, "执行breakpoint的某个子命令时出错");
             return createErrorResult("执行breakpoint命令失败: " + e.getMessage());
         }

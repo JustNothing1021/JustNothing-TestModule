@@ -5,8 +5,8 @@ import com.justnothing.methodsclient.monitor.ClientPortManager;
 import com.justnothing.methodsclient.StreamClient;
 import com.justnothing.methodsclient.monitor.PerformanceMonitor;
 import com.justnothing.methodsclient.utils.TerminalManager;
-import com.justnothing.testmodule.command.protocol.InteractiveProtocol;
-import com.justnothing.testmodule.command.output.ClientRequirements;
+import com.justnothing.testmodule.command.framework.protocol.InteractiveProtocol;
+import com.justnothing.testmodule.command.framework.output.ClientRequirements;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
 import java.io.IOException;

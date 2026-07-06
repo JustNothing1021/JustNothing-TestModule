@@ -1,7 +1,7 @@
 package com.justnothing.testmodule.command.functions.memory;
 
-import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.output.Colors;
 
 import java.util.Locale;
 

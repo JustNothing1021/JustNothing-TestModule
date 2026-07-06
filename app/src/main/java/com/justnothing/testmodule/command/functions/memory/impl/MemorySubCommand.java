@@ -4,11 +4,11 @@ import android.annotation.SuppressLint;
 import android.app.ActivityManager;
 import android.content.Context;
 
-import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.AbstractCommand;
-import com.justnothing.testmodule.command.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.base.protocol.CommandResult;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.base.AbstractCommand;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.functions.memory.MemoryUtils;
 import com.justnothing.testmodule.utils.logging.Logger;
 
@@ -36,7 +36,7 @@ public abstract class MemorySubCommand<Req extends CommandRequest, Res extends C
         Req request = context.getRequest();
         if (request == null) {
             @SuppressWarnings("unchecked")
-            Res errorResult = (Res) new com.justnothing.testmodule.command.base.protocol.CommandResult();
+            Res errorResult = (Res) new CommandResult();
             errorResult.setSuccess(false);
             errorResult.setMessage("请求对象不能为空");
             return errorResult;

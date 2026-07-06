@@ -6,7 +6,7 @@ import android.os.Parcel;
 
 import androidx.annotation.NonNull;
 
-import com.justnothing.testmodule.command.CommandExecutor;
+import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.service.handler.CommandHandler;
 import com.justnothing.testmodule.service.handler.ServerPortManager;
 import com.justnothing.testmodule.service.handler.SocketClientHandler;

@@ -4,15 +4,16 @@ import static com.justnothing.testmodule.constants.CommandServer.CMD_WATCH_VER;
 
 import java.util.Arrays;
 
-import com.justnothing.testmodule.command.base.MainCommand;
-import com.justnothing.testmodule.command.CommandExecutor;
-import com.justnothing.testmodule.command.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.base.command.Cmd;
-import com.justnothing.testmodule.command.base.command.CmdRoutes;
-import com.justnothing.testmodule.command.utils.CmdParamProcessor;
-import com.justnothing.testmodule.command.base.command.CommandRouter;
-import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.base.MainCommand;
+import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.base.command.Cmd;
+import com.justnothing.testmodule.command.framework.base.command.CmdRoutes;
+import com.justnothing.testmodule.command.framework.utils.CommandExceptionHandler;
+import com.justnothing.testmodule.command.framework.utils.CmdParamProcessor;
+import com.justnothing.testmodule.command.framework.base.command.CommandRouter;
+import com.justnothing.testmodule.command.framework.base.IllegalCommandLineArgumentException;
+import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.functions.watch.request.WatchAddRequest;
 import com.justnothing.testmodule.command.functions.watch.request.WatchListRequest;
 import com.justnothing.testmodule.command.functions.watch.request.WatchStopRequest;
@@ -107,7 +108,7 @@ public class WatchMain extends MainCommand<WatchCommandResult> {
         } catch (IllegalCommandLineArgumentException e) {
             throw e;
         } catch (Exception e) {
-            com.justnothing.testmodule.command.utils.CommandExceptionHandler.handleException(
+            CommandExceptionHandler.handleException(
                 "watch", e, context, "执行watch命令失败"
             );
             return createErrorResult("执行watch命令失败: " + e.getMessage());

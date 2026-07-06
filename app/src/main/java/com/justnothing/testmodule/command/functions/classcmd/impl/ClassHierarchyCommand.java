@@ -1,12 +1,11 @@
 package com.justnothing.testmodule.command.functions.classcmd.impl;
 
-import com.justnothing.testmodule.command.base.protocol.CommandResult;
-import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandResult;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandContext;
 import com.justnothing.testmodule.command.functions.classcmd.DirectCommand;
 import com.justnothing.testmodule.command.functions.classcmd.request.ClassHierarchyRequest;
 import com.justnothing.testmodule.command.functions.classcmd.response.ClassHierarchyResult;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
 

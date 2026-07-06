@@ -3,8 +3,8 @@ package com.justnothing.testmodule.command.utils;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
-import com.justnothing.testmodule.command.base.protocol.CommandResult;
-import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.framework.base.protocol.SerializeKeyName;
 
 import java.util.List;
 import java.util.Map;

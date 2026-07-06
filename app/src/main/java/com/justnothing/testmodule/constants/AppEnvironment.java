@@ -3,7 +3,7 @@ package com.justnothing.testmodule.constants;
 import java.lang.reflect.Method;
 import java.lang.reflect.InvocationTargetException;
 
-public class AppEnvironment {
+public final class AppEnvironment {
     private static boolean isHookEnvironment = false;
     private static boolean isAndroidEnvironment = true;
 

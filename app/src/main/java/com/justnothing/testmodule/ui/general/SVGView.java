@@ -13,6 +13,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.caverock.androidsvg.SVG;
+import com.justnothing.testmodule.utils.logging.Logger;
 
 import java.io.InputStream;
 
@@ -55,7 +56,7 @@ public class SVGView extends View {
             inputStream.close();
             invalidate();
         } catch (Exception e) {
-            e.printStackTrace();
+            Logger.getLoggerForName("SVGView").error("加载SVG失败: " + fileName, e);
         }
     }
 

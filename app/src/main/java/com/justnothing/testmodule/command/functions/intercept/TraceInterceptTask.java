@@ -2,6 +2,8 @@ package com.justnothing.testmodule.command.functions.intercept;
 
 import androidx.annotation.NonNull;
 
+import com.justnothing.testmodule.hooks.api.HookParam;
+import com.justnothing.testmodule.hooks.api.MethodHook;
 import com.justnothing.testmodule.utils.io.IOManager;
 
 import java.io.IOException;
@@ -14,8 +16,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import de.robv.android.xposed.XC_MethodHook;
 
 public class TraceInterceptTask extends AbstractInterceptTask {
 
@@ -30,12 +30,12 @@ public class TraceInterceptTask extends AbstractInterceptTask {
     }
 
     @Override
-    protected XC_MethodHook createMethodHook() {
-        return new XC_MethodHook() {
+    protected MethodHook createMethodHook() {
+        return new MethodHook() {
             private long startTime;
 
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) {
+            protected void beforeHookedMethod(HookParam param) {
                 startTime = System.currentTimeMillis();
                 String timestamp = new SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault()).format(new Date());
 
@@ -45,7 +45,7 @@ public class TraceInterceptTask extends AbstractInterceptTask {
                         targetClass.getName(),
                         methodName,
                         depth,
-                        param.args,
+                        param.getArgs(),
                         null,
                         null,
                         0
@@ -57,7 +57,7 @@ public class TraceInterceptTask extends AbstractInterceptTask {
             }
 
             @Override
-            protected void afterHookedMethod(MethodHookParam param) {
+            protected void afterHookedMethod(HookParam param) {
                 long endTime = System.currentTimeMillis();
                 long duration = endTime - startTime;
                 String timestamp = new SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault()).format(new Date());
@@ -69,7 +69,7 @@ public class TraceInterceptTask extends AbstractInterceptTask {
                         targetClass.getName(),
                         methodName,
                         depth,
-                        param.args,
+                        param.getArgs(),
                         param.getResult(),
                         param.getThrowable(),
                         duration

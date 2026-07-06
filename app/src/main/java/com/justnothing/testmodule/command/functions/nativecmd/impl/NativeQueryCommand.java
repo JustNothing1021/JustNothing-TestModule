@@ -1,11 +1,11 @@
 package com.justnothing.testmodule.command.functions.nativecmd.impl;
 
-import com.justnothing.testmodule.command.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.base.protocol.CommandResult;
-import com.justnothing.testmodule.command.functions.nativecmd.NativeManager;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.framework.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.command.functions.nativecmd.NativeResult;
 import com.justnothing.testmodule.command.functions.nativecmd.request.*;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.output.Colors;
 
 import java.io.File;
 import java.util.List;
@@ -39,7 +39,7 @@ public class NativeQueryCommand extends AbstractNativeCommand<CommandRequest, Co
             }
 
         } catch (Exception e) {
-            com.justnothing.testmodule.command.utils.CommandExceptionHandler.handleException(
+            CommandExceptionHandler.handleException(
                 "native list", e, context, "获取native库列表失败");
         }
 
@@ -84,7 +84,7 @@ public class NativeQueryCommand extends AbstractNativeCommand<CommandRequest, Co
             }
 
         } catch (Exception e) {
-            com.justnothing.testmodule.command.utils.CommandExceptionHandler.handleException(
+            CommandExceptionHandler.handleException(
                 "native info", e, context, "获取库信息失败");
         }
 
@@ -112,7 +112,7 @@ public class NativeQueryCommand extends AbstractNativeCommand<CommandRequest, Co
             }
 
         } catch (Exception e) {
-            com.justnothing.testmodule.command.utils.CommandExceptionHandler.handleException(
+            CommandExceptionHandler.handleException(
                 "native symbols", e, context, "获取符号表失败");
         }
 
@@ -135,7 +135,7 @@ public class NativeQueryCommand extends AbstractNativeCommand<CommandRequest, Co
             }
 
         } catch (Exception e) {
-            com.justnothing.testmodule.command.utils.CommandExceptionHandler.handleException(
+            CommandExceptionHandler.handleException(
                 "native memory", e, context, "获取native内存信息失败");
         }
 
@@ -169,7 +169,7 @@ public class NativeQueryCommand extends AbstractNativeCommand<CommandRequest, Co
             }
 
         } catch (Exception e) {
-            com.justnothing.testmodule.command.utils.CommandExceptionHandler.handleException(
+            CommandExceptionHandler.handleException(
                 "native heap", e, context, "获取native堆信息失败");
         }
 
@@ -204,7 +204,7 @@ public class NativeQueryCommand extends AbstractNativeCommand<CommandRequest, Co
             }
 
         } catch (Exception e) {
-            com.justnothing.testmodule.command.utils.CommandExceptionHandler.handleException(
+            CommandExceptionHandler.handleException(
                 "native maps", e, context, "获取内存映射失败");
         }
 

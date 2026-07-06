@@ -2,10 +2,11 @@ package com.justnothing.testmodule.command.utils;
 
 import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
 import com.justnothing.testmodule.command.base.protocol.AutoSerializableBase;
-import com.justnothing.testmodule.command.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.base.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.base.protocol.ResultField;
-import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
+import com.justnothing.testmodule.command.framework.base.protocol.SerializeKeyName;
+import com.justnothing.testmodule.command.framework.utils.ParamParser;
 
 @SerializeKeyName("AutoHook")
 @AutoSerializable

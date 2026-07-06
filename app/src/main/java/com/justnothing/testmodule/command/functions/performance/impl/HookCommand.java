@@ -1,6 +1,6 @@
 package com.justnothing.testmodule.command.functions.performance.impl;
 
-import com.justnothing.testmodule.command.base.command.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.base.command.SubCommandInfo;
 import androidx.annotation.NonNull;
 
 import com.justnothing.testmodule.command.functions.intercept.PerformanceInterceptTask;
@@ -8,7 +8,7 @@ import com.justnothing.testmodule.command.functions.performance.PerformanceManag
 import com.justnothing.testmodule.command.functions.performance.PerformanceRequest;
 import com.justnothing.testmodule.command.functions.performance.request.*;
 import com.justnothing.testmodule.command.functions.performance.response.PerfHookResult;
-import com.justnothing.testmodule.command.output.Colors;
+import com.justnothing.testmodule.command.framework.output.Colors;
 
 import org.json.JSONObject;
 

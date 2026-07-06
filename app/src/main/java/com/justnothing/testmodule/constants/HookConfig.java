@@ -1,6 +1,6 @@
 package com.justnothing.testmodule.constants;
 
-public class HookConfig {
+public final class HookConfig {
     public static final String KEY_NAME = "name";
     public static final String KEY_DESCRIPTION = "description";
     public static final String KEY_DISPLAY_NAME = "displayName";

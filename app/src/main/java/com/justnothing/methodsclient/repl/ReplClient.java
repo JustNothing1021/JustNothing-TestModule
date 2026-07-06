@@ -9,10 +9,9 @@ import com.justnothing.methodsclient.monitor.ClientPortManager;
 import com.justnothing.methodsclient.tailtip.TailTipManager;
 import com.justnothing.methodsclient.test.TerminalCapabilityTest;
 import com.justnothing.methodsclient.utils.TerminalManager;
-import com.justnothing.testmodule.command.protocol.InteractiveProtocol;
-import com.justnothing.testmodule.command.output.ClientRequirements;
+import com.justnothing.testmodule.command.framework.protocol.InteractiveProtocol;
+import com.justnothing.testmodule.command.framework.output.ClientRequirements;
 
-import org.jline.reader.Completer;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
 import org.jline.reader.EndOfFileException;

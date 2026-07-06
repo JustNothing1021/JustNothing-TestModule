@@ -5,10 +5,10 @@ import com.justnothing.methodsclient.StreamClient;
 import com.justnothing.methodsclient.model.ColoredSegment;
 import com.justnothing.methodsclient.utils.TerminalManager;
 import com.justnothing.methodsclient.highlighter.HighlighterManager;
-import com.justnothing.testmodule.command.output.InputMode;
-import com.justnothing.testmodule.command.output.Colors;
-import com.justnothing.testmodule.command.protocol.InteractiveProtocol;
-import com.justnothing.testmodule.command.protocol.TerminalRpcChannel;
+import com.justnothing.testmodule.command.framework.output.InputMode;
+import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.framework.protocol.InteractiveProtocol;
+import com.justnothing.testmodule.command.framework.protocol.TerminalRpcChannel;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 import org.jline.terminal.Terminal;
 

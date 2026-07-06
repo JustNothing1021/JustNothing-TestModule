@@ -1,6 +1,6 @@
 package com.justnothing.testmodule.command.functions.network;
 
-import com.justnothing.testmodule.hooks.HookAPI;
+import com.justnothing.testmodule.hooks.api.HookAPI;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
 import com.justnothing.testmodule.utils.reflect.ReflectionUtils;
@@ -16,7 +16,9 @@ import java.net.URL;
 import java.util.Map;
 import java.util.Objects;
 
-import de.robv.android.xposed.XC_MethodHook;
+import com.justnothing.testmodule.hooks.api.HookParam;
+import com.justnothing.testmodule.hooks.api.MethodHook;
+import com.justnothing.testmodule.hooks.api.UnhookHandle;
 
 public class NetworkInterceptor {
 
@@ -65,19 +67,19 @@ public class NetworkInterceptor {
                 return false;
             }
 
-            XC_MethodHook.Unhook unhook = HookAPI.findAndHookMethod(
+            UnhookHandle unhook = HookAPI.findAndHookMethod(
                     okHttpClientClass,
                     OKHTTP_NEW_CALL,
                     requestClass,
-                    new XC_MethodHook() {
+                    new MethodHook() {
                         @Override
-                        protected void beforeHookedMethod(MethodHookParam param) {
+                        protected void beforeHookedMethod(HookParam param) {
                             if (!NetworkManager.getInstance().isInterceptEnabled()) {
                                 return;
                             }
 
                             try {
-                                Object request = param.args[0];
+                                Object request = param.getArgs()[0];
                                 NetworkRequestInfo requestInfo = extractOkHttpRequest(request);
 
                                 NetworkManager.MockRule mockRule = NetworkManager.getInstance()
@@ -103,7 +105,7 @@ public class NetworkInterceptor {
                         }
 
                         @Override
-                        protected void afterHookedMethod(MethodHookParam param) {
+                        protected void afterHookedMethod(HookParam param) {
                             if (!NetworkManager.getInstance().isRecordEnabled()) {
                                 return;
                             }
@@ -143,10 +145,10 @@ public class NetworkInterceptor {
         try {
             Class<?> callClass = call.getClass();
 
-            HookAPI.findAndHookMethod(callClass, "execute", new XC_MethodHook() {
+            HookAPI.findAndHookMethod(callClass, "execute", new MethodHook() {
                 @Override
-                protected void beforeHookedMethod(MethodHookParam param) throws Exception {
-                    Object thisObject = param.thisObject;
+                protected void beforeHookedMethod(HookParam param) throws Exception {
+                    Object thisObject = param.getThisObject();
                     Object request = ReflectionUtils.callMethod(thisObject, "request");
 
                     NetworkRequestInfo requestInfo = extractOkHttpRequest(request);
@@ -154,7 +156,7 @@ public class NetworkInterceptor {
                 }
 
                 @Override
-                protected void afterHookedMethod(MethodHookParam param) {
+                protected void afterHookedMethod(HookParam param) {
                     NetworkRequestInfo requestInfo = (NetworkRequestInfo) param.getObjectExtra("network_request");
                     if (requestInfo == null) return;
 
@@ -174,17 +176,17 @@ public class NetworkInterceptor {
 
             Class<?> callbackClass = ClassResolver.findClass(OKHTTP_CALLBACK, classLoader);
             if (callbackClass != null) {
-                HookAPI.findAndHookMethod(callClass, "enqueue", callbackClass, new XC_MethodHook() {
+                HookAPI.findAndHookMethod(callClass, "enqueue", callbackClass, new MethodHook() {
                     @Override
-                    protected void beforeHookedMethod(MethodHookParam param) throws Exception {
-                        Object thisObject = param.thisObject;
+                    protected void beforeHookedMethod(HookParam param) throws Exception {
+                        Object thisObject = param.getThisObject();
                         Object request = ReflectionUtils.callMethod(thisObject, "request");
-                        Object originalCallback = param.args[0];
+                        Object originalCallback = param.getArgs()[0];
 
                         NetworkRequestInfo requestInfo = extractOkHttpRequest(request);
 
                         Object wrappedCallback = createWrappedCallback(originalCallback, requestInfo, classLoader);
-                        param.args[0] = wrappedCallback;
+                        param.getArgs()[0] = wrappedCallback;
                     }
                 });
             }
@@ -453,9 +455,9 @@ public class NetworkInterceptor {
         }
 
         try {
-            HookAPI.findAndHookMethod(URL.class, "openConnection", new XC_MethodHook() {
+            HookAPI.findAndHookMethod(URL.class, "openConnection", new MethodHook() {
                 @Override
-                protected void afterHookedMethod(MethodHookParam param) {
+                protected void afterHookedMethod(HookParam param) {
                     Object connection = param.getResult();
                     if (connection instanceof HttpURLConnection) {
                         hookHttpUrlConnectionInstance((HttpURLConnection) connection);
@@ -475,15 +477,15 @@ public class NetworkInterceptor {
 
     private static void hookHttpUrlConnectionInstance(HttpURLConnection connection) {
         try {
-            HookAPI.findAndHookMethod(connection.getClass(), "getInputStream", new XC_MethodHook() {
+            HookAPI.findAndHookMethod(connection.getClass(), "getInputStream", new MethodHook() {
                 @Override
-                protected void beforeHookedMethod(MethodHookParam param) {
+                protected void beforeHookedMethod(HookParam param) {
                     if (!NetworkManager.getInstance().isRecordEnabled()) {
                         return;
                     }
 
                     try {
-                        HttpURLConnection thisConn = (HttpURLConnection) param.thisObject;
+                        HttpURLConnection thisConn = (HttpURLConnection) param.getThisObject();
                         URL url = thisConn.getURL();
                         String method = thisConn.getRequestMethod();
 
@@ -498,12 +500,12 @@ public class NetworkInterceptor {
                 }
 
                 @Override
-                protected void afterHookedMethod(MethodHookParam param) {
+                protected void afterHookedMethod(HookParam param) {
                     NetworkRequestInfo info = (NetworkRequestInfo) param.getObjectExtra("network_request");
                     if (info == null) return;
 
                     try {
-                        HttpURLConnection thisConn = (HttpURLConnection) param.thisObject;
+                        HttpURLConnection thisConn = (HttpURLConnection) param.getThisObject();
                         int responseCode = thisConn.getResponseCode();
                         String responseMessage = thisConn.getResponseMessage();
 
@@ -549,15 +551,15 @@ public class NetworkInterceptor {
                 return false;
             }
 
-            HookAPI.findAndHookMethod(retrofitCallClass, "execute", new XC_MethodHook() {
+            HookAPI.findAndHookMethod(retrofitCallClass, "execute", new MethodHook() {
                 @Override
-                protected void beforeHookedMethod(MethodHookParam param) {
+                protected void beforeHookedMethod(HookParam param) {
                     if (!NetworkManager.getInstance().isRecordEnabled()) {
                         return;
                     }
 
                     try {
-                        Object retrofitCall = param.thisObject;
+                        Object retrofitCall = param.getThisObject();
                         Object okHttpCall = ReflectionUtils.callMethod(retrofitCall, "raw");
                         Object request = ReflectionUtils.callMethod(okHttpCall, "request");
 
@@ -571,7 +573,7 @@ public class NetworkInterceptor {
                 }
 
                 @Override
-                protected void afterHookedMethod(MethodHookParam param) {
+                protected void afterHookedMethod(HookParam param) {
                     NetworkRequestInfo info = (NetworkRequestInfo) param.getObjectExtra("network_request");
                     if (info == null) return;
 

@@ -1,8 +1,8 @@
 package com.justnothing.testmodule.command.functions.script.impl;
 
-import com.justnothing.testmodule.command.base.command.SubCommandInfo;
-import com.justnothing.testmodule.command.output.Colors;
-import com.justnothing.testmodule.command.utils.CommandExceptionHandler;
+import com.justnothing.testmodule.command.framework.base.command.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.framework.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 import com.justnothing.testmodule.utils.data.DataBridge;
 import com.justnothing.testmodule.utils.io.IOManager;

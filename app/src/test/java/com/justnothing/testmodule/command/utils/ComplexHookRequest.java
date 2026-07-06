@@ -3,12 +3,13 @@ package com.justnothing.testmodule.command.utils;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import com.justnothing.testmodule.command.base.protocol.AutoSerializable;
-import com.justnothing.testmodule.command.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
 import com.justnothing.testmodule.command.base.parser.FlagParam;
-import com.justnothing.testmodule.command.base.IllegalCommandLineArgumentException;
+import com.justnothing.testmodule.command.framework.base.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.base.parser.KeywordParam;
 import com.justnothing.testmodule.command.base.parser.PositionalParam;
-import com.justnothing.testmodule.command.base.protocol.SerializeKeyName;
+import com.justnothing.testmodule.command.framework.base.protocol.SerializeKeyName;
+import com.justnothing.testmodule.command.framework.utils.ParamParser;
 
 import java.util.Objects;
 

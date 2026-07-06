@@ -5,7 +5,7 @@ import static com.justnothing.testmodule.constants.CommandClient.UPDATE_PORT_TEM
 import static com.justnothing.testmodule.constants.FileDirectory.PORT_FILE;
 import static com.justnothing.testmodule.constants.FileDirectory.SESSION_PREFIX;
 import static com.justnothing.testmodule.constants.FileDirectory.RESULT_FILE_NAME;
-import static com.justnothing.testmodule.hooks.tests.ShellServiceHook.SERVICE_NAME;
+import static com.justnothing.testmodule.hooks.service.ShellServiceHook.SERVICE_NAME;
 import static com.justnothing.testmodule.service.handler.TransactionHandler.TRANSACTION_UPDATE_PORT;
 
 import com.justnothing.methodsclient.StreamClient;
