@@ -1,7 +1,7 @@
 package com.justnothing.testmodule.command.functions.agent;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
-import com.justnothing.testmodule.command.framework.base.AbstractCommand;
+import com.justnothing.testmodule.command.framework.model.AbstractCommand;
 import com.justnothing.testmodule.command.functions.agent.handlers.InspectionClient;
 import com.justnothing.testmodule.command.functions.agent.handlers.SpListResult;
 import com.justnothing.testmodule.command.framework.output.Colors;

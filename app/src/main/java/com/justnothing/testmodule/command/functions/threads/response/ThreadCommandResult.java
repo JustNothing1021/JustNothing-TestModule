@@ -1,6 +1,6 @@
 package com.justnothing.testmodule.command.functions.threads.response;
 
-import com.justnothing.testmodule.command.framework.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.framework.model.CommandResult;
 
 public class ThreadCommandResult extends CommandResult {
 

@@ -1,6 +1,6 @@
 package com.justnothing.testmodule.command.functions.hook.impl;
 
-import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.functions.hook.HookListResult;
 import com.justnothing.testmodule.command.functions.hook.HookManager;
 import com.justnothing.testmodule.command.functions.hook.request.*;

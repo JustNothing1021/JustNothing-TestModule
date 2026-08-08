@@ -63,10 +63,9 @@ public class AliasManager {
         addDefaultAlias("csearch", "class search");
         addDefaultAlias("cconstructor", "class constructor");
         addDefaultAlias("creflect", "class reflect");
-        addDefaultAlias("bsh", "beanshell");
-        addDefaultAlias("bvars", "beanshell vars");
-        addDefaultAlias("bclear", "beanshell clear");
-        addDefaultAlias("bscript", "beanshell script");
+        addDefaultAlias("bvars", "bsh vars");
+        addDefaultAlias("bclear", "bsh clear");
+        addDefaultAlias("bscript", "bsh script");
         addDefaultAlias("srun", "script run");
         addDefaultAlias("sclear", "script clear");
         addDefaultAlias("svars", "script vars");

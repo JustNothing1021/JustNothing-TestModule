@@ -1,6 +1,6 @@
 package com.justnothing.testmodule.command.framework.protocol;
 
-import com.justnothing.testmodule.command.framework.base.protocol.GsonFactory;
+import com.justnothing.testmodule.command.framework.utils.GsonFactory;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;

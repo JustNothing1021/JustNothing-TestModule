@@ -9,9 +9,9 @@ import androidx.lifecycle.MutableLiveData;
 
 import com.justnothing.methodsclient.UiClient;
 import com.justnothing.testmodule.R;
-import com.justnothing.testmodule.command.framework.base.protocol.GsonFactory;
-import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.framework.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.framework.utils.GsonFactory;
+import com.justnothing.testmodule.command.framework.model.CommandRequest;
+import com.justnothing.testmodule.command.framework.model.CommandResult;
 import com.justnothing.testmodule.utils.logging.Logger;
 
 import java.util.concurrent.ExecutorService;

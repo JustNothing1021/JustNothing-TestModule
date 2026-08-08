@@ -9,7 +9,7 @@ import com.justnothing.testmodule.command.framework.output.ClientRequirements;
 import com.justnothing.testmodule.command.framework.output.InteractiveOutputHandler;
 import com.justnothing.testmodule.command.framework.protocol.InteractiveProtocol;
 import com.justnothing.testmodule.utils.logging.Logger;
-import com.justnothing.testmodule.command.framework.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.framework.model.CommandResult;
 import com.justnothing.methodsclient.executor.AsyncChmodExecutor;
 
 import org.json.JSONException;

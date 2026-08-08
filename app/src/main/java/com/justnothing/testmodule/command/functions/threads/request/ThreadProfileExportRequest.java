@@ -1,8 +1,8 @@
 package com.justnothing.testmodule.command.functions.threads.request;
 
-import com.justnothing.testmodule.command.framework.base.command.CmdParam;
-import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.framework.base.protocol.SerializeKeyName;
+import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.framework.model.CommandRequest;
+import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
 
 @SerializeKeyName("threads:profile:export")
 public class ThreadProfileExportRequest extends CommandRequest {

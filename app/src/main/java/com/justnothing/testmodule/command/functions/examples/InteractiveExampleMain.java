@@ -1,12 +1,12 @@
 package com.justnothing.testmodule.command.functions.examples;
 
-import com.justnothing.testmodule.command.framework.base.MainCommand;
+import com.justnothing.testmodule.command.framework.model.MainCommand;
 import com.justnothing.testmodule.command.framework.CommandExecutor;
-import com.justnothing.testmodule.command.framework.base.protocol.CommandResult;
-import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.model.CommandResult;
+import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.output.ICommandOutputHandler;
 
-import com.justnothing.testmodule.command.framework.base.command.Cmd;
+import com.justnothing.testmodule.command.framework.annotation.Cmd;
 
 @Cmd(name = "interactive_test", description = "交互式输入测试", defaultResultType = CommandResult.class)
 public class InteractiveExampleMain extends MainCommand<CommandResult> {

@@ -1,7 +1,7 @@
 package com.justnothing.testmodule.command.functions.packages;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
-import com.justnothing.testmodule.command.framework.base.AbstractCommand;
+import com.justnothing.testmodule.command.framework.model.AbstractCommand;
 import com.justnothing.testmodule.utils.reflect.ClassLoaderManager;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.command.framework.output.Colors;

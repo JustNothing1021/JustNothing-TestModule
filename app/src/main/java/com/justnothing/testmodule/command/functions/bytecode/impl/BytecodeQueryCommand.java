@@ -1,7 +1,7 @@
 package com.justnothing.testmodule.command.functions.bytecode.impl;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
-import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.functions.bytecode.request.BytecodeInfoRequest;
 import com.justnothing.testmodule.command.functions.bytecode.request.BytecodeMethodRequest;
 import com.justnothing.testmodule.command.functions.bytecode.request.BytecodeAnalyzeRequest;

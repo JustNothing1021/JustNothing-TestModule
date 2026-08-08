@@ -2,7 +2,7 @@ package com.justnothing.testmodule.command.functions.classcmd.model;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import com.justnothing.testmodule.command.framework.base.protocol.GsonFactory;
+import com.justnothing.testmodule.command.framework.utils.GsonFactory;
 
 import com.justnothing.testmodule.utils.format.DescriptorColorizer;
 

@@ -1,9 +1,9 @@
 package com.justnothing.testmodule.command.functions.didyouknow.impl;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
-import com.justnothing.testmodule.command.framework.base.AbstractCommand;
-import com.justnothing.testmodule.command.framework.base.IllegalCommandLineArgumentException;
-import com.justnothing.testmodule.command.framework.base.command.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.model.AbstractCommand;
+import com.justnothing.testmodule.command.framework.error.IllegalCommandLineArgumentException;
+import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
 import com.justnothing.testmodule.command.functions.didyouknow.CliTips;
 import com.justnothing.testmodule.command.functions.didyouknow.request.DidYouKnowRequest;
 import com.justnothing.testmodule.command.functions.didyouknow.response.DidYouKnowResult;

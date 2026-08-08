@@ -19,7 +19,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
-public class IOManager {
+public final class IOManager {
     private static final String TAG = "IOManager";
     private static final Logger logger = Logger.getLoggerForName(TAG);
     private static volatile IOManager instance = null;

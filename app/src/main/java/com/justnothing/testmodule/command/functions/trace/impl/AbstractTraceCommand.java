@@ -1,7 +1,7 @@
 package com.justnothing.testmodule.command.functions.trace.impl;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
-import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.functions.trace.TraceManager;
 import com.justnothing.testmodule.command.functions.trace.TraceResult;
 import com.justnothing.testmodule.command.framework.output.Colors;

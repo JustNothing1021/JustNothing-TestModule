@@ -2,7 +2,7 @@ package com.justnothing.testmodule.command.functions.system;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import com.justnothing.testmodule.command.framework.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.framework.model.CommandResult;
 
 import java.util.List;
 

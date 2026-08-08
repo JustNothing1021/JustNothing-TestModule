@@ -3,10 +3,10 @@ package com.justnothing.testmodule.command.functions.tests;
 import com.justnothing.engine.ScriptRunner;
 import com.justnothing.engine.api.DefaultOutputHandler;
 import com.justnothing.engine.exception.EvalException;
-import com.justnothing.testmodule.command.framework.base.MainCommand;
+import com.justnothing.testmodule.command.framework.model.MainCommand;
 import com.justnothing.testmodule.command.framework.CommandExecutor;
-import com.justnothing.testmodule.command.framework.base.protocol.CommandResult;
-import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.model.CommandResult;
+import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.utils.reflect.DexClassDefiner;
 import com.justnothing.engine.codegen.DynamicClassGenerator;
@@ -14,7 +14,7 @@ import com.justnothing.engine.codegen.DynamicClassGenerator;
 import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.atomic.AtomicReference;
 
-import com.justnothing.testmodule.command.framework.base.command.Cmd;
+import com.justnothing.testmodule.command.framework.annotation.Cmd;
 
 @Cmd(name = "anonclasstest", description = "匿名类生成诊断测试", defaultResultType = CommandResult.class)
 public class AnonClassTestMain extends MainCommand<CommandResult> {

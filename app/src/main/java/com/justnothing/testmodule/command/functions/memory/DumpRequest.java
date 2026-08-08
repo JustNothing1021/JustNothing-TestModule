@@ -1,8 +1,8 @@
 package com.justnothing.testmodule.command.functions.memory;
 
-import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.framework.base.protocol.SerializeKeyName;
-import com.justnothing.testmodule.command.framework.base.command.CmdParam;
+import com.justnothing.testmodule.command.framework.model.CommandRequest;
+import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
+import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 
 @SerializeKeyName("Dump")
 public class DumpRequest extends CommandRequest {

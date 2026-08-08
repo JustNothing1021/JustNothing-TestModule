@@ -172,7 +172,6 @@ public class RootProcessPool extends Logger {
                 info("维护任务：移除了 " + toRemove + " 个Root进程");
             }
 
-            // [优化] 移除所有不健康或超时空闲的进程
             long currentTime = System.currentTimeMillis();
             Iterator<RootProcess> iterator = availableProcesses.iterator();
             while (iterator.hasNext()) {
@@ -183,11 +182,6 @@ public class RootProcessPool extends Logger {
                     iterator.remove();
                     process.close();
                     totalProcesses.decrementAndGet();
-
-                    if (!process.isHealthy()) {
-                        warn("维护任务, 发现了并移除不健康的Root进程");
-                    }
-                    // debug("移除空闲Root进程");
                 }
             }
         } finally {

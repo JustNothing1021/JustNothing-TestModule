@@ -1,12 +1,12 @@
 package com.justnothing.testmodule.command.functions.agent;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
-import com.justnothing.testmodule.command.framework.base.MainCommand;
-import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.framework.base.protocol.CommandResult;
-import com.justnothing.testmodule.command.framework.base.command.Cmd;
-import com.justnothing.testmodule.command.framework.base.command.CmdRoutes;
-import com.justnothing.testmodule.command.framework.base.command.CommandRouter;
+import com.justnothing.testmodule.command.framework.model.MainCommand;
+import com.justnothing.testmodule.command.framework.model.CommandRequest;
+import com.justnothing.testmodule.command.framework.model.CommandResult;
+import com.justnothing.testmodule.command.framework.annotation.Cmd;
+import com.justnothing.testmodule.command.framework.annotation.CmdRoutes;
+import com.justnothing.testmodule.command.framework.model.CommandRouter;
 import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.functions.agent.request.AgentSpListRequest;
 import com.justnothing.testmodule.command.functions.agent.request.AgentSpReadRequest;

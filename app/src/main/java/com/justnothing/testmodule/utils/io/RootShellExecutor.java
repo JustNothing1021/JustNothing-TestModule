@@ -15,7 +15,6 @@ import java.util.concurrent.CompletableFuture;
 public class RootShellExecutor implements ShellExecutor {
 
     private static final String TAG = "RootShellExecutor";
-    private static final Logger logger = Logger.getLoggerForName(TAG);
     private static final long DEFAULT_TIMEOUT_MS = 30000;
 
     @Override

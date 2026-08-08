@@ -1,7 +1,7 @@
 package com.justnothing.testmodule.command.functions.threads;
 
-import com.justnothing.testmodule.command.framework.base.AbstractCommand;
-import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.model.AbstractCommand;
+import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.functions.threads.response.ThreadCommandResult;
 import com.justnothing.testmodule.utils.logging.Logger;

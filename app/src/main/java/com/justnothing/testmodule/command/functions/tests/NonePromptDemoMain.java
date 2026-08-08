@@ -12,11 +12,11 @@ import com.justnothing.richconsole.noneprompt.ConfirmPrompt;
 import com.justnothing.richconsole.noneprompt.InputPrompt;
 import com.justnothing.richconsole.noneprompt.ListPrompt;
 
-import com.justnothing.testmodule.command.framework.base.MainCommand;
+import com.justnothing.testmodule.command.framework.model.MainCommand;
 import com.justnothing.testmodule.command.framework.CommandExecutor;
-import com.justnothing.testmodule.command.framework.base.protocol.CommandResult;
-import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.framework.base.command.Cmd;
+import com.justnothing.testmodule.command.framework.model.CommandResult;
+import com.justnothing.testmodule.command.framework.model.CommandRequest;
+import com.justnothing.testmodule.command.framework.annotation.Cmd;
 
 @Cmd(name = "promptdemo", description = "RichConsole noneprompt demo", defaultResultType = CommandResult.class)
 public class NonePromptDemoMain extends MainCommand<CommandResult> {

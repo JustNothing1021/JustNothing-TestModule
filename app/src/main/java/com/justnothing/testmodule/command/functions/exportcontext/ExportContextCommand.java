@@ -8,7 +8,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.text.TextUtils;
 
-import com.justnothing.testmodule.command.framework.base.AbstractCommand;
+import com.justnothing.testmodule.command.framework.model.AbstractCommand;
 import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.framework.utils.CommandExceptionHandler;
@@ -22,6 +22,7 @@ import java.net.NetworkInterface;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
 public class ExportContextCommand extends AbstractCommand<ExportContextRequest, ExportContextResult> {
 
@@ -90,7 +91,7 @@ public class ExportContextCommand extends AbstractCommand<ExportContextRequest, 
                     } catch (Exception e) {
                         logger.error("JSON序列化失败", e);
                         context.print("错误: JSON序列化失败 - ", Colors.RED);
-                        context.println(e.getMessage(), Colors.YELLOW);
+                        context.println(Objects.requireNonNullElse(e.getMessage(), "无法获取错误信息"), Colors.YELLOW);
                     }
                 }
             }

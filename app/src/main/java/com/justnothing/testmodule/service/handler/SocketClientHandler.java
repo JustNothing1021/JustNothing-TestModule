@@ -4,10 +4,10 @@ import android.util.Log;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.CommandType;
-import com.justnothing.testmodule.command.framework.base.command.CommandRouter;
-import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.framework.base.protocol.CommandResult;
-import com.justnothing.testmodule.command.framework.base.protocol.GsonFactory;
+import com.justnothing.testmodule.command.framework.model.CommandRouter;
+import com.justnothing.testmodule.command.framework.model.CommandRequest;
+import com.justnothing.testmodule.command.framework.model.CommandResult;
+import com.justnothing.testmodule.command.framework.utils.GsonFactory;
 import com.justnothing.testmodule.command.framework.output.ClientRequirements;
 import com.justnothing.testmodule.command.framework.output.ICommandOutputHandler;
 import com.justnothing.testmodule.command.framework.output.InteractiveOutputHandler;

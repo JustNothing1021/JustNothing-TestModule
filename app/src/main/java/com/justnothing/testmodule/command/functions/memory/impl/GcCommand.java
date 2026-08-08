@@ -4,7 +4,7 @@ import android.app.ActivityManager;
 import android.content.Context;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
-import com.justnothing.testmodule.command.framework.base.command.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
 import com.justnothing.testmodule.command.functions.memory.GcRequest;
 import com.justnothing.testmodule.command.functions.memory.GcResult;
 import com.justnothing.testmodule.command.functions.memory.MemoryUtils;

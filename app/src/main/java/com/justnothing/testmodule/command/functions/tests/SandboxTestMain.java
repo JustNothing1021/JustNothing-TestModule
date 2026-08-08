@@ -4,9 +4,9 @@ import com.justnothing.engine.ScriptRunner;
 import com.justnothing.engine.api.DefaultOutputHandler;
 import com.justnothing.engine.security.SandboxConfig;
 import com.justnothing.testmodule.command.framework.CommandExecutor;
-import com.justnothing.testmodule.command.framework.base.MainCommand;
-import com.justnothing.testmodule.command.framework.base.protocol.CommandResult;
-import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.model.MainCommand;
+import com.justnothing.testmodule.command.framework.model.CommandResult;
+import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 import com.justnothing.testmodule.utils.data.DataBridge;
@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-import com.justnothing.testmodule.command.framework.base.command.Cmd;
+import com.justnothing.testmodule.command.framework.annotation.Cmd;
 
 @Cmd(name = "sandboxtest", description = "沙箱安全机制测试", defaultResultType = CommandResult.class)
 public class SandboxTestMain extends MainCommand<CommandResult> {

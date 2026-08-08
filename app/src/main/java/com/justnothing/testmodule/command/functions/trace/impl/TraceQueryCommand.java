@@ -1,8 +1,8 @@
 package com.justnothing.testmodule.command.functions.trace.impl;
 
-import com.justnothing.testmodule.command.framework.base.command.SubCommandInfo;
-import com.justnothing.testmodule.command.framework.base.IllegalCommandLineArgumentException;
-import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.error.IllegalCommandLineArgumentException;
+import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.functions.intercept.TraceInterceptTask;
 import com.justnothing.testmodule.command.functions.trace.TraceResult;
 import com.justnothing.testmodule.command.functions.trace.request.TraceListRequest;

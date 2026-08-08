@@ -5,11 +5,11 @@ import com.justnothing.richconsole.console.Console;
 import com.justnothing.richconsole.panel.Panel;
 import com.justnothing.richconsole.table.Table;
 
-import com.justnothing.testmodule.command.framework.base.MainCommand;
+import com.justnothing.testmodule.command.framework.model.MainCommand;
 import com.justnothing.testmodule.command.framework.CommandExecutor;
-import com.justnothing.testmodule.command.framework.base.protocol.CommandResult;
-import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.framework.base.command.Cmd;
+import com.justnothing.testmodule.command.framework.model.CommandResult;
+import com.justnothing.testmodule.command.framework.model.CommandRequest;
+import com.justnothing.testmodule.command.framework.annotation.Cmd;
 
 @Cmd(name = "tabledemo", description = "RichConsole table demo", defaultResultType = CommandResult.class)
 public class TableDemoMain extends MainCommand<CommandResult> {

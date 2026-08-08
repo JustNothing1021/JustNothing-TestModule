@@ -6,8 +6,8 @@ import android.content.Context;
 import android.os.Build;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
-import com.justnothing.testmodule.command.framework.base.AbstractCommand;
-import com.justnothing.testmodule.command.framework.base.command.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.model.AbstractCommand;
+import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
 import com.justnothing.testmodule.command.functions.script.SystemInfoRequest;
 import com.justnothing.testmodule.command.functions.system.SystemFieldInfo;
 import com.justnothing.testmodule.command.functions.system.SystemInfoResult;

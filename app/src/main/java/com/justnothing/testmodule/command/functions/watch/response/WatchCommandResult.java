@@ -1,6 +1,6 @@
 package com.justnothing.testmodule.command.functions.watch.response;
 
-import com.justnothing.testmodule.command.framework.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.framework.model.CommandResult;
 
 public class WatchCommandResult extends CommandResult {
 

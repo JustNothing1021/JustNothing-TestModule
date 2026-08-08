@@ -12,6 +12,7 @@ import com.justnothing.richconsole.console.Console;
 import com.justnothing.richconsole.console.ConsoleOptions;
 import com.justnothing.richconsole.console.Group;
 import com.justnothing.richconsole.markdown.Markdown;
+import com.justnothing.richconsole.measure.Measurement;
 import com.justnothing.richconsole.panel.Panel;
 import com.justnothing.richconsole.pretty.Pretty;
 import com.justnothing.richconsole.segment.Segment;
@@ -20,11 +21,11 @@ import com.justnothing.richconsole.syntax.Syntax;
 import com.justnothing.richconsole.table.Table;
 import com.justnothing.richconsole.text.Text;
 
-import com.justnothing.testmodule.command.framework.base.MainCommand;
+import com.justnothing.testmodule.command.framework.model.MainCommand;
 import com.justnothing.testmodule.command.framework.CommandExecutor;
-import com.justnothing.testmodule.command.framework.base.protocol.CommandResult;
-import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.framework.base.command.Cmd;
+import com.justnothing.testmodule.command.framework.model.CommandResult;
+import com.justnothing.testmodule.command.framework.model.CommandRequest;
+import com.justnothing.testmodule.command.framework.annotation.Cmd;
 
 @Cmd(name = "testcarddemo", description = "RichConsole test card demo", defaultResultType = CommandResult.class)
 public class TestCardDemoMain extends MainCommand<CommandResult> {
@@ -47,9 +48,9 @@ public class TestCardDemoMain extends MainCommand<CommandResult> {
         colorTable.addRow(
                 "[bold green]✓ 4-bit color[/]\n[bold blue]✓ 8-bit color[/]\n[bold magenta]✓ Truecolor (16.7 million)[/]\n[bold yellow]✓ Dumb terminals[/]\n[bold cyan]✓ Automatic color conversion",
                 new ColorBox());
-        card.addRow("Colors", colorTable);
+        card.addRow("Colors", new Group(Arrays.asList(colorTable, new Text("\n"))));
 
-        card.addRow("Styles",
+        card.addRow("Styles\n",
                 "All ANSI styles: [bold]bold[/], [dim]dim[/], [italic]italic[/], [underline]underline[/], [strike]strikethrough[/], [reverse]reverse[/], and even [blink]blink[/].");
 
         String lorem = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque in metus sed sapien ultricies pretium a at justo. Maecenas luctus velit et auctor maximus.";
@@ -60,14 +61,15 @@ public class TestCardDemoMain extends MainCommand<CommandResult> {
         Text rightText = Text.of(lorem, cfg -> cfg.style("blue").justify("right").end(""));
         Text fullText = Text.of(lorem, cfg -> cfg.style("red").justify("full").end(""));
         loremGrid.addRow(leftText, centerText, rightText, fullText);
-        card.addRow("Text", new Group(Arrays.asList(
+        card.addRow("Text\n", new Group(Arrays.asList(
                 Text.fromMarkup("Word wrap text. Justify [green]left[/], [yellow]center[/], [blue]right[/] or [red]full[/].\n"),
-                loremGrid)));
+                loremGrid,
+                new Text("\n"))));
 
-        card.addRow("Asian\nlanguage\nsupport",
+        card.addRow("Asian\nlanguage\nsupport\n",
                 "\uD83C\uDDE8\uD83C\uDDF3  该库支持中文，日文和韩文文本！\n\uD83C\uDDEF\uD83C\uDDF5  ライブラリは中国語、日本語、韓国語のテキストをサポートしています\n\uD83C\uDDF0\uD83C\uDDF7  이 라이브러리는 중국어, 일본어 및 한국어 텍스트를 지원합니다");
 
-        card.addRow("Markup",
+        card.addRow("Markup\n",
                 "[bold magenta]RichConsole[/] supports a simple [i]bbcode[/i]-like [b]markup[/b] for [yellow]color[/], [underline]style[/], and emoji!");
 
         Table movieTable = Table.of(cfg -> cfg
@@ -80,7 +82,7 @@ public class TestCardDemoMain extends MainCommand<CommandResult> {
         movieTable.addRow("May 25, 2018", "[b]Solo[/]: A Star Wars Story", "$275,000,000", "$393,151,347");
         movieTable.addRow("Dec 15, 2017", "Star Wars Ep. VIII: The Last Jedi", "$262,000,000", "[bold]$1,332,539,889[/bold]");
         movieTable.addRow("May 19, 1999", "Star Wars Ep. [b]I[/b]: [i]The phantom Menace", "$115,000,000", "$1,027,044,677");
-        card.addRow("Tables", movieTable);
+        card.addRow("Tables\n", new Group(Arrays.asList(movieTable, new Text("\n"))));
 
         String code = """
                 def iter_last(values: Iterable[T]) -> Iterable[Tuple[bool, T]]:
@@ -95,10 +97,10 @@ public class TestCardDemoMain extends MainCommand<CommandResult> {
                         previous_value = value
                     yield True, previous_value""";
         Map<String, Object> prettyData = new LinkedHashMap<>();
-        prettyData.put("foo", Arrays.asList(3.1427, Arrays.asList("Paul Atreides", "Vladimir Harkonnen", "Thufir Hawat")));
+        prettyData.put("foo", Arrays.asList(3.1427, Arrays.asList("Paul Atreides", "Vladimir Harkonnen", "Thufir Hawat"), Map.of("rich", 1, "plain" ,false)));
         prettyData.put("atomic", Arrays.asList(false, true, null));
 
-        card.addRow("Syntax\nhighlighting\n&\npretty\nprinting",
+        card.addRow("Syntax\nhighlighting\n&\npretty\nprinting\n",
                 comparison(
                         Syntax.of(code, cfg -> cfg.lexerName("python").lineNumbers(true).startLine(1)),
                         new Pretty(prettyData, true, true)));
@@ -113,11 +115,11 @@ public class TestCardDemoMain extends MainCommand<CommandResult> {
                 - Block quotes
                 - Lists, and more...
                 """;
-        card.addRow("Markdown", comparison(
+        card.addRow("Markdown\n", comparison(
                 Text.fromMarkup("[cyan]" + mdExample),
                 new Markdown(mdExample)));
 
-        card.addRow("+more!",
+        card.addRow("+more!\n",
                 "Progress bars, columns, styled logging handler, tracebacks, etc...");
 
         console.println(card);
@@ -139,10 +141,11 @@ public class TestCardDemoMain extends MainCommand<CommandResult> {
         @Override
         public Iterable<?> richConsole(Console console, ConsoleOptions options) {
             List<Segment> segments = new ArrayList<>();
-            int maxWidth = options.getMaxWidth();
+            // Use options.maxWidth (which is the actual column width assigned by Table)
+            int width = options.getMaxWidth();
             for (int y = 0; y < 5; y++) {
-                for (int x = 0; x < maxWidth; x++) {
-                    double h = (double) x / maxWidth;
+                for (int x = 0; x < width; x++) {
+                    double h = (double) x / width;
                     double l = 0.1 + ((double) y / 5) * 0.7;
                     double l2 = l + 0.7 / 10;
                     int[] rgb1 = hslToRgb(h, l, 1.0);
@@ -154,6 +157,11 @@ public class TestCardDemoMain extends MainCommand<CommandResult> {
                 segments.add(Segment.line());
             }
             return segments;
+        }
+
+        @Override
+        public Measurement richMeasure(Console console, ConsoleOptions options) {
+            return new Measurement(8, options.getMaxWidth());
         }
     }
 

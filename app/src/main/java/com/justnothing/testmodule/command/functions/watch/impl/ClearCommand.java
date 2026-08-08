@@ -1,7 +1,7 @@
 package com.justnothing.testmodule.command.functions.watch.impl;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
-import com.justnothing.testmodule.command.framework.base.command.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
 import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.functions.watch.AbstractWatchCommand;
 import com.justnothing.testmodule.command.functions.watch.WatchManager;

@@ -2,8 +2,8 @@ package com.justnothing.testmodule.command.functions.agent.handlers;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import com.justnothing.testmodule.command.framework.base.protocol.CommandResult;
-import com.justnothing.testmodule.command.framework.base.protocol.SerializeKeyName;
+import com.justnothing.testmodule.command.framework.model.CommandResult;
+import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
 
 import java.util.HashMap;
 import java.util.Map;

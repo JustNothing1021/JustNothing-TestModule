@@ -1,10 +1,10 @@
 package com.justnothing.methodsclient.metadata;
 
-import com.justnothing.testmodule.command.framework.base.MainCommand;
-import com.justnothing.testmodule.command.framework.base.command.Cmd;
-import com.justnothing.testmodule.command.framework.base.command.CmdParam;
-import com.justnothing.testmodule.command.framework.base.command.CommandRouter;
-import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.model.MainCommand;
+import com.justnothing.testmodule.command.framework.annotation.Cmd;
+import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.framework.model.CommandRouter;
+import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.functions.alias.AliasMain;
 import com.justnothing.testmodule.command.functions.agent.AgentCliMain;
 import com.justnothing.testmodule.command.functions.bytecode.impl.BytecodeMain;

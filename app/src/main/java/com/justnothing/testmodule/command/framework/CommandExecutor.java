@@ -1,10 +1,10 @@
 package com.justnothing.testmodule.command.framework;
 
-import com.justnothing.testmodule.command.framework.base.MainCommand;
-import com.justnothing.testmodule.command.framework.base.command.Cmd;
-import com.justnothing.testmodule.command.framework.base.command.CommandRouter;
-import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
-import com.justnothing.testmodule.command.framework.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.framework.model.MainCommand;
+import com.justnothing.testmodule.command.framework.annotation.Cmd;
+import com.justnothing.testmodule.command.framework.model.CommandRouter;
+import com.justnothing.testmodule.command.framework.model.CommandRequest;
+import com.justnothing.testmodule.command.framework.model.CommandResult;
 
 import static com.justnothing.testmodule.constants.CommandServer.MAIN_MODULE_VER;
 
@@ -427,6 +427,7 @@ public class CommandExecutor {
                     CommandResult result = CommandRouter.getInstance().dispatch(context);
 
                     if (executionType == CommandType.USER_INTERFACE) {
+                        assert origOutput != null : "为用户界面返回 Json 的时候 OutputHandler 为 null???";
                         origOutput.println(result.toJson().toString());
                     }
 
@@ -473,14 +474,10 @@ public class CommandExecutor {
             try {
                 @SuppressWarnings("unchecked")
                 MainCommand<CommandResult> typedCmd = (MainCommand<CommandResult>) commandObj;
-                CommandRequest request = context.getRequest();
-                if (request == null) {
-                    // 无路由命令不需要 Request 对象（如 output_test 直接在 runMain 里处理）
-                }
-                CommandResult result = typedCmd.runMain(
-                        (CmdExecContext<CommandRequest>) context);
+                CommandResult result = typedCmd.runMain(context);
 
                 if (executionType == CommandType.USER_INTERFACE) {
+                    assert origOutput != null : "为用户界面返回 Json 的时候 OutputHandler 为 null???";
                     origOutput.println(result.toJson().toString());
                 }
 
@@ -654,22 +651,32 @@ public class CommandExecutor {
               watch                             - 监控字段或方法的变化
               native                            - 查看和调试Native代码
               system                            - 显示系统信息
-              profile                           - 性能分析
               bytecode                          - 查看和分析Java字节码 (未正式使用, 很可能实现不了)
               bsh                               - 通过BeanShell执行代码
               memory                            - 显示详细内存使用情况
               network                           - 进行网络调试
               packages                          - 列出已知包名
-              
+            
             娱乐性命令:
               did-you-know                      - 你知道吗?
 
-            测试类命令:
+            底层测试命令:
               output_test                       - 对命令行输出进行测试
               interactive_test                  - 对命令行交互进行测试
               anonclasstest                     - 针对匿名类生成的测试
               sandboxtest                       - 针对沙盒机制防御的测试
-              tui_test                          - 针对终端用户界面的测试
+            
+            终端优化测试命令:
+              richdemo                          - rich模块综合测试
+              testcarddemo                      - rich欢迎卡片测试
+              promptdemo                        - 询问专项测试
+              layoutdemo                        - 布局控件专项测试
+              livedemo                          - 动态渲染专项测试
+              syntaxdemo                        - 语法渲染专项测试
+              progressdemo                      - 进度条/旋转进度条专项测试
+              tabledemo                         - 表格专项测试
+              treedemo                          - 树形图专项测试
+              
             
             获取一个子命令的帮助:
               help <cmd_name>

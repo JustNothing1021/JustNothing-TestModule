@@ -3,8 +3,8 @@ package com.justnothing.testmodule.command.functions.agent.handlers;
 import android.net.LocalSocket;
 import android.net.LocalSocketAddress;
 
-import com.justnothing.testmodule.command.framework.base.protocol.CommandResult;
-import com.justnothing.testmodule.command.framework.base.protocol.GsonFactory;
+import com.justnothing.testmodule.command.framework.model.CommandResult;
+import com.justnothing.testmodule.command.framework.utils.GsonFactory;
 import com.justnothing.testmodule.command.framework.protocol.InteractiveProtocol;
 import com.justnothing.testmodule.hooks.agent.InspectionAgentHook;
 import com.justnothing.testmodule.utils.io.ShellExecutorProvider;

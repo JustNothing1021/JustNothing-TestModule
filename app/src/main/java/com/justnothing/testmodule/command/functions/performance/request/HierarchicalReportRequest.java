@@ -1,8 +1,8 @@
 package com.justnothing.testmodule.command.functions.performance.request;
 
-import com.justnothing.testmodule.command.framework.base.command.CmdParam;
+import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.functions.performance.PerformanceRequest;
-import com.justnothing.testmodule.command.framework.base.protocol.SerializeKeyName;
+import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
 import org.json.JSONException;
 import org.json.JSONObject;
 

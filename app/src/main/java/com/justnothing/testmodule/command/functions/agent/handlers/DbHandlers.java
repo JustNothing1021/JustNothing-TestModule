@@ -2,7 +2,7 @@ package com.justnothing.testmodule.command.functions.agent.handlers;
 
 import android.content.Context;
 
-import com.justnothing.testmodule.command.framework.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.framework.model.CommandResult;
 import com.justnothing.testmodule.constants.AgentResultTypes;
 
 import org.json.JSONObject;

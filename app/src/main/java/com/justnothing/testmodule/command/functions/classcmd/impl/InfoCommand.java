@@ -1,8 +1,8 @@
 package com.justnothing.testmodule.command.functions.classcmd.impl;
 
 
-import com.justnothing.testmodule.command.framework.base.IllegalCommandLineArgumentException;
-import com.justnothing.testmodule.command.framework.base.command.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.error.IllegalCommandLineArgumentException;
+import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
 import com.justnothing.testmodule.command.functions.classcmd.AbstractClassCommand;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandContext;
 import com.justnothing.testmodule.command.functions.classcmd.model.ClassInfo;

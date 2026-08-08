@@ -1,7 +1,7 @@
 package com.justnothing.testmodule.command.functions.bsh.impl;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
-import com.justnothing.testmodule.command.framework.base.protocol.CommandRequest;
+import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.functions.bsh.request.BshScriptListRequest;
 import com.justnothing.testmodule.command.functions.bsh.request.BshScriptShowRequest;
 import com.justnothing.testmodule.command.functions.bsh.request.BshVarsRequest;

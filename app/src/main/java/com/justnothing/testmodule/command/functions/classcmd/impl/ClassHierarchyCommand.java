@@ -1,8 +1,8 @@
 package com.justnothing.testmodule.command.functions.classcmd.impl;
 
-import com.justnothing.testmodule.command.framework.base.protocol.CommandResult;
+import com.justnothing.testmodule.command.framework.model.CommandResult;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandContext;
-import com.justnothing.testmodule.command.functions.classcmd.DirectCommand;
+import com.justnothing.testmodule.command.functions.classcmd.DirectClassCommand;
 import com.justnothing.testmodule.command.functions.classcmd.request.ClassHierarchyRequest;
 import com.justnothing.testmodule.command.functions.classcmd.response.ClassHierarchyResult;
 import com.justnothing.testmodule.command.framework.output.Colors;
@@ -15,7 +15,7 @@ import java.util.Collections;
 import java.util.List;
 
 
-public class ClassHierarchyCommand extends DirectCommand<ClassHierarchyRequest, ClassHierarchyResult> {
+public class ClassHierarchyCommand extends DirectClassCommand<ClassHierarchyRequest, ClassHierarchyResult> {
 
     private static final Logger logger = Logger.getLoggerForName("ClassHierarchyCommand");
 

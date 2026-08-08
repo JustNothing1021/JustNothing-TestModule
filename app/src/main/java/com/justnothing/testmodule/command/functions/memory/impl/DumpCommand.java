@@ -1,6 +1,6 @@
 package com.justnothing.testmodule.command.functions.memory.impl;
 
-import com.justnothing.testmodule.command.framework.base.command.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
 import com.justnothing.testmodule.command.functions.memory.DumpRequest;
 import com.justnothing.testmodule.command.functions.memory.DumpResult;
 import com.justnothing.testmodule.command.functions.memory.MemoryUtils;
