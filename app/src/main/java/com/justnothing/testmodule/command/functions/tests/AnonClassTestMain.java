@@ -16,7 +16,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import com.justnothing.testmodule.command.framework.annotation.Cmd;
 
-@Cmd(name = "anonclasstest", description = "匿名类生成诊断测试", defaultResultType = CommandResult.class)
+@Cmd(name = "anonclasstest", description = "匿名类生成诊断测试")
 public class AnonClassTestMain extends MainCommand<CommandResult> {
 
     public AnonClassTestMain() {
@@ -42,7 +42,7 @@ public class AnonClassTestMain extends MainCommand<CommandResult> {
     }
 
     @Override
-    public CommandResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
+    protected CommandResult executeInternal(CommandExecutor.CmdExecContext<CommandRequest<?>> context) throws Exception {
         String[] args = context.args();
         
         boolean quickMode = false;

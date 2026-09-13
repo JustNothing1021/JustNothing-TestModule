@@ -14,7 +14,9 @@ import com.justnothing.engine.eval.Value.NullValue;
 import com.justnothing.engine.eval.Value.VoidValue;
 import com.justnothing.testmodule.command.framework.output.ICommandOutputHandler;
 import com.justnothing.testmodule.command.framework.output.HookOutputHandler;
+import com.justnothing.testmodule.command.functions.hook.result.HookAddResult;
 import com.justnothing.testmodule.hooks.api.HookAPI;
+import com.justnothing.testmodule.hooks.api.LoadPackageInfo;
 import com.justnothing.testmodule.hooks.base.HookEntry;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
 import com.justnothing.testmodule.utils.data.DataBridge;
@@ -40,9 +42,6 @@ import com.justnothing.testmodule.hooks.api.HookParam;
 import com.justnothing.testmodule.hooks.api.MethodHook;
 import com.justnothing.testmodule.hooks.api.UnhookHandle;
 
-import de.robv.android.xposed.callbacks.XC_LoadPackage;
-import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam;
-
 public class HookManager {
     private static final String TAG = "HookManager";
 
@@ -53,7 +52,7 @@ public class HookManager {
     private static final ConcurrentHashMap<String, ICommandOutputHandler> errorHandlers = new ConcurrentHashMap<>();
 
 
-    private static XC_LoadPackage.LoadPackageParam currentLoadPackageParam;
+    private static LoadPackageInfo currentLoadPackageInfo;
     private static final List<String> imports = new ArrayList<>(Arrays.asList("java.lang.*", "java.util.*"));
 
     private static final Logger logger = Logger.getLoggerForName(TAG);
@@ -75,7 +74,7 @@ public class HookManager {
 
     public static void addHookBuiltIn(EvalContext context,
                                       HookParam methodHookParam,
-                                      LoadPackageParam loadPackageParam,
+                                      LoadPackageInfo loadPackageInfo,
                                       HookInfo hookInfo,
                                       String phase,
                                       AtomicBoolean returnValueSet
@@ -105,7 +104,7 @@ public class HookManager {
                 if (!args.isEmpty()) {
                     logger.warn("getLoadPackageParam() 不接受任何参数，忽略参数");
                 }
-                return Value.of(loadPackageParam);
+                return Value.of(loadPackageInfo);
             });
 
             context.addBuiltIn("getHookInfo", args -> {
@@ -147,15 +146,15 @@ public class HookManager {
             });
     }
 
-    public static void setLoadPackageParam(XC_LoadPackage.LoadPackageParam param) {
-        currentLoadPackageParam = param;
+    public static void setLoadPackageParam(LoadPackageInfo param) {
+        currentLoadPackageInfo = param;
     }
 
-    public static XC_LoadPackage.LoadPackageParam getLoadPackageParam() {
+    public static LoadPackageInfo getLoadPackageParam() {
         // 因为一个线程里边的LoadPackageParam不会变（虽然只是理论上，也有一个线程初始化多个包的情况）
         // 所以直接设置就行
-        if (currentLoadPackageParam == null) setLoadPackageParam(HookEntry.getLastLoadPackageParam());
-        return currentLoadPackageParam;
+        if (currentLoadPackageInfo == null) setLoadPackageParam(HookEntry.getLastLoadPackageInfo());
+        return currentLoadPackageInfo;
     }
 
     public static AddHookResult addHook(String className, String methodName, String signature,

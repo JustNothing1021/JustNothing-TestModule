@@ -1,11 +1,10 @@
 package com.justnothing.testmodule.command.functions.nativecmd.request;
 
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
+import com.justnothing.testmodule.command.framework.model.CommandResult;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
 
-@SerializeKeyName("native:list")
-public class NativeListRequest extends CommandRequest {
+public class NativeListRequest extends CommandRequest<CommandResult> {
 
     @CmdParam(name = "pattern", required = false, description = "过滤模式")
     private String pattern;

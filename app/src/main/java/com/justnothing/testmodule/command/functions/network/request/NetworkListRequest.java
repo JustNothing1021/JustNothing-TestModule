@@ -2,12 +2,9 @@ package com.justnothing.testmodule.command.functions.network.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.justnothing.testmodule.command.framework.model.CommandResult;
 
-@SerializeKeyName("network:list")
-public class NetworkListRequest extends CommandRequest {
+public class NetworkListRequest extends CommandRequest<CommandResult> {
 
     @CmdParam(
         name = "--method",
@@ -53,24 +50,4 @@ public class NetworkListRequest extends CommandRequest {
 
     public int getLimit() { return limit; }
     public void setLimit(int limit) { this.limit = limit; }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        if (method != null) obj.put("method", method);
-        if (host != null) obj.put("host", host);
-        if (statusFilter != null) obj.put("statusFilter", statusFilter);
-        obj.put("limit", limit);
-        return obj;
-    }
-
-    @Override
-    public NetworkListRequest fromJson(JSONObject obj) {
-        setRequestId(obj.optString("requestId"));
-        setMethod(obj.optString("method", null));
-        setHost(obj.optString("host", null));
-        setStatusFilter(obj.optString("statusFilter", null));
-        setLimit(obj.optInt("limit", 20));
-        return this;
-    }
 }

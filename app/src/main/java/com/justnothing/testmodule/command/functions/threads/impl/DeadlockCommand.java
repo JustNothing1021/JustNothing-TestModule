@@ -6,9 +6,12 @@ import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.functions.threads.AbstractThreadsCommand;
 import com.justnothing.testmodule.command.functions.threads.request.ThreadDeadlockRequest;
 import com.justnothing.testmodule.command.functions.threads.response.ThreadDeadlockResult;
+import com.justnothing.testmodule.command.functions.threads.response.ThreadDetail;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -63,6 +66,8 @@ public class DeadlockCommand extends AbstractThreadsCommand<ThreadDeadlockReques
         printStateCount(context, " NEW", newStateCount, Colors.CYAN);
         context.println("");
 
+        List<ThreadDetail> blockedThreads = new ArrayList<>();
+
         if (blockedCount > 0) {
             context.println("===== 可能的死锁线程 =====", Colors.CYAN);
             context.println("");
@@ -94,9 +99,12 @@ public class DeadlockCommand extends AbstractThreadsCommand<ThreadDeadlockReques
                         context.println("");
                         for (StackTraceElement element : stackTrace) {
                             context.print("    ", Colors.DEFAULT);
+                            context.println(element.toString(), Colors.DEFAULT);
                         }
                     }
                     context.println("");
+
+                    blockedThreads.add(ThreadDetail.of(thread, stackTrace, true));
                 }
             }
         } else {
@@ -122,8 +130,10 @@ public class DeadlockCommand extends AbstractThreadsCommand<ThreadDeadlockReques
         logger.info("线程状态分析完成, 发现 " + blockedCount + " 个BLOCKED线程");
 
         ThreadDeadlockResult result = new ThreadDeadlockResult();
+        result.setTimestamp(System.currentTimeMillis());
         result.setBlockedThreadCount(blockedCount);
         result.setHasDeadlock(blockedCount > 0);
+        result.setBlockedThreads(blockedThreads);
 
         return result;
     }

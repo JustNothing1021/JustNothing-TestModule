@@ -2,12 +2,9 @@ package com.justnothing.testmodule.command.functions.performance.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.functions.performance.PerformanceRequest;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.justnothing.testmodule.command.functions.performance.response.SampleResult;
 
-@SerializeKeyName("perf:sample:start")
-public class SampleStartRequest extends PerformanceRequest {
+public class SampleStartRequest extends PerformanceRequest<SampleResult> {
 
     @CmdParam(
         name = "rate",
@@ -35,20 +32,4 @@ public class SampleStartRequest extends PerformanceRequest {
 
     public String getExclude() { return exclude; }
     public void setExclude(String exclude) { this.exclude = exclude; }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        obj.put("rate", rate);
-        if (exclude != null) obj.put("exclude", exclude);
-        return obj;
-    }
-
-    @Override
-    public SampleStartRequest fromJson(JSONObject obj) {
-        setRequestId(obj.optString("requestId"));
-        setRate(obj.optInt("rate", 100));
-        setExclude(obj.optString("exclude", null));
-        return this;
-    }
 }

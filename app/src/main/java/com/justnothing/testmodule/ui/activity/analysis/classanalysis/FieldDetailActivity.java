@@ -39,7 +39,6 @@ public class FieldDetailActivity extends AppCompatActivity {
     private TextView tvValueHash;
     private ProgressBar progressBar;
     private EditText etValueExpression;
-    private EditText etValueTypeHint;
     
     private String className;
     private String fieldName;
@@ -76,7 +75,6 @@ public class FieldDetailActivity extends AppCompatActivity {
         tvValueHash = findViewById(R.id.tv_value_hash);
         progressBar = findViewById(R.id.progress_bar);
         etValueExpression = findViewById(R.id.et_value_expression);
-        etValueTypeHint = findViewById(R.id.et_value_type_hint);
         
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
@@ -202,11 +200,7 @@ public class FieldDetailActivity extends AppCompatActivity {
             return;
         }
         
-        String valueTypeHint = etValueTypeHint.getText() != null ? 
-            etValueTypeHint.getText().toString().trim() : null;
-        
-        viewModel.setFieldValue(className, fieldName, targetInstance, valueExpression, 
-                               valueTypeHint, isStatic);
+        viewModel.setFieldValue(className, fieldName, targetInstance, valueExpression, isStatic);
     }
     
     @Override

@@ -3,8 +3,13 @@ package com.justnothing.testmodule.command.functions.threads.response;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class ThreadListResult extends ThreadCommandResult {
 
+    @Expose @SerializedName("timestamp")
+    private long timestamp;
     @Expose @SerializedName("totalThreadCount")
     private int totalThreadCount;
     @Expose @SerializedName("blockedCount")
@@ -19,10 +24,19 @@ public class ThreadListResult extends ThreadCommandResult {
     private int terminatedCount;
     @Expose @SerializedName("newCount")
     private int newCount;
+    @Expose @SerializedName("threadDetails")
+    private List<ThreadDetail> threadDetails = new ArrayList<>();
 
     public ThreadListResult() {
         super();
     }
+
+    public long getTimestamp() { return timestamp; }
+    public void setTimestamp(long timestamp) { this.timestamp = timestamp; }
+
+    public List<ThreadDetail> getThreadDetails() { return threadDetails; }
+    public void setThreadDetails(List<ThreadDetail> threadDetails) { this.threadDetails = threadDetails; }
+    public void addThreadDetail(ThreadDetail detail) { this.threadDetails.add(detail); }
 
     public int getTotalThreadCount() { return totalThreadCount; }
     public void setTotalThreadCount(int totalThreadCount) { this.totalThreadCount = totalThreadCount; }

@@ -1,11 +1,10 @@
 package com.justnothing.testmodule.command.functions.nativecmd.request;
 
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
+import com.justnothing.testmodule.command.framework.model.CommandResult;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
 
-@SerializeKeyName("native:symbols")
-public class NativeSymbolsRequest extends CommandRequest {
+public class NativeSymbolsRequest extends CommandRequest<CommandResult> {
 
     @CmdParam(name = "libName", required = true, description = "库名")
     private String libName;

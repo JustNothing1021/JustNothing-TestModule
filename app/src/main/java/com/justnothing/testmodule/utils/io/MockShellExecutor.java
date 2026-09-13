@@ -18,7 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *   MockShellExecutor mock = new MockShellExecutor();
  *   mock.mockCommand("pm list packages",
  *       new ProcessResult(0, "package:com.example.app\n", ""));
- *   mock.execute("pm list packages"); // 返回预设结果
+ *   mock.executeWithResult("pm list packages"); // 返回预设结果
  * </pre>
  */
 public class MockShellExecutor implements ShellExecutor {

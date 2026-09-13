@@ -1,11 +1,10 @@
 package com.justnothing.testmodule.command.functions.bytecode.request;
 
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.functions.bytecode.response.BytecodeResult;
 
-@SerializeKeyName("bytecode:disasm")
-public class BytecodeDisasmRequest extends CommandRequest {
+public class BytecodeDisasmRequest extends CommandRequest<BytecodeResult> {
 
     @CmdParam(
         name = "className",

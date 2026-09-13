@@ -19,7 +19,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * <pre>
  *   // 获取当前最佳执行器
  *   ShellExecutor shell = ShellExecutorProvider.get();
- *   ProcessResult result = shell.execute("pm list packages");
+ *   ProcessResult result = shell.executeWithResult("pm list packages");
  *
  *   // 测试时强制使用 Mock
  *   MockShellExecutor mock = new MockShellExecutor();

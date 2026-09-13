@@ -14,15 +14,16 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 
-public class BshQueryCommand extends AbstractBeanShellCommand<CommandRequest> {
+public class BshQueryCommand extends AbstractBeanShellCommand<CommandRequest<?>> {
 
+    @SuppressWarnings("unchecked")
     public BshQueryCommand() {
-        super("bsh query", CommandRequest.class);
+        super("bsh query", (Class) CommandRequest.class);
     }
 
     @Override
-    protected BeanShellResult executeInternal(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
-        CommandRequest request = context.getRequest();
+    protected BeanShellResult executeInternal(CommandExecutor.CmdExecContext<CommandRequest<?>> context) throws Exception {
+        CommandRequest<?> request = context.getRequest();
 
         if (request instanceof BshVarsRequest req) {
             return handleVars(req, context);
@@ -35,7 +36,7 @@ public class BshQueryCommand extends AbstractBeanShellCommand<CommandRequest> {
         return buildErrorResult("不支持的请求类型: " + request.getClass().getSimpleName());
     }
 
-    public BeanShellResult handleVars(BshVarsRequest request, CommandExecutor.CmdExecContext<CommandRequest> context) {
+    public BeanShellResult handleVars(BshVarsRequest request, CommandExecutor.CmdExecContext<CommandRequest<?>> context) {
         ClassLoader classLoader = context.classLoader();
         String targetPackage = context.targetPackage();
 
@@ -59,7 +60,7 @@ public class BshQueryCommand extends AbstractBeanShellCommand<CommandRequest> {
         return buildVariableResult("bvars", classLoader);
     }
 
-    public BeanShellResult handleScriptList(BshScriptListRequest request, CommandExecutor.CmdExecContext<CommandRequest> context) {
+    public BeanShellResult handleScriptList(BshScriptListRequest request, CommandExecutor.CmdExecContext<CommandRequest<?>> context) {
         File scriptsDir = DataBridge.getScriptsDirectory();
         if (!scriptsDir.exists()) {
             context.println("脚本目录不存在: " + scriptsDir.getAbsolutePath(), Colors.RED);
@@ -98,7 +99,7 @@ public class BshQueryCommand extends AbstractBeanShellCommand<CommandRequest> {
         return buildSuccessResult("bscript:list", scriptFiles.length + " 个脚本");
     }
 
-    public BeanShellResult handleScriptShow(BshScriptShowRequest request, CommandExecutor.CmdExecContext<CommandRequest> context) throws IOException {
+    public BeanShellResult handleScriptShow(BshScriptShowRequest request, CommandExecutor.CmdExecContext<CommandRequest<?>> context) throws IOException {
         String scriptName = request.getName();
         File scriptFile = getBeanShellScriptFile(scriptName);
 

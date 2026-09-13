@@ -2,12 +2,9 @@ package com.justnothing.testmodule.command.functions.performance.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.functions.performance.PerformanceRequest;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.justnothing.testmodule.command.functions.performance.response.SystraceResult;
 
-@SerializeKeyName("perf:systrace:start")
-public class SystraceStartRequest extends PerformanceRequest {
+public class SystraceStartRequest extends PerformanceRequest<SystraceResult> {
 
     @CmdParam(
         name = "duration",
@@ -35,20 +32,4 @@ public class SystraceStartRequest extends PerformanceRequest {
 
     public String getCategories() { return categories; }
     public void setCategories(String categories) { this.categories = categories; }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        if (duration != null) obj.put("duration", duration);
-        if (categories != null) obj.put("categories", categories);
-        return obj;
-    }
-
-    @Override
-    public SystraceStartRequest fromJson(JSONObject obj) throws org.json.JSONException {
-        setRequestId(obj.optString("requestId"));
-        if (obj.has("duration")) setDuration(obj.getInt("duration"));
-        setCategories(obj.optString("categories", null));
-        return this;
-    }
 }

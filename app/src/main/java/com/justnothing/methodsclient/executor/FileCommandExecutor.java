@@ -10,7 +10,8 @@ import com.justnothing.testmodule.constants.AppEnvironment;
 import com.justnothing.testmodule.constants.FileDirectory;
 import com.justnothing.testmodule.hooks.base.HookEntry;
 import com.justnothing.testmodule.utils.io.IOManager;
-import com.justnothing.testmodule.utils.io.RootProcessPool;
+import com.justnothing.testmodule.utils.io.ShellExecutionException;
+import com.justnothing.testmodule.utils.io.ShellExecutorProvider;
 
 import android.os.Process;
 
@@ -41,7 +42,7 @@ public class FileCommandExecutor {
      * @param command 要执行的命令
      * @return 执行上下文（包含临时目录路径、输入文件、输出文件），若失败则返回 null
      */
-    private static ExecutionContext prepareExecution(String command) throws IOException, InterruptedException {
+    private static ExecutionContext prepareExecution(String command) throws IOException {
         String baseDataDir = isInAppProcess ? FileDirectory.METHODS_DATA_DIR : FileDirectory.SDCARD_PATH;
         String sessionDir = baseDataDir + "/" + FileDirectory.EXECUTE_SESSIONS_DIR_NAME;
         String tmpDir = sessionDir + "/" + FileDirectory.SESSION_PREFIX + System.nanoTime() + "_" + Process.myPid();
@@ -49,52 +50,58 @@ public class FileCommandExecutor {
         String outputFile = tmpDir + "/" + FileDirectory.OUTPUT_FILE_NAME;
 
         // 创建会话目录和临时目录
-        if (isInAppProcess) {
-            IOManager.ProcessResult mkdirResult = RootProcessPool.executeCommand("mkdir -p " + sessionDir, 5000, true);
-            if (!mkdirResult.isSuccess()) {
-                logger.error("创建会话目录失败: " + mkdirResult.stdout());
-                return null;
+        try {
+            if (isInAppProcess) {
+                IOManager.ProcessResult mkdirResult = ShellExecutorProvider.get().execute("mkdir -p " + sessionDir, 5000);
+                if (!mkdirResult.isSuccess()) {
+                    logger.error("创建会话目录失败: " + mkdirResult.stdout());
+                    return null;
+                }
+                IOManager.ProcessResult mkdirTmpResult = ShellExecutorProvider.get().execute("mkdir -p " + tmpDir, 5000);
+                if (!mkdirTmpResult.isSuccess()) {
+                    logger.error("创建临时目录失败: " + mkdirTmpResult.stdout());
+                    cleanupTempDir(tmpDir);
+                    return null;
+                }
+            } else {
+                File sessionDirFile = new File(sessionDir);
+                if (!sessionDirFile.exists() && !IOManager.createDirectory(sessionDirFile)) {
+                    logger.error("创建会话目录失败: " + sessionDir);
+                    return null;
+                }
+                File tmpDirFile = new File(tmpDir);
+                if (!tmpDirFile.exists() && !IOManager.createDirectory(tmpDirFile)) {
+                    logger.error("创建临时目录失败: " + tmpDir);
+                    cleanupTempDir(tmpDir);
+                    return null;
+                }
+                // 设置临时目录权限为 777
+                IOManager.ProcessResult chmodResult = ShellExecutorProvider.get().execute("chmod 777 " + tmpDir, 5000);
+                if (!chmodResult.isSuccess()) {
+                    logger.warn("设置临时目录权限失败: " + tmpDir);
+                }
             }
-            IOManager.ProcessResult mkdirTmpResult = RootProcessPool.executeCommand("mkdir -p " + tmpDir, 5000, true);
-            if (!mkdirTmpResult.isSuccess()) {
-                logger.error("创建临时目录失败: " + mkdirTmpResult.stdout());
-                cleanupTempDir(tmpDir);
-                return null;
-            }
-        } else {
-            File sessionDirFile = new File(sessionDir);
-            if (!sessionDirFile.exists() && !IOManager.createDirectory(sessionDirFile)) {
-                logger.error("创建会话目录失败: " + sessionDir);
-                return null;
-            }
-            File tmpDirFile = new File(tmpDir);
-            if (!tmpDirFile.exists() && !IOManager.createDirectory(tmpDirFile)) {
-                logger.error("创建临时目录失败: " + tmpDir);
-                cleanupTempDir(tmpDir);
-                return null;
-            }
-            // 设置临时目录权限为 777
-            IOManager.ProcessResult chmodResult = RootProcessPool.executeCommand("chmod 777 " + tmpDir, 5000, true);
-            if (!chmodResult.isSuccess()) {
-                logger.warn("设置临时目录权限失败: " + tmpDir);
-            }
-        }
 
-        // 写入输入文件
-        IOManager.writeFile(inputFile, command);
-        File input = new File(inputFile);
-        if (!input.exists() || input.length() == 0) {
-            logger.error("无法创建输入文件");
+            // 写入输入文件
+            IOManager.writeFile(inputFile, command);
+            File input = new File(inputFile);
+            if (!input.exists() || input.length() == 0) {
+                logger.error("无法创建输入文件");
+                cleanupTempDir(tmpDir);
+                return null;
+            }
+
+            // 设置输入文件权限（仅在非 app_process 环境需要）
+            if (!isInAppProcess) {
+                IOManager.ProcessResult chmodResult = ShellExecutorProvider.get().execute("chmod 644 " + inputFile, 5000);
+                if (!chmodResult.isSuccess()) {
+                    logger.warn("设置输入文件权限失败: " + inputFile);
+                }
+            }
+        } catch (ShellExecutionException e) {
+            logger.error("Shell命令执行失败: " + e.getMessage());
             cleanupTempDir(tmpDir);
             return null;
-        }
-
-        // 设置输入文件权限（仅在非 app_process 环境需要）
-        if (!isInAppProcess) {
-            IOManager.ProcessResult chmodResult = RootProcessPool.executeCommand("chmod 644 " + inputFile, 5000, true);
-            if (!chmodResult.isSuccess()) {
-                logger.warn("设置输入文件权限失败: " + inputFile);
-            }
         }
 
         logger.info("文件模式执行，命令长度: " + command.length());
@@ -109,15 +116,20 @@ public class FileCommandExecutor {
      * @param outputFile 输出文件路径
      * @return 输出文件的内容，如果失败则返回 null
      */
-    private static String callServiceAndGetOutput(String inputFile, String outputFile) throws IOException, InterruptedException {
+    private static String callServiceAndGetOutput(String inputFile, String outputFile) throws IOException {
         String[] serviceCmd = new String[]{
                 "service", "call", "justnothing_xposed_method_cli",
                 String.valueOf(TRANSACTION_EXECUTE_FILE), "s16", "FILE:" + inputFile + ":" + outputFile
         };
         String serviceCommand = String.join(" ", serviceCmd);
-        IOManager.ProcessResult serviceResult = RootProcessPool.executeCommand(serviceCommand, 60000, false);
-        if (!serviceResult.isSuccess()) {
-            logger.error("服务调用失败，退出码: " + serviceResult.exitCode() + ", 输出: " + serviceResult.stdout());
+        try {
+            IOManager.ProcessResult serviceResult = ShellExecutorProvider.get().execute(serviceCommand, 60000);
+            if (!serviceResult.isSuccess()) {
+                logger.error("服务调用失败，退出码: " + serviceResult.exitCode() + ", 输出: " + serviceResult.stdout());
+                return null;
+            }
+        } catch (ShellExecutionException e) {
+            logger.error("服务调用执行异常: " + e.getMessage());
             return null;
         }
 
@@ -157,7 +169,7 @@ public class FileCommandExecutor {
      * @return ExecutionResult 包含执行状态和输出内容
      */
     @SuppressWarnings("unused")
-    public static ExecutionResult executeFileWithOutput(String command) {
+    public static ExecutionResult executeFileWithOutput(String command) throws IOException, InterruptedException {
         long startTime = System.currentTimeMillis();
         ExecutionContext ctx = null;
         boolean success = false;
@@ -180,10 +192,6 @@ public class FileCommandExecutor {
                 error = "执行失败（服务调用或输出文件读取失败）";
             }
             return new ExecutionResult(success, output, error);
-        } catch (IOException | InterruptedException e) {
-            logger.error("文件模式命令执行异常", e);
-            error = "执行异常: " + e.getMessage();
-            return new ExecutionResult(false, "", error);
         } finally {
             if (ctx != null) {
                 cleanupTempDir(ctx.tmpDir);
@@ -206,7 +214,7 @@ public class FileCommandExecutor {
             ctx = prepareExecution(command);
             if (ctx == null) return false;
             outputContent = callServiceAndGetOutput(ctx.inputFile, ctx.outputFile);
-        } catch (InterruptedException | IOException e) {
+        } catch (Exception e) {
             logger.error("文件模式命令执行失败", e);
         }
 
@@ -237,7 +245,7 @@ public class FileCommandExecutor {
 
         try {
             Thread.sleep(200);
-            IOManager.ProcessResult result = RootProcessPool.executeCommand("rm -rf " + dir, 5000, false);
+            IOManager.ProcessResult result = ShellExecutorProvider.get().execute("rm -rf " + dir, 5000);
             if (result.isSuccess()) {
                 logger.debug("清理临时目录: " + dir);
             } else {
@@ -273,7 +281,7 @@ public class FileCommandExecutor {
                     "i32", String.valueOf(fixPermissions ? 1 : 0)};
 
             String serviceCommand = String.join(" ", serviceCmd);
-            IOManager.ProcessResult serviceResult = RootProcessPool.executeCommand(serviceCommand, 15000, false);
+            IOManager.ProcessResult serviceResult = ShellExecutorProvider.get().execute(serviceCommand, 15000);
 
             if (serviceResult.isSuccess()) {
                 logger.info("写入Hook数据请求成功, 修复权限: " + fixPermissions + ", 输出: " + serviceResult.stdout());

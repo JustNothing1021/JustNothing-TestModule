@@ -4,7 +4,6 @@ import android.content.Context;
 import android.content.SharedPreferences;
 
 import com.justnothing.testmodule.command.framework.model.CommandResult;
-import com.justnothing.testmodule.constants.AgentResultTypes;
 
 import org.json.JSONObject;
 
@@ -21,7 +20,6 @@ public class SpReadHandler extends AgentCommandHandler {
     @Override
     public CommandResult handle(JSONObject params, Context context) throws Exception {
         SpReadResult result = new SpReadResult();
-        result.setResultType(AgentResultTypes.SP_READ);
 
         String spName = params.getString("spName");
         String keyFilter = params.has("keyFilter") ? params.optString("keyFilter", null) : null;

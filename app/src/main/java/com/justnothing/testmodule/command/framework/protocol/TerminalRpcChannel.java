@@ -1,55 +1,37 @@
 package com.justnothing.testmodule.command.framework.protocol;
 
-import com.justnothing.testmodule.command.framework.utils.GsonFactory;
-import com.justnothing.testmodule.utils.logging.Logger;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
+import com.justnothing.testmodule.utils.logging.Logger;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
- * JSON-RPC 通道，运行在 InteractiveProtocol TYPE_TERMINAL_RPC 帧之上。
+ * JSON-RPC 通道（终端域专用扩展）。
  *
- * <p>所有 Terminal 相关的通信（输出、输入、raw mode 切换、尺寸查询等）
- * 统一走这一个消息类型，通过 JSON-RPC method 分发，无需为每个功能新增协议类型。</p>
+ * <p>在 {@link RpcChannel} 基础上增加终端 I/O 能力（method 见 {@link ProtocolMethods}）：</p>
+ * <ul>
+ *   <li>{@link ProtocolMethods#TERM_OUTPUT} 通知 → RpcOutputStream 缓冲输出</li>
+ *   <li>{@link ProtocolMethods#TERM_INPUT} 通知 → 喂入 Lambda InputStream（inputQueue）</li>
+ *   <li>{@link ProtocolMethods#TERM_ENTER_RAW_MODE} / {@link ProtocolMethods#TERM_EXIT_RAW_MODE} /
+ *       {@link ProtocolMethods#TERM_QUERY_SIZE} / {@link ProtocolMethods#TERM_SIZE_UPDATE}
+ *       （由 RemoteServerTerminal/RemoteClientTerminal 注册）</li>
+ * </ul>
  *
- * <h3>RPC Methods 约定：</h3>
- * <table>
- *   <tr><th>Method</th><th>Direction</th><th>Description</th></tr>
- *   <tr><td>output</td><td>S→C</td><td>通知：终端输出数据</td></tr>
- *   <tr><td>input</td><td>C→S</td><td>通知：终端输入字节</td></tr>
- *   <tr><td>sizeUpdate</td><td>C→S</td><td>通知：终端尺寸变更</td></tr>
- *   <tr><td>querySize</td><td>S→C</td><td>请求：查询终端尺寸</td></tr>
- *   <tr><td>enterRawMode</td><td>S→C</td><td>通知：进入 raw mode</td></tr>
- *   <tr><td>exitRawMode</td><td>S→C</td><td>通知：退出 raw mode</td></tr>
- *   <tr><td>promptRequest</td><td>S→C</td><td>请求：交互式提示</td></tr>
- * </table>
+ * <p>统一走 {@link InteractiveProtocol#TYPE_RPC} 帧，命令域 / 终端域 / 系统域 method 共用一个通道实例。</p>
  */
-public final class TerminalRpcChannel {
+public class TerminalRpcChannel extends RpcChannel {
 
     private static final Logger logger = Logger.getLoggerForName("TerminalRpcChannel");
-
-    private final OutputStream socketOutput;
-    private final Object writeLock;
-
-    // ─── Notification / Request handler registries ──────────────────
-    private final Map<String, List<Consumer<JsonObject>>> notificationHandlers = new ConcurrentHashMap<>();
-    private final Map<String, BiConsumer<Integer, JsonObject>> requestHandlers = new ConcurrentHashMap<>();
-
-    // ─── Pending RPC calls (id → future) ───────────────────────────
-    private final Map<Integer, CompletableFuture<JsonObject>> pendingCalls = new ConcurrentHashMap<>();
-    private final AtomicInteger nextCallId = new AtomicInteger(0);
 
     // ─── Lambda InputStream 的数据队列 ─────────────────────────────
     private final BlockingQueue<Integer> inputQueue = new LinkedBlockingQueue<>();
@@ -57,19 +39,15 @@ public final class TerminalRpcChannel {
     // ─── Lambda OutputStream 实例（由 createOutputStream 创建） ──────
     private RpcOutputStream rpcOutputStream;
 
-    // ─── 关闭状态 ───────────────────────────────────────────────────
-    private volatile boolean closed = false;
-
-    // =====================================================================
-    // Constructor
-    // =====================================================================
-
     public TerminalRpcChannel(OutputStream socketOutput, Object writeLock) {
-        this.socketOutput = socketOutput;
-        this.writeLock = writeLock;
+        this(socketOutput, writeLock, InteractiveProtocol.TYPE_RPC);
+    }
 
-        // 默认注册 "input" 通知 → 喂入 inputQueue
-        onNotification("input", params -> {
+    public TerminalRpcChannel(OutputStream socketOutput, Object writeLock, byte frameType) {
+        super(socketOutput, writeLock, frameType);
+
+        // 默认注册 input 通知 → 喂入 inputQueue
+        onNotification(ProtocolMethods.TERM_INPUT, params -> {
             if (params != null && params.has("bytes")) {
                 JsonArray bytes = params.getAsJsonArray("bytes");
                 for (int i = 0; i < bytes.size(); i++) {
@@ -77,161 +55,6 @@ public final class TerminalRpcChannel {
                 }
             }
         });
-    }
-
-    // =====================================================================
-    // Send RPC messages
-    // =====================================================================
-
-    /**
-     * 发送通知（不期望响应）
-     */
-    public void sendNotification(String method, JsonObject params) {
-        if (closed) return;
-        JsonObject msg = new JsonObject();
-        msg.addProperty("jsonrpc", "2.0");
-        msg.addProperty("method", method);
-        if (params != null) msg.add("params", params);
-        sendRpcMessage(msg);
-    }
-
-    /**
-     * 发送请求并等待响应（带超时）
-     *
-     * @param method    RPC 方法名
-     * @param params    参数
-     * @param timeoutMs 超时毫秒
-     * @return 响应结果，超时或失败返回 null
-     */
-    public JsonObject call(String method, JsonObject params, long timeoutMs) {
-        if (closed) return null;
-        int id = nextCallId.incrementAndGet();
-        JsonObject msg = new JsonObject();
-        msg.addProperty("jsonrpc", "2.0");
-        msg.addProperty("method", method);
-        msg.addProperty("id", id);
-        if (params != null) msg.add("params", params);
-
-        CompletableFuture<JsonObject> future = new CompletableFuture<>();
-        pendingCalls.put(id, future);
-        sendRpcMessage(msg);
-
-        try {
-            return future.get(timeoutMs, TimeUnit.MILLISECONDS);
-        } catch (TimeoutException e) {
-            logger.warn("RPC call 超时: " + method + " (id=" + id + ", " + timeoutMs + "ms)");
-        } catch (Exception e) {
-            logger.error("RPC call 失败: " + method, e);
-        } finally {
-            pendingCalls.remove(id);
-        }
-        return null;
-    }
-
-    /**
-     * 发送响应给请求方
-     */
-    public void sendResponse(int id, JsonObject result) {
-        if (closed) return;
-        JsonObject msg = new JsonObject();
-        msg.addProperty("jsonrpc", "2.0");
-        msg.addProperty("id", id);
-        msg.add("result", result != null ? result : new JsonObject());
-        sendRpcMessage(msg);
-    }
-
-    /**
-     * 发送错误响应
-     */
-    public void sendError(int id, int code, String message) {
-        if (closed) return;
-        JsonObject msg = new JsonObject();
-        msg.addProperty("jsonrpc", "2.0");
-        msg.addProperty("id", id);
-        JsonObject error = new JsonObject();
-        error.addProperty("code", code);
-        error.addProperty("message", message);
-        msg.add("error", error);
-        sendRpcMessage(msg);
-    }
-
-    private void sendRpcMessage(JsonObject msg) {
-        try {
-            byte[] data = GsonFactory.getInstance().toJson(msg).getBytes(StandardCharsets.UTF_8);
-            synchronized (writeLock) {
-                InteractiveProtocol.writeMessage(socketOutput,
-                        InteractiveProtocol.TYPE_TERMINAL_RPC, data);
-            }
-        } catch (IOException e) {
-            logger.error("发送 RPC 消息失败: " + msg.get("method"), e);
-        }
-    }
-
-    // =====================================================================
-    // Receive RPC messages
-    // =====================================================================
-
-    /**
-     * 处理收到的 TYPE_TERMINAL_RPC 帧数据（由 SocketClientHandler / SocketStreamReader 调用）
-     */
-    public void handleMessage(byte[] data) {
-        if (data == null || data.length == 0) return;
-        try {
-            JsonObject msg = JsonParser.parseString(new String(data, StandardCharsets.UTF_8)).getAsJsonObject();
-
-            if (msg.has("method")) {
-                String method = msg.get("method").getAsString();
-                JsonObject params = msg.has("params") ? msg.getAsJsonObject("params") : null;
-
-                if (msg.has("id")) {
-                    // 这是请求（需要响应）
-                    int id = msg.get("id").getAsInt();
-                    BiConsumer<Integer, JsonObject> handler = requestHandlers.get(method);
-                    if (handler != null) {
-                        handler.accept(id, params);
-                    } else {
-                        sendError(id, -32601, "Method not found: " + method);
-                    }
-                } else {
-                    // 这是通知（无需响应）
-                    List<Consumer<JsonObject>> handlers = notificationHandlers.get(method);
-                    if (handlers != null) {
-                        for (Consumer<JsonObject> h : handlers) {
-                            h.accept(params);
-                        }
-                    }
-                }
-            } else if (msg.has("result")) {
-                // 这是响应
-                int id = msg.get("id").getAsInt();
-                CompletableFuture<JsonObject> future = pendingCalls.remove(id);
-                if (future != null) {
-                    future.complete(msg.getAsJsonObject("result"));
-                }
-            } else if (msg.has("error")) {
-                // 这是错误响应
-                int id = msg.get("id").getAsInt();
-                CompletableFuture<JsonObject> future = pendingCalls.remove(id);
-                if (future != null) {
-                    future.completeExceptionally(new RuntimeException(
-                            msg.getAsJsonObject("error").toString()));
-                }
-            }
-        } catch (Exception e) {
-            logger.error("处理 RPC 消息失败", e);
-        }
-    }
-
-    // =====================================================================
-    // Handler registration
-    // =====================================================================
-
-    public void onNotification(String method, Consumer<JsonObject> handler) {
-        notificationHandlers.computeIfAbsent(method, k -> new CopyOnWriteArrayList<>()).add(handler);
-    }
-
-    public void onRequest(String method, BiConsumer<Integer, JsonObject> handler) {
-        requestHandlers.put(method, handler);
     }
 
     // =====================================================================
@@ -243,11 +66,10 @@ public final class TerminalRpcChannel {
      *
      * <p>Terminal.writer() 写出的数据经过此流，对 Terminal 完全透明。</p>
      *
-     * <p>不使用自动 flush 定时器，因为 JLine 的 FilteringOutputStream
-     * 会对每个字节单独调用 write(int b)，定时器可能在两次 write 之间
-     * 把部分 ANSI 转义序列单独 flush 出去，导致乱码。
-     * FilteringOutputStream 在每个 write() 结束后会调用 flush()，
-     * 因此数据不会积压。</p>
+     * <p>flush 后不会立即发送：数据先进入 {@link RpcOutputStream} 的合并窗口，
+     * 窗口内到达的数据会合成一帧；距上次发送超过空闲阈值时立即发送，
+     * 以保持交互式输出零延迟。会话收尾必须调用 {@link RpcOutputStream#flushNow()}
+     * 同步排出，避免最后一批输出晚于 cmd.done 到达。</p>
      */
     public OutputStream createOutputStream() {
         if (rpcOutputStream != null) {
@@ -315,46 +137,28 @@ public final class TerminalRpcChannel {
     }
 
     /**
-     * 获取 RpcOutputStream 实例（用于设置 autoFlush 等选项）
+     * 获取 RpcOutputStream 实例
      */
     public RpcOutputStream getRpcOutputStream() {
         return rpcOutputStream;
-    }
-
-    /**
-     * 直接向 inputQueue 喂入字节（供兼容旧协议的桥接使用）
-     */
-    public void feedInput(byte[] data) {
-        if (data != null) {
-            for (byte b : data) {
-                inputQueue.offer((int) b & 0xFF);
-            }
-        }
     }
 
     // =====================================================================
     // Lifecycle
     // =====================================================================
 
+    @Override
     public void close() {
-        closed = true;
-        // 最后一次 flush
+        // 先同步排出剩余输出：必须早于 super.close()（后者会把通道置为 closed，
+        // 之后 sendNotification 会直接丢弃数据）。
         if (rpcOutputStream != null) {
             try {
-                rpcOutputStream.flush();
-            } catch (IOException ignored) {}
+                rpcOutputStream.flushNow();
+            } catch (Exception ignored) {}
         }
-        // 中断所有等待的 call
-        for (CompletableFuture<JsonObject> future : pendingCalls.values()) {
-            future.cancel(true);
-        }
-        pendingCalls.clear();
+        super.close();
         // 中断 inputQueue 的等待
         inputQueue.offer(-1);
-    }
-
-    public boolean isClosed() {
-        return closed;
     }
 
     // =====================================================================
@@ -362,17 +166,39 @@ public final class TerminalRpcChannel {
     // =====================================================================
 
     /**
-     * Lambda OutputStream：缓冲写入，flush 时打包成 "output" RPC 通知发送。
+     * Lambda OutputStream：缓冲写入，打包成 "output" RPC 通知发送。
      *
-     * <p>所有 buffer 操作（write / flush）通过 bufferLock 互斥，
-     * 防止自动 flush 定时器与写入线程并发时丢失字节（特别是 ANSI 转义序列被拆碎）。</p>
+     * <p><b>合并策略（关键性能点）</b></p>
+     *
+     * <p>JLine 的 FilteringOutputStream 几乎每次 write 之后都会 flush。若每次 flush 都发一帧，
+     * 批量输出就退化成"每行一次跨进程帧"：每帧都要 Gson 序列化 + 两把锁 + 信封编码 + socket flush，
+     * 对端还要逐帧解析并重绘。实测约 1.6ms/行。</p>
+     *
+     * <p>因此这里不再立即发送，而是先落入 {@code pending}：</p>
+     * <ul>
+     *   <li>距上次发送超过 {@link #IDLE_THRESHOLD_NANOS} → 视为空闲/交互式输出，立即发送（零额外延迟）；</li>
+     *   <li>否则延迟 {@link #COALESCE_DELAY_MS} 作为合并窗口，窗口内到达的数据合成一帧。</li>
+     * </ul>
+     *
+     * <p>会话收尾必须调用 {@link #flushNow()} 同步排出，否则最后一批输出可能晚于 cmd.done 到达。</p>
      */
     public class RpcOutputStream extends OutputStream {
 
         private static final int FLUSH_THRESHOLD = 8192;
+        /** 连续输出时的合并窗口（毫秒）：取一帧时长，兼顾吞吐与实时感。 */
+        private static final long COALESCE_DELAY_MS = 16;
+        /** 距上次发送超过该间隔即视为空闲，此时立即发送以保持交互式输出零延迟。 */
+        private static final long IDLE_THRESHOLD_NANOS = 10_000_000L;
+        /** 待发数据达到该字节数时立即发送，不再等窗口——大输出时贴近原生"批量发送"的行为。 */
+        private static final int MAX_PENDING_BYTES = 4096;
+
         private final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         private final Object bufferLock = new Object();
-        private volatile boolean autoFlushEveryWrite = false;
+        /** 已 flush 但尚未发出、等待合并窗口的数据 */
+        private final ByteArrayOutputStream pending = new ByteArrayOutputStream();
+        private final Object pendingLock = new Object();
+        private boolean flushScheduled = false;
+        private long lastEmitNanos = 0L;
 
         @Override
         public void write(int b) throws IOException {
@@ -380,7 +206,7 @@ public final class TerminalRpcChannel {
             boolean shouldFlush;
             synchronized (bufferLock) {
                 buffer.write(b);
-                shouldFlush = autoFlushEveryWrite || buffer.size() >= FLUSH_THRESHOLD;
+                shouldFlush = buffer.size() >= FLUSH_THRESHOLD;
             }
             if (shouldFlush) {
                 doFlush();
@@ -393,7 +219,7 @@ public final class TerminalRpcChannel {
             boolean shouldFlush;
             synchronized (bufferLock) {
                 buffer.write(b, off, len);
-                shouldFlush = autoFlushEveryWrite || buffer.size() >= FLUSH_THRESHOLD;
+                shouldFlush = buffer.size() >= FLUSH_THRESHOLD;
             }
             if (shouldFlush) {
                 doFlush();
@@ -405,53 +231,116 @@ public final class TerminalRpcChannel {
             doFlush();
         }
 
-        private void doFlush() throws IOException {
+        private void doFlush() {
+            byte[] data = drainBuffer();
+            if (data == null) return;
+
+            byte[] toEmit = null;
+            boolean needSchedule = false;
+            synchronized (pendingLock) {
+                pending.write(data, 0, data.length);
+                if (pending.size() >= MAX_PENDING_BYTES
+                        || System.nanoTime() - lastEmitNanos >= IDLE_THRESHOLD_NANOS) {
+                    toEmit = takePendingLocked();
+                } else if (!flushScheduled) {
+                    flushScheduled = true;
+                    needSchedule = true;
+                }
+            }
+
+            if (toEmit != null) {
+                emit(toEmit);
+            } else if (needSchedule) {
+                ScheduledFuture<?> future = ThreadPoolManager.schedule(
+                        this::emitPending, COALESCE_DELAY_MS, TimeUnit.MILLISECONDS);
+                if (future == null) {
+                    // 线程池不可用（Zygote 阶段/已关闭）→ 退化为同步发送，避免数据滞留
+                    emitPending();
+                }
+            }
+        }
+
+        /**
+         * 取出缓冲区数据；尾部不完整的 UTF-8 序列会被放回缓冲区等待下次拼接。
+         *
+         * @return 可发送的数据；null 表示无数据（或不完整序列已全部放回）
+         */
+        private byte[] drainBuffer() {
             byte[] data;
             synchronized (bufferLock) {
-                if (closed || buffer.size() == 0) return;
+                if (buffer.size() == 0) return null;
                 data = buffer.toByteArray();
                 buffer.reset();
             }
-            // 检测尾部不完整的 UTF-8 序列，保留在缓冲区等待下次拼接
             int incomplete = trailingIncompleteUtf8Bytes(data);
-            if (incomplete > 0) {
-                int completeLen = data.length - incomplete;
-                if (completeLen == 0) {
-                    // 整个缓冲都是不完整序列，放回缓冲区等待更多数据
-                    synchronized (bufferLock) {
-                        buffer.write(data, 0, data.length);
-                    }
-                    return;
-                }
-                byte[] toSend = new byte[completeLen];
-                System.arraycopy(data, 0, toSend, 0, completeLen);
-                // 保留残余字节
+            if (incomplete == 0) return data;
+
+            int completeLen = data.length - incomplete;
+            if (completeLen == 0) {
+                // 整个缓冲都是不完整序列，放回缓冲区等待更多数据
                 synchronized (bufferLock) {
-                    buffer.write(data, completeLen, incomplete);
+                    buffer.write(data, 0, data.length);
                 }
-                data = toSend;
+                return null;
             }
-            // 在锁外发送，避免持锁期间做 I/O
+            byte[] toSend = new byte[completeLen];
+            System.arraycopy(data, 0, toSend, 0, completeLen);
+            // 保留残余字节
+            synchronized (bufferLock) {
+                buffer.write(data, completeLen, incomplete);
+            }
+            return toSend;
+        }
+
+        /** 在 pendingLock 内取出全部待发数据并记录发送时刻。 */
+        private byte[] takePendingLocked() {
+            if (pending.size() == 0) return null;
+            byte[] data = pending.toByteArray();
+            pending.reset();
+            lastEmitNanos = System.nanoTime();
+            return data;
+        }
+
+        private void emitPending() {
+            byte[] data;
+            synchronized (pendingLock) {
+                flushScheduled = false;
+                data = takePendingLocked();
+            }
+            if (data != null) {
+                emit(data);
+            }
+        }
+
+        /**
+         * 立即（同步）把缓冲区与待发数据全部发出，绕过合并窗口。
+         *
+         * <p>会话收尾时必须调用：否则最后一批输出可能晚于 cmd.done 到达对端。</p>
+         */
+        public void flushNow() {
+            byte[] drained = drainBuffer();
+            byte[] data;
+            synchronized (pendingLock) {
+                if (drained != null) {
+                    pending.write(drained, 0, drained.length);
+                }
+                data = takePendingLocked();
+            }
+            if (data != null) {
+                emit(data);
+            }
+        }
+
+        /** 在锁外做实际发送，避免持锁期间做 I/O。 */
+        private void emit(byte[] data) {
             JsonObject params = new JsonObject();
             params.addProperty("data", new String(data, StandardCharsets.UTF_8));
-            TerminalRpcChannel.this.sendNotification("output", params);
+            TerminalRpcChannel.this.sendNotification(ProtocolMethods.TERM_OUTPUT, params);
         }
 
         @Override
         public void close() throws IOException {
-            flush();
-        }
-
-        /**
-         * 设置是否每次 write 都立即 flush（极端实时场景）。
-         * 默认 false：缓冲到显式 flush()。
-         */
-        public void setAutoFlushEveryWrite(boolean auto) {
-            this.autoFlushEveryWrite = auto;
-        }
-
-        public boolean isAutoFlushEveryWrite() {
-            return autoFlushEveryWrite;
+            flushNow();
         }
     }
 

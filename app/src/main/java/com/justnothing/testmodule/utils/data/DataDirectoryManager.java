@@ -11,7 +11,8 @@ import com.justnothing.testmodule.constants.FileDirectory;
 import com.justnothing.testmodule.ui.general.ErrorDialog;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.io.IOManager;
-import com.justnothing.testmodule.utils.io.RootProcessPool;
+import com.justnothing.testmodule.utils.io.ShellExecutionException;
+import com.justnothing.testmodule.utils.io.ShellExecutorProvider;
 
 import java.io.File;
 
@@ -124,16 +125,19 @@ public class DataDirectoryManager {
                 logger.info("为" + description + "设置权限成功, 路径: " + file.getAbsolutePath());
                 return true;
             }
-            
-            logger.warn("AsyncChmodExecutor设置权限失败，尝试使用root权限: " + file.getAbsolutePath());
-            IOManager.ProcessResult chmodResult = RootProcessPool.executeCommand("chmod " + permissions + " " + file.getAbsolutePath(), 5000, true);
+
+            logger.warn("AsyncChmodExecutor设置权限失败，尝试直接使用ShellExecutor: " + file.getAbsolutePath());
+            IOManager.ProcessResult chmodResult = ShellExecutorProvider.get().execute("chmod " + permissions + " " + file.getAbsolutePath(), 5000);
             if (chmodResult.isSuccess()) {
-                logger.info("使用root权限为" + description + "设置权限成功, 路径:  " + file.getAbsolutePath());
+                logger.info("使用ShellExecutor为" + description + "设置权限成功, 路径:  " + file.getAbsolutePath());
                 return true;
             } else {
                 logger.warn("为" + description + "设置权限失败, 路径:  " + file.getAbsolutePath());
                 return false;
             }
+        } catch (ShellExecutionException e) {
+            logger.error("设置文件权限时Shell执行异常", e);
+            return false;
         } catch (Exception e) {
             logger.error("设置文件权限时发生异常", e);
             return false;

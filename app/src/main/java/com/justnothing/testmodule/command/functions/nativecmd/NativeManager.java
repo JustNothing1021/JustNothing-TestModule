@@ -1,7 +1,7 @@
 package com.justnothing.testmodule.command.functions.nativecmd;
 
 import com.justnothing.testmodule.utils.io.IOManager;
-import com.justnothing.testmodule.utils.io.RootProcessPool;
+import com.justnothing.testmodule.utils.io.ShellExecutorProvider;
 import com.justnothing.testmodule.utils.logging.Logger;
 
 import org.objectweb.asm.Type;
@@ -22,7 +22,7 @@ public class NativeManager {
         List<String> libraries = new ArrayList<>();
         
         try {
-            IOManager.ProcessResult result = RootProcessPool.executeCommand("cat /proc/self/maps", 30000, false);
+            IOManager.ProcessResult result = ShellExecutorProvider.get().execute("cat /proc/self/maps", 30000);
             
             if (result.isSuccess()) {
                 String[] lines = result.stdout().split("\n");
@@ -67,7 +67,7 @@ public class NativeManager {
                 return symbols;
             }
             
-            IOManager.ProcessResult result = RootProcessPool.executeCommand("readelf -s " + libPath, 30000, false);
+            IOManager.ProcessResult result = ShellExecutorProvider.get().execute("readelf -s " + libPath, 30000);
             
             if (result.isSuccess()) {
                 String[] lines = result.stdout().split("\n");
@@ -110,7 +110,7 @@ public class NativeManager {
         Map<String, String> info = new HashMap<>();
         
         try {
-            IOManager.ProcessResult result = RootProcessPool.executeCommand("cat /proc/self/status", 30000, false);
+            IOManager.ProcessResult result = ShellExecutorProvider.get().execute("cat /proc/self/status", 30000);
             
             if (result.isSuccess()) {
                 String[] lines = result.stdout().split("\n");
@@ -152,7 +152,7 @@ public class NativeManager {
                 "cat /proc/" + threadId + "/stack" : 
                 "cat /proc/self/task/*/stack";
             
-            IOManager.ProcessResult result = RootProcessPool.executeCommand(command, 30000, false);
+            IOManager.ProcessResult result = ShellExecutorProvider.get().execute(command, 30000);
             
             if (result.isSuccess()) {
                 String[] lines = result.stdout().split("\n");
@@ -173,7 +173,7 @@ public class NativeManager {
         List<String> maps = new ArrayList<>();
         
         try {
-            IOManager.ProcessResult result = RootProcessPool.executeCommand("cat /proc/self/maps", 30000, false);
+            IOManager.ProcessResult result = ShellExecutorProvider.get().execute("cat /proc/self/maps", 30000);
             
             if (result.isSuccess()) {
                 String[] lines = result.stdout().split("\n");

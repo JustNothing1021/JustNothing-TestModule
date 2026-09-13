@@ -32,14 +32,15 @@ import java.util.stream.Collectors;
             report [id]                          查看报告 (默认最新)
             export <id> <path>                   导出数据"""
 )
-public class HookCommand extends AbstractPerfCommand<PerformanceRequest, PerfHookResult> {
+public class HookCommand extends AbstractPerfCommand<PerformanceRequest<?>, PerfHookResult> {
 
+    @SuppressWarnings("unchecked")
     public HookCommand() {
-        super("performance hook", PerformanceRequest.class, PerfHookResult.class);
+        super("performance hook", (Class) PerformanceRequest.class, PerfHookResult.class);
     }
 
     @Override
-    protected PerfHookResult executePerfCommand(PerformanceRequest req) {
+    protected PerfHookResult executePerfCommand(PerformanceRequest<?> req) {
         logger.debug("[hook] 收到请求: %s", req.getClass().getSimpleName());
 
         if (req instanceof PerfHookStartRequest startReq) {

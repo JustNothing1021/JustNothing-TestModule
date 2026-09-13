@@ -41,12 +41,12 @@ import com.justnothing.testmodule.command.framework.model.CommandResult;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.annotation.Cmd;
 
-@Cmd(name = "richdemo", description = "RichConsole comprehensive 25-section demo", defaultResultType = CommandResult.class)
+@Cmd(name = "richdemo", description = "RichConsole comprehensive 25-section demo")
 public class RichDemoMain extends MainCommand<CommandResult> {
     public RichDemoMain() { super("RichDemo", CommandResult.class); }
 
     @Override
-    public CommandResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
+    protected CommandResult executeInternal(CommandExecutor.CmdExecContext<CommandRequest<?>> context) throws Exception {
         Console console = context.console();
         if (console == null) console = Console.of(cfg -> cfg.withForceTerminal(true));
 

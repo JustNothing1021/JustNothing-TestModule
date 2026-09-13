@@ -2,12 +2,9 @@ package com.justnothing.testmodule.command.functions.performance.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.functions.performance.PerformanceRequest;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.justnothing.testmodule.command.functions.performance.response.PerfHookResult;
 
-@SerializeKeyName("perf:hook:start")
-public class PerfHookStartRequest extends PerformanceRequest {
+public class PerfHookStartRequest extends PerformanceRequest<PerfHookResult> {
 
     @CmdParam(
         name = "className",
@@ -46,22 +43,4 @@ public class PerfHookStartRequest extends PerformanceRequest {
 
     public String getSignature() { return signature; }
     public void setSignature(String signature) { this.signature = signature; }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        obj.put("className", className);
-        if (methodName != null) obj.put("methodName", methodName);
-        if (signature != null) obj.put("signature", signature);
-        return obj;
-    }
-
-    @Override
-    public PerfHookStartRequest fromJson(JSONObject obj) {
-        setRequestId(obj.optString("requestId"));
-        setClassName(obj.optString("className", ""));
-        setMethodName(obj.optString("methodName", null));
-        setSignature(obj.optString("signature", null));
-        return this;
-    }
 }

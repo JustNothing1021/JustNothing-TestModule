@@ -2,12 +2,10 @@ package com.justnothing.testmodule.command.functions.exportcontext;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
-import org.json.JSONException;
-import org.json.JSONObject;
 
-@SerializeKeyName("export_context")
-public class ExportContextRequest extends CommandRequest {
+// key 必须等于服务端路由的完整路径。export-context 路由的 path 为空，
+// fullPath 即父路径本身（如 "export-context"，参见 CommandRouter.registerRoute）。
+public class ExportContextRequest extends CommandRequest<ExportContextResult> {
 
     @CmdParam(
         name = "prettyPrinting",
@@ -27,19 +25,5 @@ public class ExportContextRequest extends CommandRequest {
 
     public void setPrettyPrinting(boolean prettyPrinting) {
         this.prettyPrinting = prettyPrinting;
-    }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        obj.put("prettyPrinting", prettyPrinting);
-        return obj;
-    }
-
-    @Override
-    public ExportContextRequest fromJson(JSONObject obj) throws JSONException {
-        super.fromJson(obj);
-        setPrettyPrinting(obj.optBoolean("prettyPrinting", false));
-        return this;
     }
 }

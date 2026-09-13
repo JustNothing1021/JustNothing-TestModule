@@ -14,7 +14,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class NativeManageCommand extends AbstractNativeCommand<CommandRequest, NativeResult> {
+public class NativeManageCommand extends AbstractNativeCommand<CommandRequest<?>, NativeResult> {
+
+    @SuppressWarnings("unchecked")
+    public NativeManageCommand() {
+        super("native manage", (Class) CommandRequest.class, NativeResult.class);
+    }
 
     public NativeResult handleCli(NativeCliRequest request) {
         String className = request.getClassName();
@@ -133,7 +138,7 @@ public class NativeManageCommand extends AbstractNativeCommand<CommandRequest, N
     }
 
     @Override
-    protected NativeResult executeInternal(CommandRequest request) throws Exception {
+    protected NativeResult executeRequest(CommandRequest<?> request) throws Exception {
         if (request instanceof NativeCliRequest r) return handleCli(r);
         if (request instanceof NativeStackRequest r) return handleStack(r);
         if (request instanceof NativeSearchRequest r) return handleSearch(r);

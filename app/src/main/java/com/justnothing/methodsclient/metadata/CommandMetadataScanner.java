@@ -1,29 +1,11 @@
 package com.justnothing.methodsclient.metadata;
 
+import com.justnothing.testmodule.command.framework.CommandCatalog;
 import com.justnothing.testmodule.command.framework.model.MainCommand;
 import com.justnothing.testmodule.command.framework.annotation.Cmd;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.framework.model.CommandRouter;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
-import com.justnothing.testmodule.command.functions.alias.AliasMain;
-import com.justnothing.testmodule.command.functions.agent.AgentCliMain;
-import com.justnothing.testmodule.command.functions.bytecode.impl.BytecodeMain;
-import com.justnothing.testmodule.command.functions.breakpoint.impl.BreakpointMain;
-import com.justnothing.testmodule.command.functions.bsh.impl.BeanShellExecutorMain;
-import com.justnothing.testmodule.command.functions.classcmd.ClassMain;
-import com.justnothing.testmodule.command.functions.exportcontext.ExportContextMain;
-import com.justnothing.testmodule.command.functions.help.HelpMain;
-import com.justnothing.testmodule.command.functions.hook.HookMain;
-import com.justnothing.testmodule.command.functions.memory.MemoryMain;
-import com.justnothing.testmodule.command.functions.nativecmd.NativeMain;
-import com.justnothing.testmodule.command.functions.network.NetworkMain;
-import com.justnothing.testmodule.command.functions.packages.PackagesMain;
-import com.justnothing.testmodule.command.functions.performance.PerformanceMain;
-import com.justnothing.testmodule.command.functions.script.ScriptExecutorMain;
-import com.justnothing.testmodule.command.functions.system.SystemMain;
-import com.justnothing.testmodule.command.functions.threads.ThreadsMain;
-import com.justnothing.testmodule.command.functions.trace.TraceMain;
-import com.justnothing.testmodule.command.functions.watch.WatchMain;
 import com.justnothing.testmodule.utils.logging.Logger;
 
 import java.lang.reflect.Field;
@@ -99,13 +81,24 @@ public final class CommandMetadataScanner {
         cachedMetadata = null;
     }
 
+    /**
+     * 仅确保命令路由元数据已注册（不构建完整元数据）。
+     *
+     * <p>Request 的 {@code commandType} 由路由派生（见 CommandRequest.extractTypeKey），
+     * 所以客户端在构造/发送 Request 之前必须先有路由表；GUI 进程不会执行服务端的自动注册，
+     * 这里做一次纯反射注册（只填 map，不创建命令实例）。</p>
+     */
+    public static void ensureRegistered() {
+        ensureCommandsRegistered(CommandRouter.getInstance());
+    }
+
     // ==================== 内部实现 ====================
 
     /**
      * 确保所有命令类已注册到 CommandRouter 的 pathRegistry 中。
      * <p>
      * 客户端进程不会执行服务端的 CommandExecutor.autoRegister()，
-     * 因此 pathRegistry 初始为空。此方法通过反射注册所有已知命令类的路由元数据，
+     * 因此 pathRegistry 初始为空。此方法注册 {@link CommandCatalog} 中的全部命令，
      * 使后续的注解扫描能正常工作。
      * <p>
      * registerCommand() 只读取 @Cmd/@CmdRoutes 注解并填充 map，
@@ -118,43 +111,35 @@ public final class CommandMetadataScanner {
         synchronized (CommandMetadataScanner.class) {
             if (commandsRegistered) return;
 
-            // 与 CommandExecutor.autoRegister() 保持一致的命令列表
-            Class<?>[] commandClasses = {
-                HelpMain.class,
-                WatchMain.class,
-                TraceMain.class,
-                ExportContextMain.class,
-                MemoryMain.class,
-                ThreadsMain.class,
-                SystemMain.class,
-                BreakpointMain.class,
-                HookMain.class,
-                BytecodeMain.class,
-                NativeMain.class,
-                PerformanceMain.class,
-                AliasMain.class,
-                NetworkMain.class,
-                BeanShellExecutorMain.class,
-                ScriptExecutorMain.class,
-                ClassMain.class,
-                PackagesMain.class,
-                AgentCliMain.class,
-            };
-
-            for (Class<?> cmdClass : commandClasses) {
+            int registered = 0;
+            for (Class<? extends MainCommand<?>> cmdClass : CommandCatalog.ALL) {
+                if (!isExposedToClient(cmdClass)) {
+                    continue;
+                }
                 try {
-                    // registerCommand 接受 Class<? extends MainCommand<?>>，需要强制转换
-                    @SuppressWarnings("unchecked")
-                    var mainCmdClass = (Class<? extends MainCommand<?>>) cmdClass;
-                    router.registerCommand(mainCmdClass);
+                    router.registerCommand(cmdClass);
+                    registered++;
                 } catch (Exception e) {
                     logger.warn("注册命令元数据失败（已跳过）: " + cmdClass.getSimpleName() + " - " + e.getMessage());
                 }
             }
 
             commandsRegistered = true;
-            logger.info("客户端命令元数据注册完成: %d 个类", commandClasses.length);
+            logger.info("客户端命令元数据注册完成: %d 个命令", registered);
         }
+    }
+
+    /**
+     * demo/test 命令只在服务端本地调试用（无 @CmdRoutes），不进客户端补全与元数据。
+     */
+    private static boolean isExposedToClient(Class<?> cmdClass) {
+        Package pkg = cmdClass.getPackage();
+        if (pkg == null) {
+            return true;
+        }
+        String name = pkg.getName();
+        return !name.startsWith("com.justnothing.testmodule.command.functions.tests")
+                && !name.startsWith("com.justnothing.testmodule.command.functions.examples");
     }
 
     private static List<CommandMeta> doScan() {
@@ -184,8 +169,8 @@ public final class CommandMetadataScanner {
     }
 
     private static String extractTopLevelCommand(String fullPath) {
-        int colonIdx = fullPath.indexOf(':');
-        return colonIdx > 0 ? fullPath.substring(0, colonIdx) : fullPath;
+        int slashIdx = fullPath.indexOf('/');
+        return slashIdx > 0 ? fullPath.substring(0, slashIdx) : fullPath;
     }
 
     private static CommandMeta buildCommandMeta(CommandRouter router, String cmdName) {
@@ -211,7 +196,7 @@ public final class CommandMetadataScanner {
         // 遍历已注册的 handler 类找 @Cmd 注解
         CommandRouter router = CommandRouter.getInstance();
         for (var entry : router.getPathRegistry().entrySet()) {
-            if (entry.getKey().startsWith(cmdName + ":") || entry.getKey().equals(cmdName)) {
+            if (entry.getKey().startsWith(cmdName + "/") || entry.getKey().equals(cmdName)) {
                 var config = entry.getValue();
                 try {
                     Cmd cmdAnnotation = config.handlerType().getAnnotation(Cmd.class);
@@ -240,10 +225,10 @@ public final class CommandMetadataScanner {
     /**
      * 反射扫描 Request 类的字段，提取所有 @CmdParam 注解信息
      */
-    private static List<ParamMeta> scanRequestParams(Class<? extends CommandRequest> requestClass) {
+    private static List<ParamMeta> scanRequestParams(Class<? extends CommandRequest<?>> requestClass) {
         List<ParamMeta> paramMetas = new ArrayList<>();
 
-        if (requestClass == null || requestClass == CommandRequest.class) {
+        if (requestClass == null || CommandRequest.class.equals(requestClass)) {
             return paramMetas;
         }
 

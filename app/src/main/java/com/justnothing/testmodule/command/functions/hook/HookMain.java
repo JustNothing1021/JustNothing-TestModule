@@ -1,15 +1,12 @@
 package com.justnothing.testmodule.command.functions.hook;
 
 import com.justnothing.engine.codegen.DynamicClassGenerator;
-import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.model.MainCommand;
-import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.annotation.Cmd;
 import com.justnothing.testmodule.command.framework.annotation.CmdRoutes;
 import com.justnothing.testmodule.command.framework.model.CommandRouter;
-import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.functions.hook.result.HookListResult;
 import com.justnothing.testmodule.utils.reflect.DexClassDefiner;
-import com.justnothing.testmodule.utils.logging.Logger;
 
 import com.justnothing.testmodule.command.functions.hook.request.HookAddRequest;
 import com.justnothing.testmodule.command.functions.hook.request.HookRemoveRequest;
@@ -24,8 +21,7 @@ import com.justnothing.testmodule.command.functions.hook.impl.HookQueryCommand;
 
 @Cmd(
     name = "hook",
-    description = "动态Hook注入器, 通过脚本实现Hook功能",
-    defaultResultType = HookListResult.class
+    description = "动态Hook注入器, 通过脚本实现Hook功能"
 )
 @CmdRoutes({
     @CmdRoutes.Route(
@@ -79,8 +75,6 @@ import com.justnothing.testmodule.command.functions.hook.impl.HookQueryCommand;
 })
 public class HookMain extends MainCommand<HookListResult> {
 
-    private static final Logger logger = Logger.getLoggerForName("HookMain");
-
     static {
         DynamicClassGenerator.setDefaultClassDefiner(DexClassDefiner.getInstance());
     }
@@ -92,20 +86,5 @@ public class HookMain extends MainCommand<HookListResult> {
     @Override
     public String getHelpText() {
         return CommandRouter.getInstance().generateHelpForCommand("hook");
-    }
-
-    @Override
-    public HookListResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
-        String[] args = context.args();
-
-        logger.debug("执行 hook 命令（fallback路径），参数: %s", java.util.Arrays.toString(args));
-
-        if (args.length == 0) {
-            context.println(getHelpText(), Colors.WHITE);
-            return null;
-        }
-
-        context.println("提示: 使用 'hook help' 查看路由帮助", Colors.CYAN);
-        return createErrorResult("旧路径已迁移到 @CmdRoutes，请使用新路径");
     }
 }

@@ -1,13 +1,11 @@
 package com.justnothing.testmodule.command.functions.classcmd.response;
 
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandResult;
 import com.justnothing.testmodule.command.functions.classcmd.model.MethodInfo;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@SerializeKeyName("MethodList")
 public class MethodListResult extends ClassCommandResult {
 
     private String className;

@@ -4,18 +4,16 @@ import com.justnothing.methodsclient.model.ColoredSegment;
 import com.justnothing.methodsclient.monitor.ClientPortManager;
 import com.justnothing.methodsclient.StreamClient;
 import com.justnothing.methodsclient.monitor.PerformanceMonitor;
-import com.justnothing.methodsclient.utils.TerminalManager;
-import com.justnothing.testmodule.command.framework.protocol.InteractiveProtocol;
+import com.justnothing.methodsclient.renderer.JsonRenderer;
+import com.justnothing.methodsclient.renderer.SegmentsRenderer;
+import com.justnothing.methodsclient.renderer.TerminalRenderer;
 import com.justnothing.testmodule.command.framework.output.ClientRequirements;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -25,35 +23,62 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Socket 命令行客户端。
- * <p>
- * 提供与本地 methods 服务端进行命令交互的能力，支持两种协议：
+ *
+ * <p>提供统一的命令执行入口，通过 {@link Format} 枚举选择输出格式：
  * <ul>
- *   <li><b>文本协议</b>（Text）：普通命令行风格，通过 PrintWriter 发送命令，按行读取响应。</li>
- *   <li><b>交互式二进制协议</b>（Interactive）：使用自定义消息格式，支持能力协商、分块传输、彩色输出等高级特性。</li>
+ *   <li>{@link Format#JSON} — JSON 协议，结构化输出</li>
+ *   <li>{@link Format#COLORED} — 交互式协议，带 ANSI 颜色直接渲染到本地终端</li>
+ *   <li>{@link Format#PLAIN} — 交互式协议，忽略颜色渲染纯文本到本地终端</li>
  * </ul>
  * </p>
  */
 public class SocketCommandExecutor {
 
-    private static final int CONNECT_TIMEOUT_MS = 5000;      // 连接超时
-    private static final int EXEC_TIMEOUT_MS = 86400000;     // 命令执行超时（24小时）
-    private static final int SOCKET_READ_TIMEOUT_MS = 30000; // Socket 读超时
+    private static final int CONNECT_TIMEOUT_MS = 5000;
+    private static final int EXEC_TIMEOUT_MS = 86400000;
+    private static final int SOCKET_READ_TIMEOUT_MS = 30000;
 
     private static final StreamClient.ClientLogger logger = new StreamClient.ClientLogger();
+
+    // ==================== 输出格式 ====================
+
+    public enum Format {
+        /** JSON 协议：服务端输出结构化 JSON */
+        JSON,
+        /** 彩色模式：按颜色映射为 ANSI 转义序列渲染到本地终端 */
+        COLORED,
+        /** 纯文本模式：忽略颜色，直接把输出渲染到本地终端 */
+        PLAIN
+    }
 
     // ==================== 公共结果类 ====================
 
     public record ExecutionResult(boolean success, String output, String error) {}
 
-    public record ColoredExecutionResult(boolean success, List<ColoredSegment> segments,
-                                         String error) {
+    public record ColoredExecutionResult(boolean success, List<ColoredSegment> segments, String error) {}
 
-    }
-
+    // ==================== 统一执行入口 ====================
 
     /**
-     * 创建并配置到本地 methods 服务的 Socket 连接。
+     * 执行命令，根据指定的格式选择协议和输出处理方式。
+     *
+     * @param command 要执行的命令
+     * @param format  输出格式
+     * @return 执行结果
      */
+    public ExecutionResult executeWithResult(String command, Format format) {
+        return switch (format) {
+            case JSON -> {
+                String json = executeJson(command);
+                yield new ExecutionResult(json != null && !json.isEmpty(), json != null ? json : "", "");
+            }
+            case COLORED -> executeToTerminal(command, true);
+            case PLAIN -> executeToTerminal(command, false);
+        };
+    }
+
+    // ==================== 内部实现 ====================
+
     private Socket createSocket() throws IOException {
         int port = ClientPortManager.getSocketPort();
         Socket socket = new Socket();
@@ -65,18 +90,11 @@ public class SocketCommandExecutor {
         return socket;
     }
 
-    /**
-     * 等待异步读取任务完成，处理超时和异常。
-     *
-     * @param future      异步任务
-     * @param readingFlag 用于通知读取线程停止的标志
-     * @return true 表示任务正常完成（未超时、无异常），false 表示超时或异常
-     */
     private boolean waitForReadFuture(Future<Boolean> future, AtomicBoolean readingFlag) {
         try {
-            return future.get(SocketCommandExecutor.EXEC_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+            return future.get(EXEC_TIMEOUT_MS, TimeUnit.MILLISECONDS);
         } catch (TimeoutException e) {
-            logger.error("命令执行超时（" + (long) SocketCommandExecutor.EXEC_TIMEOUT_MS + "ms）");
+            logger.error("命令执行超时（" + EXEC_TIMEOUT_MS + "ms）");
             readingFlag.set(false);
             future.cancel(true);
             return false;
@@ -84,15 +102,10 @@ public class SocketCommandExecutor {
             logger.error("命令执行异常", e);
             readingFlag.set(false);
             future.cancel(true);
-            System.out.println("命令执行出现错误");
-            e.printStackTrace(System.out);
             return false;
         }
     }
 
-    /**
-     * 记录性能指标并输出日志。
-     */
     private void recordMetrics(long startTime, long bytesRead, long charsRead, boolean success) {
         long duration = System.currentTimeMillis() - startTime;
         PerformanceMonitor.recordSocketCommand(duration, bytesRead, charsRead, success);
@@ -103,9 +116,6 @@ public class SocketCommandExecutor {
         }
     }
 
-    /**
-     * 静默关闭 Socket，忽略异常。
-     */
     private void closeSocketQuietly(Socket socket) {
         if (socket != null) {
             try {
@@ -115,9 +125,6 @@ public class SocketCommandExecutor {
         }
     }
 
-    /**
-     * 统一处理各类异常，记录错误并输出到控制台。
-     */
     private void handleException(Exception e, long startTime, long bytesRead, long charsRead) {
         recordMetrics(startTime, bytesRead, charsRead, false);
         if (e instanceof SocketTimeoutException) {
@@ -133,72 +140,40 @@ public class SocketCommandExecutor {
         System.err.flush();
     }
 
-    // ==================== 公共 API ====================
-
-    /**
-     * 执行文本协议命令，输出直接打印到控制台（不捕获）。
-     *
-     * @param command 要执行的命令
-     * @return true 表示执行成功，false 表示失败
-     */
-    public boolean executeTextSocket(String command) {
-        long startTime = System.currentTimeMillis();
-        AtomicBoolean reading = new AtomicBoolean(true);
-        AtomicLong bytesRead = new AtomicLong(0);
-        AtomicLong charsRead = new AtomicLong(0);
-        Socket socket = null;
-
-        try {
-            socket = createSocket();
-            // 发送文本命令
-            PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
-            writer.println(command);
-            writer.flush();
-            logger.info("命令已发送，开始读取响应...");
-
-            Socket finalSocket = socket;
-            Future<Boolean> future = ThreadPoolManager.submitSocketCallable(() ->
-                    SocketStreamReader.readTextProtocolStream(finalSocket.getInputStream(), reading, bytesRead, charsRead));
-            boolean success = waitForReadFuture(future, reading);
-            recordMetrics(startTime, bytesRead.get(), charsRead.get(), success);
-            return success;
-        } catch (Exception e) {
-            handleException(e, startTime, bytesRead.get(), charsRead.get());
-            return false;
-        } finally {
-            closeSocketQuietly(socket);
-        }
+    private static ClientRequirements buildRequirements(boolean supportsInput, boolean isJsonMode) {
+        // 能力经 sys.hello RPC 握手发送
+        return SocketStreamReader.buildClientRequirements(supportsInput, isJsonMode);
     }
 
+    // ==================== 统一执行实现 ====================
+
     /**
-     * 执行文本协议命令，并返回输出字符串。
+     * 以交互式协议执行命令，输出直接渲染到本地终端（不捕获）。
      *
      * @param command 要执行的命令
-     * @return ExecutionResult 包含执行状态和输出内容
+     * @param colored true 渲染 ANSI 颜色；false 渲染纯文本
      */
-    public ExecutionResult executeTextSocketWithOutput(String command) {
+    private ExecutionResult executeToTerminal(String command, boolean colored) {
         long startTime = System.currentTimeMillis();
         AtomicBoolean reading = new AtomicBoolean(true);
         AtomicLong bytesRead = new AtomicLong(0);
-        AtomicLong charsRead = new AtomicLong(0);
-        StringBuilder outputBuilder = new StringBuilder();
         Socket socket = null;
 
         try {
             socket = createSocket();
-            PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
-            writer.println(command);
-            writer.flush();
+            ClientRequirements requirements = buildRequirements(true, false);
             logger.info("命令已发送，开始读取响应...");
 
             Socket finalSocket = socket;
+            TerminalRenderer renderer = new TerminalRenderer(colored);
             Future<Boolean> future = ThreadPoolManager.submitSocketCallable(() ->
-                    SocketStreamReader.readTextStreamToString(finalSocket.getInputStream(), reading, bytesRead, charsRead, outputBuilder));
+                    SocketStreamReader.readRpcStream(finalSocket.getInputStream(), finalSocket.getOutputStream(),
+                            reading, bytesRead, finalSocket, requirements, command, null, renderer));
             boolean success = waitForReadFuture(future, reading);
-            recordMetrics(startTime, bytesRead.get(), charsRead.get(), success);
-            return new ExecutionResult(success, outputBuilder.toString(), "");
+            recordMetrics(startTime, bytesRead.get(), bytesRead.get(), success);
+            return new ExecutionResult(success, "", "");
         } catch (Exception e) {
-            handleException(e, startTime, bytesRead.get(), charsRead.get());
+            handleException(e, startTime, bytesRead.get(), bytesRead.get());
             return new ExecutionResult(false, "", e.getMessage());
         } finally {
             closeSocketQuietly(socket);
@@ -206,117 +181,60 @@ public class SocketCommandExecutor {
     }
 
     /**
-     * 执行交互式协议命令（无颜色输出，输出直接打印到控制台）。
-     *
-     * @param command 要执行的命令
-     * @return true 表示成功，false 表示失败
+     * 以交互式彩色协议执行命令，收集彩色片段。
      */
-    public boolean executeInteractiveSocket(String command) {
+    public ColoredExecutionResult executeWithResult(String command, boolean supportsInput) {
         long startTime = System.currentTimeMillis();
         AtomicBoolean reading = new AtomicBoolean(true);
         AtomicLong bytesRead = new AtomicLong(0);
+        SegmentsRenderer renderer = new SegmentsRenderer();
         Socket socket = null;
 
         try {
             socket = createSocket();
-            // 发送能力协商
-            ClientRequirements requirements = buildRequirements(true, false);
-            InteractiveProtocol.writeMessage(socket.getOutputStream(), InteractiveProtocol.TYPE_CLIENT_CAPABILITY,
-                    InteractiveProtocol.encodeCapability(requirements));
-            // 发送交互式命令
-            InteractiveProtocol.writeMessage(socket.getOutputStream(), InteractiveProtocol.TYPE_CLIENT_COMMAND,
-                    command.getBytes(StandardCharsets.UTF_8));
-            logger.info("命令已发送，开始读取响应...");
-
-            Socket finalSocket = socket;
-            Future<Boolean> future = ThreadPoolManager.submitSocketCallable(() ->
-                    SocketStreamReader.readInteractiveStream(finalSocket.getInputStream(), finalSocket.getOutputStream(), reading, bytesRead, finalSocket));
-            boolean success = waitForReadFuture(future, reading);
-            recordMetrics(startTime, bytesRead.get(), bytesRead.get(), success);
-            return success;
-        } catch (Exception e) {
-            handleException(e, startTime, bytesRead.get(), bytesRead.get());
-            return false;
-        } finally {
-            closeSocketQuietly(socket);
-        }
-    }
-
-    /**
-     * 执行交互式协议命令，返回带颜色片段的结果。
-     *
-     * @param command       要执行的命令
-     * @param supportsInput 是否支持用户输入（用于交互式命令）
-     * @return ColoredExecutionResult 包含执行状态和彩色输出片段
-     */
-    public ColoredExecutionResult executeInteractiveWithColoredOutput(String command, boolean supportsInput) {
-        long startTime = System.currentTimeMillis();
-        AtomicBoolean reading = new AtomicBoolean(true);
-        AtomicLong bytesRead = new AtomicLong(0);
-        List<ColoredSegment> segments = new ArrayList<>();
-        Socket socket = null;
-
-        try {
-            socket = createSocket();
-            // 发送能力协商
             ClientRequirements requirements = buildRequirements(supportsInput, false);
-            InteractiveProtocol.writeMessage(socket.getOutputStream(), InteractiveProtocol.TYPE_CLIENT_CAPABILITY,
-                    InteractiveProtocol.encodeCapability(requirements));
-            // 发送命令
-            InteractiveProtocol.writeMessage(socket.getOutputStream(), InteractiveProtocol.TYPE_CLIENT_COMMAND,
-                    command.getBytes(StandardCharsets.UTF_8));
-
             logger.info("命令已发送，开始读取响应...");
 
             Socket finalSocket = socket;
             Future<Boolean> future = ThreadPoolManager.submitSocketCallable(() ->
-                    SocketStreamReader.readColoredInteractiveStream(finalSocket.getInputStream(), finalSocket.getOutputStream(), reading, bytesRead, finalSocket, segments));
+                    SocketStreamReader.readRpcStream(finalSocket.getInputStream(), finalSocket.getOutputStream(),
+                            reading, bytesRead, finalSocket, requirements, command, null, renderer));
             boolean success = waitForReadFuture(future, reading);
             recordMetrics(startTime, bytesRead.get(), bytesRead.get(), success);
-            return new ColoredExecutionResult(success, segments, "");
+            return new ColoredExecutionResult(success, renderer.getSegments(), "");
         } catch (Exception e) {
             handleException(e, startTime, bytesRead.get(), bytesRead.get());
-            return new ColoredExecutionResult(false, segments, e.getMessage());
+            return new ColoredExecutionResult(false, renderer.getSegments(), e.getMessage());
         } finally {
             closeSocketQuietly(socket);
         }
     }
 
     /**
-     * 执行命令请求并返回结果，从segments[0].text中提取内容。
-     * 
-     * @param requestJson 请求JSON字符串
-     * @return 从segments[0].text中提取的内容
+     * 以 JSON 命令请求模式执行。
      */
-    public String executeCommandRequest(String requestJson) {
+    public String executeJson(String requestJson) {
         long startTime = System.currentTimeMillis();
         AtomicBoolean reading = new AtomicBoolean(true);
         AtomicLong bytesRead = new AtomicLong(0);
-        List<ColoredSegment> segments = new ArrayList<>();
         Socket socket = null;
 
         try {
             socket = createSocket();
-            // 发送能力协商
-            ClientRequirements requirements = buildRequirements(false, false);
-            InteractiveProtocol.writeMessage(socket.getOutputStream(), InteractiveProtocol.TYPE_CLIENT_CAPABILITY,
-                    InteractiveProtocol.encodeCapability(requirements));
-            // 发送命令请求
-            InteractiveProtocol.writeMessage(socket.getOutputStream(), InteractiveProtocol.TYPE_JSON_COMMAND_REQUEST,
-                    requestJson.getBytes(StandardCharsets.UTF_8));
-
-
+            ClientRequirements requirements = buildRequirements(false, true);
             logger.info("命令请求已发送，开始读取响应...");
 
             Socket finalSocket = socket;
+            JsonRenderer renderer = new JsonRenderer();
             Future<Boolean> future = ThreadPoolManager.submitSocketCallable(() ->
-                    SocketStreamReader.readColoredInteractiveStream(finalSocket.getInputStream(), finalSocket.getOutputStream(), reading, bytesRead, finalSocket, segments));
+                    SocketStreamReader.readRpcStream(finalSocket.getInputStream(), finalSocket.getOutputStream(),
+                            reading, bytesRead, finalSocket, requirements, null, requestJson, renderer));
             boolean success = waitForReadFuture(future, reading);
             recordMetrics(startTime, bytesRead.get(), bytesRead.get(), success);
-            
-            // 从segments[0].text中提取内容
-            if (success && !segments.isEmpty()) {
-                return segments.get(0).text();
+
+            if (success) {
+                String resultJson = renderer.getResultJson();
+                return resultJson != null ? resultJson : "";
             } else {
                 return "";
             }
@@ -326,35 +244,5 @@ public class SocketCommandExecutor {
         } finally {
             closeSocketQuietly(socket);
         }
-    }
-
-    /**
-     * 创建带终端信息的 ClientRequirements。
-     * 自动从 JLine Terminal 检测宽度、高度、ANSI 支持和颜色系统。
-     */
-    private static ClientRequirements buildRequirements(boolean supportsInput, boolean isJsonMode) {
-        ClientRequirements req = new ClientRequirements(supportsInput, isJsonMode);
-        var terminal = TerminalManager.getTerminal();
-        if (terminal != null) {
-            try {
-                org.jline.terminal.Size size = terminal.getSize();
-                if (size != null && size.getColumns() > 0) {
-                    req.setWidth(size.getColumns());
-                    req.setHeight(size.getRows());
-                }
-            } catch (Exception ignored) {}
-            req.setSupportsAnsi(!org.jline.terminal.Terminal.TYPE_DUMB.equals(terminal.getType()));
-        }
-        // 颜色系统检测
-        String colorTerm = System.getenv("COLORTERM");
-        String term = System.getenv("TERM");
-        if ("truecolor".equals(colorTerm) || "24bit".equals(colorTerm)) {
-            req.setColorSystem(ClientRequirements.COLOR_TRUECOLOR);
-        } else if (term != null && term.contains("256color")) {
-            req.setColorSystem(ClientRequirements.COLOR_EIGHT_BIT);
-        } else {
-            req.setColorSystem(ClientRequirements.COLOR_STANDARD);
-        }
-        return req;
     }
 }

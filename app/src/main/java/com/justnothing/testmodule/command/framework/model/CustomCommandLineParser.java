@@ -7,7 +7,7 @@ import java.util.Map;
 
 /**
  * 自定义命令行解析器接口
- * 
+ * <p>
  * 用于处理无法用声明式注解表达的复杂参数解析场景。
  * 
  * <p>使用场景示例:</p>
@@ -20,7 +20,7 @@ import java.util.Map;
  */
 public interface CustomCommandLineParser {
     
-    CommandRequest customParse(ParseContext context) throws IllegalCommandLineArgumentException;
+    CommandRequest<?> customParse(ParseContext context) throws IllegalCommandLineArgumentException;
 
     /**
          * 解析上下文 (传递给自定义解析器)

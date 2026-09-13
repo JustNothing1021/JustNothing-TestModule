@@ -2,17 +2,10 @@ package com.justnothing.testmodule.command.functions.bytecode.impl;
 
 import static com.justnothing.testmodule.constants.CommandServer.CMD_BYTECODE_VER;
 
-import java.util.Arrays;
-
-import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.model.MainCommand;
-import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.annotation.Cmd;
 import com.justnothing.testmodule.command.framework.annotation.CmdRoutes;
-import com.justnothing.testmodule.command.framework.utils.CmdParamProcessor;
 import com.justnothing.testmodule.command.framework.model.CommandRouter;
-import com.justnothing.testmodule.command.framework.error.IllegalCommandLineArgumentException;
-import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.functions.bytecode.request.BytecodeInfoRequest;
 import com.justnothing.testmodule.command.functions.bytecode.request.BytecodeMethodRequest;
 import com.justnothing.testmodule.command.functions.bytecode.request.BytecodeDumpRequest;
@@ -28,8 +21,7 @@ import com.justnothing.testmodule.command.functions.bytecode.response.BytecodeRe
 @Cmd(
     name = "bytecode",
     description = "查看和分析Java字节码",
-    version = CMD_BYTECODE_VER,
-    defaultResultType = BytecodeResult.class
+    version = CMD_BYTECODE_VER
 )
 @CmdRoutes({
     @CmdRoutes.Route(
@@ -95,9 +87,6 @@ import com.justnothing.testmodule.command.functions.bytecode.response.BytecodeRe
 })
 public class BytecodeMain extends MainCommand<BytecodeResult> {
 
-    private final BytecodeQueryCommand queryCommand = new BytecodeQueryCommand();
-    private final BytecodeManageCommand manageCommand = new BytecodeManageCommand();
-
     public BytecodeMain() {
         super("bytecode", BytecodeResult.class);
     }
@@ -105,45 +94,5 @@ public class BytecodeMain extends MainCommand<BytecodeResult> {
     @Override
     public String getHelpText() {
         return CommandRouter.getInstance().generateHelpForCommand("bytecode");
-    }
-
-    @Override
-    public BytecodeResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
-        String[] args = context.args();
-
-        if (args.length < 1) {
-            context.println(getHelpText(), Colors.WHITE);
-            return createErrorResult("参数不足，需要指定子命令");
-        }
-
-        String subCommand = args[0].toLowerCase();
-
-        CommandRouter.RouteMatch match = CommandRouter.getInstance()
-                .matchRoute("bytecode", new String[]{subCommand});
-
-        if (match == null || match.routeConfig() == null) {
-            context.println("未知子命令: " + subCommand, Colors.RED);
-            context.println(getHelpText(), Colors.WHITE);
-            throw new IllegalCommandLineArgumentException("未知子命令: " + subCommand);
-        }
-
-        Class<? extends CommandRequest> requestType = match.routeConfig().requestType();
-        CommandRequest request = requestType.getDeclaredConstructor().newInstance();
-
-        String[] remainingArgs = args.length > 1
-                ? Arrays.copyOfRange(args, 1, args.length)
-                : new String[0];
-        CmdParamProcessor.parseCommandLineArgs(request, remainingArgs);
-
-        context.setRequest(request);
-
-        Class<?> handlerType = match.routeConfig().handlerType();
-        if (handlerType == BytecodeQueryCommand.class) {
-            return queryCommand.execute(context);
-        } else if (handlerType == BytecodeManageCommand.class) {
-            return manageCommand.execute(context);
-        }
-
-        return createErrorResult("无法找到处理器: " + handlerType.getSimpleName());
     }
 }

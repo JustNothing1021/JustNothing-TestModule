@@ -16,17 +16,22 @@ import com.justnothing.testmodule.command.framework.output.Colors;
         "trace clear                        清除所有任务"
     }
 )
-public class TraceManageCommand extends AbstractTraceCommand<CommandRequest, TraceResult> {
+public class TraceManageCommand extends AbstractTraceCommand<CommandRequest<?>, TraceResult> {
+
+    @SuppressWarnings("unchecked")
+    public TraceManageCommand() {
+        super("trace manage", (Class) CommandRequest.class, TraceResult.class);
+    }
 
     @Override
-    protected TraceResult executeInternal(CommandRequest request) throws Exception {
+    protected TraceResult executeRequest(CommandRequest<?> request) throws Exception {
         if (request instanceof TraceAddRequest r) return handleAdd(r);
         if (request instanceof TraceStopRequest r) return handleStop(r);
         if (request instanceof TraceClearRequest r) return handleClear(r);
         throw new IllegalArgumentException("不支持的请求类型: " + request.getClass().getSimpleName());
     }
 
-    private TraceResult handleAdd(TraceAddRequest request) throws Exception {
+    private TraceResult handleAdd(TraceAddRequest request) {
         TraceResult r = new TraceResult(java.util.UUID.randomUUID().toString());
         r.setSubCommand("add");
 

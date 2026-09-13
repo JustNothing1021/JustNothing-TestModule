@@ -14,7 +14,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Locale;
 
-public abstract class AbstractPerfCommand<Req extends PerformanceRequest, Res extends CommandResult>
+public abstract class AbstractPerfCommand<Req extends PerformanceRequest<?>, Res extends CommandResult>
         extends AbstractCommand<Req, Res>
         implements PerformanceCommand<Res> {
 

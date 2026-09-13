@@ -1,25 +1,11 @@
 package com.justnothing.testmodule.command.functions.trace.request;
 
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.justnothing.testmodule.command.functions.trace.TraceResult;
 
-@SerializeKeyName("trace:clear")
-public class TraceClearRequest extends CommandRequest {
+public class TraceClearRequest extends CommandRequest<TraceResult> {
 
     public TraceClearRequest() {
         super();
-    }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        return super.toJson();
-    }
-
-    @Override
-    public TraceClearRequest fromJson(JSONObject obj) {
-        setRequestId(obj.optString("requestId"));
-        return this;
     }
 }

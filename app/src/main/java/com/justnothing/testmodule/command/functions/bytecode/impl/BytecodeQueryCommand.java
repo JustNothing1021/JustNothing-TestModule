@@ -21,14 +21,15 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
 
-public class BytecodeQueryCommand extends AbstractBytecodeCommand<CommandRequest> {
+public class BytecodeQueryCommand extends AbstractBytecodeCommand<CommandRequest<?>> {
 
+    @SuppressWarnings("unchecked")
     public BytecodeQueryCommand() {
-        super("bytecode query", CommandRequest.class);
+        super("bytecode query", (Class) CommandRequest.class);
     }
 
     @Override
-    protected BytecodeResult executeInternal(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
+    protected BytecodeResult executeInternal(CommandExecutor.CmdExecContext<CommandRequest<?>> context) throws Exception {
         CommandRequest request = context.getRequest();
         ClassLoader classLoader = context.classLoader();
 
@@ -52,7 +53,7 @@ public class BytecodeQueryCommand extends AbstractBytecodeCommand<CommandRequest
     }
 
     private BytecodeResult handleInfo(BytecodeInfoRequest request, ClassLoader classLoader,
-            CommandExecutor.CmdExecContext<CommandRequest> context) {
+            CommandExecutor.CmdExecContext<CommandRequest<?>> context) {
         String className = request.getClassName();
         boolean verbose = request.isVerbose();
 
@@ -104,7 +105,7 @@ public class BytecodeQueryCommand extends AbstractBytecodeCommand<CommandRequest
     }
 
     private BytecodeResult handleMethod(BytecodeMethodRequest request, ClassLoader classLoader,
-            CommandExecutor.CmdExecContext<CommandRequest> context) {
+            CommandExecutor.CmdExecContext<CommandRequest<?>> context) {
         String className = request.getClassName();
         String methodName = request.getMethodName();
         boolean hexFormat = request.isHexFormat();
@@ -164,7 +165,7 @@ public class BytecodeQueryCommand extends AbstractBytecodeCommand<CommandRequest
     }
 
     private BytecodeResult handleAnalyze(BytecodeAnalyzeRequest request, ClassLoader classLoader,
-            CommandExecutor.CmdExecContext<CommandRequest> context) {
+            CommandExecutor.CmdExecContext<CommandRequest<?>> context) {
         String className = request.getClassName();
         boolean verbose = request.isVerbose();
 
@@ -222,7 +223,7 @@ public class BytecodeQueryCommand extends AbstractBytecodeCommand<CommandRequest
     }
 
     private BytecodeResult handleDisasm(BytecodeDisasmRequest request, ClassLoader classLoader,
-            CommandExecutor.CmdExecContext<CommandRequest> context) {
+            CommandExecutor.CmdExecContext<CommandRequest<?>> context) {
         String className = request.getClassName();
         String methodName = request.getMethodName();
 
@@ -259,7 +260,7 @@ public class BytecodeQueryCommand extends AbstractBytecodeCommand<CommandRequest
     }
 
     private BytecodeResult handleConstants(BytecodeConstantsRequest request, ClassLoader classLoader,
-            CommandExecutor.CmdExecContext<CommandRequest> context) {
+            CommandExecutor.CmdExecContext<CommandRequest<?>> context) {
         String className = request.getClassName();
 
         try {
@@ -307,7 +308,7 @@ public class BytecodeQueryCommand extends AbstractBytecodeCommand<CommandRequest
     }
 
     private BytecodeResult handleVerify(BytecodeVerifyRequest request, ClassLoader classLoader,
-            CommandExecutor.CmdExecContext<CommandRequest> context) {
+            CommandExecutor.CmdExecContext<CommandRequest<?>> context) {
         String className = request.getClassName();
 
         try {
@@ -367,7 +368,7 @@ public class BytecodeQueryCommand extends AbstractBytecodeCommand<CommandRequest
     }
 
     private BytecodeResult handleDecompile(BytecodeDecompileRequest request, ClassLoader classLoader,
-            CommandExecutor.CmdExecContext<CommandRequest> context) {
+            CommandExecutor.CmdExecContext<CommandRequest<?>> context) {
         String className = request.getClassName();
         String outputPath = request.getOutputPath();
 

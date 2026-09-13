@@ -1,18 +1,25 @@
 package com.justnothing.testmodule.command.functions.help.impl;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
-import com.justnothing.testmodule.command.framework.model.MainCommand;
+import com.justnothing.testmodule.command.framework.model.AbstractCommand;
 import com.justnothing.testmodule.command.framework.model.CommandResult;
+import com.justnothing.testmodule.command.framework.model.MainCommand;
+import com.justnothing.testmodule.command.framework.model.NoArgRequest;
 import com.justnothing.testmodule.command.framework.output.Colors;
 
-public class HelpCommand {
+public class HelpCommand extends AbstractCommand<NoArgRequest, CommandResult> {
 
-    public CommandResult execute(CommandExecutor.CmdExecContext<?> ctx) {
+    public HelpCommand() {
+        super("help", NoArgRequest.class, CommandResult.class);
+    }
+
+    @Override
+    protected CommandResult executeInternal(CommandExecutor.CmdExecContext<NoArgRequest> ctx) {
         String[] args = ctx.args();
-        
+
         if (args.length > 0) {
             String commandName = args[0];
-            MainCommand command = CommandExecutor.getCommand(commandName);
+            MainCommand<? extends CommandResult> command = CommandExecutor.getCommand(commandName);
             if (command != null) {
                 ctx.println(command.getHelpText(), Colors.WHITE);
             } else {

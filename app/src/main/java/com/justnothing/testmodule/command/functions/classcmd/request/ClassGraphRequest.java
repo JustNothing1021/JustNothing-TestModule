@@ -2,12 +2,10 @@ package com.justnothing.testmodule.command.functions.classcmd.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.framework.error.IllegalCommandLineArgumentException;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
-import com.justnothing.testmodule.command.framework.utils.ParamParser;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandRequest;
+import com.justnothing.testmodule.command.functions.classcmd.response.ClassGraphResult;
 
-@SerializeKeyName("class:graph")
-public class ClassGraphRequest extends ClassCommandRequest {
+public class ClassGraphRequest extends ClassCommandRequest<ClassGraphResult> {
 
     @CmdParam(
         name = "class",
@@ -63,8 +61,4 @@ public class ClassGraphRequest extends ClassCommandRequest {
     public void setMaxDepth(int maxDepth) { this.maxDepth = maxDepth; }
     public boolean isCompactMode() { return compactMode; }
     public void setCompactMode(boolean compactMode) { this.compactMode = compactMode; }
-    @Override
-    public ClassGraphRequest fromCommandLine(String[] args) throws IllegalCommandLineArgumentException {
-        return ParamParser.parse(ClassGraphRequest.class, args);
-    }
 }

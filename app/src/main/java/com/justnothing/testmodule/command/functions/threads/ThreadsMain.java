@@ -2,19 +2,10 @@ package com.justnothing.testmodule.command.functions.threads;
 
 import static com.justnothing.testmodule.constants.CommandServer.CMD_THREADS_VER;
 
-import java.util.Arrays;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
-import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.model.MainCommand;
-import com.justnothing.testmodule.command.framework.error.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.framework.annotation.Cmd;
-import com.justnothing.testmodule.command.framework.utils.CommandExceptionHandler;
-import com.justnothing.testmodule.command.framework.utils.CmdParamProcessor;
 import com.justnothing.testmodule.command.framework.annotation.CmdRoutes;
 import com.justnothing.testmodule.command.framework.model.CommandRouter;
-import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.functions.threads.impl.DeadlockCommand;
 import com.justnothing.testmodule.command.functions.threads.impl.ListCommand;
 import com.justnothing.testmodule.command.functions.threads.impl.ProfileExportCommand;
@@ -28,14 +19,12 @@ import com.justnothing.testmodule.command.functions.threads.request.ThreadProfil
 import com.justnothing.testmodule.command.functions.threads.request.ThreadProfileStartRequest;
 import com.justnothing.testmodule.command.functions.threads.request.ThreadProfileStopRequest;
 import com.justnothing.testmodule.command.functions.threads.response.ThreadCommandResult;
-import com.justnothing.testmodule.command.framework.output.Colors;
 
 @Cmd(
     name = "threads",
     group = "system",
     description = "线程管理和分析工具",
-    version = CMD_THREADS_VER,
-    defaultResultType = ThreadCommandResult.class
+    version = CMD_THREADS_VER
 )
 @CmdRoutes({
     @CmdRoutes.Route(
@@ -77,102 +66,12 @@ import com.justnothing.testmodule.command.framework.output.Colors;
 })
 public class ThreadsMain extends MainCommand<ThreadCommandResult> {
 
-    private final Map<String, AbstractThreadsCommand<?, ?>> subCommandMap = new ConcurrentHashMap<>();
-
     public ThreadsMain() {
         super("Threads", ThreadCommandResult.class);
-        
-        registerSubCommand("list", new ListCommand());
-        registerSubCommand("deadlock", new DeadlockCommand());
-        registerSubCommand("profile/start", new ProfileStartCommand());
-        registerSubCommand("profile/stop", new ProfileStopCommand());
-        registerSubCommand("profile/show", new ProfileShowCommand());
-        registerSubCommand("profile/export", new ProfileExportCommand());
-        
-        CommandRouter.getInstance().registerCommand(ThreadsMain.class);
-    }
-
-    private void registerSubCommand(String name, AbstractThreadsCommand<?, ?> command) {
-        subCommandMap.put(name.toLowerCase(), command);
-        logger.debug("注册子命令: " + name + " -> " + command.getClass().getSimpleName());
     }
 
     @Override
     public String getHelpText() {
         return CommandRouter.getInstance().generateHelpForCommand("threads");
-    }
-
-    @Override
-    public ThreadCommandResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
-        String[] args = context.args();
-        
-        logger.debug("执行threads命令，参数: " + Arrays.toString(args));
-
-        try {
-            if (args.length < 1) {
-                context.println(getHelpText(), Colors.WHITE);
-                return createErrorResult("参数不足，使用 threads <subcmd> [args...]");
-            }
-
-            String subCommand = args[0];
-            String[] remainingArgs = (args.length > 1) 
-                ? Arrays.copyOfRange(args, 1, args.length) 
-                : new String[0];
-
-            AbstractThreadsCommand<?, ?> command = resolveCommand(subCommand, remainingArgs);
-            
-            if (command == null) {
-                context.print("未知子命令: ", Colors.RED);
-                context.println(subCommand, Colors.YELLOW);
-                context.println("\n可用的子命令:", Colors.WHITE);
-                context.println(getHelpText(), Colors.WHITE);
-                return createErrorResult("未知子命令: " + subCommand);
-            }
-
-            context.setRequest(parseRequestForCommand(subCommand, remainingArgs));
-            return (ThreadCommandResult) command.execute(context);
-
-        } catch (IllegalCommandLineArgumentException e) {
-            throw e;
-        } catch (Exception e) {
-            CommandExceptionHandler.handleException(
-                "threads", e, context, "执行threads命令失败"
-            );
-            return createErrorResult("执行threads命令失败: " + e.getMessage());
-        }
-    }
-
-    private AbstractThreadsCommand<?, ?> resolveCommand(String subCommand, String[] remainingArgs) {
-        if ("profile".equals(subCommand) && remainingArgs.length >= 1) {
-            String nestedPath = "profile/" + remainingArgs[0];
-            AbstractThreadsCommand<?, ?> nestedCmd = subCommandMap.get(nestedPath.toLowerCase());
-            if (nestedCmd != null) return nestedCmd;
-        }
-        
-        return subCommandMap.get(subCommand.toLowerCase());
-    }
-
-    @SuppressWarnings("unchecked")
-    private CommandRequest parseRequestForCommand(String subCommand, String[] args)
-            throws Exception {
-        String routePath = ("profile".equals(subCommand) && args.length > 0)
-            ? "profile/" + args[0]
-            : subCommand;
-
-        CommandRouter.RouteMatch match = CommandRouter.getInstance()
-            .matchRoute("threads", new String[]{routePath});
-
-        if (match != null && match.routeConfig() != null) {
-            Class<? extends CommandRequest> requestType = match.routeConfig().requestType();
-            CommandRequest request = requestType.getDeclaredConstructor().newInstance();
-
-            String[] parseArgs = ("profile".equals(subCommand) && args.length > 1)
-                ? Arrays.copyOfRange(args, 1, args.length)
-                : args;
-
-            return CmdParamProcessor.parseRequest(request, parseArgs);
-        }
-
-        return new ThreadListRequest();
     }
 }

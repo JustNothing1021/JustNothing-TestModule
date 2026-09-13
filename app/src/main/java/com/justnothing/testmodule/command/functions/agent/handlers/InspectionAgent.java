@@ -8,6 +8,8 @@ import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.output.ClientRequirements;
 import com.justnothing.testmodule.command.framework.output.InteractiveOutputHandler;
 import com.justnothing.testmodule.command.framework.protocol.InteractiveProtocol;
+import com.justnothing.testmodule.command.framework.protocol.ProtocolMethods;
+import com.justnothing.testmodule.command.framework.protocol.TerminalRpcChannel;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.command.framework.model.CommandResult;
 import com.justnothing.methodsclient.executor.AsyncChmodExecutor;
@@ -329,12 +331,12 @@ public class InspectionAgent {
      * 在目标应用进程中通过 Socket 交互式执行代理命令
      * <p>
      * 复用当前 IPC Socket 连接，使用 InteractiveOutputHandler 进行双向通信。
-     * 输入线程使用 InteractiveProtocol 二进制帧协议读取客户端响应，
-     * 与主服务 SocketClientHandler.runInteractiveProtocolServer() 保持一致。
+     * 交互阶段统一走 TYPE_RPC 单帧 + 逻辑多通道（cmd.* / term.* / sys.*），
+     * 与主服务 {@code SocketClientHandler} 保持一致。
      *
      * @param commandStr 完整命令字符串
-     * @param socketIn   Socket 输入流（用于读取客户端输入响应）
-     * @param socketOut  Socket 输出流（用于发送输出和输入请求）
+     * @param socketIn   Socket 输入流（用于读取客户端 RPC 帧）
+     * @param socketOut  Socket 输出流（用于发送 RPC 帧）
      */
     private void executeDispatchedCommandInteractive(String commandStr,
                                                       java.io.InputStream socketIn,
@@ -343,14 +345,22 @@ public class InspectionAgent {
             CommandExecutor executor =
                     new CommandExecutor();
 
-            // 使用 InteractiveOutputHandler — 通过 Socket 双向通信
+            // 使用 InteractiveOutputHandler — 统一 RPC 通道（cmd.output / cmd.prompt / cmd.done）
             InteractiveOutputHandler outputHandler =
                     new InteractiveOutputHandler(socketOut);
             outputHandler.setSupportsInput(true);
-            outputHandler.setCommand(commandStr);
+            outputHandler.initRpcChannel();
 
-            // 启动输入读取线程：使用 InteractiveProtocol 二进制帧协议读取客户端输入响应
-            // 与 SocketClientHandler.runInteractiveProtocolServer() 保持一致的帧解析逻辑
+            TerminalRpcChannel channel = outputHandler.getRpcChannel();
+            // sys.ping → sys.pong（RPC 层活性，取代旧裸帧 PING/PONG）
+            if (channel != null) {
+                channel.onNotification(ProtocolMethods.SYS_PING,
+                        p -> channel.sendNotification(ProtocolMethods.SYS_PONG, null));
+            }
+
+            // 启动输入读取线程：统一 TYPE_RPC 帧（cmd.prompt 响应 / sys.pong 等）
+            // 与 SocketClientHandler 的 reader 线程分离设计一致，保证 cmd.prompt 的
+            // channel.call() 不因 reader 被占用而死锁。
             java.util.concurrent.atomic.AtomicBoolean inputRunning = new java.util.concurrent.atomic.AtomicBoolean(true);
             java.util.concurrent.ExecutorService inputExecutor = java.util.concurrent.Executors.newSingleThreadExecutor();
             inputExecutor.submit(() -> {
@@ -364,43 +374,12 @@ public class InspectionAgent {
                         }
                         byte packetType = (byte) packet[0];
                         byte[] packetData = (byte[]) packet[1];
-
-                        switch (packetType) {
-                            case InteractiveProtocol.TYPE_INPUT_RESPONSE:
-                                if (packetData != null) {
-                                    String response = new String(packetData, StandardCharsets.UTF_8);
-                                    String[] parts = response.split(":", 2);
-                                    if (parts.length == 2) {
-                                        logger.debug("_dispatch 收到输入响应: " + parts[0]);
-                                        outputHandler.handleInputResponse(parts[0], parts[1]);
-                                    }
-                                }
-                                break;
-
-                            case InteractiveProtocol.TYPE_CLIENT_PONG:
-                                logger.debug("_dispatch 收到 CLIENT_PONG");
-                                break;
-
-                            case InteractiveProtocol.TYPE_INPUT_PONG:
-                                InteractiveOutputHandler.lastResponseTime
-                                        .getAndSet(System.currentTimeMillis());
-                                logger.debug("_dispatch 收到 INPUT_PONG");
-                                break;
-
-                            case InteractiveProtocol.TYPE_SET_HIGHLIGHT_MODE:
-                                // 客户端发来的模式切换请求：转发给命令执行上下文
-                                // 当前通过日志记录，未来可接入上下文感知的模式管理
-                                if (packetData != null) {
-                                    String mode = new String(packetData, StandardCharsets.UTF_8);
-                                    logger.debug("_dispatch 收到客户端模式切换请求: " + mode);
-                                }
-                                break;
-
-                            default:
-                                logger.debug("_dispatch 收到未知帧类型: " +
-                                        InteractiveProtocol
-                                                .getMessageTypeName(packetType));
-                                break;
+                        if (packetType == InteractiveProtocol.TYPE_RPC) {
+                            outputHandler.handleRpcData(packetData);
+                        } else {
+                            logger.debug("_dispatch 收到未知帧类型: " +
+                                    InteractiveProtocol
+                                            .getMessageTypeName(packetType));
                         }
                     }
                 } catch (Exception e) {

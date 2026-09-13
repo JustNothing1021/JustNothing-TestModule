@@ -1,12 +1,16 @@
 package com.justnothing.testmodule.command.framework.protocol;
 
-import com.justnothing.testmodule.command.framework.output.ClientRequirements;
-import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.utils.logging.Logger;
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
+/**
+ * 统一 RPC 信封协议。
+ *
+ * <p>旧二进制帧协议已整体删除，所有 JSON-RPC（cmd.* / term.* / sys.*）承载于
+ * 单一帧类型 {@link #TYPE_RPC}，通过 method 命名空间分区。</p>
+ */
 public final class InteractiveProtocol {
 
 
@@ -16,91 +20,13 @@ public final class InteractiveProtocol {
     public static final byte[] START_MARKER = {0x00, 0x11, 0x45, 0x14};
     public static final byte[] END_MARKER = {0x01, (byte)0x91, (byte)0x98, 0x10};
 
-    // 消息类型
-    public static final byte TYPE_CLIENT_COMMAND = 0x01;
-    public static final byte TYPE_SERVER_OUTPUT = 0x02;
-    public static final byte TYPE_SERVER_ERROR = 0x03;
-    public static final byte TYPE_SERVER_INPUT_REQUEST = 0x04;
-    public static final byte TYPE_INPUT_RESPONSE = 0x05;
-    public static final byte TYPE_SERVER_PING = 0x06;
-    public static final byte TYPE_CLIENT_PING = 0x07;
-    public static final byte TYPE_SERVER_PONG = 0x08;
-    public static final byte TYPE_CLIENT_PONG = 0x09;
-    public static final byte TYPE_INPUT_PING = 0x10;
-    public static final byte TYPE_INPUT_PONG = 0x11;
-    public static final byte TYPE_COMMAND_END = 0x12;
-    public static final byte TYPE_CLIENT_CAPABILITY = 0x13;
-    public static final byte TYPE_COLORED_OUTPUT = 0x14;
-    public static final byte TYPE_JSON_COMMAND_REQUEST = 0x15;
-    public static final byte TYPE_JSON_COMMAND_RESPONSE = 0x16;
-    public static final byte TYPE_SET_HIGHLIGHT_MODE = 0x17;
-
-    // ─── RichConsole 扩展消息类型 ──────────────────────────
-    // 0x1A-0x1F 已废弃，统一迁移至 TYPE_TERMINAL_RPC (0x20) JSON-RPC
-    public static final byte TYPE_TERMINAL_RPC = 0x20;  // JSON-RPC Terminal 通信
-
-
+    // 统一 RPC 信封帧（所有 JSON-RPC 消息的物理承载）
+    public static final byte TYPE_RPC = 0x21;
 
     public static String getMessageTypeName(byte type) {
         return switch (type) {
-            case TYPE_CLIENT_COMMAND -> "CLIENT_COMMAND";
-            case TYPE_SERVER_OUTPUT -> "SERVER_OUTPUT";
-            case TYPE_SERVER_ERROR -> "SERVER_ERROR";
-            case TYPE_SERVER_INPUT_REQUEST -> "SERVER_INPUT_REQUEST";
-            case TYPE_INPUT_RESPONSE -> "INPUT_RESPONSE";
-            case TYPE_SERVER_PING -> "SERVER_PING";
-            case TYPE_CLIENT_PING -> "CLIENT_PING";
-            case TYPE_SERVER_PONG -> "SERVER_PONG";
-            case TYPE_CLIENT_PONG -> "CLIENT_PONG";
-            case TYPE_INPUT_PING -> "INPUT_PING";
-            case TYPE_INPUT_PONG -> "INPUT_PONG";
-            case TYPE_COMMAND_END -> "COMMAND_END";
-            case TYPE_CLIENT_CAPABILITY -> "CLIENT_CAPABILITY";
-            case TYPE_COLORED_OUTPUT -> "COLORED_OUTPUT";
-            case TYPE_JSON_COMMAND_REQUEST -> "COMMAND_REQUEST";
-            case TYPE_JSON_COMMAND_RESPONSE -> "COMMAND_RESPONSE";
-            case TYPE_SET_HIGHLIGHT_MODE -> "SET_HIGHLIGHT_MODE";
-            case TYPE_TERMINAL_RPC -> "TERMINAL_RPC";
+            case TYPE_RPC -> "RPC";
             default -> "UNKNOWN(" + type + ")";
-        };
-    }
-
-    public static String getColorName(byte color) {
-        return switch (color) {
-            case Colors.DEFAULT -> "DEFAULT";
-            case Colors.BLACK -> "BLACK";
-            case Colors.RED -> "RED";
-            case Colors.GREEN -> "GREEN";
-            case Colors.YELLOW -> "YELLOW";
-            case Colors.BLUE -> "BLUE";
-            case Colors.CYAN -> "CYAN";
-            case Colors.MAGENTA -> "MAGENTA";
-            case Colors.WHITE -> "WHITE";
-            case Colors.GRAY -> "GRAY";
-            case Colors.LIGHT_GRAY -> "LIGHT_GRAY";
-            case Colors.LIGHT_RED -> "LIGHT_RED";
-            case Colors.LIGHT_GREEN -> "LIGHT_GREEN";
-            case Colors.LIGHT_YELLOW -> "LIGHT_YELLOW";
-            case Colors.LIGHT_BLUE -> "LIGHT_BLUE";
-            case Colors.LIGHT_CYAN -> "LIGHT_CYAN";
-            case Colors.LIGHT_MAGENTA -> "LIGHT_MAGENTA";
-            case Colors.DARK_GRAY -> "DARK_GRAY";
-            case Colors.ORANGE -> "ORANGE";
-            case Colors.PINK -> "PINK";
-            case Colors.BROWN -> "BROWN";
-            case Colors.GOLD -> "GOLD";
-            case Colors.SILVER -> "SILVER";
-            case Colors.LIME -> "LIME";
-            case Colors.TEAL -> "TEAL";
-            case Colors.NAVY -> "NAVY";
-            case Colors.MAROON -> "MAROON";
-            case Colors.OLIVE -> "OLIVE";
-            case Colors.AQUA -> "AQUA";
-            case Colors.CORAL -> "CORAL";
-            case Colors.SALMON -> "SALMON";
-            case Colors.INDIGO -> "INDIGO";
-            case Colors.VIOLET -> "VIOLET";
-            default -> "UNKNOWN(" + color + ")";
         };
     }
 
@@ -287,84 +213,5 @@ public final class InteractiveProtocol {
             }
             throw e;
         }
-    }
-
-    /**
-     * 编码颜色输出
-     * @param color 颜色常量
-     * @param text 文本内容
-     * @return 编码后的字节数组 [COLOR_BYTE][TEXT_BYTES]
-     */
-    public static byte[] encodeColoredOutput(byte color, String text) {
-        if (text == null) {
-            text = "";
-        }
-        byte[] textBytes = text.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-        byte[] data = new byte[1 + textBytes.length];
-        data[0] = color;
-        System.arraycopy(textBytes, 0, data, 1, textBytes.length);
-        return data;
-    }
-
-    /**
-     * 解码颜色输出
-     * @param data 原始数据 [BYTE][TEXT_BYTES]
-     * @return Object[]{color, text}
-     */
-    public static Object[] decodeColoredOutput(byte[] data) {
-        if (data == null || data.length == 0) {
-            return new Object[]{Colors.DEFAULT, ""};
-        }
-        byte color = data[0];
-        String text = "";
-        if (data.length > 1) {
-            text = new String(data, 1, data.length - 1, java.nio.charset.StandardCharsets.UTF_8);
-        }
-        return new Object[]{color, text};
-    }
-
-    /**
-     * 编码客户端能力（8 字节）
-     * [supportsInput(1B)][isJsonMode(1B)][width(2B)][height(2B)][supportsAnsi(1B)][colorSystem(1B)]
-     */
-    public static byte[] encodeCapability(ClientRequirements requirements) {
-        if (requirements == null) {
-            return new byte[]{0, 0, 0, 0, 0, 0, 0, 0};
-        }
-        ByteBuffer buf = ByteBuffer.allocate(8);
-        buf.put((byte) (requirements.isSupportsInput() ? 1 : 0));
-        buf.put((byte) (requirements.isJsonMode() ? 1 : 0));
-        buf.putShort((short) requirements.getWidth());
-        buf.putShort((short) requirements.getHeight());
-        buf.put((byte) (requirements.isSupportsAnsi() ? 1 : 0));
-        buf.put((byte) requirements.getColorSystem());
-        return buf.array();
-    }
-
-    /**
-     * 解码客户端能力（兼容 1/2/8 字节格式）
-     */
-    public static ClientRequirements decodeCapability(byte[] data) {
-        if (data == null) return new ClientRequirements();
-        if (data.length == 1) {
-            // 旧版 v1：仅 supportsInput
-            return new ClientRequirements(data[0] == 0x01, false);
-        }
-        if (data.length < 2) {
-            return new ClientRequirements();
-        }
-        boolean supportsInput = data[0] == 1;
-        boolean isJsonMode = data[1] == 1;
-        ClientRequirements req = new ClientRequirements(supportsInput, isJsonMode);
-
-        if (data.length >= 8) {
-            // v2 扩展：含终端尺寸 + ANSI + 颜色系统
-            ByteBuffer buf = ByteBuffer.wrap(data, 2, 6);
-            req.setWidth(buf.getShort() & 0xFFFF);
-            req.setHeight(buf.getShort() & 0xFFFF);
-            req.setSupportsAnsi(buf.get() == 1);
-            req.setColorSystem(buf.get());
-        }
-        return req;
     }
 }

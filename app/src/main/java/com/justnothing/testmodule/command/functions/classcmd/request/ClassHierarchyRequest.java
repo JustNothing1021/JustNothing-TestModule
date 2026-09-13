@@ -1,11 +1,10 @@
 package com.justnothing.testmodule.command.functions.classcmd.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandRequest;
+import com.justnothing.testmodule.command.functions.classcmd.response.ClassHierarchyResult;
 
-@SerializeKeyName("class:hierarchy")
-public class ClassHierarchyRequest extends ClassCommandRequest {
+public class ClassHierarchyRequest extends ClassCommandRequest<ClassHierarchyResult> {
 
     @CmdParam(
         name = "class",

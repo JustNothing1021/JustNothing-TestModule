@@ -2,12 +2,10 @@ package com.justnothing.testmodule.command.functions.classcmd.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.framework.error.IllegalCommandLineArgumentException;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
-import com.justnothing.testmodule.command.framework.utils.ParamParser;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandRequest;
+import com.justnothing.testmodule.command.functions.classcmd.response.AnalyzeReportResult;
 
-@SerializeKeyName("class:analyze")
-public class AnalyzeClassRequest extends ClassCommandRequest {
+public class AnalyzeClassRequest extends ClassCommandRequest<AnalyzeReportResult> {
 
     @CmdParam(
         name = "class",
@@ -130,8 +128,4 @@ public class AnalyzeClassRequest extends ClassCommandRequest {
     public void setShowStats(boolean showStats) { this.showStats = showStats; }
     public boolean isRawOutput() { return rawOutput; }
     public void setRawOutput(boolean rawOutput) { this.rawOutput = rawOutput; }
-    @Override
-    public AnalyzeClassRequest fromCommandLine(String[] args) throws IllegalCommandLineArgumentException {
-        return ParamParser.parse(AnalyzeClassRequest.class, args);
-    }
 }

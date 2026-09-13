@@ -16,14 +16,15 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class BytecodeManageCommand extends AbstractBytecodeCommand<CommandRequest> {
+public class BytecodeManageCommand extends AbstractBytecodeCommand<CommandRequest<?>> {
 
+    @SuppressWarnings("unchecked")
     public BytecodeManageCommand() {
-        super("bytecode manage", CommandRequest.class);
+        super("bytecode manage", (Class) CommandRequest.class);
     }
 
     @Override
-    protected BytecodeResult executeInternal(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
+    protected BytecodeResult executeInternal(CommandExecutor.CmdExecContext<CommandRequest<?>> context) throws Exception {
         CommandRequest request = context.getRequest();
         ClassLoader classLoader = context.classLoader();
 
@@ -39,7 +40,7 @@ public class BytecodeManageCommand extends AbstractBytecodeCommand<CommandReques
     }
 
     private BytecodeResult handleDump(BytecodeDumpRequest request, ClassLoader classLoader,
-            CommandExecutor.CmdExecContext<CommandRequest> context) {
+            CommandExecutor.CmdExecContext<CommandRequest<?>> context) {
         String className = request.getClassName();
         String outputPath = request.getOutputPath();
 
@@ -69,7 +70,7 @@ public class BytecodeManageCommand extends AbstractBytecodeCommand<CommandReques
     }
 
     private BytecodeResult handleBatchExport(BytecodeBatchExportRequest request, ClassLoader classLoader,
-            CommandExecutor.CmdExecContext<CommandRequest> context) {
+            CommandExecutor.CmdExecContext<CommandRequest<?>> context) {
         String outputPath = request.getOutputPath();
 
         if (outputPath == null) {
@@ -88,7 +89,7 @@ public class BytecodeManageCommand extends AbstractBytecodeCommand<CommandReques
     }
 
     private BytecodeResult handleListClasses(BytecodeListClassesRequest request, ClassLoader classLoader,
-            CommandExecutor.CmdExecContext<CommandRequest> context) {
+            CommandExecutor.CmdExecContext<CommandRequest<?>> context) {
         try {
             Map<String, byte[]> classes = SystemBytecodeExtractor.getAllClassesBytecode(classLoader);
 

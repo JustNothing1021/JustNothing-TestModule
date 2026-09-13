@@ -1,12 +1,9 @@
 package com.justnothing.testmodule.command.functions.script.request;
 
+import com.justnothing.testmodule.command.functions.script.ScriptResult;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
-import org.json.JSONException;
-import org.json.JSONObject;
 
-@SerializeKeyName("script:run")
-public class ScriptRunRequest extends ScriptBaseRequest {
+public class ScriptRunRequest extends ScriptBaseRequest<ScriptResult> {
 
     @CmdParam(name = "name", position = 1, required = true, description = "脚本名称")
     private String name;
@@ -17,18 +14,4 @@ public class ScriptRunRequest extends ScriptBaseRequest {
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        obj.put("name", name);
-        return obj;
-    }
-
-    @Override
-    public ScriptRunRequest fromJson(JSONObject obj) {
-        setRequestId(obj.optString("requestId"));
-        setName(obj.optString("name"));
-        return this;
-    }
 }

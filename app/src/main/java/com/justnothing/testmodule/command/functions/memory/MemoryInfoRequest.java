@@ -2,10 +2,8 @@ package com.justnothing.testmodule.command.functions.memory;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
 
-@SerializeKeyName("memory:info")
-public class MemoryInfoRequest extends CommandRequest {
+public class MemoryInfoRequest extends CommandRequest<MemoryInfoResult> {
 
     public static final String LEVEL_BASIC = "basic";
     public static final String LEVEL_FULL = "full";

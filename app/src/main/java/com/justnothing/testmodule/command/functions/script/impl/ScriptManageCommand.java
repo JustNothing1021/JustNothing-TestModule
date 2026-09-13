@@ -18,10 +18,15 @@ import java.io.IOException;
         "script manage                     交互式管理器"
     }
 )
-public class ScriptManageCommand extends AbstractScriptCommand<ScriptBaseRequest, ScriptResult> {
+public class ScriptManageCommand extends AbstractScriptCommand<ScriptBaseRequest<?>, ScriptResult> {
+
+    @SuppressWarnings("unchecked")
+    public ScriptManageCommand() {
+        super("script manage", (Class) ScriptBaseRequest.class, ScriptResult.class);
+    }
 
     @Override
-    protected ScriptResult executeInternal(ScriptBaseRequest request) throws Exception {
+    protected ScriptResult executeRequest(ScriptBaseRequest<?> request) throws Exception {
         if (request instanceof ScriptListRequest) {
             return handleList();
         }

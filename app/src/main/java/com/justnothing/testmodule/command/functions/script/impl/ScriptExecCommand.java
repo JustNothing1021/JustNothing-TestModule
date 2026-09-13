@@ -42,10 +42,15 @@ import java.util.concurrent.atomic.AtomicReference;
         "script interactive                REPL 交互模式"
     }
 )
-public class ScriptExecCommand extends AbstractScriptCommand<ScriptBaseRequest, ScriptResult> {
+public class ScriptExecCommand extends AbstractScriptCommand<ScriptBaseRequest<?>, ScriptResult> {
+
+    @SuppressWarnings("unchecked")
+    public ScriptExecCommand() {
+        super("script exec", (Class) ScriptBaseRequest.class, ScriptResult.class);
+    }
 
     @Override
-    protected ScriptResult executeInternal(ScriptBaseRequest request) throws Exception {
+    protected ScriptResult executeRequest(ScriptBaseRequest<?> request) throws Exception {
         if (request instanceof ScriptRunRequest r) {
             return handleRun(r);
         }
@@ -282,6 +287,9 @@ public class ScriptExecCommand extends AbstractScriptCommand<ScriptBaseRequest, 
     protected void runInteractiveMode() {
         ClassLoader classLoader = context.classLoader();
         ScriptRunner runner = getScriptExecutor(classLoader);
+        // REPL 模式：保留 ParseContext，使 import / 变量 / 类声明可跨行生效。
+        // 注意：sinteractive 别名会展开成 "script interactive" 走这里，而非 ScriptExecutorMain。
+        runner.setReplMode(true);
 
         logger.info("进入交互式脚本执行模式");
         context.println("====== 脚本交互执行模式 =====", Colors.CYAN);
@@ -524,9 +532,9 @@ public class ScriptExecCommand extends AbstractScriptCommand<ScriptBaseRequest, 
                     break;
             }
         }
-
+        
         if (inString || inChar || inFString) {
-            throw new RuntimeException("Unterminated string literal detected");
+            return false;
         }
 
         return braceCount <= 0 && parenCount <= 0 && bracketCount <= 0 && preprocessorConditionCount <= 0;

@@ -1,12 +1,9 @@
 package com.justnothing.testmodule.command.functions.script.request;
 
+import com.justnothing.testmodule.command.functions.script.ScriptResult;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
-import org.json.JSONException;
-import org.json.JSONObject;
 
-@SerializeKeyName("script:permission:preset")
-public class ScriptPermPresetRequest extends ScriptBaseRequest {
+public class ScriptPermPresetRequest extends ScriptBaseRequest<ScriptResult> {
 
     @CmdParam(name = "presetName", position = 1, description = "预设名称(sandbox/expression/minimal/full)")
     private String presetName;
@@ -17,18 +14,4 @@ public class ScriptPermPresetRequest extends ScriptBaseRequest {
 
     public String getPresetName() { return presetName; }
     public void setPresetName(String presetName) { this.presetName = presetName; }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        obj.put("presetName", presetName);
-        return obj;
-    }
-
-    @Override
-    public ScriptPermPresetRequest fromJson(JSONObject obj) {
-        setRequestId(obj.optString("requestId"));
-        setPresetName(obj.optString("presetName"));
-        return this;
-    }
 }

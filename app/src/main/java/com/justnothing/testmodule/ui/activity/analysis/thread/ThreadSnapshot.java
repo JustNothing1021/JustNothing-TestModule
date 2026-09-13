@@ -1,6 +1,7 @@
 package com.justnothing.testmodule.ui.activity.analysis.thread;
 
-import com.justnothing.testmodule.command.functions.threads.ThreadInfoResult;
+import com.justnothing.testmodule.command.functions.threads.response.ThreadDetail;
+import com.justnothing.testmodule.command.functions.threads.response.ThreadListResult;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -16,10 +17,10 @@ public record ThreadSnapshot(
     @Serial
     private static final long serialVersionUID = 1L;
 
-    public static ThreadSnapshot fromResult(ThreadInfoResult result) {
+    public static ThreadSnapshot fromResult(ThreadListResult result) {
         List<ThreadItem> items = new ArrayList<>();
         if (result.getThreadDetails() != null) {
-            for (ThreadInfoResult.ThreadDetail d : result.getThreadDetails()) {
+            for (ThreadDetail d : result.getThreadDetails()) {
                 items.add(new ThreadItem(
                         d.getThreadId(), d.getName(), d.getState(),
                         d.getPriority(), d.isDaemon(), d.isInterrupted(), d.isAlive(),

@@ -19,15 +19,16 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Objects;
 
-public class BshManageCommand extends AbstractBeanShellCommand<CommandRequest> {
+public class BshManageCommand extends AbstractBeanShellCommand<CommandRequest<?>> {
 
+    @SuppressWarnings("unchecked")
     public BshManageCommand() {
-        super("bsh manage", CommandRequest.class);
+        super("bsh manage", (Class) CommandRequest.class);
     }
 
     @Override
-    protected BeanShellResult executeInternal(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
-        CommandRequest request = context.getRequest();
+    protected BeanShellResult executeInternal(CommandExecutor.CmdExecContext<CommandRequest<?>> context) throws Exception {
+        CommandRequest<?> request = context.getRequest();
 
         if (request instanceof BshExecuteRequest req) {
             return handleExecute(req, context);
@@ -50,7 +51,7 @@ public class BshManageCommand extends AbstractBeanShellCommand<CommandRequest> {
         return buildErrorResult("不支持的请求类型: " + request.getClass().getSimpleName());
     }
 
-    public BeanShellResult handleExecute(BshExecuteRequest request, CommandExecutor.CmdExecContext<CommandRequest> context) {
+    public BeanShellResult handleExecute(BshExecuteRequest request, CommandExecutor.CmdExecContext<CommandRequest<?>> context) {
         String code = request.getCode();
         ClassLoader classLoader = context.classLoader();
 
@@ -77,7 +78,7 @@ public class BshManageCommand extends AbstractBeanShellCommand<CommandRequest> {
         }
     }
 
-    public BeanShellResult handleClear(BshClearRequest request, CommandExecutor.CmdExecContext<CommandRequest> context) {
+    public BeanShellResult handleClear(BshClearRequest request, CommandExecutor.CmdExecContext<CommandRequest<?>> context) {
         ClassLoader classLoader = context.classLoader();
         String targetPackage = context.targetPackage();
 
@@ -90,7 +91,7 @@ public class BshManageCommand extends AbstractBeanShellCommand<CommandRequest> {
         return buildSuccessResult("bclear", "已清空变量");
     }
 
-    public BeanShellResult handleScriptCreate(BshScriptCreateRequest request, CommandExecutor.CmdExecContext<CommandRequest> context) throws IOException {
+    public BeanShellResult handleScriptCreate(BshScriptCreateRequest request, CommandExecutor.CmdExecContext<CommandRequest<?>> context) throws IOException {
         String scriptName = request.getName();
 
         if (!isValidScriptName(scriptName)) {
@@ -123,7 +124,7 @@ public class BshManageCommand extends AbstractBeanShellCommand<CommandRequest> {
         return buildSuccessResult("bscript:create", "脚本创建成功: " + scriptName);
     }
 
-    public BeanShellResult handleScriptEdit(BshScriptEditRequest request, CommandExecutor.CmdExecContext<CommandRequest> context) {
+    public BeanShellResult handleScriptEdit(BshScriptEditRequest request, CommandExecutor.CmdExecContext<CommandRequest<?>> context) {
         String scriptName = request.getName();
         File scriptFile = getBeanShellScriptFile(scriptName);
 
@@ -142,7 +143,7 @@ public class BshManageCommand extends AbstractBeanShellCommand<CommandRequest> {
         return buildSuccessResult("bscript:edit", "脚本已准备好编辑: " + scriptName);
     }
 
-    public BeanShellResult handleScriptDelete(BshScriptDeleteRequest request, CommandExecutor.CmdExecContext<CommandRequest> context) {
+    public BeanShellResult handleScriptDelete(BshScriptDeleteRequest request, CommandExecutor.CmdExecContext<CommandRequest<?>> context) {
         String scriptName = request.getName();
         File scriptFile = getBeanShellScriptFile(scriptName);
 
@@ -162,7 +163,7 @@ public class BshManageCommand extends AbstractBeanShellCommand<CommandRequest> {
         }
     }
 
-    public BeanShellResult handleScriptRun(BshScriptRunRequest request, CommandExecutor.CmdExecContext<CommandRequest> context) throws IOException {
+    public BeanShellResult handleScriptRun(BshScriptRunRequest request, CommandExecutor.CmdExecContext<CommandRequest<?>> context) throws IOException {
         String scriptName = request.getName();
         File scriptFile = getBeanShellScriptFile(scriptName);
 
@@ -190,7 +191,7 @@ public class BshManageCommand extends AbstractBeanShellCommand<CommandRequest> {
         }
     }
 
-    public BeanShellResult handleScriptImport(BshScriptImportRequest request, CommandExecutor.CmdExecContext<CommandRequest> context) throws IOException {
+    public BeanShellResult handleScriptImport(BshScriptImportRequest request, CommandExecutor.CmdExecContext<CommandRequest<?>> context) throws IOException {
         String filePath = request.getFilePath();
         File sourceFile = new File(filePath);
 
@@ -223,7 +224,7 @@ public class BshManageCommand extends AbstractBeanShellCommand<CommandRequest> {
         return buildSuccessResult("bscript:import", "导入成功: " + scriptName);
     }
 
-    public BeanShellResult handleScriptExport(BshScriptExportRequest request, CommandExecutor.CmdExecContext<CommandRequest> context) throws IOException {
+    public BeanShellResult handleScriptExport(BshScriptExportRequest request, CommandExecutor.CmdExecContext<CommandRequest<?>> context) throws IOException {
         String scriptName = request.getName();
         String exportPath = request.getExportPath();
         File scriptFile = getBeanShellScriptFile(scriptName);

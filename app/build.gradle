@@ -7,30 +7,30 @@ plugins {
 
 
 android {
-    namespace 'com.justnothing.testmodule'
-    compileSdkVersion 36
+    namespace = 'com.justnothing.testmodule'
+    compileSdk = 36
 
     defaultConfig {
-        applicationId "com.justnothing.testmodule"
-        minSdk 26
-        targetSdk 36
-        versionCode 48
-        versionName "0.4.8"
+        applicationId = "com.justnothing.testmodule"
+        minSdk = 26
+        targetSdk = 36
+        versionCode = 48
+        versionName = "0.4.8"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
         ndk {
-            abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86_64', 'x86'
+            abiFilters = ['arm64-v8a', 'armeabi-v7a', 'x86_64', 'x86']
         }
     }
 
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled = false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
         debug {
-            minifyEnabled false
+            minifyEnabled = false
         }
 
     }
@@ -51,7 +51,7 @@ android {
     }
 
     buildFeatures {
-        viewBinding true
+        viewBinding = true
     }
 
     testOptions {
@@ -61,7 +61,7 @@ android {
     externalNativeBuild {
         cmake {
             path "src/main/cpp/CMakeLists.txt"
-            version "3.22.1"
+            version = "3.22.1"
         }
     }
 
@@ -83,8 +83,8 @@ android {
     }
 
 
-    buildToolsVersion '36.1.0'
-    ndkVersion '29.0.14206865'
+    buildToolsVersion = '36.1.0'
+    ndkVersion = '29.0.14206865'
 }
 
 dependencies {
@@ -104,14 +104,14 @@ dependencies {
     implementation libs.cfr
     implementation libs.r8
     implementation libs.mpandroidchart
-    implementation libs.jline        // umbrella fat JAR (includes jansi, terminal, reader, console, builtins, etc.)
-    implementation libs.jna          // JLine terminal-jna needs JNA at runtime
+    implementation libs.jline
+    implementation libs.jna
     implementation libs.commonmark
     implementation libs.commonmark.ext.gfm.tables
     implementation libs.commonmark.ext.gfm.strikethrough
     implementation files("libs/engine_new.jar")
     implementation files("libs/NCW-Logger-1.0.3-hotfix3.jar")
-    implementation files("libs/richconsole-0.1.0.jar")
+    implementation files("libs/RichConsole.jar")
 
     compileOnly libs.xposed.api
 
@@ -184,14 +184,6 @@ description=一个用来调试安卓开发千奇百怪的诡异问题的Xposed�
             }
         }
 
-        copy {
-            from file('src/main/assets')
-            into file("${magiskDir}/common/binary")
-            include 'arm64-v8a/methods_client_arm64-v8a'
-            include 'armeabi-v7a/methods_client_armeabi-v7a'
-            include 'x86_64/methods_client_x86_64'
-            include 'x86/methods_client_x86'
-        }
         copy {
             from file('magisk/scripts')
             into file("${magiskDir}/system/bin")

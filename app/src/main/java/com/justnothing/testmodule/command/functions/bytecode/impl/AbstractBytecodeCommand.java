@@ -4,7 +4,6 @@ import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.model.AbstractCommand;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.functions.bytecode.response.BytecodeResult;
-import com.justnothing.testmodule.command.framework.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.functions.bytecode.util.SystemBytecodeExtractor;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
@@ -28,23 +27,12 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-public abstract class AbstractBytecodeCommand<Req extends CommandRequest> extends AbstractCommand<Req, BytecodeResult> {
+public abstract class AbstractBytecodeCommand<Req extends CommandRequest<?>> extends AbstractCommand<Req, BytecodeResult> {
 
     protected static final Logger logger = Logger.getLoggerForName("BytecodeCmd");
 
     protected AbstractBytecodeCommand(String commandName, Class<Req> requestType) {
         super(commandName, requestType, BytecodeResult.class);
-    }
-
-    @Override
-    public BytecodeResult execute(CommandExecutor.CmdExecContext<? extends CommandRequest> context) {
-        try {
-            return executeInternal((CommandExecutor.CmdExecContext<Req>) context);
-        } catch (Exception e) {
-            logger.error("执行 bytecode 命令失败", e);
-            CommandExceptionHandler.handleException("bytecode", e, context, "执行命令失败");
-            return buildErrorResult("执行命令失败: " + e.getMessage());
-        }
     }
 
     protected abstract BytecodeResult executeInternal(CommandExecutor.CmdExecContext<Req> context) throws Exception;

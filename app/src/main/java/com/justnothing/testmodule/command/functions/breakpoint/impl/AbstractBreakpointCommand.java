@@ -7,10 +7,9 @@ import com.justnothing.testmodule.command.framework.model.AbstractCommand;
 import com.justnothing.testmodule.command.functions.breakpoint.util.BreakpointManager;
 import com.justnothing.testmodule.command.functions.breakpoint.response.BreakpointResult;
 import com.justnothing.testmodule.command.framework.output.Colors;
-import com.justnothing.testmodule.command.framework.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.logging.Logger;
 
-public abstract class AbstractBreakpointCommand<REQUEST extends CommandRequest, RESULT extends CommandResult>
+public abstract class AbstractBreakpointCommand<REQUEST extends CommandRequest<?>, RESULT extends CommandResult>
         extends AbstractCommand<REQUEST, RESULT> {
 
     protected static final Logger logger = Logger.getLoggerForName("BreakpointCmd");
@@ -23,16 +22,11 @@ public abstract class AbstractBreakpointCommand<REQUEST extends CommandRequest, 
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public RESULT execute(CommandExecutor.CmdExecContext<? extends CommandRequest> context) {
+    public RESULT execute(CommandExecutor.CmdExecContext<? extends CommandRequest<?>> context) {
+        // 保留额外行为：out(...) 依赖此字段输出；其余（请求类型护栏、异常兜底、
+        // 失败结果的 requestId/ErrorInfo）交由 AbstractCommand.executeWithResult 统一处理。
         this.context = context;
-        try {
-            return executeInternal((CommandExecutor.CmdExecContext<REQUEST>) context);
-        } catch (Exception e) {
-            CommandExceptionHandler.handleException(
-                "breakpoint", e, context, "执行断点命令失败");
-            return (RESULT) createErrorResult(e.getMessage());
-        }
+        return super.execute(context);
     }
 
     protected abstract RESULT executeInternal(CommandExecutor.CmdExecContext<REQUEST> request) throws Exception;

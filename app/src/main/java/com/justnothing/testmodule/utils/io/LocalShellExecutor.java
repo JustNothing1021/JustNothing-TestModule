@@ -14,11 +14,14 @@ import java.util.concurrent.TimeoutException;
 /**
  * 非 Root 的本地 Shell 执行器。
  *
- * <p>使用 {@code /system/bin/sh} 执行命令，无需 root 权限。
- * 适用于不需要权限提升的场景（如读取系统属性、
- * 基本文件操作等）。</p>
+ * <p>在 Android 上使用 {@code /system/bin/sh} 执行命令，无需 root 权限。
+ * 在桌面系统（Windows/Linux/macOS）上使用系统默认 shell。
+ * 适用于不需要权限提升的场景（如读取系统属性、基本文件操作等）。</p>
  */
 public class LocalShellExecutor implements ShellExecutor {
+
+    private static final boolean IS_WINDOWS =
+            System.getProperty("os.name", "").toLowerCase().contains("win");
 
     private static final String TAG = "LocalShellExecutor";
     private static final Logger logger = Logger.getLoggerForName(TAG);
@@ -39,7 +42,10 @@ public class LocalShellExecutor implements ShellExecutor {
         long startTime = System.currentTimeMillis();
         Process process = null;
         try {
-            process = new ProcessBuilder("/system/bin/sh", "-c", command)
+            String[] cmdArray = IS_WINDOWS
+                    ? new String[]{"cmd", "/c", command}
+                    : new String[]{"/system/bin/sh", "-c", command};
+            process = new ProcessBuilder(cmdArray)
                     .redirectErrorStream(true)
                     .start();
 
@@ -103,7 +109,8 @@ public class LocalShellExecutor implements ShellExecutor {
 
     @Override
     public boolean isAvailable() {
-        return !BootMonitor.isZygotePhase();
+        // 桌面环境始终可用；Android 上需跳过 Zygote 阶段
+        return IS_WINDOWS || !BootMonitor.isZygotePhase();
     }
 
     @Override
@@ -113,6 +120,7 @@ public class LocalShellExecutor implements ShellExecutor {
 
     @Override
     public String getDescription() {
-        return "LocalShellExecutor[/system/bin/sh, 无需 root]";
+        String shell = IS_WINDOWS ? "cmd" : "/system/bin/sh";
+        return "LocalShellExecutor[" + shell + ", 无需 root]";
     }
 }

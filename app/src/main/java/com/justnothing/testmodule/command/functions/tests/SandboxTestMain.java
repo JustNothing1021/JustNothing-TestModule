@@ -24,7 +24,7 @@ import java.util.zip.ZipFile;
 
 import com.justnothing.testmodule.command.framework.annotation.Cmd;
 
-@Cmd(name = "sandboxtest", description = "沙箱安全机制测试", defaultResultType = CommandResult.class)
+@Cmd(name = "sandboxtest", description = "沙箱安全机制测试")
 public class SandboxTestMain extends MainCommand<CommandResult> {
 
     private static volatile boolean nativeLoaded = false;
@@ -64,7 +64,7 @@ public class SandboxTestMain extends MainCommand<CommandResult> {
     }
 
     @Override
-    public CommandResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
+    protected CommandResult executeInternal(CommandExecutor.CmdExecContext<CommandRequest<?>> context) throws Exception {
         String[] args = context.args();
         
         if (args.length < 1) {

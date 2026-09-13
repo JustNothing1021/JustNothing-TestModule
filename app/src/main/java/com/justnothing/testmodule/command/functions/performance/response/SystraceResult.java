@@ -1,9 +1,7 @@
 package com.justnothing.testmodule.command.functions.performance.response;
 
 import com.justnothing.testmodule.command.framework.model.CommandResult;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
 
-@SerializeKeyName("SystraceResult")
 public class SystraceResult extends CommandResult {
 
     private int taskId;

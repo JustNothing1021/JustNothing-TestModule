@@ -6,7 +6,7 @@ import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.functions.watch.response.WatchCommandResult;
 import com.justnothing.testmodule.utils.logging.Logger;
 
-public abstract class AbstractWatchCommand<Req extends CommandRequest, Res extends WatchCommandResult>
+public abstract class AbstractWatchCommand<Req extends CommandRequest<?>, Res extends WatchCommandResult>
         extends AbstractCommand<Req, Res> {
 
     protected static final Logger logger = Logger.getLoggerForName("AbstractWatchCommand");

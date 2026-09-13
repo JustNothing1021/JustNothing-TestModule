@@ -1,11 +1,10 @@
 package com.justnothing.testmodule.command.functions.network.request;
 
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
+import com.justnothing.testmodule.command.functions.network.NetworkResult;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
 
-@SerializeKeyName("network:intercept")
-public class NetworkInterceptRequest extends CommandRequest {
+public class NetworkInterceptRequest extends CommandRequest<NetworkResult> {
 
     @CmdParam(name = "enable", required = false, description = "开启或关闭拦截")
     private Boolean enable;

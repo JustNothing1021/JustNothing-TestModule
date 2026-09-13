@@ -26,10 +26,15 @@ import java.util.UUID;
         "script delete <name>              删除脚本"
     }
 )
-public class ScriptCrudCommand extends AbstractScriptCommand<ScriptBaseRequest, ScriptResult> {
+public class ScriptCrudCommand extends AbstractScriptCommand<ScriptBaseRequest<?>, ScriptResult> {
+
+    @SuppressWarnings("unchecked")
+    public ScriptCrudCommand() {
+        super("script crud", (Class) ScriptBaseRequest.class, ScriptResult.class);
+    }
 
     @Override
-    protected ScriptResult executeInternal(ScriptBaseRequest request) throws Exception {
+    protected ScriptResult executeRequest(ScriptBaseRequest<?> request) throws Exception {
         if (request instanceof ScriptCreateRequest r) {
             return handleCreate(r.getName());
         }

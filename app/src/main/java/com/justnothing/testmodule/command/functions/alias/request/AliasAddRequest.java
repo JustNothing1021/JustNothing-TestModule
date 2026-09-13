@@ -1,11 +1,10 @@
 package com.justnothing.testmodule.command.functions.alias.request;
 
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.functions.alias.response.AliasResult;
 
-@SerializeKeyName("AliasAdd")
-public class AliasAddRequest extends CommandRequest {
+public class AliasAddRequest extends CommandRequest<AliasResult> {
 
     @CmdParam(
         name = "name",
@@ -18,7 +17,6 @@ public class AliasAddRequest extends CommandRequest {
     @CmdParam(
         name = "command",
         description = "完整的原始命令（支持多词命令）",
-        required = false,
         varArgs = true,
         position = 2
     )

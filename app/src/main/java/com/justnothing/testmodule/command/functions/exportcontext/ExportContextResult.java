@@ -1,12 +1,10 @@
 package com.justnothing.testmodule.command.functions.exportcontext;
 
 import com.justnothing.testmodule.command.framework.model.CommandResult;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@SerializeKeyName("ExportContext")
 public class ExportContextResult extends CommandResult {
 
     private List<ContextFieldInfo> fields = new ArrayList<>();

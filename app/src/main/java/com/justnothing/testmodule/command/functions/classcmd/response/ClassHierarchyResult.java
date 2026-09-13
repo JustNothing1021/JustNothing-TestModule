@@ -1,12 +1,10 @@
 package com.justnothing.testmodule.command.functions.classcmd.response;
 
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandResult;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@SerializeKeyName("ClassHierarchy")
 public class ClassHierarchyResult extends ClassCommandResult {
 
     private List<HierarchyClassInfo> classChain = new ArrayList<>();

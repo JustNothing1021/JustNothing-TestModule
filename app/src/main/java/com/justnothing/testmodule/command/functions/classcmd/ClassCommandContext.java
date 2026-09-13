@@ -11,7 +11,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
 
-public record ClassCommandContext<Req extends ClassCommandRequest>
+public record ClassCommandContext<Req extends ClassCommandRequest<?>>
          (String[] args, ClassLoader classLoader,
           String targetPackage,
           CommandExecutor.CmdExecContext<Req> execContext,

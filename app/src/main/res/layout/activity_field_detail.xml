@@ -178,22 +178,6 @@
 
                     </com.google.android.material.textfield.TextInputLayout>
 
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:hint="@string/analysis_type_hint_optional"
-                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/et_value_type_hint"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="text"
-                            android:fontFamily="monospace" />
-
-                    </com.google.android.material.textfield.TextInputLayout>
-
                     <Button
                         android:id="@+id/btn_set_value"
                         android:layout_width="match_parent"

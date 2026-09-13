@@ -5,7 +5,6 @@ import com.justnothing.testmodule.command.framework.model.AbstractCommand;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.functions.bsh.response.BeanShellResult;
 import com.justnothing.testmodule.command.functions.bsh.util.BeanShellExecutor;
-import com.justnothing.testmodule.command.framework.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.utils.data.DataBridge;
 import com.justnothing.testmodule.utils.logging.Logger;
@@ -19,7 +18,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public abstract class AbstractBeanShellCommand<Req extends CommandRequest>
+public abstract class AbstractBeanShellCommand<Req extends CommandRequest<?>>
         extends AbstractCommand<Req, BeanShellResult> {
 
     protected static final Logger logger = Logger.getLoggerForName("BeanShellExecutor");
@@ -32,17 +31,6 @@ public abstract class AbstractBeanShellCommand<Req extends CommandRequest>
 
     protected AbstractBeanShellCommand(String commandName, Class<Req> requestType) {
         super(commandName, requestType, BeanShellResult.class);
-    }
-
-    @Override
-    public BeanShellResult execute(CommandExecutor.CmdExecContext<? extends CommandRequest> context) {
-        try {
-            return executeInternal((CommandExecutor.CmdExecContext<Req>) context);
-        } catch (Exception e) {
-            logger.error("执行 bsh 命令失败", e);
-            CommandExceptionHandler.handleException(commandName, e, context, "执行命令失败");
-            return buildErrorResult("执行命令失败: " + e.getMessage());
-        }
     }
 
     @Override

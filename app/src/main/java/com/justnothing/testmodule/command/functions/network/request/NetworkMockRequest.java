@@ -1,11 +1,10 @@
 package com.justnothing.testmodule.command.functions.network.request;
 
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
+import com.justnothing.testmodule.command.functions.network.NetworkResult;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
 
-@SerializeKeyName("network:mock")
-public class NetworkMockRequest extends CommandRequest {
+public class NetworkMockRequest extends CommandRequest<NetworkResult> {
 
     @CmdParam(name = "subCommand", required = false, description = "子命令 (add/header/remove/list/clear)")
     private String subCommand;

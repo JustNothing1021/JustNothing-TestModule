@@ -2,13 +2,10 @@ package com.justnothing.testmodule.command.functions.nativecmd;
 
 import static com.justnothing.testmodule.constants.CommandServer.CMD_NATIVE_VER;
 
-import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.model.MainCommand;
-import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.annotation.Cmd;
 import com.justnothing.testmodule.command.framework.annotation.CmdRoutes;
 import com.justnothing.testmodule.command.framework.model.CommandRouter;
-import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.functions.nativecmd.impl.NativeQueryCommand;
 import com.justnothing.testmodule.command.functions.nativecmd.impl.NativeManageCommand;
 import com.justnothing.testmodule.command.functions.nativecmd.request.NativeListRequest;
@@ -24,8 +21,7 @@ import com.justnothing.testmodule.command.functions.nativecmd.request.NativeSear
 @Cmd(
     name = "native",
     description = "查看和调试Native代码，分析JNI函数和库",
-    version = CMD_NATIVE_VER,
-    defaultResultType = NativeResult.class
+    version = CMD_NATIVE_VER
 )
 @CmdRoutes({
     @CmdRoutes.Route(path = "list", request = NativeListRequest.class, handler = NativeQueryCommand.class, description = "列出已加载的native库"),
@@ -47,18 +43,5 @@ public class NativeMain extends MainCommand<NativeResult> {
     @Override
     public String getHelpText() {
         return CommandRouter.getInstance().generateHelpForCommand("native");
-    }
-
-    @Override
-    public NativeResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
-        String[] args = context.args();
-
-        if (args.length < 1) {
-            context.println(getHelpText(), Colors.WHITE);
-            return null;
-        }
-
-        context.println("提示: 使用 'native help' 查看路由帮助", Colors.CYAN);
-        return createErrorResult("旧路径已迁移到 @CmdRoutes，请使用新路径");
     }
 }

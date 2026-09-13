@@ -8,17 +8,17 @@ import androidx.lifecycle.MutableLiveData;
 
 import com.justnothing.testmodule.ui.viewmodel.BaseViewModel;
 import com.justnothing.testmodule.R;
-import com.justnothing.testmodule.command.functions.threads.DeadlockDetectRequest;
-import com.justnothing.testmodule.command.functions.threads.ThreadInfoRequest;
-import com.justnothing.testmodule.command.functions.threads.DeadlockDetectResult;
-import com.justnothing.testmodule.command.functions.threads.ThreadInfoResult;
+import com.justnothing.testmodule.command.functions.threads.request.ThreadDeadlockRequest;
+import com.justnothing.testmodule.command.functions.threads.request.ThreadListRequest;
+import com.justnothing.testmodule.command.functions.threads.response.ThreadDeadlockResult;
+import com.justnothing.testmodule.command.functions.threads.response.ThreadListResult;
 import com.justnothing.testmodule.ui.activity.analysis.thread.ThreadSnapshot;
 
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 
-public class ThreadAnalysisViewModel extends BaseViewModel<ThreadInfoRequest, ThreadInfoResult> {
+public class ThreadAnalysisViewModel extends BaseViewModel<ThreadListRequest, ThreadListResult> {
 
     private static final int MAX_HISTORY_SIZE = 60;
     private static final int DEFAULT_REFRESH_INTERVAL_SEC = 3;
@@ -28,21 +28,21 @@ public class ThreadAnalysisViewModel extends BaseViewModel<ThreadInfoRequest, Th
     private final MutableLiveData<ThreadSnapshot> threadData = new MutableLiveData<>();
     private final MutableLiveData<String> lastUpdateTime = new MutableLiveData<>("");
     private final MutableLiveData<Boolean> autoRefresh = new MutableLiveData<>(true);
-    private final MutableLiveData<DeadlockDetectResult> deadlockResult = new MutableLiveData<>();
+    private final MutableLiveData<ThreadDeadlockResult> deadlockResult = new MutableLiveData<>();
 
     public LiveData<ThreadSnapshot> getThreadData() { return threadData; }
     public LiveData<String> getLastUpdateTime() { return lastUpdateTime; }
     public LiveData<Boolean> isAutoRefresh() { return autoRefresh; }
-    public LiveData<DeadlockDetectResult> getDeadlockResult() { return deadlockResult; }
+    public LiveData<ThreadDeadlockResult> getDeadlockResult() { return deadlockResult; }
 
     public List<ThreadSnapshot> getHistorySamples() { return new LinkedList<>(historySamples); }
 
     public ThreadAnalysisViewModel(@NonNull Application application) {
-        super(application, ThreadInfoResult.class);
+        super(application, ThreadListResult.class);
     }
 
     public void queryThreadInfo(boolean detailed) {
-        String level = detailed ? ThreadInfoRequest.LEVEL_FULL : ThreadInfoRequest.LEVEL_BASIC;
+        String level = detailed ? ThreadListRequest.LEVEL_FULL : ThreadListRequest.LEVEL_BASIC;
         queryThreadInfo(level);
     }
 
@@ -51,7 +51,9 @@ public class ThreadAnalysisViewModel extends BaseViewModel<ThreadInfoRequest, Th
         error.setValue(null);
 
         getExecutor().execute(() -> {
-            ThreadInfoResult result = execute(new ThreadInfoRequest(detailLevel));
+            ThreadListRequest request = new ThreadListRequest();
+            request.setDetailLevel(detailLevel);
+            ThreadListResult result = execute(request);
             if (result != null && result.isSuccess()) {
                 ThreadSnapshot snapshot = ThreadSnapshot.fromResult(result);
                 threadData.postValue(snapshot);
@@ -68,20 +70,20 @@ public class ThreadAnalysisViewModel extends BaseViewModel<ThreadInfoRequest, Th
         error.setValue(null);
 
         getExecutor().execute(() -> {
-            DeadlockDetectResult result = executeAny(new DeadlockDetectRequest(), DeadlockDetectResult.class);
+            ThreadDeadlockResult result = executeAny(new ThreadDeadlockRequest());
             if (result != null && result.isSuccess()) {
                 deadlockResult.postValue(result);
             } else if (result != null) {
                 postError(result.getError(), R.string.analysis_thread_error_deadlock_failed);
             }
-            queryThreadInfo(ThreadInfoRequest.LEVEL_FULL);
+            queryThreadInfo(ThreadListRequest.LEVEL_FULL);
         });
     }
 
     public void setAutoRefresh(boolean enabled) {
         autoRefresh.postValue(enabled);
         if (enabled) {
-            startAutoRefresh(DEFAULT_REFRESH_INTERVAL_SEC, () -> queryThreadInfo(ThreadInfoRequest.LEVEL_FULL));
+            startAutoRefresh(DEFAULT_REFRESH_INTERVAL_SEC, () -> queryThreadInfo(ThreadListRequest.LEVEL_FULL));
         } else {
             stopAutoRefresh();
         }

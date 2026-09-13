@@ -1,25 +1,11 @@
 package com.justnothing.testmodule.command.functions.performance.request;
 
 import com.justnothing.testmodule.command.functions.performance.PerformanceRequest;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.justnothing.testmodule.command.functions.performance.PerformanceResult;
 
-@SerializeKeyName("perf:list")
-public class PerfListRequest extends PerformanceRequest {
+public class PerfListRequest extends PerformanceRequest<PerformanceResult> {
 
     public PerfListRequest() {
         super();
-    }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        return super.toJson();
-    }
-
-    @Override
-    public PerfListRequest fromJson(JSONObject obj) {
-        setRequestId(obj.optString("requestId"));
-        return this;
     }
 }

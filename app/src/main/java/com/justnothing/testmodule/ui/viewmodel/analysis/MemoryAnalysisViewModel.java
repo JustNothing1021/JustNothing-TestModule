@@ -72,7 +72,7 @@ public class MemoryAnalysisViewModel extends BaseViewModel<MemoryInfoRequest, Me
         error.postValue(null);
 
         getExecutor().execute(() -> {
-            GcResult result = executeAny(new GcRequest(fullGc), GcResult.class);
+            GcResult result = executeAny(new GcRequest(fullGc));
             if (result != null && result.isSuccess()) {
                 gcResult.postValue(result);
             } else if (result != null) {

@@ -1,23 +1,13 @@
 package com.justnothing.testmodule.command.functions.alias;
 
-import java.util.Arrays;
-
-import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.model.MainCommand;
-import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.annotation.Cmd;
 import com.justnothing.testmodule.command.framework.annotation.CmdRoutes;
-import com.justnothing.testmodule.command.framework.utils.CommandExceptionHandler;
-import com.justnothing.testmodule.command.framework.utils.CmdParamProcessor;
 import com.justnothing.testmodule.command.framework.model.CommandRouter;
-import com.justnothing.testmodule.command.framework.error.IllegalCommandLineArgumentException;
-import com.justnothing.testmodule.command.functions.alias.impl.AbstractAliasCommand;
 import com.justnothing.testmodule.command.functions.alias.impl.AliasAddCommand;
 import com.justnothing.testmodule.command.functions.alias.impl.AliasClearCommand;
-import com.justnothing.testmodule.command.functions.alias.impl.AliasCommandRegistry;
 import com.justnothing.testmodule.command.functions.alias.impl.AliasListCommand;
 import com.justnothing.testmodule.command.functions.alias.impl.AliasRemoveCommand;
-import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.functions.alias.request.AliasAddRequest;
 import com.justnothing.testmodule.command.functions.alias.request.AliasListRequest;
 import com.justnothing.testmodule.command.functions.alias.request.AliasRemoveRequest;
@@ -26,8 +16,6 @@ import com.justnothing.testmodule.command.functions.alias.response.AliasResult;
 import com.justnothing.testmodule.command.functions.alias.util.AliasManager;
 import com.justnothing.testmodule.constants.CommandServer;
 import com.justnothing.testmodule.utils.data.DataDirectoryManager;
-import com.justnothing.testmodule.utils.logging.Logger;
-import com.justnothing.testmodule.command.framework.model.AbstractCommand;
 
 import java.io.File;
 import java.util.Map;
@@ -35,8 +23,7 @@ import java.util.Map;
 @Cmd(
     version = CommandServer.CMD_ALIAS_VER,
     name = "alias",
-    description = "管理命令别名，用于简化常用命令",
-    defaultResultType = AliasResult.class
+    description = "管理命令别名，用于简化常用命令"
 )
 @CmdRoutes({
     @CmdRoutes.Route(
@@ -66,8 +53,6 @@ import java.util.Map;
 })
 public class AliasMain extends MainCommand<AliasResult> {
 
-    private final Logger logger = Logger.getLoggerForName("AliasMain");
-
     public AliasMain() {
         super("alias", AliasResult.class);
     }
@@ -95,64 +80,5 @@ public class AliasMain extends MainCommand<AliasResult> {
     private static AliasManager getAliasManager() {
         String dataDir = DataDirectoryManager.getMethodsCmdlineDataDirectory();
         return AliasManager.getInstance(new File(dataDir));
-    }
-
-    @Override
-    public AliasResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
-        String[] args = context.args();
-
-        logger.debug("执行 alias 命令，参数: " + Arrays.toString(args));
-
-        try {
-            if (args.length < 1) {
-                context.println(getHelpText(), Colors.WHITE);
-                return createErrorResult("参数不足，使用 alias <subcmd> [args...]");
-            }
-
-            String subCommand = args[0].toLowerCase();
-
-            Object commandObj = AliasCommandRegistry.getCommand(subCommand);
-            if (commandObj == null) {
-                if (context.isCli()) {
-                    context.println("未知子命令: " + subCommand + ", 输入 alias 获取帮助", Colors.RED);
-                }
-                throw new IllegalCommandLineArgumentException("未知子命令: " + subCommand);
-            }
-
-            logger.debug("执行 alias 子命令: " + subCommand);
-
-            CommandRouter.RouteMatch match = CommandRouter.getInstance()
-                .matchRoute("alias", new String[]{subCommand});
-
-            CommandRequest request;
-            if (match != null && match.routeConfig() != null) {
-                Class<? extends CommandRequest> requestType = match.routeConfig().requestType();
-                request = requestType.getDeclaredConstructor().newInstance();
-                String[] remainingArgs = args.length > 1
-                    ? Arrays.copyOfRange(args, 1, args.length)
-                    : new String[0];
-                CmdParamProcessor.parseCommandLineArgs(request, remainingArgs);
-            } else {
-                request = new AliasListRequest();
-            }
-
-            context.setRequest(request);
-
-            if (commandObj instanceof AbstractAliasCommand) {
-                return (AliasResult) ((AbstractAliasCommand<?, ?>) commandObj).execute(context);
-            } else if (commandObj instanceof AbstractCommand) {
-                return (AliasResult) ((AbstractCommand<?, ?>) commandObj).execute(context);
-            } else {
-                throw new IllegalStateException("无法执行的命令类型: " + commandObj.getClass());
-            }
-
-        } catch (IllegalCommandLineArgumentException e) {
-            throw e;
-        } catch (Exception e) {
-            CommandExceptionHandler.handleException(
-                "alias", e, context, "执行 alias 命令失败"
-            );
-            return createErrorResult("执行 alias 命令失败: " + e.getMessage());
-        }
     }
 }

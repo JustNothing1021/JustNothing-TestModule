@@ -96,7 +96,7 @@ public class CommandCompleter implements Completer {
             String prefix = word.toLowerCase();
             addCandidates(candidates, filterPrefix(topLevelCommands, prefix), prefix, "命令");
             addCandidates(candidates, filterPrefix(customCommands, prefix), prefix, "自定义命令");
-        } else if (word.contains(":") && !word.startsWith("-")) {
+        } else if ((word.contains("/") || word.contains(":")) && !word.startsWith("-")) {
             completeSubRoute(word, candidates);
         } else if (word.startsWith("-")) {
             completeParameter(fullLine, word, candidates);
@@ -109,9 +109,11 @@ public class CommandCompleter implements Completer {
     // ==================== 子路由补全 ====================
 
     private void completeSubRoute(String word, List<Candidate> candidates) {
-        int colonIdx = word.indexOf(':');
-        String cmdPart = word.substring(0, colonIdx).toLowerCase();
-        String subPart = colonIdx + 1 < word.length() ? word.substring(colonIdx + 1) : "";
+        // 路由 key 用 "/" 分层（class/info），同时兼容用户沿用 "class:info" 的写法
+        int sepIdx = word.indexOf('/');
+        if (sepIdx < 0) sepIdx = word.indexOf(':');
+        String cmdPart = word.substring(0, sepIdx).toLowerCase();
+        String subPart = sepIdx + 1 < word.length() ? word.substring(sepIdx + 1) : "";
 
         Set<String> subs = getSubCommands(cmdPart);
         if (subs != null && !subs.isEmpty()) {
@@ -168,15 +170,17 @@ public class CommandCompleter implements Completer {
         String[] tokens = fullLine.split("\\s+");
         if (tokens.length == 0) return "";
 
-        String firstToken = tokens[0];
-        if (firstToken.contains(":")) {
-            // 已有子路由：返回 command:sub 形式
-            return firstToken.toLowerCase();
-        } else if (tokens.length > 1 && tokens[1].contains(":")) {
-            // 第二个 token 是子路由（如 "class info" 空格分隔）
-            return firstToken.toLowerCase() + ":" + tokens[1].toLowerCase();
+        // 单 token 写法：class/info（新格式）或 class:info（旧格式）
+        String path = tokens[0].toLowerCase().replace(':', '/');
+
+        // 空格分隔写法（class info [args...]）：只把"确实存在于路由表中"的后续 token 当路径段，
+        // 遇到参数值就停下——否则 "class info java.lang.String" 会被误当成子路径。
+        for (int i = 1; i < tokens.length; i++) {
+            String candidate = path + "/" + tokens[i].toLowerCase();
+            if (!routeParams.containsKey(candidate)) break;
+            path = candidate;
         }
-        return firstToken.toLowerCase(); // 只有顶层命令
+        return path;
     }
 
     private Set<String> getParamsForContext(String fullLine) {
@@ -187,8 +191,8 @@ public class CommandCompleter implements Completer {
         if (params != null) return params;
 
         // 模糊匹配：只取顶层命令
-        String topCmd = routePath.contains(":")
-                ? routePath.substring(0, routePath.indexOf(':'))
+        String topCmd = routePath.contains("/")
+                ? routePath.substring(0, routePath.indexOf('/'))
                 : routePath;
         params = customParams.get(topCmd);
         if (params != null) return params;
@@ -196,7 +200,7 @@ public class CommandCompleter implements Completer {
         // 合并该顶层命令下所有路由的参数
         Set<String> merged = new LinkedHashSet<>();
         for (String key : routeParams.keySet()) {
-            if (key.startsWith(topCmd + ":")) {
+            if (key.startsWith(topCmd + "/")) {
                 merged.addAll(routeParams.get(key));
             }
         }
@@ -231,15 +235,15 @@ public class CommandCompleter implements Completer {
                 topLevelCommands.add(cmd.name());
 
                 for (CommandMetadataScanner.RouteMeta route : cmd.routes()) {
-                // 注册子路由（只取最后一个路径段，如 "class:info" → "info"）
+                // 注册子路由（只取最后一个路径段，如 "class/info" → "info"）
                 String routePath = route.path();
-                String subName = routePath.contains(":")
-                        ? routePath.substring(routePath.lastIndexOf(':') + 1)
+                String subName = routePath.contains("/")
+                        ? routePath.substring(routePath.lastIndexOf('/') + 1)
                         : routePath;
                 subCommands.computeIfAbsent(cmd.name(), k -> new LinkedHashSet<>())
                         .add(subName);
 
-                // route.path() 已经是完整路径（如 "class:info"），直接使用
+                // route.path() 已经是完整路径（如 "class/info"），直接使用
                 String fullPath = routePath;
 
                     // 注册参数

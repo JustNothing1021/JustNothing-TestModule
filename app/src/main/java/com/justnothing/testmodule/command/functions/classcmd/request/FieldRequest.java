@@ -1,11 +1,10 @@
 package com.justnothing.testmodule.command.functions.classcmd.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandRequest;
+import com.justnothing.testmodule.command.functions.classcmd.response.GetFieldValueResult;
 
-@SerializeKeyName("class:field")
-public class FieldRequest extends ClassCommandRequest {
+public class FieldRequest extends ClassCommandRequest<GetFieldValueResult> {
 
     // ========== 通用参数（不属于任何操作符）==========
 
@@ -206,9 +205,10 @@ public class FieldRequest extends ClassCommandRequest {
      * @return "list", "get", 或 "set"
      */
     public String getOperationMode() {
-        // 使用显式追踪的操作符列表
-        if (hasOperator("set")) return "set";
-        if (hasOperator("get")) return "get";
+        // receivedOperators 只在命令行解析（CmdArgParser.handleOperator）时填充；
+        // GUI 走 JSON 反序列化，这里为空，所以还要认 useGet/useSet 这两个可序列化字段。
+        if (hasOperator("set") || useSet) return "set";
+        if (hasOperator("get") || useGet) return "get";
         return "list";
     }
 
@@ -216,8 +216,8 @@ public class FieldRequest extends ClassCommandRequest {
      * 获取目标字段名（兼容 get 和 set 模式）
      */
     public String getEffectiveFieldName() {
-        if (hasOperator("get")) return getTargetFieldName;
-        if (hasOperator("set")) return setTargetFieldName;
+        if (hasOperator("get") || useGet) return getTargetFieldName;
+        if (hasOperator("set") || useSet) return setTargetFieldName;
         return null;
     }
 }

@@ -1,117 +1,43 @@
 package com.justnothing.testmodule.service.handler;
 
-import android.util.Log;
-
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.CommandType;
+import com.justnothing.testmodule.command.framework.model.CommandResult;
 import com.justnothing.testmodule.command.framework.model.CommandRouter;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
-import com.justnothing.testmodule.command.framework.model.CommandResult;
-import com.justnothing.testmodule.command.framework.utils.GsonFactory;
 import com.justnothing.testmodule.command.framework.output.ClientRequirements;
-import com.justnothing.testmodule.command.framework.output.ICommandOutputHandler;
 import com.justnothing.testmodule.command.framework.output.InteractiveOutputHandler;
 import com.justnothing.testmodule.command.framework.protocol.InteractiveProtocol;
+import com.justnothing.testmodule.command.framework.protocol.ProtocolMethods;
+import com.justnothing.testmodule.command.framework.protocol.TerminalRpcChannel;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
 import java.io.PushbackInputStream;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
-import java.nio.charset.StandardCharsets;
 import java.util.Objects;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class SocketClientHandler {
     private static final Logger logger = Logger.getLoggerForName("SocketClientHandler");
 
-    public static final long PING_CLIENT_INTERVAL_MS = 5000;
     public static final int CLIENT_CONNECT_SOCKET_TIMEOUT_MS = 5000;
-    public static final int TEXT_PROTOCOL_SOCKET_TIMEOUT_MS = 10000;
     public static final int INTERACTIVE_PROTOCOL_SOCKET_TIMEOUT_MS = 10000;
     public static final int INTERACTIVE_PROTOCOL_REQUEST_TIMEOUT_MS = 30000;
-    public static final int OUTPUT_HANDLER_CLOSE_TIMEOUT_MS = 5000;
 
     private final CommandExecutor commandExecutor;
 
     public SocketClientHandler(CommandExecutor commandExecutor) {
         this.commandExecutor = commandExecutor;
-    }
-
-    /**
-     * 初始包读取结果
-     */
-    private static class InitialPacketResult {
-        ClientRequirements requirements = new ClientRequirements();
-        Object[] commandPacket = null;
-    }
-
-    /**
-     * 读取初始包（CAPABILITY 和 COMMAND/COMMAND_REQUEST），不强制顺序。
-     * 
-     * <p>循环读取包直到：
-     * <ul>
-     *   <li>同时收到 CAPABILITY 和 COMMAND（或 COMMAND_REQUEST）</li>
-     *   <li>连接关闭</li>
-     *   <li>遇到非 CAPABILITY/COMMAND 类型的包（停止读取，但不丢弃）</li>
-     * </ul>
-     * </p>
-     * 
-     * @param input 输入流
-     * @return 初始包读取结果
-     */
-    private InitialPacketResult readInitialPackets(InputStream input) throws IOException {
-        InitialPacketResult result = new InitialPacketResult();
-        boolean hasCapability = false;
-        boolean hasCommand = false;
-        
-        while (!hasCommand) {
-            Object[] packet = InteractiveProtocol.readMessage(input);
-            if (packet == null) {
-                logger.warn("客户端连接已关闭");
-                break;
-            }
-            
-            byte packetType = (byte) packet[0];
-            byte[] packetData = (byte[]) packet[1];
-            
-            switch (packetType) {
-                case InteractiveProtocol.TYPE_CLIENT_CAPABILITY:
-                    if (!hasCapability) {
-                        result.requirements = InteractiveProtocol.decodeCapability(packetData);
-                        hasCapability = true;
-                        logger.info("客户端能力: " + result.requirements);
-                    } else {
-                        logger.warn("收到重复的CAPABILITY包，忽略");
-                    }
-                    break;
-                    
-                case InteractiveProtocol.TYPE_CLIENT_COMMAND:
-                case InteractiveProtocol.TYPE_JSON_COMMAND_REQUEST:
-                    result.commandPacket = packet;
-                    hasCommand = true;
-                    logger.debug("收到命令包: " + InteractiveProtocol.getMessageTypeName(packetType));
-                    break;
-                    
-                default:
-                    logger.warn("收到非预期的初始包类型: " + InteractiveProtocol.getMessageTypeName(packetType) + 
-                               "，停止读取初始包");
-                    return result;
-            }
-        }
-        
-        return result;
     }
 
     public void handleClient(Socket clientSocket) {
@@ -131,13 +57,15 @@ public class SocketClientHandler {
                 PushbackInputStream pushbackInput = new PushbackInputStream(input, 1);
                 pushbackInput.unread(firstByte);
 
-                if (firstByte == InteractiveProtocol.START_MARKER[0]) {
-                    logger.info("使用交互式协议");
-                    handleInteractiveProtocolClient(clientSocket, pushbackInput, output);
-                } else {
-                    logger.info("使用纯文本协议");
-                    handleTextProtocolClient(clientSocket, pushbackInput, output);
+                if (firstByte != InteractiveProtocol.START_MARKER[0]) {
+                    // 首字节不是协议起始标记，无法解析为 RPC 帧，直接拒绝
+                    logger.warn("客户端首字节不是协议起始标记，拒绝连接");
+                    clientSocket.close();
+                    return;
                 }
+
+                logger.info("使用统一 RPC 协议");
+                handleRpcClient(clientSocket, pushbackInput, output);
 
             } catch (Exception e) {
                 logger.error("处理Socket客户端错误", e);
@@ -149,43 +77,14 @@ public class SocketClientHandler {
         });
     }
 
-    private void handleTextProtocolClient(Socket clientSocket, PushbackInputStream input, OutputStream output) {
-        try (clientSocket) {
-            try {
-                clientSocket.setSoTimeout(TEXT_PROTOCOL_SOCKET_TIMEOUT_MS);
-
-                BufferedReader reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8));
-                PrintWriter writer = new PrintWriter(new OutputStreamWriter(output, StandardCharsets.UTF_8), true);
-
-                StringBuilder commandBuilder = new StringBuilder();
-                int c;
-                while ((c = reader.read()) != -1) {
-                    if (c == '\n' || c == '\r') {
-                        break;
-                    }
-                    commandBuilder.append((char) c);
-                }
-
-                String command = commandBuilder.toString();
-                if (command.trim().isEmpty()) {
-                    logger.warn("收到空命令");
-                    return;
-                }
-
-                logger.debug("Socket客户端命令: " + command);
-
-
-                executeCommandForTextProtocolSocket(command, writer);
-            } catch (Exception e) {
-                logger.error("处理Socket客户端错误", e);
-            }
-        } catch (IOException ignored) {
-        }
-    }
-
-    private void runInteractiveProtocolServer(
+    /**
+     * 服务端 reader 线程：与命令执行线程分离，保证 cmd.prompt 的 channel.call() 不死锁。
+     *
+     * <p>只处理 {@link InteractiveProtocol#TYPE_RPC} 帧（统一 RPC 信封），
+     * 每包更新会话级 {@code lastResponseTime}（最后在线时间），超时/EOF 关闭。</p>
+     */
+    private void runRpcServer(
             final InputStream input,
-            final OutputStream output,
             final AtomicBoolean readerRunning,
             final Socket clientSocket,
             final AtomicLong lastResponseTime,
@@ -209,38 +108,10 @@ public class SocketClientHandler {
                     byte[] packetData = (byte[]) packet[1];
 
                     switch (packetType) {
-                        case InteractiveProtocol.TYPE_INPUT_RESPONSE:
-                            if (packetData != null) {
-                                String response = new String(packetData, StandardCharsets.UTF_8);
-                                String[] parts = response.split(":", 2);
-                                if (parts.length == 2) {
-                                    logger.debug("收到输入响应: " + parts[0]);
-                                    finalOutputHandler.handleInputResponse(parts[0], parts[1]);
-                                }
-                            }
-                            break;
+                        case InteractiveProtocol.TYPE_RPC ->
+                            finalOutputHandler.handleRpcData(packetData);
 
-                        case InteractiveProtocol.TYPE_CLIENT_PONG:
-                            lastResponseTime.getAndSet(System.currentTimeMillis());
-                            logger.debug("收到客户端的CLIENT_PONG响应, 更新客户端最近响应时间: " + lastResponseTime.get());
-                            break;
-
-                        case InteractiveProtocol.TYPE_INPUT_PONG:
-                            InteractiveOutputHandler.lastResponseTime.getAndSet(System.currentTimeMillis());
-                            logger.debug("收到了输入端的INPUT_PONG响应，更新输入最近响应时间: " +
-                                    InteractiveOutputHandler.lastResponseTime.get());
-                            break;
-
-                        case InteractiveProtocol.TYPE_CLIENT_PING:
-                            logger.debug("收到了客户端的CLIENT_PING请求，发送SERVER_PONG");
-                            InteractiveProtocol.writeMessage(output, InteractiveProtocol.TYPE_SERVER_PONG, null);
-                            break;
-
-                        case InteractiveProtocol.TYPE_TERMINAL_RPC:
-                            finalOutputHandler.handleTerminalRpc(packetData);
-                            break;
-
-                        default:
+                        default ->
                             logger.warn("未知的客户端消息类型: " + packetType);
                     }
 
@@ -264,278 +135,165 @@ public class SocketClientHandler {
         }
     }
 
-    private void runInteractiveProtocolPing(
-        final OutputStream output
-    ) {
-
-        try {
-            InteractiveProtocol.writeMessage(output,
-                    InteractiveProtocol.TYPE_SERVER_PING,
-                    null);
-            logger.debug("向客户端发送SERVER_PING包");
-
-        } catch (IOException e) {
-            // Socket closed是正常的，因为客户端可能已经断开连接
-            if (!Objects.requireNonNullElse(e.getMessage(), "").contains("Socket closed")) {
-                logger.warn("发送SERVER_PING失败", e);
-            }
-        }
-    }
-
-    private void handleInteractiveProtocolClient(Socket clientSocket, InputStream input, OutputStream output) {
+    /**
+     * 统一 RPC 信封路径（TYPE_RPC 单帧，逻辑多通道 cmd.* / term.* / sys.*）。
+     *
+     * <p>流程：读首帧（应为 {@code sys.hello}）→ 建通道 → 同步完成握手 →
+     * 注册 cmd.executeWithResult / sys.ping → 起 reader 线程 → 等待命令完成。</p>
+     */
+    private void handleRpcClient(Socket clientSocket, InputStream input, OutputStream output) {
         try (clientSocket) {
-            try {
-                InitialPacketResult initialResult = readInitialPackets(input);
-                ClientRequirements requirements = initialResult.requirements;
-                Object[] commandPacket = initialResult.commandPacket;
-                    
-                if (commandPacket == null) {
-                    logger.warn("客户端连接已关闭或无效, 没有收到需要执行的命令");
-                    return;
-                }
-
-                byte type = (byte) commandPacket[0];
-                byte[] data = (byte[]) commandPacket[1];
-
-                if (data == null) {
-                    logger.warn("命令包数据为空");
-                    return;
-                }
-
-                InteractiveOutputHandler outputHandler = new InteractiveOutputHandler(output);
-                outputHandler.setSupportsInput(requirements.isSupportsInput());
-                outputHandler.setJsonMode(requirements.isJsonMode());
-                outputHandler.setClientTerminalInfo(
-                        requirements.getWidth(), requirements.getHeight(),
-                        requirements.isSupportsAnsi(), requirements.getColorSystem()
-                );
-                outputHandler.initRemoteTerminal(); // 交互模式：创建 RPC 通道
-
-                final AtomicBoolean readerRunning = new AtomicBoolean(true);
-                final AtomicLong lastResponseTime = new AtomicLong(System.currentTimeMillis());
-                ScheduledFuture<?> future = null;
-                
-                if (!requirements.isJsonMode()) {
-                    ThreadPoolManager.submitSocketRunnable(() -> runInteractiveProtocolServer(
-                            input, output, readerRunning, clientSocket, lastResponseTime, outputHandler
-                    ));
-
-                    future = ThreadPoolManager.scheduleWithFixedDelay(
-                        () -> runInteractiveProtocolPing(output),
-                        PING_CLIENT_INTERVAL_MS, PING_CLIENT_INTERVAL_MS, TimeUnit.MILLISECONDS);
-                }
-
-                if (type == InteractiveProtocol.TYPE_CLIENT_COMMAND) {
-                    String command = new String(data, StandardCharsets.UTF_8);
-                    logger.debug("接收到的客户端命令: " + command);
-                    outputHandler.setCommand(command);
-                    
-                    try {
-                        commandExecutor.execute(command, outputHandler, requirements);
-                    } catch (Exception e) {
-                        logger.error("执行命令失败", e);
-                        try {
-                            outputHandler.println("执行命令失败: " + e.getMessage());
-                        } catch (Exception ignored) {}
-                    } finally {
-                        outputHandler.close();
-                    }
-                } else if (type == InteractiveProtocol.TYPE_JSON_COMMAND_REQUEST) {
-                    logger.debug("接收到的为JSON命令请求");
-                    handleCommandRequest(data, output, requirements);
-                    // JSON 命令路径没有 reader 线程，外层 outputHandler 永远不会被 close，
-                    // 直接关闭避免等待逻辑空转
-                    outputHandler.close();
-                }
-                
-                if (requirements.isJsonMode()) {
-                    logger.info("使用JSON输出模式");
-                }
-
-                AtomicInteger waited = new AtomicInteger(0);
-                ThreadPoolManager.scheduleWithFixedDelayUntil(
-                    () -> waited.getAndAdd(100),
-                    0,
-                    100, TimeUnit.MILLISECONDS,
-                    () -> waited.get() < OUTPUT_HANDLER_CLOSE_TIMEOUT_MS && !outputHandler.isClosed()
-                );
-
-                logger.info("命令执行完成");
-                if (future != null) future.cancel(true);
-
-            } catch (Throwable t) {
-                logger.error("处理交互协议客户端错误", t);
+            Object[] firstPacket = InteractiveProtocol.readMessage(input);
+            if (firstPacket == null) {
+                logger.warn("客户端连接已关闭");
+                return;
             }
-        } catch (IOException ignored) {
-        }
-    }
-
-    private void executeCommandForTextProtocolSocket(String command, final PrintWriter writer) {
-        ICommandOutputHandler socketOutput = new ICommandOutputHandler() {
-            private volatile boolean closed = false;
-            final StringBuilder sb = new StringBuilder();
-
-            @Override
-            public void println(String line) {
-                if (closed) return;
-                try {
-                    writer.println(line);
-                    sb.append(line).append('\n');
-                } catch (Exception e) {
-                    logger.warn("向Socket写入失败", e);
-                    close();
-                }
-            }
-
-            @Override
-            public void print(String text) {
-                if (closed) return;
-                try {
-                    writer.print(text);
-                    writer.flush();
-                    sb.append(text);
-                } catch (Exception e) {
-                    logger.warn("向Socket写入失败", e);
-                    close();
-                }
-            }
-
-            @Override
-            public void printf(String format, Object... args) {
-                print(String.format(format, args));
-            }
-
-            @Override
-            public void printError(String text) {
-                print("[ERROR] " + text);
-            }
-
-            @Override
-            public void printlnError(String text) {
-                println("[ERROR] " + text);
-            }
-
-            @Override
-            public void printStackTrace(Throwable t) {
-                if (t != null) {
-                    String stacktrace = Log.getStackTraceString(t);
-                    print(stacktrace);
-                }
-            }
-
-            @Override
-            public void flush() {
-                if (closed) return;
-                try {
-                    writer.flush();
-                } catch (Exception ignored) {
-                }
-            }
-
-            @Override
-            public void close() {
-                closed = true;
-            }
-
-            @Override
-            public boolean isClosed() {
-                return closed;
-            }
-
-            @Override
-            public void clear() {
-                sb.setLength(0);
-            }
-
-            @Override
-            public String getString() {
-                return sb.toString();
-            }
-
-            @Override
-            public String readLineFromClient(String prompt) {
-                throw new RuntimeException("当前的执行方式不支持交互...");
-            }
-
-            @Override
-            public String readPasswordFromClient(String prompt) {
-                throw new RuntimeException("当前的执行方式不支持交互...");
-            }
-
-            @Override
-            public boolean isInteractive() {
-                return false;
-            }
-        };
-
-        try {
-            commandExecutor.execute(command, socketOutput, null);
-        } catch (Exception e) {
-            socketOutput.println("执行命令失败: " + e.getMessage());
-            logger.error("执行Socket命令失败", e);
-        } finally {
-            socketOutput.close();
-        }
-    }
-    
-    private void handleCommandRequest(byte[] data, OutputStream output, ClientRequirements requirements) {
-        try {
-            String jsonRequest = new String(data, StandardCharsets.UTF_8);
-            logger.info("命令请求: " + jsonRequest);
-
-            // 使用新架构 CommandRouter 解析 JSON 请求（替代旧的 AutoSerializer）
-            // CommandRouter 在注册路由时已建立 commandType → RequestClass 的映射
-            CommandRequest request = CommandRouter
-                    .getInstance().resolveRequestFromJson(jsonRequest);
-
-            if (request == null) {
-                CommandResult errorResult = new CommandResult();
-                errorResult.setError(new CommandResult.ErrorInfo(
-                    "INVALID_REQUEST", "无法解析请求"
-                ));
-                sendErrorResponse(output, errorResult);
+            byte firstType = (byte) firstPacket[0];
+            byte[] firstData = (byte[]) firstPacket[1];
+            if (firstType != InteractiveProtocol.TYPE_RPC) {
+                logger.warn("首帧非 TYPE_RPC（旧协议已废弃），拒绝连接: "
+                        + InteractiveProtocol.getMessageTypeName(firstType));
                 return;
             }
 
             InteractiveOutputHandler outputHandler = new InteractiveOutputHandler(output);
-            outputHandler.setSupportsInput(requirements.isSupportsInput());
-            outputHandler.setJsonMode(requirements.isJsonMode());
-            // 文件模式：只设置客户端信息（宽高等），不创建 RPC 通道
-            // getConsole() 会自动创建 System.out-backed fallback Console (noColor)
-            // SystemOutputRedirector 会捕获 System.out 转发到 outputHandler
-            outputHandler.setClientTerminalInfo(
-                    requirements.getWidth(), requirements.getHeight(),
-                    requirements.isSupportsAnsi(), requirements.getColorSystem()
-            );
-            commandExecutor.execute(
-                    request, outputHandler, requirements, CommandType.USER_INTERFACE
-            ); // 这里不用再管了, commandExecutor会自己判断模式然后给输出写进InteractiveOutputHandler
+            outputHandler.initRpcChannel();
 
-        } catch (Exception e) {
-            logger.error("处理命令请求失败", e);
-            CommandResult errorResult = new CommandResult();
-            errorResult.setError(new CommandResult.ErrorInfo(
-                "INTERNAL_ERROR", "处理请求失败: " + e.getMessage()
-            ));
-            try {
-                sendErrorResponse(output, errorResult);
-            } catch (Exception ignored) {}
+            TerminalRpcChannel channel = outputHandler.getRpcChannel();
+            if (channel == null) {
+                logger.error("创建 RPC 通道失败，关闭连接");
+                outputHandler.close();
+                return;
+            }
+
+            final AtomicBoolean commandStarted = new AtomicBoolean(false);
+            final AtomicReference<ClientRequirements> helloRequirements = new AtomicReference<>();
+
+            // sys.hello：能力协商（ClientRequirements 参数）→ 建 RemoteServerTerminal → 回传版本
+            channel.onRequest(ProtocolMethods.SYS_HELLO, (id, params) -> {
+                ClientRequirements requirements = ClientRequirements.fromRpcParams(params);
+                helloRequirements.set(requirements);
+                // supportsInput / jsonMode 由 applyClientRequirements 统一设置，无需重复调用
+                outputHandler.applyClientRequirements(requirements);
+                JsonObject resp = new JsonObject();
+                channel.sendResponse(id, resp);
+                logger.info("sys.hello 握手完成: " + requirements);
+            });
+
+            // 同步完成握手（reader 尚未启动，安全；此后 reader 线程逐帧有序处理）
+            channel.handleMessage(firstData);
+
+            // cmd.executeWithResult：先回执 ack，再异步执行（绝不在 reader 线程同步执行，防 cmd.prompt 死锁）
+            channel.onRequest(ProtocolMethods.CMD_EXECUTE, (id, params) -> {
+                String command = params != null && params.has("command") && !params.get("command").isJsonNull()
+                        ? params.get("command").getAsString() : null;
+                String requestJson = params != null && params.has("request") && !params.get("request").isJsonNull()
+                        ? params.get("request").getAsString() : null;
+
+                if ((command == null || command.trim().isEmpty())
+                        && (requestJson == null || requestJson.trim().isEmpty())) {
+                    channel.sendError(id, -32602, "cmd.executeWithResult 缺少 command/request 参数");
+                    return;
+                }
+
+                commandStarted.set(true);
+                JsonObject ack = new JsonObject();
+                ack.addProperty("accepted", true);
+                channel.sendResponse(id, ack);
+                logger.info("收到 cmd.executeWithResult: " + (command != null ? command : requestJson));
+
+                ThreadPoolManager.submitSocketRunnable(() -> {
+                    try {
+                        ClientRequirements requirements = helloRequirements.get();
+                        if (requirements == null) {
+                            requirements = new ClientRequirements();
+                        }
+                        if (requestJson != null && !requestJson.trim().isEmpty()) {
+                            executeJsonRequest(requestJson, outputHandler, requirements);
+                        } else {
+                            commandExecutor.execute(command, outputHandler, requirements);
+                        }
+                    } catch (Exception e) {
+                        logger.error("cmd.executeWithResult 执行失败", e);
+                        try {
+                            outputHandler.printlnError("执行命令失败: " + e.getMessage());
+                        } catch (Exception ignored) {}
+                        outputHandler.close();
+                    }
+                });
+            });
+
+            // sys.ping → sys.pong（RPC 层活性，取代裸帧心跳）
+            channel.onNotification(ProtocolMethods.SYS_PING,
+                    p -> channel.sendNotification(ProtocolMethods.SYS_PONG, null));
+
+            final AtomicBoolean readerRunning = new AtomicBoolean(true);
+            final AtomicLong lastResponseTime = new AtomicLong(System.currentTimeMillis());
+            ThreadPoolManager.submitSocketRunnable(() -> runRpcServer(
+                    input, readerRunning, clientSocket, lastResponseTime, outputHandler));
+
+            logger.info("RPC 协议客户端就绪");
+
+            // 等待会话关闭（outputHandler.close() 完成即返回）：
+            // - 命令执行完 → CommandExecutor finally 调 outputHandler.close()（已发出/尝试发出 cmd.done）
+            // - 客户端断开 → reader 线程 finally 也会 close()
+            // 用关闭闩锁替代 sleep 轮询，保证 cmd.done 发出/发送失败后才关闭 socket（避免 GUI 收不到结果）。
+            // 注意：不能以 isClosed() 作为"是否已收尾完毕"的判据——close() 一开始就会把 closed 置 true，
+            // 之后才发送 cmd.done；此处必须无条件等待闩锁，否则仍会提前关掉 socket。
+            long waitStart = System.currentTimeMillis();
+            while (!commandStarted.get() && !outputHandler.awaitClosed(100, TimeUnit.MILLISECONDS)) {
+                if (System.currentTimeMillis() - waitStart > 60000) {
+                    logger.warn("客户端长时间未发送 cmd.executeWithResult，关闭连接");
+                    outputHandler.close();
+                    break;
+                }
+            }
+            outputHandler.awaitClosed();
+            logger.info("RPC 协议命令执行完成");
+
+        } catch (Throwable t) {
+            logger.error("处理 RPC 协议客户端错误", t);
         }
     }
-    
-    private void sendErrorResponse(OutputStream output,
-                                   CommandResult result) throws Exception {
-        String jsonResponse = GsonFactory.getInstance().toJson(result);
-        logger.info("返回错误响应: resultType=" + result.getResultType() + ", class=" + result.getClass().getSimpleName() + ", json=" + jsonResponse);
-        
-        byte[] data = InteractiveProtocol.encodeColoredOutput((byte) 0, jsonResponse);
-        InteractiveProtocol.writeMessage(output, 
-                InteractiveProtocol.TYPE_COLORED_OUTPUT, 
-                data);
-        
-        InteractiveProtocol.writeMessage(output, 
-                InteractiveProtocol.TYPE_COMMAND_END, 
-                null);
-        logger.debug("已发送COMMAND_END标记");
+
+    /**
+     * 执行 JSON 命令请求（cmd.executeWithResult 的 request 参数路径，USER_INTERFACE 模式）
+     */
+    private void executeJsonRequest(String requestJson, InteractiveOutputHandler outputHandler,
+                                    ClientRequirements requirements) {
+        CommandRequest<?> request = CommandRouter.getInstance().resolveRequestFromJson(requestJson);
+        if (request == null) {
+            logger.warn("cmd.executeWithResult 请求解析失败: " + requestJson);
+            outputHandler.printlnError("无法解析请求: " + requestJson);
+            // 必须随 cmd.done 回传结构化错误，否则客户端只会拿到一个空响应（result 缺失），
+            // 界面上就只能显示"查询失败: %s"这种没有信息量的兜底文案。
+            outputHandler.finish(buildRequestErrorResult(requestJson));
+            outputHandler.close();
+            return;
+        }
+        commandExecutor.execute(request, outputHandler, requirements, CommandType.USER_INTERFACE);
+    }
+
+    /**
+     * 构造"请求解析失败"的结构化错误结果（随 cmd.done 回传）。
+     *
+     * <p>优先带上 commandType，便于直接看出是哪一个命令类型没有注册。</p>
+     */
+    private static CommandResult buildRequestErrorResult(String requestJson) {
+        String detail = "服务端未注册该命令类型或请求格式错误";
+        try {
+            JsonObject obj = JsonParser.parseString(requestJson).getAsJsonObject();
+            if (obj.has("commandType") && !obj.get("commandType").isJsonNull()) {
+                detail = "服务端未注册的命令类型: " + obj.get("commandType").getAsString();
+            }
+        } catch (Exception ignored) {
+            // 请求本身不是合法 JSON，沿用上面的通用描述
+        }
+
+        CommandResult result = new CommandResult();
+        result.setSuccess(false);
+        result.setMessage(detail);
+        result.setError(new CommandResult.ErrorInfo("REQUEST_NOT_REGISTERED", detail));
+        return result;
     }
 }

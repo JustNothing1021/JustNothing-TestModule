@@ -11,7 +11,8 @@ import com.justnothing.testmodule.hooks.base.HookEntry;
 import com.justnothing.testmodule.utils.data.DataDirectoryManager;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.io.IOManager;
-import com.justnothing.testmodule.utils.io.RootProcessPool;
+import com.justnothing.testmodule.utils.io.ShellExecutionException;
+import com.justnothing.testmodule.utils.io.ShellExecutorProvider;
 
 import java.io.File;
 import java.util.Objects;
@@ -338,7 +339,7 @@ public class TransactionHandler {
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
             try {
                 logger.info("chmod尝试 " + attempt + "/" + maxRetries + " (超时: " + timeoutMs + "ms)");
-                IOManager.ProcessResult result = RootProcessPool.executeCommand("chmod -R 777 " + dataDir, timeoutMs, true);
+                IOManager.ProcessResult result = ShellExecutorProvider.get().execute("chmod -R 777 " + dataDir, timeoutMs);
                 
                 logger.info("chmod命令执行结果 - 退出码: " + result.exitCode() +
                             ", stdout: " + Objects.requireNonNullElse(result.stdout(), "(空)") +

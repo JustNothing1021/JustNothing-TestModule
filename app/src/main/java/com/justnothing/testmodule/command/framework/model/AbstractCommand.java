@@ -5,7 +5,7 @@ import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
 import com.justnothing.testmodule.command.framework.error.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.framework.utils.CommandExceptionHandler;
 
-public abstract class AbstractCommand<Req extends CommandRequest, Res extends CommandResult> implements Command<Res> {
+public abstract class AbstractCommand<Req extends CommandRequest<?>, Res extends CommandResult> implements Command<Res> {
     protected final String commandName;
     protected final Class<Req> requestType;
     protected final Class<Res> returnType;
@@ -21,7 +21,7 @@ public abstract class AbstractCommand<Req extends CommandRequest, Res extends Co
         return requestType;
     }
 
-    protected boolean acceptable(CommandRequest req) {
+    protected boolean acceptable(CommandRequest<?> req) {
         if (req == null) {
             return true;
         }
@@ -29,7 +29,7 @@ public abstract class AbstractCommand<Req extends CommandRequest, Res extends Co
     }
 
     @SuppressWarnings("unchecked")
-    public Res execute(CommandExecutor.CmdExecContext<? extends CommandRequest> context) {
+    public Res execute(CommandExecutor.CmdExecContext<? extends CommandRequest<?>> context) {
         if (!acceptable(context.getRequest())) {
             throw new IllegalArgumentException("命令请求类型错误; 期待"
                     + getAcceptableRequestType().getSimpleName()
@@ -51,10 +51,13 @@ public abstract class AbstractCommand<Req extends CommandRequest, Res extends Co
                 if (context.getRequest() != null) {
                     result.setRequestId(context.getRequest().getRequestId());
                 }
+                // 同时写 message：结构化 error 供客户端取 code，message 供纯文本展示，
+                // 两者都会上线（stacktrace 仍排除在外）。
+                String message = "执行" + commandName + "命令失败"
+                        + (e.getMessage() != null ? ": " + e.getMessage() : "");
+                result.setMessage(message);
                 result.setError(
-                    new CommandResult.ErrorInfo(
-                        "UNEXPECTED_ERROR", "执行" + commandName + "命令失败", e
-                    )
+                    new CommandResult.ErrorInfo("UNEXPECTED_ERROR", message, e)
                 );
 
                 return result;

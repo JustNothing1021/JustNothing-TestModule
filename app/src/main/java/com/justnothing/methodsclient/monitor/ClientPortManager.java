@@ -11,7 +11,7 @@ import static com.justnothing.testmodule.service.handler.TransactionHandler.TRAN
 import com.justnothing.methodsclient.StreamClient;
 import com.justnothing.methodsclient.executor.FileCommandExecutor;
 import com.justnothing.testmodule.utils.io.IOManager;
-import com.justnothing.testmodule.utils.io.RootProcessPool;
+import com.justnothing.testmodule.utils.io.ShellExecutorProvider;
 
 import java.io.File;
 import java.net.InetSocketAddress;
@@ -94,9 +94,9 @@ public class ClientPortManager {
                     "i32", String.valueOf(newPort),
                     "s16", outputFilePath};
 
-            // 使用RootProcessPool执行服务调用
+            // 使用ShellExecutor执行服务调用
             String serviceCommand = String.join(" ", serviceCmd);
-            IOManager.ProcessResult serviceResult = RootProcessPool.executeCommand(serviceCommand, 15000, false);
+            IOManager.ProcessResult serviceResult = ShellExecutorProvider.get().execute(serviceCommand, 15000);
             
             if (serviceResult.isSuccess()) {
                 logger.info("执行完成, 输出: " + serviceResult.stdout());
@@ -158,7 +158,7 @@ public class ClientPortManager {
                     return;
                 }
                 try {
-                    IOManager.ProcessResult chmodResult = RootProcessPool.executeCommand("chmod 777 " + parent.getAbsolutePath(), 5000, true);
+                    IOManager.ProcessResult chmodResult = ShellExecutorProvider.get().execute("chmod 777 " + parent.getAbsolutePath(), 5000);
                     if (!chmodResult.isSuccess()) {
                         logger.warn("设置端口文件目录权限失败: " + parent.getAbsolutePath());
                     }
@@ -167,7 +167,7 @@ public class ClientPortManager {
                 }
             } else if (parent != null && (!parent.canRead() || !parent.canWrite() || !parent.canExecute())) {
                 try {
-                    IOManager.ProcessResult chmodResult = RootProcessPool.executeCommand("chmod 777 " + parent.getAbsolutePath(), 5000, true);
+                    IOManager.ProcessResult chmodResult = ShellExecutorProvider.get().execute("chmod 777 " + parent.getAbsolutePath(), 5000);
                     if (!chmodResult.isSuccess()) {
                         logger.warn("设置端口文件目录权限失败: " + parent.getAbsolutePath());
                     }

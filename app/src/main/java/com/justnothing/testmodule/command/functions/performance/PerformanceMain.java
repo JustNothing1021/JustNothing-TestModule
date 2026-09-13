@@ -26,8 +26,7 @@ import java.util.Map;
 @Cmd(
     version = CommandServer.CMD_PERFORMANCE_VER,
     name = "performance",
-    description = "性能分析命令, 支持多种分析方式（采样, 多线程, 分层, Trace, Systrace, Hook)",
-    defaultResultType = PerformanceResult.class
+    description = "性能分析命令, 支持多种分析方式（采样, 多线程, 分层, Trace, Systrace, Hook)"
 )
 @CmdRoutes({
     // Sample (4 routes) → SampleCommand
@@ -47,6 +46,7 @@ import java.util.Map;
     @CmdRoutes.Route(path = "hierarchical/stop", request = HierarchicalStopRequest.class, handler = HierarchicalCommand.class, description = "停止分层采样"),
     @CmdRoutes.Route(path = "hierarchical/report", request = HierarchicalReportRequest.class, handler = HierarchicalCommand.class, description = "查看分层采样报告"),
     @CmdRoutes.Route(path = "hierarchical/export", request = HierarchicalExportRequest.class, handler = HierarchicalCommand.class, description = "导出分层数据"),
+
 
     // Trace (4 routes) → TraceCommand
     @CmdRoutes.Route(path = "trace/start", request = TraceStartRequest.class, handler = TraceCommand.class, description = "开始 Trace"),
@@ -84,7 +84,7 @@ public class PerformanceMain extends MainCommand<PerformanceResult> {
     }
 
     @Override
-    public PerformanceResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
+    protected PerformanceResult executeInternal(CommandExecutor.CmdExecContext<CommandRequest<?>> context) throws Exception {
         String[] args = context.args();
 
         if (args.length < 1) {

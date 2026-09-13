@@ -1,25 +1,11 @@
 package com.justnothing.testmodule.command.functions.performance.request;
 
 import com.justnothing.testmodule.command.functions.performance.PerformanceRequest;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.justnothing.testmodule.command.functions.performance.response.TraceResult;
 
-@SerializeKeyName("perf:trace:start")
-public class TraceStartRequest extends PerformanceRequest {
+public class TraceStartRequest extends PerformanceRequest<TraceResult> {
 
     public TraceStartRequest() {
         super();
-    }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        return super.toJson();
-    }
-
-    @Override
-    public TraceStartRequest fromJson(JSONObject obj) {
-        setRequestId(obj.optString("requestId"));
-        return this;
     }
 }

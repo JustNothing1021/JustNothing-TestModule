@@ -72,24 +72,26 @@ public class ClassQueryViewModel extends AndroidViewModel {
                 String jsonResponse = client.executeCommandRequest(GsonFactory.getInstance().toJson(request));
                 logger.debug("收到响应: " + jsonResponse);
 
+                // 先解析为 CommandResult 检查成功状态
                 CommandResult parsedResult = GsonFactory.getInstance().fromJson(jsonResponse, CommandResult.class);
-                logger.debug("解析结果类型: " + parsedResult.getClass().getName());
+                logger.debug("解析结果, 成功: " + parsedResult.isSuccess());
                 
-                if (parsedResult instanceof ClassInfoResult result) {
-                    if (result.isSuccess() && result.getClassInfo() != null) {
+                if (parsedResult.isSuccess()) {
+                    // 成功时用 ClassInfoResult 类型重新解析，获取完整数据
+                    ClassInfoResult result = GsonFactory.getInstance().fromJson(jsonResponse, ClassInfoResult.class);
+                    if (result.getClassInfo() != null) {
                         logger.info("查询成功: " + result.getClassInfo().getName());
                         classInfo.postValue(result.getClassInfo());
                     } else {
-                        String errorMsg = result.getError() != null 
-                            ? result.getError().getMessage() 
-                            : getApplication().getString(R.string.analysis_class_query_failed_format);
-                        logger.error("查询失败: " + errorMsg);
+                        String errorMsg = getApplication().getString(R.string.analysis_class_query_failed_format);
+                        logger.error("查询失败: 响应中没有类信息");
                         error.postValue(errorMsg);
                     }
                 } else {
-                    String errorMsg = getApplication().getString(R.string.analysis_response_type_error,
-                        "ClassInfoResult", parsedResult.getClass().getName());
-                    logger.error(errorMsg);
+                    String errorMsg = parsedResult.getMessage() != null
+                        ? parsedResult.getMessage()
+                        : getApplication().getString(R.string.analysis_class_query_failed_format);
+                    logger.error("查询失败: " + errorMsg);
                     error.postValue(errorMsg);
                 }
             } catch (Exception e) {

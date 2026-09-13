@@ -42,7 +42,7 @@ import java.util.function.Function;
  *     );
  * }</pre>
  */
-public class DirectClassCommand<Req extends ClassCommandRequest, Res extends ClassCommandResult>
+public class DirectClassCommand<Req extends ClassCommandRequest<?>, Res extends ClassCommandResult>
         extends AbstractClassCommand<Req, Res> {
 
     private static final Logger logger = Logger.getLoggerForName("DirectClassCommand");

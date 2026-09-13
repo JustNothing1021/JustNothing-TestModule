@@ -2,11 +2,9 @@ package com.justnothing.testmodule.command.functions.hook.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
-import org.json.JSONObject;
+import com.justnothing.testmodule.command.functions.hook.result.HookListResult;
 
-@SerializeKeyName("hook:add")
-public class HookAddRequest extends CommandRequest {
+public class HookAddRequest extends CommandRequest<HookListResult> {
 
     @CmdParam(
         name = "className",
@@ -107,36 +105,4 @@ public class HookAddRequest extends CommandRequest {
 
     public String getReplaceCodebase() { return replaceCodebase; }
     public void setReplaceCodebase(String replaceCodebase) { this.replaceCodebase = replaceCodebase; }
-
-    @Override
-    public JSONObject toJson() throws org.json.JSONException {
-        JSONObject obj = super.toJson();
-        obj.put("className", className);
-        obj.put("methodName", methodName);
-        if (signature != null && !signature.isEmpty()) {
-            obj.put("signature", signature);
-        }
-        if (beforeCode != null) obj.put("beforeCode", beforeCode);
-        if (afterCode != null) obj.put("afterCode", afterCode);
-        if (replaceCode != null) obj.put("replaceCode", replaceCode);
-        if (beforeCodebase != null) obj.put("beforeCodebase", beforeCodebase);
-        if (afterCodebase != null) obj.put("afterCodebase", afterCodebase);
-        if (replaceCodebase != null) obj.put("replaceCodebase", replaceCodebase);
-        return obj;
-    }
-
-    @Override
-    public HookAddRequest fromJson(JSONObject obj) {
-        setRequestId(obj.optString("requestId"));
-        setClassName(obj.optString("className", ""));
-        setMethodName(obj.optString("methodName", ""));
-        setSignature(obj.optString("signature", null));
-        setBeforeCode(obj.optString("beforeCode", null));
-        setAfterCode(obj.optString("afterCode", null));
-        setReplaceCode(obj.optString("replaceCode", null));
-        setBeforeCodebase(obj.optString("beforeCodebase", null));
-        setAfterCodebase(obj.optString("afterCodebase", null));
-        setReplaceCodebase(obj.optString("replaceCodebase", null));
-        return this;
-    }
 }

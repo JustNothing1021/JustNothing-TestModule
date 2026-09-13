@@ -20,15 +20,16 @@ import java.util.List;
         "breakpoint hits"
     }
 )
-public class BreakpointQueryCommand extends AbstractBreakpointCommand<CommandRequest, BreakpointResult> {
+public class BreakpointQueryCommand extends AbstractBreakpointCommand<CommandRequest<?>, BreakpointResult> {
 
+    @SuppressWarnings("unchecked")
     public BreakpointQueryCommand() {
-        super("breakpoint query", CommandRequest.class, BreakpointResult.class);
+        super("breakpoint query", (Class) CommandRequest.class, BreakpointResult.class);
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    protected BreakpointResult executeInternal(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
+    protected BreakpointResult executeInternal(CommandExecutor.CmdExecContext<CommandRequest<?>> context) throws Exception {
         CommandRequest request = context.getRequest();
 
         if (request instanceof BreakpointListRequest) {

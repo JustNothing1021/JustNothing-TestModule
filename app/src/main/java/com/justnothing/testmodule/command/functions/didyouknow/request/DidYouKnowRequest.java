@@ -2,10 +2,9 @@ package com.justnothing.testmodule.command.functions.didyouknow.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
+import com.justnothing.testmodule.command.functions.didyouknow.response.DidYouKnowResult;
 
-@SerializeKeyName("did-you-know")
-public class DidYouKnowRequest extends CommandRequest {
+public class DidYouKnowRequest extends CommandRequest<DidYouKnowResult> {
 
     @CmdParam(
         name = "--id",

@@ -7,7 +7,7 @@ import com.justnothing.testmodule.utils.logging.Logger;
 
 import java.util.Arrays;
 
-public abstract class AbstractClassCommand<Req extends ClassCommandRequest, Res extends ClassCommandResult>
+public abstract class AbstractClassCommand<Req extends ClassCommandRequest<?>, Res extends ClassCommandResult>
         extends AbstractCommand<Req, Res>
         implements ClassCommand<Res> {
 

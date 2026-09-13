@@ -5,11 +5,18 @@ import com.justnothing.testmodule.command.framework.model.CommandResult;
 import com.justnothing.testmodule.command.functions.hook.*;
 import com.justnothing.testmodule.command.functions.hook.request.*;
 import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.functions.hook.result.HookAddResult;
+import com.justnothing.testmodule.command.functions.hook.result.HookListResult;
 
 import java.util.List;
 import java.util.Map;
 
-public class HookQueryCommand extends AbstractHookCommand<CommandRequest, CommandResult> {
+public class HookQueryCommand extends AbstractHookCommand<CommandRequest<?>, CommandResult> {
+
+    @SuppressWarnings("unchecked")
+    public HookQueryCommand() {
+        super("hook query", (Class) CommandRequest.class, CommandResult.class);
+    }
 
     public HookListResult handleList(HookListRequest request) {
         logger.debug("列出所有Hook");
@@ -72,7 +79,7 @@ public class HookQueryCommand extends AbstractHookCommand<CommandRequest, Comman
     }
 
     @Override
-    protected CommandResult executeInternal(CommandRequest request) throws Exception {
+    protected CommandResult executeRequest(CommandRequest<?> request) throws Exception {
         if (request instanceof HookListRequest r) return handleList(r);
         if (request instanceof HookInfoRequest r) return handleInfo(r);
         if (request instanceof HookOutputRequest r) return handleOutput(r);

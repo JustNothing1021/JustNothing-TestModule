@@ -35,14 +35,15 @@ import java.util.stream.Collectors;
             report [id]                        查看报告 (默认最新)
             export <id> <path>                 导出数据"""
 )
-public class SampleCommand extends AbstractPerfCommand<PerformanceRequest, SampleResult> {
+public class SampleCommand extends AbstractPerfCommand<PerformanceRequest<?>, SampleResult> {
 
+    @SuppressWarnings("unchecked")
     public SampleCommand() {
-        super("performance sample", PerformanceRequest.class, SampleResult.class);
+        super("performance sample", (Class) PerformanceRequest.class, SampleResult.class);
     }
 
     @Override
-    protected SampleResult executePerfCommand(PerformanceRequest request) throws Exception {
+    protected SampleResult executePerfCommand(PerformanceRequest<?> request) throws Exception {
         logger.debug("[sample] 收到请求: %s", request.getClass().getSimpleName());
 
         if (request instanceof SampleStartRequest startReq) {

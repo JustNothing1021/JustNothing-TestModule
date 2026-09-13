@@ -19,7 +19,7 @@ import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Objects;
 
-public abstract class MemorySubCommand<Req extends CommandRequest, Res extends CommandResult>
+public abstract class MemorySubCommand<Req extends CommandRequest<?>, Res extends CommandResult>
         extends AbstractCommand<Req, Res> {
 
     protected static final Logger logger = Logger.getLoggerForName("MemorySubCommand");

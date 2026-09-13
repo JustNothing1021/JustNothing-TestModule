@@ -3,17 +3,16 @@ package com.justnothing.testmodule.command.functions.classcmd.request;
 import com.justnothing.testmodule.command.framework.error.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandRequest;
 import com.justnothing.testmodule.command.framework.model.CustomCommandLineParser;
-import com.justnothing.testmodule.command.framework.utils.ParamParser;
+import com.justnothing.testmodule.command.framework.utils.CmdParamProcessor;
 import com.justnothing.testmodule.command.framework.utils.ParamStringUtils;
+import com.justnothing.testmodule.command.functions.classcmd.response.InvokeMethodResult;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@SerializeKeyName("class:invoke")
-public class InvokeMethodRequest extends ClassCommandRequest implements CustomCommandLineParser {
+public class InvokeMethodRequest extends ClassCommandRequest<InvokeMethodResult> implements CustomCommandLineParser {
 
     @CmdParam(
         name = "class",
@@ -137,33 +136,28 @@ public class InvokeMethodRequest extends ClassCommandRequest implements CustomCo
 
     // ========== CustomCommandLineParser 实现 ==========
 
-    @Override
-    public CommandRequest customParse(CustomCommandLineParser.ParseContext context) throws IllegalCommandLineArgumentException {
-        return fromCommandLine(context.originalArgs());
-    }
-
     /**
      * CLI 解析入口:
      * 1. 预处理：合并反引号包裹的参数（支持带空格的表达式）
-     * 2. 用 ParamParser 解析 className, methodName, 标志选项（含 --instance/-i）
+     * 2. 声明式解析（@CmdParam）：className / methodName / 标志选项（含 --instance/-i）
      * 3. 手动收集位置3及之后的剩余参数 → paramsRaw (String[])
      * 4. 解析每个参数 token → params + paramTypes 列表
      */
     @Override
-    public InvokeMethodRequest fromCommandLine(String[] args) throws IllegalCommandLineArgumentException {
+    public CommandRequest customParse(CustomCommandLineParser.ParseContext context) throws IllegalCommandLineArgumentException {
         // 预处理：合并反引号包裹的参数（如 `new String[2] {"114514", "1919810"}`）
-        args = preprocessBacktickArgs(args);
+        String[] args = preprocessBacktickArgs(context.originalArgs());
 
-        InvokeMethodRequest parsed = ParamParser.parse(InvokeMethodRequest.class, args);
+        CmdParamProcessor.parseCommandLineArgs(this, args);
 
         // 从原始参数中提取位置3之后的剩余参数（跳过选项及其值）
         List<String> remaining = collectRemainingPositionalArgs(args, 2);
         if (!remaining.isEmpty()) {
-            parsed.paramsRaw = remaining.toArray(new String[0]);
-            parsed.rebuildParamsFromRaw();
+            this.paramsRaw = remaining.toArray(new String[0]);
+            this.rebuildParamsFromRaw();
         }
 
-        return parsed;
+        return this;
     }
 
     // ========== 内部方法 ==========

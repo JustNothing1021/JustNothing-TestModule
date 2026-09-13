@@ -2,12 +2,9 @@ package com.justnothing.testmodule.command.functions.network.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.justnothing.testmodule.command.framework.model.CommandResult;
 
-@SerializeKeyName("network:export")
-public class NetworkExportRequest extends CommandRequest {
+public class NetworkExportRequest extends CommandRequest<CommandResult> {
 
     @CmdParam(
         name = "filePath",
@@ -25,18 +22,4 @@ public class NetworkExportRequest extends CommandRequest {
 
     public String getFilePath() { return filePath; }
     public void setFilePath(String filePath) { this.filePath = filePath; }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        if (filePath != null) obj.put("filePath", filePath);
-        return obj;
-    }
-
-    @Override
-    public NetworkExportRequest fromJson(JSONObject obj) {
-        setRequestId(obj.optString("requestId"));
-        setFilePath(obj.optString("filePath", "/sdcard/network_log.json"));
-        return this;
-    }
 }

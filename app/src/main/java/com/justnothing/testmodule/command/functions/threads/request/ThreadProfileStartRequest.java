@@ -2,11 +2,10 @@ package com.justnothing.testmodule.command.functions.threads.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
+import com.justnothing.testmodule.command.functions.threads.response.ThreadProfileStartResult;
 import java.util.List;
 
-@SerializeKeyName("threads:profile:start")
-public class ThreadProfileStartRequest extends CommandRequest {
+public class ThreadProfileStartRequest extends CommandRequest<ThreadProfileStartResult> {
 
     @CmdParam(
         name = "--duration",

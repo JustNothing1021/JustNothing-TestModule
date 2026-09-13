@@ -17,7 +17,8 @@ import com.justnothing.testmodule.utils.data.DataDirectoryManager;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 import com.justnothing.testmodule.utils.io.IOManager;
-import com.justnothing.testmodule.utils.io.RootProcessPool;
+import com.justnothing.testmodule.utils.io.ShellExecutionException;
+import com.justnothing.testmodule.utils.io.ShellExecutorProvider;
 
 import java.io.File;
 import java.io.IOException;
@@ -60,7 +61,7 @@ public class ShellService extends Binder {
         for (int suAttempt = 1; suAttempt <= suMaxRetries; suAttempt++) {
             try {
                 logger.info("su检查尝试 " + suAttempt + "/" + suMaxRetries + " (超时: " + suTimeoutMs + "ms)");
-                IOManager.ProcessResult suCheck = RootProcessPool.executeCommand("echo 'su available'", suTimeoutMs, true);
+                IOManager.ProcessResult suCheck = ShellExecutorProvider.get().execute("echo 'su available'", suTimeoutMs);
                 
                 if (suCheck.isSuccess() && suCheck.stdout() != null && suCheck.stdout().contains("su available")) {
                     logger.info("su可用，继续执行chmod");
@@ -71,11 +72,8 @@ public class ShellService extends Binder {
                                ", 输出: " + (suCheck.stdout() != null ? suCheck.stdout() : "(空)") + 
                                ", 错误: " + (suCheck.stderr() != null ? suCheck.stderr() : "(空)"));
                 }
-            } catch (InterruptedException e) {
-                logger.warn("su检查尝试 " + suAttempt + " 超时: " + e.getMessage());
-                Thread.currentThread().interrupt();
-            } catch (IOException e) {
-                logger.error("su检查尝试 " + suAttempt + " IO异常: " + e.getMessage(), e);
+            } catch (ShellExecutionException e) {
+                logger.error("su检查尝试 " + suAttempt + " Shell执行异常: " + e.getMessage(), e);
             } catch (Exception e) {
                 logger.error("su检查尝试 " + suAttempt + " 未知异常: " + e.getMessage(), e);
             }
@@ -104,7 +102,7 @@ public class ShellService extends Binder {
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
             try {
                 logger.info("chmod尝试 " + attempt + "/" + maxRetries + " (超时: " + timeoutMs + "ms)");
-                IOManager.ProcessResult result = RootProcessPool.executeCommand("chmod -R 777 " + dataDir, timeoutMs, true);
+                IOManager.ProcessResult result = ShellExecutorProvider.get().execute("chmod -R 777 " + dataDir, timeoutMs);
 
                 logger.info("chmod命令执行结果 - 退出码: " + result.exitCode() +
                             ", stdout: " + Objects.requireNonNullElse(result.stdout(), "空") +
@@ -115,7 +113,7 @@ public class ShellService extends Binder {
                     
                     logger.info("验证权限设置...");
                     try {
-                        IOManager.ProcessResult statResult = RootProcessPool.executeCommand("stat -c '%a' " + dataDir, 3000, true);
+                        IOManager.ProcessResult statResult = ShellExecutorProvider.get().execute("stat -c '%a' " + dataDir, 3000);
                         if (statResult.isSuccess() && statResult.stdout() != null) {
                             String permissions = statResult.stdout().trim();
                             logger.info("目录权限: " + permissions);
@@ -138,11 +136,8 @@ public class ShellService extends Binder {
                     logger.warn("chmod尝试 " + attempt + " 失败，退出码: " + result.exitCode() + 
                                ", 错误: " + (result.stderr() != null ? result.stderr() : "(空)"));
                 }
-            } catch (InterruptedException e) {
-                logger.warn("chmod尝试 " + attempt + " 超时: " + e.getMessage());
-                Thread.currentThread().interrupt();
-            } catch (IOException e) {
-                logger.error("chmod尝试 " + attempt + " IO异常: " + e.getMessage(), e);
+            } catch (ShellExecutionException e) {
+                logger.error("chmod尝试 " + attempt + " Shell执行异常: " + e.getMessage(), e);
             } catch (Exception e) {
                 logger.error("chmod尝试 " + attempt + " 未知异常: " + e.getMessage(), e);
             }

@@ -2,22 +2,18 @@ package com.justnothing.testmodule.command.functions.classcmd;
 
 import static com.justnothing.testmodule.constants.CommandServer.CMD_CLASS_VER;
 
-import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.model.MainCommand;
 import com.justnothing.testmodule.command.framework.annotation.Cmd;
 import com.justnothing.testmodule.command.framework.annotation.CmdRoutes;
 import com.justnothing.testmodule.command.framework.model.CommandRouter;
-import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.functions.classcmd.request.*;
 import com.justnothing.testmodule.command.functions.classcmd.impl.*;
-import com.justnothing.testmodule.command.framework.output.Colors;
 
 @Cmd(
     name = "class",
     group = "system",
     description = "查看类的详细信息, 包括继承关系, 接口, 构造函数等",
-    version = CMD_CLASS_VER,
-    defaultResultType = ClassCommandResult.class
+    version = CMD_CLASS_VER
 )
 @CmdRoutes({
     @CmdRoutes.Route(path = "info", request = ClassInfoRequest.class,
@@ -35,7 +31,9 @@ import com.justnothing.testmodule.command.framework.output.Colors;
     @CmdRoutes.Route(path = "constructor", request = InvokeConstructorRequest.class,
             handler = ConstructorCommand.class, description = "创建类的实例"),
     @CmdRoutes.Route(path = "reflect", request = ReflectClassRequest.class,
-            handler = ReflectCommand.class, description = "使用反射访问和操作类的私有成员")
+            handler = ReflectCommand.class, description = "使用反射访问和操作类的私有成员"),
+    @CmdRoutes.Route(path = "hierarchy", request = ClassHierarchyRequest.class,
+            handler = ClassHierarchyCommand.class, description = "查看类的继承层次结构")
 })
 public class ClassMain extends MainCommand<ClassCommandResult> {
 
@@ -46,32 +44,5 @@ public class ClassMain extends MainCommand<ClassCommandResult> {
     @Override
     public String getHelpText() {
         return CommandRouter.getInstance().generateHelpForCommand("class");
-    }
-
-    @Override
-    public ClassCommandResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
-        if (context.getRequest() != null) {
-            Object request = context.getRequest();
-            if (request instanceof ClassInfoRequest) {
-                return new InfoCommand().execute(context);
-            } else if (request instanceof ClassGraphRequest) {
-                return new GraphCommand().execute(context);
-            } else if (request instanceof AnalyzeClassRequest) {
-                return new AnalyzeCommand().execute(context);
-            } else if (request instanceof MethodListRequest) {
-                return new ListCommand().execute(context);
-            } else if (request instanceof InvokeMethodRequest) {
-                return new InvokeCommand().execute(context);
-            } else if (request instanceof FieldRequest) {
-                return new FieldCommand().execute(context);
-            } else if (request instanceof InvokeConstructorRequest) {
-                return new ConstructorCommand().execute(context);
-            } else if (request instanceof ReflectClassRequest) {
-                return new ReflectCommand().execute(context);
-            }
-        }
-
-        context.println(getHelpText(), Colors.WHITE);
-        return createErrorResult("请指定子命令: class <subcmd> [args...]");
     }
 }

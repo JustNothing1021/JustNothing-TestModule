@@ -6,7 +6,7 @@ import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.functions.threads.response.ThreadCommandResult;
 import com.justnothing.testmodule.utils.logging.Logger;
 
-public abstract class AbstractThreadsCommand<Req extends CommandRequest, Res extends ThreadCommandResult>
+public abstract class AbstractThreadsCommand<Req extends CommandRequest<?>, Res extends ThreadCommandResult>
         extends AbstractCommand<Req, Res> {
 
     protected static final Logger logger = Logger.getLoggerForName("AbstractThreadsCommand");

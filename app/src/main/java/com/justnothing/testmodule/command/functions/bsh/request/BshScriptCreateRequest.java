@@ -1,11 +1,10 @@
 package com.justnothing.testmodule.command.functions.bsh.request;
 
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
+import com.justnothing.testmodule.command.functions.bsh.response.BeanShellResult;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 
-@SerializeKeyName("bsh:script:create")
-public class BshScriptCreateRequest extends CommandRequest {
+public class BshScriptCreateRequest extends CommandRequest<BeanShellResult> {
 
     @CmdParam(
         name = "name",

@@ -52,7 +52,12 @@ public class ParamStringUtils {
             char c = paramsRaw.charAt(i);
             
             if (escapeNext) {
-                // 处理转义字符
+                // 对引号/反斜杠必须保留反斜杠：下游表达式解析器要把 \" 识别为"字符串内的引号"，
+                // 若在这里把反斜杠吃掉，\" 会退化成裸引号导致字符串字面量引号失衡、解析失败。
+                // 其余转义（如 \s）维持原行为：去掉反斜杠，只保留字符本身。
+                if (c == '"' || c == '\\') {
+                    currentToken.append('\\');
+                }
                 currentToken.append(c);
                 escapeNext = false;
             } else if (c == '\\') {

@@ -2,12 +2,9 @@ package com.justnothing.testmodule.command.functions.network.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.justnothing.testmodule.command.framework.model.CommandResult;
 
-@SerializeKeyName("network:info")
-public class NetworkInfoRequest extends CommandRequest {
+public class NetworkInfoRequest extends CommandRequest<CommandResult> {
 
     @CmdParam(
         name = "id",
@@ -24,18 +21,4 @@ public class NetworkInfoRequest extends CommandRequest {
 
     public int getTargetRequestId() { return targetRequestId; }
     public void setTargetRequestId(int id) { this.targetRequestId = id; }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        obj.put("targetRequestId", targetRequestId);
-        return obj;
-    }
-
-    @Override
-    public NetworkInfoRequest fromJson(JSONObject obj) {
-        setRequestId(obj.optString("requestId"));
-        setTargetRequestId(obj.optInt("targetRequestId", 0));
-        return this;
-    }
 }

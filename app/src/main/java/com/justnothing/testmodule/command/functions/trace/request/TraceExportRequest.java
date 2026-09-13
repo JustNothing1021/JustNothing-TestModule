@@ -2,12 +2,9 @@ package com.justnothing.testmodule.command.functions.trace.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.justnothing.testmodule.command.functions.trace.TraceResult;
 
-@SerializeKeyName("trace:export")
-public class TraceExportRequest extends CommandRequest {
+public class TraceExportRequest extends CommandRequest<TraceResult> {
 
     @CmdParam(
         name = "id",
@@ -36,20 +33,4 @@ public class TraceExportRequest extends CommandRequest {
 
     public String getFilePath() { return filePath; }
     public void setFilePath(String filePath) { this.filePath = filePath; }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        obj.put("traceId", traceId);
-        if (filePath != null) obj.put("filePath", filePath);
-        return obj;
-    }
-
-    @Override
-    public TraceExportRequest fromJson(JSONObject obj) {
-        setRequestId(obj.optString("requestId"));
-        setTraceId(obj.optInt("traceId", 0));
-        setFilePath(obj.optString("filePath", null));
-        return this;
-    }
 }

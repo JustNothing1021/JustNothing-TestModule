@@ -11,7 +11,12 @@ import java.io.File;
 import java.util.List;
 import java.util.Map;
 
-public class NativeQueryCommand extends AbstractNativeCommand<CommandRequest, CommandResult> {
+public class NativeQueryCommand extends AbstractNativeCommand<CommandRequest<?>, CommandResult> {
+
+    @SuppressWarnings("unchecked")
+    public NativeQueryCommand() {
+        super("native query", (Class) CommandRequest.class, CommandResult.class);
+    }
 
     public NativeResult handleList(NativeListRequest request) {
         String pattern = request.getPattern();
@@ -215,7 +220,7 @@ public class NativeQueryCommand extends AbstractNativeCommand<CommandRequest, Co
     }
 
     @Override
-    protected CommandResult executeInternal(CommandRequest request) throws Exception {
+    protected CommandResult executeRequest(CommandRequest<?> request) throws Exception {
         if (request instanceof NativeListRequest r) return handleList(r);
         if (request instanceof NativeInfoRequest r) return handleInfo(r);
         if (request instanceof NativeSymbolsRequest r) return handleSymbols(r);

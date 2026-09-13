@@ -1,11 +1,10 @@
 package com.justnothing.testmodule.command.functions.watch.request;
 
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.functions.watch.response.WatchStopResult;
 
-@SerializeKeyName("WatchStop")
-public class WatchStopRequest extends CommandRequest {
+public class WatchStopRequest extends CommandRequest<WatchStopResult> {
 
     @CmdParam(
         name = "watchId",

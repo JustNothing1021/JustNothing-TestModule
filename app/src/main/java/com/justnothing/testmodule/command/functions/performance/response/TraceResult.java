@@ -1,11 +1,9 @@
 package com.justnothing.testmodule.command.functions.performance.response;
 
 import com.justnothing.testmodule.command.framework.model.CommandResult;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
 
 import java.util.List;
 
-@SerializeKeyName("TraceResult")
 public class TraceResult extends CommandResult {
 
     private int taskId;

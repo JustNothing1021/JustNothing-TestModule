@@ -1,12 +1,9 @@
 package com.justnothing.testmodule.command.functions.script.request;
 
+import com.justnothing.testmodule.command.functions.script.ScriptResult;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
-import org.json.JSONException;
-import org.json.JSONObject;
 
-@SerializeKeyName("script:export")
-public class ScriptExportRequest extends ScriptBaseRequest {
+public class ScriptExportRequest extends ScriptBaseRequest<ScriptResult> {
 
     @CmdParam(name = "name", position = 1, required = true, description = "脚本名称")
     private String name;
@@ -23,20 +20,4 @@ public class ScriptExportRequest extends ScriptBaseRequest {
 
     public String getFilePath() { return filePath; }
     public void setFilePath(String filePath) { this.filePath = filePath; }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        obj.put("name", name);
-        obj.put("filePath", filePath);
-        return obj;
-    }
-
-    @Override
-    public ScriptExportRequest fromJson(JSONObject obj) {
-        setRequestId(obj.optString("requestId"));
-        setName(obj.optString("name"));
-        setFilePath(obj.optString("filePath"));
-        return this;
-    }
 }

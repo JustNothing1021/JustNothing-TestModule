@@ -119,13 +119,10 @@ magisk --install-module /data/local/tmp/magisk-module.zip
 
 (4) 如果你不用Magisk管理root (?)
  - 把magisk-module.zip中的system文件夹提取出来，将其与设备中的system合并
- - 再将zip中`common/binary`下符合ABI的可执行文件命名为`methods_client`复制在`system/framework`下即可!
  - 然后，更改一下可执行文件的权限
 ```text
 chmod 0775 /system/bin/methods                 # Shell客户端文件
 chmod 0775 /system/bin/methods-daemon          # 守护进程监视器
-chmod 0775 /system/bin/methods_client          # C++客户端文件
-chmod 0775 /system/bin/methods-concurrent-test # debug用，并发测试
 
 # 顺便把数据目录也更改一下
 mkdir /data/local/tmp/methods 
@@ -154,7 +151,6 @@ chmod -R 0775 /data/local/tmp/methods
 
 ### 后端
  - **Java** - Xposed模块和服务端
- - **C++** - 原生客户端
  - **Socket通信** - 客户端和服务端通信
  - **Binder IPC** - Android进程间通信
 
@@ -235,10 +231,10 @@ cd JustNothing-TestModule
 命令行 ├────────> process │ --> 目前主要的瓶颈
        │        └──────▲──┘     破坏输入且开销大
        │               │ 
-┌──────▼──┐     ┌──────▼──┐ 
-│ 客户端  │     │  客户端 │
-│  (C++)  │     │  (Java) │
-└──────▲──┘     └──────▲──┘ 
+       │       ┌──────▼──┐ 
+       │       │  客户端 │
+       │       │  (Java) │
+       │       └──────▲──┘ 
        ├───────────────┘
        │ Socket
        │
@@ -347,8 +343,8 @@ README.MD!!!!!
 
 ## 常见问题
 
-### Q: 为什么有三个客户端？
-A: Shell处理终端，Java通过app_process执行，体验好; C++处理轻量命令 (虽然还用不了)。
+### Q: 为什么有两个客户端？
+A: Shell 处理终端，Java 通过 app_process 执行，体验好。
 
 ## 相关链接
 

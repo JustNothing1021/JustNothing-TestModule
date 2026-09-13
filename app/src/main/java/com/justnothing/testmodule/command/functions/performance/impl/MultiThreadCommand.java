@@ -34,14 +34,15 @@ import java.util.stream.Collectors;
             report [id]                        查看报告 (默认最新)
             export <id> <path>                 导出数据"""
 )
-public class MultiThreadCommand extends AbstractPerfCommand<PerformanceRequest, MultiThreadResult> {
+public class MultiThreadCommand extends AbstractPerfCommand<PerformanceRequest<?>, MultiThreadResult> {
 
+    @SuppressWarnings("unchecked")
     public MultiThreadCommand() {
-        super("performance multithread", PerformanceRequest.class, MultiThreadResult.class);
+        super("performance multithread", (Class) PerformanceRequest.class, MultiThreadResult.class);
     }
 
     @Override
-    protected MultiThreadResult executePerfCommand(PerformanceRequest req) throws Exception {
+    protected MultiThreadResult executePerfCommand(PerformanceRequest<?> req) throws Exception {
         logger.debug("[mt] 收到请求: %s", req.getClass().getSimpleName());
 
         if (req instanceof MultiThreadStartRequest startReq) {

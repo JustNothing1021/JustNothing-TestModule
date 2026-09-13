@@ -29,7 +29,9 @@ public class ThreadPoolManager {
     
     private static final int IO_POOL_SIZE = IS_LOW_END_DEVICE ? 3 : 6;
     private static final int FAST_POOL_SIZE = IS_LOW_END_DEVICE ? 4 : 10;
-    private static final int SOCKET_POOL_SIZE = IS_LOW_END_DEVICE ? 3 : 5;
+    // 每个客户端连接会长期占用 2 个 socket 线程（会话线程 + RPC reader 线程），
+    // 命令执行期间还要再占 1 个，因此池大小直接决定并发连接数上限。
+    private static final int SOCKET_POOL_SIZE = IS_LOW_END_DEVICE ? 12 : 32;
 
     private static final int IO_QUEUE_CAPACITY = IS_LOW_END_DEVICE ? 50 : 200;
     private static final int FAST_QUEUE_CAPACITY = IS_LOW_END_DEVICE ? 50 : 150;
@@ -217,22 +219,6 @@ public class ThreadPoolManager {
         return mgr.scheduledExecutor.schedule(mgr.wrapTask(command), delay, unit);
     }
 
-    // 强烈不建议用，可能导致未定义行为
-    // Android Studio的解释：
-    // Use of `scheduleAtFixedRate` is strongly discouraged
-    // because it can lead to unexpected behavior when Android processes become cached
-    //  (tasks may unexpectedly execute hundreds or thousands of times in quick succession
-    //      when a process changes from cached to uncached);
-    // prefer using `scheduleWithFixedDelay`
-    @Deprecated(since = "0.4.7")
-    public static ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
-        ThreadPoolManager mgr = getInstance();
-        if (mgr == null) {
-            return null;
-        }
-        return mgr.scheduledExecutor.scheduleAtFixedRate(mgr.wrapTask(command), initialDelay, period, unit);
-    }
-
     public static ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
         ThreadPoolManager mgr = getInstance();
         if (mgr == null) {
@@ -241,70 +227,6 @@ public class ThreadPoolManager {
         return mgr.scheduledExecutor.scheduleWithFixedDelay(mgr.wrapTask(command), initialDelay, delay, unit);
     }
 
-
-    /**
-     * 以固定速率执行任务，直到指定条件满足。
-     *
-     * @param runnable        要执行的任务
-     * @param initialDelay    首次执行延迟
-     * @param period          固定周期（两次开始执行之间的间隔）
-     * @param unit            时间单位
-     * @param stopCondition   停止条件（返回true时停止后续调度）
-     * @return ScheduledFuture<?> 可用于手动取消
-     */
-    @Deprecated(since = "0.4.7")
-    public static ScheduledFuture<?> scheduleAtFixedRateUntil(
-            Runnable runnable,
-            long initialDelay,
-            long period,
-            TimeUnit unit,
-            Supplier<Boolean> stopCondition) {
-        
-        ThreadPoolManager mgr = getInstance();
-        if (mgr == null)  return null;
-
-        AtomicReference<ScheduledFuture<?>> futureRef = new AtomicReference<>();
-
-
-        Runnable wrapped = () -> {
-            // 先检查停止条件
-            if (stopCondition.get()) {
-                Future<?> f = futureRef.get();
-                if (f != null && !f.isCancelled()) {
-                    f.cancel(false);   // 取消后续调度
-                }
-                return;
-            }
-            // 执行用户任务
-            runnable.run();
-        };
-
-        ScheduledFuture<?> future = mgr.scheduledExecutor.scheduleAtFixedRate(
-                mgr.wrapTask(wrapped), initialDelay, period, unit);
-        futureRef.set(future);
-        return future;
-    }
-
-
-    /**
-     * 以固定速率执行任务，直到系统时间达到指定的截止时间戳。
-     *
-     * @param runnable            要执行的任务
-     * @param initialDelay        首次执行延迟
-     * @param period              固定周期（两次开始执行之间的间隔）
-     * @param unit                时间单位
-     * @param stopTimeMillis      停止时间（毫秒时间戳），当System.currentTimeMillis() >= stopTimeMillis时停止后续调度
-     * @return ScheduledFuture<?> 可用于手动取消
-     */
-    @Deprecated(since = "0.4.7")
-    public static ScheduledFuture<?> scheduleAtFixedRateUntil(
-            Runnable runnable,
-            long initialDelay,
-            long period,
-            TimeUnit unit,
-            long stopTimeMillis) {
-        return scheduleAtFixedRateUntil(runnable, initialDelay, period, unit, () -> System.currentTimeMillis() >= stopTimeMillis);
-    }
 
     /**
      * 以固定延迟的方式执行任务，直到指定的停止条件满足。
@@ -327,7 +249,6 @@ public class ThreadPoolManager {
      *                            如果条件已满足，当前任务不会执行，且后续调度被取消。
      * @return ScheduledFuture<?> 可用于手动取消任务（如果还没有被停止条件取消）
      *
-     * @see #scheduleAtFixedRateUntil(Runnable, long, long, TimeUnit, Supplier)
      * @see ScheduledExecutorService#scheduleWithFixedDelay(Runnable, long, long, TimeUnit)
      */
     public static ScheduledFuture<?> scheduleWithFixedDelayUntil(

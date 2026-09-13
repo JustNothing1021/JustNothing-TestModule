@@ -20,10 +20,15 @@ import java.util.List;
         "trace export <id> <file>          导出到文件"
     }
 )
-public class TraceQueryCommand extends AbstractTraceCommand<CommandRequest, TraceResult> {
+public class TraceQueryCommand extends AbstractTraceCommand<CommandRequest<?>, TraceResult> {
+
+    @SuppressWarnings("unchecked")
+    public TraceQueryCommand() {
+        super("trace query", (Class) CommandRequest.class, TraceResult.class);
+    }
 
     @Override
-    protected TraceResult executeInternal(CommandRequest request) throws Exception {
+    protected TraceResult executeRequest(CommandRequest<?> request) throws Exception {
         if (request instanceof TraceListRequest) return handleList();
         if (request instanceof TraceShowRequest r) return handleShow(r);
         if (request instanceof TraceExportRequest r) return handleExport(r);

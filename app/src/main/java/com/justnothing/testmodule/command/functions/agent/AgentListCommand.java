@@ -45,7 +45,6 @@ public class AgentListCommand extends AbstractCommand<AgentListRequest, CommandR
 
         CommandResult result = new CommandResult();
         result.setSuccess(true);
-        result.setResultType("agent_list");
         result.setData(agents);
         return result;
     }

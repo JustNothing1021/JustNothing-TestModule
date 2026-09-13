@@ -1,24 +1,11 @@
 package com.justnothing.testmodule.command.functions.hook.request;
 
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
-import org.json.JSONObject;
+import com.justnothing.testmodule.command.framework.model.CommandResult;
 
-@SerializeKeyName("hook:list")
-public class HookListRequest extends CommandRequest {
+public class HookListRequest extends CommandRequest<CommandResult> {
 
     public HookListRequest() {
         super();
-    }
-
-    @Override
-    public JSONObject toJson() throws org.json.JSONException {
-        return super.toJson();
-    }
-
-    @Override
-    public HookListRequest fromJson(JSONObject obj) {
-        setRequestId(obj.optString("requestId"));
-        return this;
     }
 }

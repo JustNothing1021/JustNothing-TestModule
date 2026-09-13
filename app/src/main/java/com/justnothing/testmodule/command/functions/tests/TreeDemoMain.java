@@ -10,12 +10,12 @@ import com.justnothing.testmodule.command.framework.model.CommandResult;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.annotation.Cmd;
 
-@Cmd(name = "treedemo", description = "RichConsole tree demo", defaultResultType = CommandResult.class)
+@Cmd(name = "treedemo", description = "RichConsole tree demo")
 public class TreeDemoMain extends MainCommand<CommandResult> {
     public TreeDemoMain() { super("TreeDemo", CommandResult.class); }
 
     @Override
-    public CommandResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
+    protected CommandResult executeInternal(CommandExecutor.CmdExecContext<CommandRequest<?>> context) throws Exception {
         Console console = context.console();
         if (console == null) console = Console.of(cfg -> cfg.withForceTerminal(true));
 

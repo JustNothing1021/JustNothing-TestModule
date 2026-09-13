@@ -5,7 +5,12 @@ import com.justnothing.testmodule.command.functions.network.NetworkResult;
 import com.justnothing.testmodule.command.functions.network.request.*;
 import com.justnothing.testmodule.command.framework.output.Colors;
 
-public class NetworkManageCommand extends AbstractNetworkCommand<CommandRequest, NetworkResult> {
+public class NetworkManageCommand extends AbstractNetworkCommand<CommandRequest<?>, NetworkResult> {
+
+    @SuppressWarnings("unchecked")
+    public NetworkManageCommand() {
+        super("network manage", (Class) CommandRequest.class, NetworkResult.class);
+    }
 
     public NetworkResult handleIntercept(NetworkInterceptRequest request) {
         boolean enable = request.getEnable() == null || request.getEnable();
@@ -200,7 +205,7 @@ public class NetworkManageCommand extends AbstractNetworkCommand<CommandRequest,
     }
 
     @Override
-    protected NetworkResult executeInternal(CommandRequest request) throws Exception {
+    protected NetworkResult executeRequest(CommandRequest<?> request) throws Exception {
         if (request instanceof NetworkInterceptRequest r) return handleIntercept(r);
         if (request instanceof NetworkRecordRequest r) return handleRecord(r);
         if (request instanceof NetworkFilterRequest r) return handleFilter(r);

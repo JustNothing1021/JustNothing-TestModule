@@ -8,56 +8,25 @@ import com.justnothing.testmodule.command.framework.model.CommandResult;
 
 import static com.justnothing.testmodule.constants.CommandServer.MAIN_MODULE_VER;
 
-import com.justnothing.testmodule.command.functions.bsh.impl.BeanShellExecutorMain;
-import com.justnothing.testmodule.command.functions.breakpoint.impl.BreakpointMain;
-import com.justnothing.testmodule.command.functions.bytecode.impl.BytecodeMain;
-import com.justnothing.testmodule.command.functions.classcmd.ClassMain;
-import com.justnothing.testmodule.command.functions.examples.InteractiveExampleMain;
-import com.justnothing.testmodule.command.functions.examples.OutputExampleMain;
-import com.justnothing.testmodule.command.functions.exportcontext.ExportContextMain;
-import com.justnothing.testmodule.command.functions.help.HelpMain;
 import com.justnothing.testmodule.command.functions.alias.AliasMain;
-import com.justnothing.testmodule.command.functions.hook.HookMain;
-import com.justnothing.testmodule.command.functions.memory.MemoryMain;
-import com.justnothing.testmodule.command.functions.nativecmd.NativeMain;
-import com.justnothing.testmodule.command.functions.network.NetworkMain;
-import com.justnothing.testmodule.command.functions.packages.PackagesMain;
-import com.justnothing.testmodule.command.functions.agent.AgentCliMain;
-import com.justnothing.testmodule.command.functions.didyouknow.DidYouKnowMain;
-import com.justnothing.testmodule.command.functions.performance.PerformanceMain;
-import com.justnothing.testmodule.command.functions.script.ScriptExecutorMain;
-import com.justnothing.testmodule.command.functions.system.SystemMain;
-import com.justnothing.testmodule.command.functions.threads.ThreadsMain;
-import com.justnothing.testmodule.command.functions.trace.TraceMain;
-import com.justnothing.testmodule.command.functions.watch.WatchMain;
-import com.justnothing.testmodule.command.functions.tests.SandboxTestMain;
-import com.justnothing.testmodule.command.functions.tests.AnonClassTestMain;
-import com.justnothing.testmodule.command.functions.tests.RichDemoMain;
-import com.justnothing.testmodule.command.functions.tests.TableDemoMain;
-import com.justnothing.testmodule.command.functions.tests.ProgressDemoMain;
-import com.justnothing.testmodule.command.functions.tests.LayoutPanelDemoMain;
-import com.justnothing.testmodule.command.functions.tests.TreeDemoMain;
-import com.justnothing.testmodule.command.functions.tests.NonePromptDemoMain;
-import com.justnothing.testmodule.command.functions.tests.TestCardDemoMain;
-import com.justnothing.testmodule.command.functions.tests.LiveDemoMain;
-import com.justnothing.testmodule.command.functions.tests.MarkdownSyntaxDemoMain;
 import com.justnothing.testmodule.command.framework.output.ClientRequirements;
 import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.framework.output.StringBuilderCollector;
 import com.justnothing.testmodule.command.framework.output.ICommandOutputHandler;
 import com.justnothing.testmodule.command.framework.output.SystemOutputRedirector;
 import com.justnothing.testmodule.command.framework.output.VoidOutputHandler;
-import com.justnothing.testmodule.command.framework.utils.ArgumentGroup;
 import com.justnothing.testmodule.command.framework.utils.CommandArgumentParser;
-import com.justnothing.testmodule.utils.reflect.ClassLoaderManager;
 import com.justnothing.testmodule.utils.logging.Logger;
+import com.justnothing.testmodule.utils.reflect.ClassLoaderManager;
 
-import org.json.JSONException;
-
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 
 
 
@@ -76,44 +45,8 @@ public class CommandExecutor {
     private static final ThreadLocal<ClassLoader> classLoaderThreadLocal = new ThreadLocal<>();
     private static final ThreadLocal<ClassLoaderManager> classLoaderManagerThreadLocal = new ThreadLocal<>();
 
-    private volatile boolean initialized = false;
-
     static {
-        autoRegister(
-            HelpMain.class,
-            WatchMain.class,
-            TraceMain.class,
-            ExportContextMain.class,
-            MemoryMain.class,
-            ThreadsMain.class,
-            SystemMain.class,
-            BreakpointMain.class,
-            HookMain.class,
-            BytecodeMain.class,
-            NativeMain.class,
-            PerformanceMain.class,
-            AliasMain.class,
-            NetworkMain.class,
-            BeanShellExecutorMain.class,
-            ScriptExecutorMain.class,
-            OutputExampleMain.class,
-            InteractiveExampleMain.class,
-            SandboxTestMain.class,
-            AnonClassTestMain.class,
-            RichDemoMain.class,
-            TableDemoMain.class,
-            ProgressDemoMain.class,
-            LayoutPanelDemoMain.class,
-            TreeDemoMain.class,
-            NonePromptDemoMain.class,
-            TestCardDemoMain.class,
-            LiveDemoMain.class,
-            MarkdownSyntaxDemoMain.class,
-            ClassMain.class,
-            PackagesMain.class,
-            AgentCliMain.class,
-            DidYouKnowMain.class
-        );
+        autoRegister(CommandCatalog.ALL);
     }
 
     @SafeVarargs
@@ -145,23 +78,6 @@ public class CommandExecutor {
         commandRegistry.put(name, command);
     }
 
-    private static void registerCommand(Class<? extends CommandRequest> requestType, MainCommand<?> command)
-                throws RuntimeException {
-        try {
-            registerCommand(requestType.newInstance().getCommandType(), command);
-        } catch (InstantiationException | IllegalAccessException e) {
-            logger.error("注册命令时出错 (已跳过): " + requestType.getSimpleName()
-                       + " - " + e.getMessage()
-                       + "\n   该请求类型将无法路由，但服务端继续运行");
-        } catch (IllegalStateException e) {
-            if (e.getMessage() != null && e.getMessage().contains("@SerializeKeyName")) {
-                logger.error(requestType.getSimpleName() + " 缺少@SerializeKeyName注解 (已跳过)");
-            } else {
-                logger.error("注册命令时状态异常 (已跳过): " + e.getMessage());
-            }
-        }
-    }
-
     public static MainCommand<? extends CommandResult> getCommand(String name) {
         return commandRegistry.get(name);
     }
@@ -171,16 +87,6 @@ public class CommandExecutor {
     }
 
     public CommandExecutor() {
-    }
-
-    private void initializeIfNeeded() {
-        if (!initialized) {
-            synchronized (this) {
-                if (!initialized) {
-                    initialized = true;
-                }
-            }
-        }
     }
 
     public void setTargetPackage(String pkgName) {
@@ -250,25 +156,14 @@ public class CommandExecutor {
             throw new IllegalArgumentException("输出处理器不能为null");
         }
 
-        initializeIfNeeded();
         logger.info("开始执行命令: " + fullCommand);
 
-        SystemOutputRedirector redirector = new SystemOutputRedirector(output);
-        try {
-            redirector.startRedirect();
-            executeCommandInternal(fullCommand, output, requirements, executionType);
-        } catch (Throwable t) {
-            handleExecutionError(t, output, executionType);
-        } finally {
-            redirector.stopRedirect();
-            logger.info("命令执行完毕");
-            output.close();
-            cleanup();
-        }
-        logger.info("命令执行完成");
+        executeWithRedirect(
+                () -> executeCommandInternal(fullCommand, output, requirements, executionType),
+                output, executionType);
     }
 
-    public void execute(CommandRequest request, ICommandOutputHandler output,
+    public void execute(CommandRequest<?> request, ICommandOutputHandler output,
                         ClientRequirements requirements, CommandType executionType) {
         if (request == null) {
             logger.warn("请求为空");
@@ -281,25 +176,48 @@ public class CommandExecutor {
             throw new IllegalArgumentException("输出处理器不能为null");
         }
 
-        initializeIfNeeded();
         logger.info("开始执行命令请求: " + request.getCommandType());
 
-        SystemOutputRedirector redirector = new SystemOutputRedirector(output);
+        executeWithRedirect(
+                () -> executeCommandInternal(request, output, requirements, executionType),
+                output, executionType);
+    }
+
+    @FunctionalInterface
+    private interface ExecutionBody {
+        CommandResult get() throws Throwable;
+    }
+
+    /**
+     * 两条 executeWithResult 入口共用的执行流程：建立 System 输出重定向，执行 body，
+     * 并统一做异常转换与收尾。日志内容与顺序与原先逐条入口保持一致。
+     */
+    private void executeWithRedirect(ExecutionBody body, ICommandOutputHandler output, CommandType executionType) {
+        // JSON 模式下用 VoidOutputHandler 拦截 System.out，
+        // 防止 context.console().println() 通过 SystemOutputRedirector 泄漏到客户端
+        ICommandOutputHandler redirectTarget = (executionType == CommandType.USER_INTERFACE)
+                ? new VoidOutputHandler()
+                : output;
+        SystemOutputRedirector redirector = new SystemOutputRedirector(redirectTarget);
+        CommandResult result = null;
         try {
             redirector.startRedirect();
-            executeCommandInternal(request, output, requirements, executionType);
+            result = body.get();
         } catch (Throwable t) {
-            handleExecutionError(t, output, executionType);
+            result = handleExecutionError(t, output, executionType);
         } finally {
             redirector.stopRedirect();
             logger.info("命令执行完毕");
+            if (result != null) {
+                output.finish(result);
+            }
             output.close();
             cleanup();
         }
         logger.info("命令执行完成");
     }
 
-    private void handleExecutionError(Throwable t, ICommandOutputHandler output, CommandType executionType) {
+    private CommandResult handleExecutionError(Throwable t, ICommandOutputHandler output, CommandType executionType) {
         if (executionType == CommandType.COMMAND_LINE) {
             logger.error("执行命令异常", t);
             output.println("\n===============================================", Colors.RED);
@@ -313,30 +231,25 @@ public class CommandExecutor {
             output.println("堆栈追踪:", Colors.GRAY);
             output.printStackTrace(t, Colors.GRAY);
             output.println("===============================================", Colors.RED);
-            output.close();
+            return null;
         } else {
-            try {
-                CommandResult result = new CommandResult();
-                CommandResult.ErrorInfo error = new CommandResult.ErrorInfo("INTERNAL_ERROR", t.getMessage());
-                error.setStacktrace(t);
-                result.setSuccess(false);
-                result.setMessage(t.getMessage());
-                result.setError(error);
-                output.println(result.toJson().toString());
-            } catch (JSONException e) {
-                logger.error("序列化命令结果时出错", e);
-                output.println("{\"success\": false, \"message\": \"序列化命令结果时出错\"}");
-            }
+            CommandResult result = new CommandResult();
+            CommandResult.ErrorInfo error = new CommandResult.ErrorInfo("INTERNAL_ERROR", t.getMessage());
+            error.setStacktrace(t);
+            result.setSuccess(false);
+            result.setMessage(t.getMessage());
+            result.setError(error);
+            return result;
         }
     }
 
 
-    private void executeCommandInternal(String fullCommand, ICommandOutputHandler output,
+    private CommandResult executeCommandInternal(String fullCommand, ICommandOutputHandler output,
             ClientRequirements requirements, CommandType executionType) throws Throwable {
         fullCommand = fullCommand.trim();
         if (fullCommand.isEmpty()) {
             output.println("没有指定命令 (可以用help来获取帮助)", Colors.RED);
-            return;
+            return null;
         }
 
         fullCommand = AliasMain.resolveAlias(fullCommand);
@@ -350,168 +263,135 @@ public class CommandExecutor {
         String[] commandParams = CommandArgumentParser.splitArguments(parseResult.commandLine());
         if (commandParams.length == 0) {
             output.println("没有指定命令 (可以用help来获取帮助)", Colors.ORANGE);
-            return;
+            return null;
         }
 
         String command = commandParams[0];
-        int spaceIndex = fullCommand.indexOf(' ');
-        String commandString = (spaceIndex != -1) ? fullCommand.substring(spaceIndex) : "";
 
         // 去掉命令本身，只保留参数
         String[] args = new String[commandParams.length - 1];
         System.arraycopy(commandParams, 1, args, 0, args.length);
 
-        // 解析 ArgumentGroup（提供多种参数格式）
-        ArgumentGroup argGroup = ArgumentGroup.parse(commandString.trim());
+        return buildContextAndDispatch(command, args, null, output, requirements, executionType);
+    }
 
+    private CommandResult executeCommandInternal(CommandRequest<?> request, ICommandOutputHandler output,
+                                       ClientRequirements requirements, CommandType executionType) throws Throwable {
+        return buildContextAndDispatch(request.getCommandType(), new String[0], request,
+                output, requirements, executionType);
+    }
+
+    /**
+     * 两个 executeCommandInternal 重载共用的尾段：建执行上下文 → 预置 request → 分发执行。
+     */
+    private CommandResult buildContextAndDispatch(String cmdName, String[] args,
+            CommandRequest<?> request, ICommandOutputHandler output,
+            ClientRequirements requirements, CommandType executionType) throws Throwable {
         // 创建执行上下文
-        CmdExecContext<CommandRequest> context = new CmdExecContext<>(
-            command,
+        CmdExecContext<CommandRequest<?>> context = new CmdExecContext<>(
+            cmdName,
             args,
-            commandString,
             getTargetPackage(),
             getClassLoader(),
             executionType == CommandType.COMMAND_LINE ? output : new VoidOutputHandler(),
-            argGroup,
             requirements
         );
-
-        // 设置执行类型
+        if (request != null) {
+            context.setRequest(request);
+        }
         context.setExecutionType(executionType);
 
         // 使用命令注册表分发命令
-        dispatchAndExecute(context, executionType, output);
+        return dispatchAndExecute(context, executionType, output);
     }
 
-    private void executeCommandInternal(CommandRequest request, ICommandOutputHandler output,
-                                       ClientRequirements requirements, CommandType executionType) throws Throwable {
-        String cmdName = request.getCommandType();
-
-        CmdExecContext<CommandRequest> context = new CmdExecContext<>(
-            cmdName,
-            new String[0],
-            "",
-            getTargetPackage(),
-            getClassLoader(),
-            executionType == CommandType.COMMAND_LINE ? output : new VoidOutputHandler(),
-            ArgumentGroup.parse(""),
-            requirements
-        );
-        context.setRequest(request);
-        context.setExecutionType(executionType);
-
-        dispatchAndExecute(context, executionType, output);
-    }
-
-    private void dispatchAndExecute(CmdExecContext<CommandRequest> context, CommandType executionType,
+    private CommandResult dispatchAndExecute(CmdExecContext<CommandRequest<?>> context, CommandType executionType,
                             ICommandOutputHandler origOutput)
             throws Throwable {
         // 非 CLI 模式下，context.output 是 VoidOutputHandler（丢弃直接输出），
-        // 但 Console 应来自 origOutput（InteractiveOutputHandler），让 RichConsole 可用
+        // 但 Console 应来自 origOutput（InteractiveOutputHandler），让 RichConsole 可用。
+        // 注意用 Supplier 懒取而不是立刻取：立刻取会构造 JLine ExternalTerminal（实测 ~530ms），
+        // 而绝大多数命令根本不渲染 RichConsole，这个代价纯属白付。
         if (executionType != CommandType.COMMAND_LINE && origOutput != null) {
-            context.setConsole(origOutput.getConsole());
+            context.setConsoleSupplier(origOutput::getConsole);
         }
 
         String command = context.cmdName();
         ICommandOutputHandler output = context.output();
         MainCommand<? extends CommandResult> commandObj = getCommand(command);
-        
-        if (commandObj != null && commandObj.getClass().isAnnotationPresent(Cmd.class)) {
-            logger.info("使用 CommandRouter 执行命令: " + command);
 
-            // 检查命令是否有注册的路由
-            boolean hasRoutes = !CommandRouter.getInstance().getRoutesForCommand(command).isEmpty();
-
-            if (hasRoutes) {
-                try {
-                    CommandResult result = CommandRouter.getInstance().dispatch(context);
-
-                    if (executionType == CommandType.USER_INTERFACE) {
-                        assert origOutput != null : "为用户界面返回 Json 的时候 OutputHandler 为 null???";
-                        origOutput.println(result.toJson().toString());
-                    }
-
-                    logger.info("命令执行成功: " + command);
-                    return;  // 新路径完成，直接返回
-
-                } catch (IllegalArgumentException e) {
-                    if (executionType == CommandType.COMMAND_LINE) {
-                        output.println("参数错误: " + e.getMessage(), Colors.RED);
-                        output.println("", Colors.DEFAULT);
-
-                        // 使用子命令级帮助（如果匹配到子命令则只显示该子命令的帮助）
-                        String helpText = CommandRouter.getInstance().generateHelpForRoute(command, context.args());
-                        if (helpText != null && !helpText.isEmpty()) {
-                            output.println(helpText, Colors.WHITE);
-                        } else {
-                            output.println(commandObj.getHelpText(), Colors.WHITE);
-                        }
-                        return;
-                    }
-
-                    logger.warn("执行失败: " + e.getMessage() + ", 尝试回退到旧路径...");
-
-                } catch (Exception e) {
-                    Exception exception = e;
-                    if (exception instanceof InvocationTargetException invokeExc) {
-                        Throwable target = invokeExc.getTargetException();
-                        if (target instanceof Exception) {
-                            exception = (Exception) target;
-                        }
-                    }
-
-                    if (exception instanceof IllegalArgumentException) throw exception;
-                    logger.error("严重错误: " + exception.getClass().getSimpleName() +
-                               " - " + exception.getMessage(), exception);
-                    throw exception;
+        // 命令名可能自带子路径（路由 key 形式，如 "class/info"、"threads/profile/start"）。
+        // 命令注册表里只有主命令名，子路径需要拆出来交给 CommandRouter 的路由表。
+        if (commandObj == null) {
+            int separatorIndex = command.indexOf('/');
+            if (separatorIndex > 0) {
+                String baseCmd = command.substring(0, separatorIndex);
+                String subPath = command.substring(separatorIndex + 1);
+                commandObj = getCommand(baseCmd);
+                if (commandObj != null) {
+                    logger.info("命令名包含子路径: " + command + " → 主命令: " + baseCmd + ", 子路径: " + subPath);
+                    context.cmdName = baseCmd;
+                    // 多级子路径要拆成多个 arg，matchRoute 才能逐段匹配（如 profile/start）
+                    context.args = subPath.split("/");
+                    command = baseCmd;
                 }
-            } else {
-                // 无路由的命令（如 output_test）：直接调用 runMain()
-                logger.info("命令无路由定义，直接调用 runMain(): " + command);
-            }
-
-            // 回退：通过 runMain() 执行（兼容无 @CmdRoutes 的命令）
-            try {
-                @SuppressWarnings("unchecked")
-                MainCommand<CommandResult> typedCmd = (MainCommand<CommandResult>) commandObj;
-                CommandResult result = typedCmd.runMain(context);
-
-                if (executionType == CommandType.USER_INTERFACE) {
-                    assert origOutput != null : "为用户界面返回 Json 的时候 OutputHandler 为 null???";
-                    origOutput.println(result.toJson().toString());
-                }
-
-                logger.info("命令执行成功 (runMain回退): " + command);
-                return;
-
-            } catch (Exception e) {
-                Exception exception = e;
-                if (exception instanceof InvocationTargetException invokeExc) {
-                    Throwable target = invokeExc.getTargetException();
-                    if (target instanceof Exception) {
-                        exception = (Exception) target;
-                    }
-                }
-                if (exception instanceof IllegalArgumentException) {
-                    if (executionType == CommandType.COMMAND_LINE) {
-                        output.println("参数错误: " + exception.getMessage(), Colors.RED);
-                        output.println("", Colors.DEFAULT);
-                        output.println(commandObj.getHelpText(), Colors.WHITE);
-                        return;
-                    }
-                }
-                logger.error("runMain 回退执行失败: " + exception.getClass().getSimpleName() +
-                           " - " + exception.getMessage(), exception);
-                throw exception;
             }
         }
 
-        // 命令未注册
+        if (commandObj == null || !commandObj.getClass().isAnnotationPresent(Cmd.class)) {
+            // 命令未注册
+            if (executionType != CommandType.COMMAND_LINE) {
+                logger.error("在非命令行模式下执行未知命令: " + command);
+                throw new RuntimeException("未知的命令: " + command + ", 输入help获取帮助");
+            }
+            output.println("未知的命令: " + command + ", 输入help获取帮助", Colors.ORANGE);
+            return null;
+        }
+
+        try {
+            // 唯一执行入口：命中路由 → 路由处理器；无路由定义的命令 → CommandRouter 内部回退 execute()
+            CommandResult result = CommandRouter.getInstance().dispatch(context);
+            logger.info("命令执行成功: " + command);
+            return result;
+
+        } catch (IllegalArgumentException e) {
+            return handleParameterError(e, command, context, commandObj, output, executionType);
+
+        } catch (InvocationTargetException e) {
+            Throwable cause = e.getTargetException() != null ? e.getTargetException() : e;
+            if (cause instanceof IllegalArgumentException iae) {
+                return handleParameterError(iae, command, context, commandObj, output, executionType);
+            }
+            logger.error("命令执行出错: " + cause.getClass().getSimpleName() +
+                       " - " + cause.getMessage(), cause);
+            throw cause;
+        }
+    }
+
+    /**
+     * 参数错误统一处理：CLI 模式下展示（子）命令帮助并返回 null；
+     * 其余模式抛出，由 {@link #handleExecutionError} 转为结构化错误结果。
+     */
+    private CommandResult handleParameterError(IllegalArgumentException e, String command,
+                                               CmdExecContext<CommandRequest<?>> context,
+                                               MainCommand<? extends CommandResult> commandObj,
+                                               ICommandOutputHandler output, CommandType executionType) {
+        logger.warn("命令参数错误: " + e.getMessage());
         if (executionType != CommandType.COMMAND_LINE) {
-            logger.error("在非命令行模式下执行未知命令: " + command);
-            throw new RuntimeException("未知的命令: " + command + ", 输入help获取帮助");
+            throw e;
         }
-        output.println("未知的命令: " + command + ", 输入help获取帮助", Colors.ORANGE);
+
+        output.println("参数错误: " + e.getMessage(), Colors.RED);
+        output.println("", Colors.DEFAULT);
+
+        // 子命令级帮助优先（匹配到子命令时只显示该子命令的帮助）
+        String helpText = CommandRouter.getInstance().generateHelpForRoute(command, context.args());
+        if (helpText != null && !helpText.isEmpty()) {
+            output.println(helpText, Colors.WHITE);
+        } else {
+            output.println(commandObj.getHelpText(), Colors.WHITE);
+        }
+        return null;
     }
 
     public String executeShellCommand(String fullCommand) {
@@ -521,28 +401,33 @@ public class CommandExecutor {
     }
 
 
-    public static class CmdExecContext<T extends CommandRequest> {
+    public static class CmdExecContext<T extends CommandRequest<?>> {
         public String cmdName;
         public String[] args;
-        public String origCommand;
         public String targetPackage;
         public ClassLoader classLoader;
         public ICommandOutputHandler output;
-        public ArgumentGroup argGroup;
-        public ClientRequirements requirements;
         private com.justnothing.richconsole.console.Console console;
+
+        /**
+         * Console 的懒加载来源。非 CLI 模式下 {@code output} 是 VoidOutputHandler（无 Console），
+         * 真正的 Console 来自原始的 InteractiveOutputHandler；用 Supplier 延迟到首次
+         * 真正渲染时才构造，避免"命令不渲染也付终端代价"。
+         */
+        private Supplier<com.justnothing.richconsole.console.Console> consoleSupplier;
+
+        public void setConsoleSupplier(Supplier<com.justnothing.richconsole.console.Console> supplier) {
+            this.consoleSupplier = supplier;
+        }
 
         private T request;
         private CommandType executionType = CommandType.COMMAND_LINE;
 
         public String cmdName() { return cmdName; }
         public String[] args() { return args; }
-        public String origCommand() { return origCommand; }
         public String targetPackage() { return targetPackage; }
         public ClassLoader classLoader() { return classLoader; }
         public ICommandOutputHandler output() { return output; }
-        public ArgumentGroup argGroup() { return argGroup; }
-        public ClientRequirements requirements() { return requirements; }
 
         public T getRequest() { return request; }
         public void setRequest(T r) { this.request = r; }
@@ -551,33 +436,20 @@ public class CommandExecutor {
         public void setExecutionType(CommandType t) { this.executionType = t; }
 
         public boolean isCli() { return executionType == CommandType.COMMAND_LINE; }
-        public boolean isGui() { return executionType == CommandType.USER_INTERFACE; }
-        public boolean isAgent() { return executionType == CommandType.AGENT; }
 
         public T getCommandRequest() {
             return request;
         }
 
-        public CmdExecContext(String cmdName, String[] args, String origCommand,
+        public CmdExecContext(String cmdName, String[] args,
                               String targetPackage, ClassLoader classLoader,
-                              ICommandOutputHandler output, ArgumentGroup argGroup,
+                              ICommandOutputHandler output,
                               ClientRequirements requirements) {
             this.cmdName = cmdName;
             this.args = args;
-            this.origCommand = origCommand;
             this.targetPackage = targetPackage;
             this.classLoader = classLoader;
             this.output = output;
-            this.argGroup = argGroup;
-            this.requirements = requirements;
-        }
-
-        public static <T extends CommandRequest> CmdExecContext<T> copyOf(CmdExecContext<? extends T> other) {
-            return new CmdExecContext<>(
-                other.cmdName, other.args, other.origCommand,
-                other.targetPackage, other.classLoader,
-                other.output, other.argGroup, other.requirements
-            );
         }
 
 
@@ -618,13 +490,60 @@ public class CommandExecutor {
          */
         public com.justnothing.richconsole.console.Console console() {
             if (console != null) return console;
+            if (consoleSupplier != null) {
+                com.justnothing.richconsole.console.Console supplied = consoleSupplier.get();
+                if (supplied != null) {
+                    console = supplied;
+                    return console;
+                }
+            }
             return output.getConsole();
         }
 
-        public void setConsole(com.justnothing.richconsole.console.Console console) {
-            this.console = console;
+    }
+
+    /** @Cmd.group() → help 小节标题；未列出的 group 原样作为小节标题。 */
+    private static final Map<String, String> HELP_GROUP_TITLES = Map.of(
+            "general", "可用命令",
+            "system", "系统命令",
+            "fun", "娱乐性命令"
+    );
+
+    private static final String DEFAULT_COMMAND_GROUP = "general";
+
+    /**
+     * 从命令清单的唯一真相源 {@link CommandCatalog#ALL} 派生「小节标题 + 命令名 - 描述」清单。
+     *
+     * <p>命令按 {@code @Cmd.group()} 分小节：已知 group 映射为中文小节名，未知 group 原样作标题，
+     * 未设置 group 的命令归入默认小节。单个命令读取注解失败只跳过它，不影响整体 help 渲染。</p>
+     */
+    private static String buildCommandList() {
+        Map<String, List<String>> sections = new LinkedHashMap<>();
+        for (Class<? extends MainCommand<?>> cmdClass : CommandCatalog.ALL) {
+            try {
+                Cmd cmd = cmdClass.getAnnotation(Cmd.class);
+                if (cmd == null) {
+                    continue;
+                }
+                String group = (cmd.group() == null || cmd.group().isEmpty())
+                        ? DEFAULT_COMMAND_GROUP : cmd.group();
+                sections.computeIfAbsent(group, k -> new ArrayList<>())
+                        .add(String.format("  %-34s - %s", cmd.name(), cmd.description()));
+            } catch (Throwable t) {
+                logger.warn("渲染 help 命令清单时跳过 " + cmdClass.getSimpleName() + ": " + t.getMessage());
+            }
         }
 
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, List<String>> entry : sections.entrySet()) {
+            sb.append('\n')
+              .append(HELP_GROUP_TITLES.getOrDefault(entry.getKey(), entry.getKey()))
+              .append(":\n");
+            for (String line : entry.getValue()) {
+                sb.append(line).append('\n');
+            }
+        }
+        return sb.toString();
     }
 
     public static String getHelpText() {
@@ -635,54 +554,12 @@ public class CommandExecutor {
             一个用来调试安卓开发千奇百怪的诡异问题的Xp模块/命令行工具.
             
             命令语法: methods [options] <command> [args...]
-            
-            可用命令:
-              help                              - 显示所有命令的帮助或特定命令的帮助
-              agent                             - 跨应用 InspectionAgent IPC 桥接
-              alias                             - 管理命令别名
-              class                             - 查看类信息
-              export-context                    - 导出设备context上下文信息
-              script                            - 脚本管理系统
-              hook                              - 动态Hook注入器
-              trace                             - 跟踪方法调用链
-              reflect                           - 使用反射访问和操作类的私有成员
-              breakpoint                        - 设置和管理断点
-              threads                           - 列出所有线程及其状态
-              watch                             - 监控字段或方法的变化
-              native                            - 查看和调试Native代码
-              system                            - 显示系统信息
-              bytecode                          - 查看和分析Java字节码 (未正式使用, 很可能实现不了)
-              bsh                               - 通过BeanShell执行代码
-              memory                            - 显示详细内存使用情况
-              network                           - 进行网络调试
-              packages                          - 列出已知包名
-            
-            娱乐性命令:
-              did-you-know                      - 你知道吗?
-
-            底层测试命令:
-              output_test                       - 对命令行输出进行测试
-              interactive_test                  - 对命令行交互进行测试
-              anonclasstest                     - 针对匿名类生成的测试
-              sandboxtest                       - 针对沙盒机制防御的测试
-            
-            终端优化测试命令:
-              richdemo                          - rich模块综合测试
-              testcarddemo                      - rich欢迎卡片测试
-              promptdemo                        - 询问专项测试
-              layoutdemo                        - 布局控件专项测试
-              livedemo                          - 动态渲染专项测试
-              syntaxdemo                        - 语法渲染专项测试
-              progressdemo                      - 进度条/旋转进度条专项测试
-              tabledemo                         - 表格专项测试
-              treedemo                          - 树形图专项测试
-              
-            
+            %s
             获取一个子命令的帮助:
               help <cmd_name>
             
             可选项:
               -cl, --classloader <package>      - 指定类加载器（软件包名，没找到会是默认的类加载器）
-            """, MAIN_MODULE_VER);
+            """, MAIN_MODULE_VER, buildCommandList());
     }
 }

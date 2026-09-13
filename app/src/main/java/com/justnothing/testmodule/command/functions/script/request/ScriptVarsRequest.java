@@ -1,24 +1,10 @@
 package com.justnothing.testmodule.command.functions.script.request;
 
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.justnothing.testmodule.command.functions.script.ScriptResult;
 
-@SerializeKeyName("script:vars")
-public class ScriptVarsRequest extends ScriptBaseRequest {
+public class ScriptVarsRequest extends ScriptBaseRequest<ScriptResult> {
 
     public ScriptVarsRequest() {
         super();
-    }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        return super.toJson();
-    }
-
-    @Override
-    public ScriptVarsRequest fromJson(JSONObject obj) {
-        setRequestId(obj.optString("requestId"));
-        return this;
     }
 }

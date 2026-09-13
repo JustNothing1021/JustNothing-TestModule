@@ -23,8 +23,8 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.google.android.material.textfield.TextInputEditText;
 import com.justnothing.testmodule.R;
-import com.justnothing.testmodule.command.functions.threads.DeadlockDetectResult;
-import com.justnothing.testmodule.command.functions.threads.ThreadInfoResult;
+import com.justnothing.testmodule.command.functions.threads.response.ThreadDeadlockResult;
+import com.justnothing.testmodule.command.functions.threads.response.ThreadDetail;
 import com.justnothing.testmodule.ui.viewmodel.analysis.ThreadAnalysisViewModel;
 import com.justnothing.testmodule.utils.io.IOManager;
 
@@ -351,13 +351,13 @@ public class ThreadAnalysisActivity extends AppCompatActivity {
         layoutThreadGroups.addView(contentLayout);
     }
 
-    private void displayDeadlockResult(DeadlockDetectResult result) {
+    private void displayDeadlockResult(ThreadDeadlockResult result) {
         tvDeadlockResult.setVisibility(View.VISIBLE);
         scrollDeadlockDetail.setVisibility(View.VISIBLE);
 
         String statusText;
         if (result.isHasDeadlock()) {
-            statusText = getString(R.string.analysis_thread_deadlock_found, result.getBlockedCount());
+            statusText = getString(R.string.analysis_thread_deadlock_found, result.getBlockedThreadCount());
             tvDeadlockResult.setTextColor(ContextCompat.getColor(this, R.color.red));
         } else {
             statusText = getString(R.string.analysis_thread_deadlock_none);
@@ -368,7 +368,7 @@ public class ThreadAnalysisActivity extends AppCompatActivity {
         if (result.getBlockedThreads() != null && !result.getBlockedThreads().isEmpty()) {
             StringBuilder sb = new StringBuilder();
             sb.append(getString(R.string.analysis_thread_blocked_threads)).append("\n\n");
-            for (ThreadInfoResult.ThreadDetail t : result.getBlockedThreads()) {
+            for (ThreadDetail t : result.getBlockedThreads()) {
                 sb.append(getString(R.string.analysis_thread_dump_name, t.getName())).append("\n");
                 sb.append(getString(R.string.analysis_thread_dump_id, String.valueOf(t.getThreadId()))).append("\n");
                 sb.append(getString(R.string.analysis_thread_dump_state, t.getState())).append("\n");

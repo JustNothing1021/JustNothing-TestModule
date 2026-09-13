@@ -1,13 +1,10 @@
 package com.justnothing.testmodule.command.functions.agent;
 
-import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.model.MainCommand;
-import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.model.CommandResult;
 import com.justnothing.testmodule.command.framework.annotation.Cmd;
 import com.justnothing.testmodule.command.framework.annotation.CmdRoutes;
 import com.justnothing.testmodule.command.framework.model.CommandRouter;
-import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.functions.agent.request.AgentSpListRequest;
 import com.justnothing.testmodule.command.functions.agent.request.AgentSpReadRequest;
 import com.justnothing.testmodule.command.functions.agent.request.AgentSpWriteRequest;
@@ -21,8 +18,7 @@ import com.justnothing.testmodule.command.functions.agent.request.AgentRunReques
 
 @Cmd(
     name = "agent",
-    description = "跨应用 InspectionAgent IPC 桥接命令",
-    defaultResultType = CommandResult.class
+    description = "跨应用 InspectionAgent IPC 桥接命令"
 )
 @CmdRoutes({
     @CmdRoutes.Route(
@@ -95,37 +91,5 @@ public class AgentCliMain extends MainCommand<CommandResult> {
     @Override
     public String getHelpText() {
         return CommandRouter.getInstance().generateHelpForCommand("agent");
-    }
-
-    @Override
-    public CommandResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
-        if (context.getRequest() == null) {
-            context.println("用法: agent <子命令> <packageName> [参数...]", Colors.DEFAULT);
-            context.println("", Colors.DEFAULT);
-            context.println("子命令:", Colors.CYAN);
-            context.println("  sp-list <pkg>              列出 SP 文件", Colors.WHITE);
-            context.println("  sp-read <pkg> <name> [key] 读取 SP", Colors.WHITE);
-            context.println("  sp-write <pkg> <n> <k> <v> [type] 写入 SP", Colors.WHITE);
-            context.println("  db-list <pkg>              列出数据库", Colors.WHITE);
-            context.println("  db-query <pkg> <db> <sql>  查询数据库", Colors.WHITE);
-            context.println("  db-tables <pkg> <db>       列出表", Colors.WHITE);
-            context.println("", Colors.DEFAULT);
-            context.println("生命周期:", Colors.CYAN);
-            context.println("  list                      列出所有在线 Agent（自动清理死文件）", Colors.WHITE);
-            context.println("  start <pkg>               请求启动目标应用的 Agent", Colors.WHITE);
-            context.println("  stop <pkg>                停止目标应用的 Agent", Colors.WHITE);
-            context.println("  run <pkg> <command>       在目标应用上代理执行任意命令", Colors.WHITE);
-            context.println("", Colors.DEFAULT);
-            context.println("示例: agent run com.target class info java.lang.String", Colors.GREEN);
-            CommandResult result = new CommandResult();
-            result.setSuccess(false);
-            result.setMessage("缺少子命令");
-            return result;
-        }
-        try {
-            return CommandRouter.getInstance().dispatch(context);
-        } catch (Throwable t) {
-            throw t instanceof Exception ? (Exception) t : new RuntimeException(t);
-        }
     }
 }

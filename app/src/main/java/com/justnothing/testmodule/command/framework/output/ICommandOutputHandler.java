@@ -1,6 +1,8 @@
 package com.justnothing.testmodule.command.framework.output;
 
 import com.justnothing.engine.api.IOutputHandler;
+import com.justnothing.richconsole.console.Console;
+import com.justnothing.testmodule.command.framework.model.CommandResult;
 
 
 /**
@@ -97,13 +99,26 @@ public interface ICommandOutputHandler extends IOutputHandler {
     }
 
     /**
+     * 通知输出处理器：命令已执行完毕并产出结构化结果。
+     *
+     * <p>默认实现不处理（非交互式 handler）。{@link com.justnothing.testmodule.command.framework.output.InteractiveOutputHandler}
+     * 会缓存该结果，并在 {@link #close()} 时随 cmd.done 通知一起发给客户端，
+     * 实现"流式输出 (cmd.output) + 结尾结构化结果 (cmd.done)"的输出标准化。</p>
+     *
+     * @param result 命令执行的最终结果（可为 null）
+     */
+    default void finish(CommandResult result) {
+        // 默认不处理
+    }
+
+    /**
      * 获取 RichConsole Console 实例（用于高级渲染：表格、面板、进度条等）。
      *
      * <p>仅 InteractiveOutputHandler 支持此方法，其他实现返回 null。</p>
      *
      * @return Console 实例，或 null（如果当前输出目标不支持 RichConsole 渲染）
      */
-    default com.justnothing.richconsole.console.Console getConsole() {
+    default Console getConsole() {
         return null;
     }
 }

@@ -145,7 +145,7 @@ public class NetworkInterceptor {
         try {
             Class<?> callClass = call.getClass();
 
-            HookAPI.findAndHookMethod(callClass, "execute", new MethodHook() {
+            HookAPI.findAndHookMethod(callClass, "executeWithResult", new MethodHook() {
                 @Override
                 protected void beforeHookedMethod(HookParam param) throws Exception {
                     Object thisObject = param.getThisObject();
@@ -404,7 +404,7 @@ public class NetworkInterceptor {
                         String methodName = method.getName();
 
                         switch (methodName) {
-                            case "execute" -> {
+                            case "executeWithResult" -> {
                                 return response;
                             }
                             case "enqueue" -> {
@@ -551,7 +551,7 @@ public class NetworkInterceptor {
                 return false;
             }
 
-            HookAPI.findAndHookMethod(retrofitCallClass, "execute", new MethodHook() {
+            HookAPI.findAndHookMethod(retrofitCallClass, "executeWithResult", new MethodHook() {
                 @Override
                 protected void beforeHookedMethod(HookParam param) {
                     if (!NetworkManager.getInstance().isRecordEnabled()) {

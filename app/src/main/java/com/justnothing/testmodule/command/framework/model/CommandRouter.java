@@ -10,11 +10,15 @@ import com.justnothing.testmodule.command.framework.utils.CmdParamProcessor;
 import com.justnothing.testmodule.utils.logging.Logger;
 
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Set;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -29,8 +33,10 @@ public class CommandRouter {
 
     private final Map<String, RouteNode> routeTree = new ConcurrentHashMap<>();
     private final Map<String, Class<? extends MainCommand<?>>> commandRegistry = new ConcurrentHashMap<>();
-    private final Map<Class<? extends CommandRequest>, RouteConfig> requestRegistry = new ConcurrentHashMap<>();
+    private final Map<Class<? extends CommandRequest<?>>, RouteConfig> requestRegistry = new ConcurrentHashMap<>();
     private final Map<String, RouteConfig> pathRegistry = new ConcurrentHashMap<>(); // 反向索引
+    private final Set<Class<? extends CommandRequest<?>>> duplicateRequests = ConcurrentHashMap.newKeySet();
+    private final Set<String> duplicatePaths = ConcurrentHashMap.newKeySet();
 
     public static CommandRouter getInstance() {
         return INSTANCE;
@@ -57,36 +63,25 @@ public class CommandRouter {
         CmdRoutes routesAnnotation = cmdClass.getAnnotation(CmdRoutes.class);
         if (routesAnnotation != null) {
             for (CmdRoutes.Route route : routesAnnotation.value()) {
-                registerRoute(commandName, route, cmdClass);
+                registerRoute(commandName, route);
             }
         }
 
         logger.info("注册命令: " + commandName + " (" + cmdClass.getSimpleName() + ")");
     }
 
-    private void registerRoute(String parentPath, CmdRoutes.Route route, Class<? extends MainCommand<?>> cmdClass) {
-        String fullPath = parentPath + ":" + route.path();
+    private void registerRoute(String parentPath, CmdRoutes.Route route) {
+        // 路由 key 统一用 "/" 分层：class/info、threads/profile/start；
+        // path 为空的路由就用父路径本身（export-context），不再产生 "xxx:" 这种带尾冒号的怪 key。
+        String fullPath = route.path().isEmpty() ? parentPath : parentPath + "/" + route.path();
         String[] segments = route.path().split("/");
 
-        RouteNode currentNode = routeTree.computeIfAbsent(parentPath, k -> new RouteNode(parentPath, cmdClass));
+        RouteNode currentNode = routeTree.computeIfAbsent(parentPath, k -> new RouteNode(parentPath));
 
         // 空路径路由（path=""）：直接挂载到根节点，不创建子节点
         // 这样匹配时不会消费任何参数，所有参数都作为 remainingArgs 传给 CmdParamProcessor
         if (segments.length == 1 && segments[0].isEmpty()) {
-            RouteConfig config = new RouteConfig(
-                fullPath,
-                route.request(),
-                route.result(),
-                route.handler(),
-                route.description()
-            );
-            currentNode.addConfig(config);
-            requestRegistry.put(route.request(), config);
-            pathRegistry.put(fullPath, config);
-
-            logger.debug("  └─ 注册路由(空路径): " + fullPath +
-                       " → " + route.request().getSimpleName() +
-                       " [" + route.handler().getSimpleName() + "]");
+            mountRoute(fullPath, route, currentNode);
             return;
         }
 
@@ -98,31 +93,92 @@ public class CommandRouter {
             if (existingChild != null) {
                 currentNode = existingChild;
             } else {
-                RouteNode childNode = new RouteNode(segment, cmdClass);
+                RouteNode childNode = new RouteNode(segment);
                 currentNode.addChild(segment, childNode);
                 currentNode = childNode;
             }
 
             if (isLast) {
-                RouteConfig config = new RouteConfig(
-                    fullPath,
-                    route.request(),
-                    route.result(),
-                    route.handler(),
-                    route.description()
-                );
-
-                currentNode.addConfig(config);
-                requestRegistry.put(route.request(), config);
-                pathRegistry.put(fullPath, config);
-
-                logger.debug("  └─ 注册路由: " + fullPath +
-                           " → " + route.request().getSimpleName() +
-                           " [" + route.handler().getSimpleName() + "]");
+                mountRoute(fullPath, route, currentNode);
             }
         }
     }
 
+    /**
+     * 挂载一条路由：创建 {@link RouteConfig} 并写入三张表，同时记录重复注册。
+     *
+     * <p>结果类型不手写，而是从 handler 的泛型签名推导（见 {@link #resolveResultType}），
+     * 因此它与 handler 永远一致；重复的 Request / path 会被记录，由构建期测试兜住。</p>
+     */
+    private void mountRoute(String fullPath, CmdRoutes.Route route, RouteNode node) {
+        Class<? extends CommandResult> resultType = resolveResultType(route.handler());
+        // 无参路由用具体的占位 Request（NoArgRequest），因此注解元素本身已是完整类型，无需强转。
+        Class<? extends CommandRequest<?>> requestType = route.request();
+        RouteConfig config = new RouteConfig(fullPath, requestType, resultType,
+                route.handler(), route.description());
+        node.addConfig(config);
+
+        RouteConfig previousForRequest = requestRegistry.put(requestType, config);
+        if (previousForRequest != null) {
+            duplicateRequests.add(requestType);
+            logger.warn("Request 被多条路由复用（key 会被覆盖）: " + requestType.getSimpleName()
+                    + " — " + previousForRequest.path() + " 与 " + fullPath);
+        }
+        RouteConfig previousForPath = pathRegistry.put(fullPath, config);
+        if (previousForPath != null) {
+            duplicatePaths.add(fullPath);
+            logger.warn("路由 key 重复（会被覆盖）: " + fullPath);
+        }
+
+        logger.debug("  └─ 注册路由: " + fullPath
+                + " → " + route.request().getSimpleName()
+                + " [" + route.handler().getSimpleName() + "]"
+                + " → " + (resultType != null ? resultType.getSimpleName() : "?"));
+    }
+
+    /**
+     * 从 handler 的泛型签名推导它的结果类型，纯反射、不实例化 handler。
+     *
+     * <p>所有 handler 的根都收敛到 {@code AbstractCommand<Req, Res>}：命令根
+     * {@code MainCommand<Res>} 现在是它的薄子类，因此只需沿继承链把类型实参逐层代换，
+     * 最终取出第 2 个类型实参 {@code Res}。</p>
+     *
+     * @return 结果类型；推导不出来时返回 null（会被构建期测试判为失败）
+     */
+    static Class<? extends CommandResult> resolveResultType(Class<?> handlerClass) {
+        Class<?> current = handlerClass;
+        Map<TypeVariable<?>, Type> bindings = new HashMap<>();
+        while (current != null && current != Object.class) {
+            Type superType = current.getGenericSuperclass();
+            if (!(superType instanceof ParameterizedType parameterized)) {
+                current = current.getSuperclass();
+                continue;
+            }
+            Class<?> raw = (Class<?>) parameterized.getRawType();
+            TypeVariable<?>[] vars = raw.getTypeParameters();
+            Type[] args = parameterized.getActualTypeArguments();
+            Map<TypeVariable<?>, Type> local = new HashMap<>();
+            for (int i = 0; i < vars.length && i < args.length; i++) {
+                local.put(vars[i], substitute(args[i], bindings));
+            }
+            if (raw == AbstractCommand.class) {
+                Type resolved = local.get(vars[1]);
+                return resolved instanceof Class<?> c && CommandResult.class.isAssignableFrom(c)
+                        ? c.asSubclass(CommandResult.class) : null;
+            }
+            bindings = local;
+            current = raw;
+        }
+        return null;
+    }
+
+    private static Type substitute(Type type, Map<TypeVariable<?>, Type> bindings) {
+        if (type instanceof TypeVariable<?> variable) {
+            Type bound = bindings.get(variable);
+            if (bound != null) return bound;
+        }
+        return type;
+    }
     public RouteMatch matchRoute(String commandName, String[] args) {
         logger.debug("[matchRoute] 开始匹配: command=" + commandName +
                     ", args=" + Arrays.toString(args));
@@ -227,32 +283,49 @@ public class CommandRouter {
         return null;
     }
 
-    public RouteMatch matchRouteByRequest(Class<? extends CommandRequest> requestType) {
+    /**
+     * 取某个 Request 类型对应的路由 key（即 JSON 里的 {@code commandType}）。
+     *
+     * <p>key 由路由注册时按 "父路径/子路径" 自动生成，因此它与路由永远一致——
+     * Request 侧不需要（也没有）任何手写 key 的注解。</p>
+     *
+     * @return 路由 key；该 Request 没有对应路由时返回 null
+     */
+    public String getCommandTypeFor(Class<? extends CommandRequest<?>> requestType) {
         RouteConfig config = requestRegistry.get(requestType);
-        if (config != null) {
-            return new RouteMatch(config, new String[0]);
-        }
-        
-        for (Map.Entry<String, RouteNode> entry : routeTree.entrySet()) {
-            RouteMatch match = findRouteByRequestInNode(entry.getValue(), requestType);
-            if (match != null) return match;
-        }
-        
-        return null;
+        return config != null ? config.path() : null;
     }
 
     /**
-     * 通过 commandType 字符串（如 "class:info"）解析 JSON 请求。
+     * 取某个 Request 类型对应的结果类型（由 handler 泛型签名推导）。
+     */
+    public Class<? extends CommandResult> getResultTypeFor(Class<? extends CommandRequest<?>> requestType) {
+        RouteConfig config = requestRegistry.get(requestType);
+        return config != null ? config.resultType() : null;
+    }
+
+    /** 注册期间发现的"被多条路由复用的 Request"（key 会被覆盖）。 */
+    public Set<Class<? extends CommandRequest<?>>> getDuplicateRequests() {
+        return duplicateRequests;
+    }
+
+    /** 注册期间发现的"重复路由 key"。 */
+    public Set<String> getDuplicatePaths() {
+        return duplicatePaths;
+    }
+
+    /**
+     * 通过 commandType 字符串（如 "class/info"）解析 JSON 请求。
      * 用于 UI/Socket 客户端发送的 JSON 命令请求
      *
      * @param json 包含 commandType 字段的 JSON 字符串
      * @return 解析后的 CommandRequest 实例，如果 commandType 未注册则返回 null
      */
-    public CommandRequest resolveRequestFromJson(String json) {
+    public CommandRequest<?> resolveRequestFromJson(String json) {
         try {
             JSONObject obj = new JSONObject(json);
             String commandType = obj.optString("commandType");
-            if (commandType == null || commandType.isEmpty()) {
+            if (commandType.isEmpty()) {
                 logger.warn("[resolveRequest] JSON 中缺少 commandType 字段");
                 return null;
             }
@@ -264,8 +337,8 @@ public class CommandRouter {
                 return null;
             }
 
-            Class<? extends CommandRequest> requestClass = config.requestType;
-            CommandRequest request = GsonFactory
+            Class<? extends CommandRequest<?>> requestClass = config.requestType;
+            CommandRequest<?> request = GsonFactory
                     .getInstance().fromJson(json, requestClass);
             logger.info("[resolveRequest] 成功解析: " + commandType + " → " + requestClass.getSimpleName());
             return request;
@@ -276,86 +349,110 @@ public class CommandRouter {
         }
     }
 
-    private RouteMatch findRouteByRequestInNode(RouteNode node, Class<? extends CommandRequest> requestType) {
-        for (RouteConfig config : node.getRouteConfigs()) {
-            if (config.requestType == requestType) {
-                return new RouteMatch(config, new String[0]);
-            }
-        }
-        
-        for (RouteNode child : node.getChildren()) {
-            RouteMatch match = findRouteByRequestInNode(child, requestType);
-            if (match != null) return match;
-        }
-        
-        return null;
-    }
-
+    /**
+     * 命令执行的唯一入口。
+     *
+     * <p>统一收敛原 CommandExecutor 的两条路径：</p>
+     * <ol>
+     *   <li>命中路由 → 交给路由处理器（统一调用 {@link Command#execute}；
+     *       命令根与子命令都实现该接口）</li>
+     *   <li>无路由定义的命令 → 回退到命令注册表的 {@link MainCommand}，同样走 {@code execute()}</li>
+     * </ol>
+     *
+     * <p>命令已注册路由但参数不匹配（如子命令拼写错误）时抛 {@link IllegalArgumentException}，
+     * 由上层决定是展示帮助（CLI）还是返回错误结果（JSON/UI）。</p>
+     */
     public CommandResult dispatch(CommandExecutor.CmdExecContext<?> context) throws Throwable {
         String cmdName = context.cmdName();
         String[] args = context.args();
 
         RouteMatch match = matchRoute(cmdName, args);
         if (match == null) {
-            throw new IllegalArgumentException("未找到匹配的路由: " + cmdName + " " + String.join(" ", args));
+            if (!getRoutesForCommand(cmdName).isEmpty()) {
+                throw new IllegalArgumentException("未找到匹配的路由: " + cmdName + " " + String.join(" ", args));
+            }
+            return dispatchToRegisteredCommand(cmdName, context);
         }
 
         RouteConfig config = match.routeConfig;
-        Class<? extends CommandRequest> requestType = config.requestType;
+        Class<? extends CommandRequest<?>> requestType = config.requestType;
 
         // 抽象类（如 CommandRequest 本身）无法实例化，直接用 null
         int requestModifiers = requestType.getModifiers();
-        CommandRequest request = (requestModifiers & java.lang.reflect.Modifier.ABSTRACT) != 0
+        CommandRequest<?> request = (requestModifiers & java.lang.reflect.Modifier.ABSTRACT) != 0
                 ? null
                 : requestType.getDeclaredConstructor().newInstance();
 
-        // 使用统一的智能解析入口（request 为 null 时跳过，对应无参命令如 help）
-        if (request != null && (match.remainingArgs.length > 0 || hasRequiredParams(requestType))) {
-            request = CmdParamProcessor.parseRequest(request, match.remainingArgs);
-        }
-
         @SuppressWarnings("unchecked")
-        CommandExecutor.CmdExecContext<CommandRequest> typedContext = (CommandExecutor.CmdExecContext<CommandRequest>) context;
-        typedContext.setRequest(request);
+        CommandExecutor.CmdExecContext<CommandRequest<?>> typedContext = (CommandExecutor.CmdExecContext<CommandRequest<?>>) context;
+
+        // 上下文已有正确类型的请求（来自 JSON/UI 解析或 CLI 预解析）→ 直接使用，不再二次解析。
+        // 否则会用一个空的命令行参数去解析，误触发必填校验、误伤 JSON 请求。
+        CommandRequest<?> existingRequest = typedContext.getRequest();
+        if (existingRequest != null && requestType.isAssignableFrom(existingRequest.getClass())) {
+            logger.info("dispatch: 使用已有请求: %s", existingRequest.getClass().getSimpleName());
+            request = existingRequest;
+        } else {
+            // 命令行路径：即使 remainingArgs 为空也要解析，否则 required 参数会被静默放行
+            if (request != null) {
+                request = CmdParamProcessor.parseRequest(request, match.remainingArgs);
+            }
+            typedContext.setRequest(request);
+        }
 
         Object handlerInstance = config.handlerType.getDeclaredConstructor().newInstance();
         logger.info("handler实例已创建: %s", config.handlerType.getSimpleName());
 
-        if (handlerInstance instanceof MainCommand) {
-            @SuppressWarnings("unchecked")
-            MainCommand<CommandResult> mainCommand = (MainCommand<CommandResult>) handlerInstance;
-            return mainCommand.runMain(typedContext);
-        } else {
-            Method executeMethod = findExecuteMethod(config.handlerType);
-            if (executeMethod != null) {
-                logger.info("反射调用 execute(): %s.%s()",
-                        config.handlerType.getSimpleName(), executeMethod.getName());
-                Object result;
-                try {
-                    result = executeMethod.invoke(handlerInstance, context);
-                } catch (InvocationTargetException e) {
-                    Throwable cause = e.getTargetException();
-                    if (cause == null) cause = e;
-                    throw cause;
-                }
-                logger.info("execute() 返回: %s",
-                        result != null ? result.getClass().getSimpleName() : "null");
-                return (CommandResult) result;
-            } else {
-                throw new UnsupportedOperationException(
-                    "Handler " + config.handlerType.getSimpleName() + " 不支持执行");
-            }
+        // 命令根与子命令都实现 Command（命令根继承 AbstractCommand），统一走 execute()。
+        Method method = findExecuteMethod(config.handlerType);
+        if (method == null) {
+            throw new UnsupportedOperationException(
+                "Handler " + config.handlerType.getSimpleName() + " 不支持执行");
         }
+        logger.info("调用 execute(): %s.%s()",
+                config.handlerType.getSimpleName(), method.getName());
+        Object result;
+        try {
+            result = method.invoke(handlerInstance, context);
+        } catch (InvocationTargetException e) {
+            Throwable cause = e.getTargetException();
+            if (cause == null) cause = e;
+            throw cause;
+        }
+        logger.info("execute() 返回: %s",
+                result != null ? result.getClass().getSimpleName() : "null");
+        return (CommandResult) result;
     }
 
-    private boolean hasRequiredParams(Class<? extends CommandRequest> requestType) {
-        List<CmdParamProcessor.FieldInfo> fields = CmdParamProcessor.getCmdParamFields(requestType);
-        return fields.stream().anyMatch(fi -> fi.param().required());
+    /**
+     * 无路由命令的统一回退：从命令注册表取出命令根实例并调用统一的 {@code execute()}。
+     *
+     * <p>用于只标注 {@code @Cmd}（没有 {@code @CmdRoutes}）的命令，使它们与路由命令
+     * 共用 {@link #dispatch} 这一个执行入口，并共享 {@link AbstractCommand} 的集中异常兜底。</p>
+     */
+    private CommandResult dispatchToRegisteredCommand(String commandName,
+                                                     CommandExecutor.CmdExecContext<?> context) throws Throwable {
+        Class<? extends MainCommand<?>> cmdClass = commandRegistry.get(commandName);
+        if (cmdClass == null) {
+            throw new IllegalArgumentException("未知的命令: " + commandName);
+        }
+
+        MainCommand<?> handler = cmdClass.getDeclaredConstructor().newInstance();
+        logger.info("命令无路由定义，回退 execute(): %s (%s)",
+                commandName, cmdClass.getSimpleName());
+
+        return handler.execute(context);
     }
 
+    /**
+     * 取命令的执行方法。执行契约只有 {@link Command#execute} 一个：命令根与子命令都（间接）
+     * 继承 {@link AbstractCommand}，因此按接口判定类型，而不是看"直接实现的接口列表"，
+     * 也不再按方法名反射（旧名 executeWithResult 已不存在，会让所有路由命令报"不支持执行"）。
+     */
     private Method findExecuteMethod(Class<?> handlerClass) {
-        if (Arrays.asList(handlerClass.getInterfaces()).contains(Command.class) && executeMethod != null)
+        if (executeMethod != null && Command.class.isAssignableFrom(handlerClass)) {
             return executeMethod;
+        }
         try {
             return handlerClass.getMethod("execute", CommandExecutor.CmdExecContext.class);
         } catch (NoSuchMethodException e) {
@@ -375,7 +472,7 @@ public class CommandRouter {
     /**
      * 获取完整路径注册表（反向索引）。
      * <p>
-     * Key 为完整路径字符串（如 "class:info"），Value 为对应的路由配置。
+     * Key 为完整路径字符串（如 "class/info"），Value 为对应的路由配置。
      * 供 {@link com.justnothing.methodsclient.metadata.CommandMetadataScanner} 等外部组件使用。
      */
     public Map<String, RouteConfig> getPathRegistry() {
@@ -424,8 +521,9 @@ public class CommandRouter {
     public record RouteMatch(RouteConfig routeConfig, String[] remainingArgs) {
     }
 
-    public record RouteConfig(String path, Class<? extends CommandRequest> requestType,
-                              Class<? extends CommandResult> resultType, Class<?> handlerType,
+    public record RouteConfig(String path, Class<? extends CommandRequest<?>> requestType,
+                              Class<? extends CommandResult> resultType,
+                              Class<?> handlerType,
                               String description) {
 
         @NonNull
@@ -440,7 +538,7 @@ public class CommandRouter {
         private final Map<String, RouteNode> children = new HashMap<>();
         private final List<RouteConfig> routeConfigs = new ArrayList<>();
 
-        public RouteNode(String name, Class<? extends MainCommand<?>> ownerClass) {
+        public RouteNode(String name) {
             this.name = name;
         }
 
@@ -474,17 +572,6 @@ public class CommandRouter {
 
         public boolean isLeaf() {
             return children.isEmpty();
-        }
-
-        public RouteConfig getDefaultRoute() {
-            if (!routeConfigs.isEmpty()) {
-                return routeConfigs.get(0);
-            }
-            for (RouteNode child : children.values()) {
-                RouteConfig nested = child.getDefaultRoute();
-                if (nested != null) return nested;
-            }
-            return null;
         }
 
         public List<RouteNode> getChildren() {

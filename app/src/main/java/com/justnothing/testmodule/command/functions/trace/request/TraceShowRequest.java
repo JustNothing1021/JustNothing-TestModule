@@ -2,12 +2,9 @@ package com.justnothing.testmodule.command.functions.trace.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.justnothing.testmodule.command.functions.trace.TraceResult;
 
-@SerializeKeyName("trace:show")
-public class TraceShowRequest extends CommandRequest {
+public class TraceShowRequest extends CommandRequest<TraceResult> {
 
     @CmdParam(
         name = "id",
@@ -24,18 +21,4 @@ public class TraceShowRequest extends CommandRequest {
 
     public int getTraceId() { return traceId; }
     public void setTraceId(int id) { this.traceId = id; }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        obj.put("traceId", traceId);
-        return obj;
-    }
-
-    @Override
-    public TraceShowRequest fromJson(JSONObject obj) {
-        setRequestId(obj.optString("requestId"));
-        setTraceId(obj.optInt("traceId", 0));
-        return this;
-    }
 }

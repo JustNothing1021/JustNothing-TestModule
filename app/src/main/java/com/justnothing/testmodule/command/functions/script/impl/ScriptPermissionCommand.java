@@ -34,13 +34,15 @@ import com.justnothing.engine.security.SandboxConfig;
               show-config              - 显示当前权限配置状态
             """
 )
-public class ScriptPermissionCommand extends AbstractScriptCommand<ScriptBaseRequest, ScriptResult> {
+public class ScriptPermissionCommand extends AbstractScriptCommand<ScriptBaseRequest<?>, ScriptResult> {
 
+    @SuppressWarnings("unchecked")
     public ScriptPermissionCommand() {
+        super("script permission", (Class) ScriptBaseRequest.class, ScriptResult.class);
     }
 
     @Override
-    protected ScriptResult executeInternal(ScriptBaseRequest request) throws Exception {
+    protected ScriptResult executeRequest(ScriptBaseRequest<?> request) throws Exception {
         if (request instanceof ScriptPermGrantRequest grantReq) {
             return handlePermission(grantReq.getPermissions(), true);
         }

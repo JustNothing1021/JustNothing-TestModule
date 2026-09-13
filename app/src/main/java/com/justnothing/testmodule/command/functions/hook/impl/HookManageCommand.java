@@ -1,12 +1,17 @@
 package com.justnothing.testmodule.command.functions.hook.impl;
 
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
-import com.justnothing.testmodule.command.functions.hook.HookListResult;
+import com.justnothing.testmodule.command.functions.hook.result.HookListResult;
 import com.justnothing.testmodule.command.functions.hook.HookManager;
 import com.justnothing.testmodule.command.functions.hook.request.*;
 import com.justnothing.testmodule.command.framework.output.Colors;
 
-public class HookManageCommand extends AbstractHookCommand<CommandRequest, HookListResult> {
+public class HookManageCommand extends AbstractHookCommand<CommandRequest<?>, HookListResult> {
+
+    @SuppressWarnings("unchecked")
+    public HookManageCommand() {
+        super("hook manage", (Class) CommandRequest.class, HookListResult.class);
+    }
 
     public HookListResult handleAdd(HookAddRequest request) throws Exception {
         logger.info("添加Hook: %s.%s%s",
@@ -86,7 +91,7 @@ public class HookManageCommand extends AbstractHookCommand<CommandRequest, HookL
     }
 
     @Override
-    protected HookListResult executeInternal(CommandRequest request) throws Exception {
+    protected HookListResult executeRequest(CommandRequest<?> request) throws Exception {
         if (request instanceof HookAddRequest r) return handleAdd(r);
         if (request instanceof HookRemoveRequest r) return handleRemove(r);
         if (request instanceof HookEnableRequest r) return handleEnable(r);

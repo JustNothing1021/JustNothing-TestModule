@@ -3,10 +3,16 @@ package com.justnothing.testmodule.command.functions.agent.handlers;
 import android.net.LocalSocket;
 import android.net.LocalSocketAddress;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.justnothing.testmodule.command.framework.model.CommandResult;
+import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.framework.utils.GsonFactory;
 import com.justnothing.testmodule.command.framework.protocol.InteractiveProtocol;
+import com.justnothing.testmodule.command.framework.protocol.ProtocolMethods;
+import com.justnothing.testmodule.command.framework.protocol.TerminalRpcChannel;
 import com.justnothing.testmodule.hooks.agent.InspectionAgentHook;
+import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 import com.justnothing.testmodule.utils.io.ShellExecutorProvider;
 import com.justnothing.testmodule.utils.logging.Logger;
 
@@ -18,6 +24,7 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -28,6 +35,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class InspectionClient {
 
@@ -252,7 +262,7 @@ public class InspectionClient {
     /**
      * 以交互式协议在目标应用上执行命令
      * <p>
-     * 与普通 execute() 不同，此方法不会在收到首个 JSON 响应后关闭连接，
+     * 与普通 executeWithResult() 不同，此方法不会在收到首个 JSON 响应后关闭连接，
      * 而是切换到 InteractiveProtocol 二进制帧模式进行双向通信。
      * 帧处理逻辑完全对齐 {@link com.justnothing.methodsclient.executor.SocketStreamReader}。
      * <p>
@@ -275,8 +285,8 @@ public class InspectionClient {
                     "\0" + getSocketName(packageName),
                     LocalSocketAddress.Namespace.ABSTRACT));
 
-            java.io.OutputStream socketOut = socket.getOutputStream();
-            java.io.InputStream socketIn = socket.getInputStream();
+            OutputStream socketOut = socket.getOutputStream();
+            InputStream socketIn = socket.getInputStream();
 
             // Step 1: 发送 _dispatch JSON 请求
             JSONObject request = new JSONObject();
@@ -306,31 +316,89 @@ public class InspectionClient {
                 return;
             }
 
-            // Step 3: 进入交互式二进制帧循环（对齐 SocketStreamReader）
+            // Step 3: 进入统一 RPC 通道交互模式（TYPE_RPC 单帧 + 逻辑多通道 cmd.* / term.* / sys.*）
+            // 帧处理完全对齐 SocketStreamReader.readRpcStream
             callback.onSessionStart(command);
 
-            java.util.concurrent.atomic.AtomicBoolean running = new java.util.concurrent.atomic.AtomicBoolean(true);
-            java.util.concurrent.atomic.AtomicLong lastResponseTime =
-                    new java.util.concurrent.atomic.AtomicLong(System.currentTimeMillis());
+            AtomicBoolean running = new AtomicBoolean(true);
             Object writeLock = new Object();
 
-            // 启动 CLIENT_PING 保活线程（与 SocketStreamReader.startPingThread 一致）
-            java.util.concurrent.ScheduledFuture<?> pingFuture = null;
+            TerminalRpcChannel rpcChannel = new TerminalRpcChannel(socketOut, writeLock, InteractiveProtocol.TYPE_RPC);
+
+            // cmd.output → 输出回调（带颜色 → onColoredOutput，纯文本 → onOutput）
+            rpcChannel.onNotification(ProtocolMethods.CMD_OUTPUT, p -> {
+                if (p == null) return;
+                // 服务端会把连续输出合并成一帧的 segments；单段仍是旧的 {data,color} 形式。
+                if (p.has("segments") && p.get("segments").isJsonArray()) {
+                    for (JsonElement element : p.getAsJsonArray("segments")) {
+                        JsonObject segment = element.getAsJsonObject();
+                        String segText = segment.has("data") && !segment.get("data").isJsonNull()
+                                ? segment.get("data").getAsString() : null;
+                        if (segText == null || segText.isEmpty()) continue;
+                        if (segment.has("color") && segment.get("color").getAsByte() != Colors.DEFAULT) {
+                            callback.onColoredOutput(segText, segment.get("color").getAsByte());
+                        } else {
+                            callback.onOutput(segText);
+                        }
+                    }
+                    return;
+                }
+                String data = p.has("data") && !p.get("data").isJsonNull()
+                        ? p.get("data").getAsString() : null;
+                if (data == null || data.isEmpty()) return;
+                if (p.has("color") && p.get("color").getAsByte() != Colors.DEFAULT) {
+                    callback.onColoredOutput(data, p.get("color").getAsByte());
+                } else {
+                    callback.onOutput(data);
+                }
+            });
+
+            // cmd.prompt → 输入回调（异步处理，不占 reader 循环，确保能继续响应 sys.ping 保活）
+            // callback.onInputRequest() 内部走 context.readLine() → 主服务 cmd.prompt → 终端客户端
+            rpcChannel.onRequest(ProtocolMethods.CMD_PROMPT, (id, p) -> {
+                ThreadPoolManager.submitFastRunnable(() -> {
+                    JsonObject response = new JsonObject();
+                    try {
+                        String type = p != null && p.has("type") ? p.get("type").getAsString() : "input";
+                        String title = p != null && p.has("title") && !p.get("title").isJsonNull()
+                                ? p.get("title").getAsString() : "";
+                        boolean isPassword = "password".equals(type);
+                        // 复用旧协议 PASSWORD: 前缀约定，便于回调侧区分密码输入
+                        String userInput = callback.onInputRequest(isPassword ? "PASSWORD:" + title : title);
+                        if (userInput != null) {
+                            response.addProperty("value", userInput);
+                        } else {
+                            response.addProperty("cancelled", true);
+                        }
+                    } catch (Exception e) {
+                        logger.error("处理 cmd.prompt 出错: " + id, e);
+                        response.addProperty("cancelled", true);
+                    }
+                    rpcChannel.sendResponse(id, response);
+                });
+            });
+
+            // cmd.done → 命令结束，退出循环
+            rpcChannel.onNotification(ProtocolMethods.CMD_DONE, p -> {
+                logger.debug("收到 cmd.done，命令执行完成");
+                running.set(false);
+            });
+
+            // sys.ping → sys.pong（RPC 层活性）
+            rpcChannel.onNotification(ProtocolMethods.SYS_PING,
+                    p -> rpcChannel.sendNotification(ProtocolMethods.SYS_PONG, null));
+
+            // 保活线程：只要会话未结束就一直周期性发 sys.ping（服务端回 sys.pong 维持活性），
+            // 与 SocketStreamReader.startPingThread 的停止条件对齐。
+            // 注意：停止条件不能包含 lastResponseTime 新鲜度——空闲期（用户在看输出 / 等下一次 prompt）
+            // 连接其实完全健康，此时若停掉保活，会让依赖"最近有 ping/pong 活跃"的判定在 30s 后误判超时。
+            // 停止只应发生在会话结束（running 置 false）或读取循环退出后。
+            ScheduledFuture<?> pingFuture = null;
             try {
-                pingFuture = com.justnothing.testmodule.utils.concurrent.ThreadPoolManager.scheduleWithFixedDelayUntil(
-                        () -> {
-                            try {
-                                synchronized (writeLock) {
-                                    InteractiveProtocol.writeMessage(
-                                            socketOut,
-                                            InteractiveProtocol.TYPE_CLIENT_PING,
-                                            null);
-                                }
-                            } catch (IOException ignored) {}
-                        },
-                        0, 5000, java.util.concurrent.TimeUnit.MILLISECONDS,
-                        () -> !running.get()
-                                || System.currentTimeMillis() - lastResponseTime.get() > 30000
+                pingFuture = ThreadPoolManager.scheduleWithFixedDelayUntil(
+                        () -> rpcChannel.sendNotification(ProtocolMethods.SYS_PING, null),
+                        0, 5000, TimeUnit.MILLISECONDS,
+                        () -> !running.get() || Thread.currentThread().isInterrupted()
                 );
             } catch (Exception e) {
                 logger.warn("启动 PING 线程失败（非致命）: " + e.getMessage());
@@ -338,8 +406,7 @@ public class InspectionClient {
 
             try {
                 while (running.get() && !Thread.currentThread().isInterrupted()) {
-                    Object[] packet = InteractiveProtocol
-                            .readMessage(socketIn);
+                    Object[] packet = InteractiveProtocol.readMessage(socketIn);
                     if (packet == null) {
                         logger.debug("Agent 交互连接关闭");
                         break;
@@ -347,115 +414,12 @@ public class InspectionClient {
 
                     byte frameType = (byte) packet[0];
                     byte[] frameData = (byte[]) packet[1];
-                    lastResponseTime.set(System.currentTimeMillis());
 
-                    // 帧分发（完全对齐 SocketStreamReader.handleInteractivePacket）
-                    switch (frameType) {
-                        case InteractiveProtocol.TYPE_SERVER_OUTPUT:
-                            // 对齐 SocketStreamReader.handleServerOutput: System.out.print(text)
-                            if (frameData != null) {
-                                String text = new String(frameData, StandardCharsets.UTF_8);
-                                callback.onOutput(text);
-                            }
-                            break;
-
-                        case InteractiveProtocol.TYPE_COLORED_OUTPUT:
-                            // 对齐 SocketStreamReader.handleColoredOutput
-                            if (frameData != null && frameData.length > 0) {
-                                Object[] decoded = InteractiveProtocol
-                                        .decodeColoredOutput(frameData);
-                                byte color = (byte) decoded[0];
-                                String text = (String) decoded[1];
-                                callback.onColoredOutput(text, color);
-                            }
-                            break;
-
-                        case InteractiveProtocol.TYPE_SERVER_ERROR:
-                            // 对齐 SocketStreamReader.handleServerError
-                            if (frameData != null) {
-                                String errorText = new String(frameData, StandardCharsets.UTF_8);
-                                callback.onError(errorText);
-                            }
-                            break;
-
-                        case InteractiveProtocol.TYPE_SERVER_INPUT_REQUEST:
-                            // 对齐 SocketStreamReader.handleInputRequest (line 393-430)
-                            // 异步处理输入（不阻塞帧循环），确保能继续响应 PING/PONG 保活
-                            // callback.onInputRequest() 内部走 context.readLine() → 标准交互式协议
-                            if (frameData != null) {
-                                final String requestData = new String(frameData, StandardCharsets.UTF_8);
-                                final OutputStream finalOut = socketOut;
-                                java.util.concurrent.ExecutorService inputExec =
-                                        java.util.concurrent.Executors.newSingleThreadExecutor();
-                                inputExec.submit(() -> {
-                                    try {
-                                        String[] parts = requestData.split(":", 2);
-                                        if (parts.length != 2) {
-                                            logger.debug("_dispatch 输入请求格式异常: " + requestData);
-                                            return;
-                                        }
-                                        String requestId = parts[0];
-                                        String prompt = parts[1];
-                                        boolean isPassword = prompt.startsWith("PASSWORD:");
-                                        if (isPassword) {
-                                            prompt = prompt.substring(9);
-                                        }
-                                        // 通过 callback 走 context.readLine(prompt) → InteractiveOutputHandler
-                                        // → 向原始客户端发 TYPE_SERVER_INPUT_REQUEST → TerminalManager 读输入 → 返回
-                                        String userInput = callback.onInputRequest(prompt);
-                                        String response = requestId + ":"
-                                                + (userInput == null ? "" : userInput);
-                                        synchronized (writeLock) {
-                                            InteractiveProtocol.writeMessage(
-                                                    finalOut,
-                                                    InteractiveProtocol.TYPE_INPUT_RESPONSE,
-                                                    response.getBytes(StandardCharsets.UTF_8));
-                                        }
-                                    } catch (Exception e) {
-                                        logger.error("_dispatch 处理输入请求失败", e);
-                                    }
-                                });
-                                inputExec.shutdown();
-                            }
-                            break;
-
-                        case InteractiveProtocol.TYPE_SERVER_PING:
-                            // 对齐 SocketStreamReader.handleServerPing
-                            try {
-                                synchronized (writeLock) {
-                                    InteractiveProtocol.writeMessage(
-                                            socketOut,
-                                            InteractiveProtocol.TYPE_CLIENT_PONG,
-                                            null);
-                                }
-                            } catch (IOException ignored) {}
-                            break;
-
-                        case InteractiveProtocol.TYPE_SERVER_PONG:
-                            logger.debug("_dispatch 收到 SERVER_PONG");
-                            break;
-
-                        case InteractiveProtocol.TYPE_INPUT_PING:
-                            // 对齐 SocketStreamReader.handleInputPing
-                            try {
-                                InteractiveProtocol.writeMessage(
-                                        socketOut,
-                                        InteractiveProtocol.TYPE_INPUT_PONG,
-                                        null);
-                            } catch (IOException ignored) {}
-                            break;
-
-                        case InteractiveProtocol.TYPE_COMMAND_END:
-                            // 对齐 SocketStreamReader: 收到 COMMAND_END 时退出循环
-                            logger.debug("_dispatch 收到 COMMAND_END");
-                            running.set(false);
-                            break;
-
-                        default:
-                            logger.debug("_dispatch 未知的消息类型: " +
-                                    InteractiveProtocol
-                                            .getMessageTypeName(frameType));
-                            break;
+                    if (frameType == InteractiveProtocol.TYPE_RPC) {
+                        rpcChannel.handleMessage(frameData);
+                    } else {
+                        logger.debug("Agent 交互收到未知帧类型: " +
+                                InteractiveProtocol.getMessageTypeName(frameType));
                     }
                 }
             } catch (IOException e) {

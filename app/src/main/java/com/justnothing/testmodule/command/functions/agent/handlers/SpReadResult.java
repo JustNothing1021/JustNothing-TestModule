@@ -3,12 +3,10 @@ package com.justnothing.testmodule.command.functions.agent.handlers;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import com.justnothing.testmodule.command.framework.model.CommandResult;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
 
 import java.util.HashMap;
 import java.util.Map;
 
-@SerializeKeyName("SpReadResult")
 public class SpReadResult extends CommandResult {
 
     @Expose @SerializedName("spName")

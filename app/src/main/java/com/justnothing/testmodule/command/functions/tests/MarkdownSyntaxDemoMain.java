@@ -10,12 +10,12 @@ import com.justnothing.testmodule.command.framework.model.CommandResult;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.annotation.Cmd;
 
-@Cmd(name = "syntaxdemo", description = "RichConsole markdown and syntax highlighting demo", defaultResultType = CommandResult.class)
+@Cmd(name = "syntaxdemo", description = "RichConsole markdown and syntax highlighting demo")
 public class MarkdownSyntaxDemoMain extends MainCommand<CommandResult> {
     public MarkdownSyntaxDemoMain() { super("MarkdownSyntaxDemo", CommandResult.class); }
 
     @Override
-    public CommandResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
+    protected CommandResult executeInternal(CommandExecutor.CmdExecContext<CommandRequest<?>> context) throws Exception {
         Console console = context.console();
         if (console == null) console = Console.of(cfg -> cfg.withForceTerminal(true));
 

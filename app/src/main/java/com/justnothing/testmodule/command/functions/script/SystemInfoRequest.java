@@ -1,14 +1,12 @@
 package com.justnothing.testmodule.command.functions.script;
 
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.functions.system.SystemInfoResult;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
-@SerializeKeyName("SystemInfo")
-public class SystemInfoRequest extends CommandRequest {
+// key 必须等于服务端路由的完整路径。system 路由的 path 为空，
+// fullPath 形如 "父路径:"（参见 CommandRouter.registerRoute），故这里带尾冒号。
+public class SystemInfoRequest extends CommandRequest<SystemInfoResult> {
 
     @CmdParam(
         name = "--cpu",
@@ -68,31 +66,4 @@ public class SystemInfoRequest extends CommandRequest {
 
     public boolean isShowAll() { return showAll; }
     public void setShowAll(boolean showAll) { this.showAll = showAll; }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        obj.put("showCpu", showCpu);
-        obj.put("showMemory", showMemory);
-        obj.put("showOs", showOs);
-        obj.put("showProps", showProps);
-        obj.put("showAll", showAll);
-        return obj;
-    }
-
-    @Override
-    public SystemInfoRequest fromJson(JSONObject obj) {
-        this.setRequestId(obj.optString("requestId"));
-        this.showCpu = obj.optBoolean("showCpu", false);
-        this.showMemory = obj.optBoolean("showMemory", false);
-        this.showOs = obj.optBoolean("showOs", false);
-        this.showProps = obj.optBoolean("showProps", false);
-        this.showAll = obj.optBoolean("showAll", true);
-        return this;
-    }
-
-    @Override
-    public CommandRequest fromCommandLine(String[] args) {
-        return this;
-    }
 }

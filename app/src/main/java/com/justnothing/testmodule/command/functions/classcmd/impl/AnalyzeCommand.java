@@ -10,6 +10,8 @@ import com.justnothing.testmodule.command.functions.classcmd.model.FieldInfo;
 import com.justnothing.testmodule.command.functions.classcmd.model.MethodInfo;
 import com.justnothing.testmodule.command.functions.classcmd.response.AnalyzeReportResult;
 import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.hooks.api.HookAPI;
+import com.justnothing.testmodule.command.framework.utils.GsonFactory;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
 import com.justnothing.testmodule.utils.format.DescriptorColorizer;
 
@@ -98,7 +100,7 @@ public class AnalyzeCommand extends AbstractClassCommand<AnalyzeClassRequest, An
                     if (Modifier.isStatic(field.getModifiers())) {
                         try {
                             cmd.print(" = ", Colors.WHITE);
-                            Object value = field.get(null);
+                            Object value = readStaticFieldValue(field);
                             if (value == null) {
                                 cmd.print("null", Colors.LIGHT_GREEN);
                             } else if (value instanceof String) {
@@ -363,7 +365,7 @@ public class AnalyzeCommand extends AbstractClassCommand<AnalyzeClassRequest, An
 
         if (rawOutput) {
             try {
-                cmd.println(result.toJson().toString(2), Colors.WHITE);
+                cmd.println(GsonFactory.getPrettyInstance().toJson(result), Colors.WHITE);
             } catch (Exception e) {
                 context.logger().warn("JSON输出失败: " + e.getMessage());
             }
@@ -373,6 +375,23 @@ public class AnalyzeCommand extends AbstractClassCommand<AnalyzeClassRequest, An
     }
 
 
+
+    /**
+     * 读取静态字段的值。
+     *
+     * <p>优先走 Hook API：它从 boot classpath 发起访问，因此能读到 boot 类
+     * （如 {@code java.lang.String.serialPersistentFields}）的 private 成员；纯反射在这种
+     * 情况下会被 ART 的访问检查拒绝（"Class X cannot access private ... of class java.lang.String"）。
+     * 未注入 Xposed（Hook 不可用）或该字段读不到时退回反射，与该判断引入前的行为一致。</p>
+     */
+    private static Object readStaticFieldValue(Field field) throws IllegalAccessException {
+        try {
+            return HookAPI.getStaticObjectField(field.getDeclaringClass(), field.getName());
+        } catch (Throwable hookUnavailable) {
+            field.setAccessible(true);
+            return field.get(null);
+        }
+    }
 
     private Map<String, FieldInfo> collectAllFields(Class<?> targetClass, ClassCommandContext<AnalyzeClassRequest> context) {
         Map<String, FieldInfo> fieldMap = new LinkedHashMap<>();

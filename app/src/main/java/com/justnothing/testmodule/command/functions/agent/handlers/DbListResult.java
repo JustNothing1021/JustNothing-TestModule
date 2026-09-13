@@ -3,12 +3,10 @@ package com.justnothing.testmodule.command.functions.agent.handlers;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import com.justnothing.testmodule.command.framework.model.CommandResult;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@SerializeKeyName("DbListResult")
 public class DbListResult extends CommandResult {
 
     @Expose @SerializedName("dbFiles")

@@ -22,15 +22,16 @@ import com.justnothing.testmodule.command.framework.output.Colors;
         "breakpoint clear"
     }
 )
-public class BreakpointManageCommand extends AbstractBreakpointCommand<CommandRequest, BreakpointResult> {
+public class BreakpointManageCommand extends AbstractBreakpointCommand<CommandRequest<?>, BreakpointResult> {
 
+    @SuppressWarnings("unchecked")
     public BreakpointManageCommand() {
-        super("breakpoint manage", CommandRequest.class, BreakpointResult.class);
+        super("breakpoint manage", (Class) CommandRequest.class, BreakpointResult.class);
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    protected BreakpointResult executeInternal(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
+    protected BreakpointResult executeInternal(CommandExecutor.CmdExecContext<CommandRequest<?>> context) throws Exception {
         CommandRequest request = context.getRequest();
 
         if (request instanceof BreakpointAddRequest) {

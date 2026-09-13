@@ -9,7 +9,7 @@ import com.justnothing.testmodule.command.framework.output.ICommandOutputHandler
 
 import com.justnothing.testmodule.command.framework.annotation.Cmd;
 
-@Cmd(name = "output_test", description = "输出处理器测试", defaultResultType = CommandResult.class)
+@Cmd(name = "output_test", description = "输出处理器测试")
 public class OutputExampleMain extends MainCommand<CommandResult> {
 
     public OutputExampleMain() {
@@ -31,7 +31,7 @@ public class OutputExampleMain extends MainCommand<CommandResult> {
     }
 
     @Override
-    public CommandResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
+    protected CommandResult executeInternal(CommandExecutor.CmdExecContext<CommandRequest<?>> context) throws Exception {
         ICommandOutputHandler output = context.output();
 
         output.println("===== 输出处理器测试 =====");

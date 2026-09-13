@@ -30,14 +30,15 @@ import java.util.Map;
             report [id]                           查看报告 (默认最新)
             export <id> <path>                    导出 HTML 报告"""
 )
-public class SystraceCommand extends AbstractPerfCommand<PerformanceRequest, SystraceResult> {
+public class SystraceCommand extends AbstractPerfCommand<PerformanceRequest<?>, SystraceResult> {
 
+    @SuppressWarnings("unchecked")
     public SystraceCommand() {
-        super("performance systrace", PerformanceRequest.class, SystraceResult.class);
+        super("performance systrace", (Class) PerformanceRequest.class, SystraceResult.class);
     }
 
     @Override
-    protected SystraceResult executePerfCommand(PerformanceRequest req) {
+    protected SystraceResult executePerfCommand(PerformanceRequest<?> req) {
         logger.debug("[systrace] 收到请求: %s", req.getClass().getSimpleName());
 
         if (req instanceof SystraceStartRequest startReq) {

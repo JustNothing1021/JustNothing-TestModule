@@ -3,9 +3,7 @@ package com.justnothing.testmodule.command.functions.agent.handlers;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import com.justnothing.testmodule.command.framework.model.CommandResult;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
 
-@SerializeKeyName("SpWriteResult")
 public class SpWriteResult extends CommandResult {
 
     @Expose @SerializedName("spName")

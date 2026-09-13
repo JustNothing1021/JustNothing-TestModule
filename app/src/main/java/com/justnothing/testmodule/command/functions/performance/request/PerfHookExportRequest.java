@@ -2,12 +2,9 @@ package com.justnothing.testmodule.command.functions.performance.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.functions.performance.PerformanceRequest;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.justnothing.testmodule.command.functions.performance.response.PerfHookResult;
 
-@SerializeKeyName("perf:hook:export")
-public class PerfHookExportRequest extends PerformanceRequest {
+public class PerfHookExportRequest extends PerformanceRequest<PerfHookResult> {
 
     @CmdParam(
         name = "id",
@@ -34,20 +31,4 @@ public class PerfHookExportRequest extends PerformanceRequest {
 
     public String getFilePath() { return filePath; }
     public void setFilePath(String filePath) { this.filePath = filePath; }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        obj.put("taskId", taskId);
-        if (filePath != null) obj.put("filePath", filePath);
-        return obj;
-    }
-
-    @Override
-    public PerfHookExportRequest fromJson(JSONObject obj) {
-        setRequestId(obj.optString("requestId"));
-        setTaskId(obj.optInt("taskId", 0));
-        setFilePath(obj.optString("filePath", null));
-        return this;
-    }
 }

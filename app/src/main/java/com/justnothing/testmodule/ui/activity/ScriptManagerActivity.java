@@ -327,7 +327,7 @@ public class ScriptManagerActivity extends AppCompatActivity {
 
                     SocketCommandExecutor socketExecutor = new SocketCommandExecutor();
                     SocketCommandExecutor.ColoredExecutionResult result =
-                            socketExecutor.executeInteractiveWithColoredOutput(trimmedCmd, false);
+                            socketExecutor.executeWithResult(trimmedCmd, false);
 
                     runOnUiThread(() -> Toast.makeText(this, getString(R.string.script_execute_finished), Toast.LENGTH_SHORT).show());
 

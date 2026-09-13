@@ -3,7 +3,6 @@ package com.justnothing.testmodule.command.functions.agent.handlers;
 import android.content.Context;
 
 import com.justnothing.testmodule.command.framework.model.CommandResult;
-import com.justnothing.testmodule.constants.AgentResultTypes;
 
 import org.json.JSONObject;
 
@@ -20,7 +19,6 @@ class DbListHandler extends AgentCommandHandler {
     @Override
     public CommandResult handle(JSONObject params, Context context) throws Exception {
         DbListResult result = new DbListResult();
-        result.setResultType(AgentResultTypes.DB_LIST);
 
         File dbDir = new File(context.getApplicationInfo().dataDir, "databases");
 
@@ -67,7 +65,6 @@ class DbQueryHandler extends AgentCommandHandler {
     @Override
     public CommandResult handle(JSONObject params, Context context) throws Exception {
         DbQueryResult result = new DbQueryResult();
-        result.setResultType(AgentResultTypes.DB_QUERY);
 
         String dbName = params.getString("dbName");
         String sql = params.getString("sql");
@@ -132,7 +129,6 @@ class DbTablesHandler extends AgentCommandHandler {
     @Override
     public CommandResult handle(JSONObject params, Context context) throws Exception {
         DbTablesResult result = new DbTablesResult();
-        result.setResultType(AgentResultTypes.DB_TABLES);
 
         String dbName = params.getString("dbName");
         result.setDbName(dbName);

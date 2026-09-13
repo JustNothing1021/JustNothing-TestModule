@@ -1,7 +1,6 @@
 package com.justnothing.testmodule.command.framework.annotation;
 
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
-import com.justnothing.testmodule.command.framework.model.CommandResult;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -16,8 +15,7 @@ public @interface CmdRoutes {
     @Retention(RetentionPolicy.RUNTIME)
     @interface Route {
         String path();
-        Class<? extends CommandRequest> request();
-        Class<? extends CommandResult> result() default CommandResult.class;
+        Class<? extends CommandRequest<?>> request();
         Class<?> handler();
         String description() default "";
     }

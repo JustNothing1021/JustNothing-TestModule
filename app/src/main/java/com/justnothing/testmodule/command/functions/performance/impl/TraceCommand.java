@@ -34,14 +34,15 @@ import java.util.Map;
             report [id]                         查看报告 (默认最新)
             export <id> <path>                  导出数据"""
 )
-public class TraceCommand extends AbstractPerfCommand<PerformanceRequest, TraceResult> {
+public class TraceCommand extends AbstractPerfCommand<PerformanceRequest<?>, TraceResult> {
 
+    @SuppressWarnings("unchecked")
     public TraceCommand() {
-        super("performance trace", PerformanceRequest.class, TraceResult.class);
+        super("performance trace", (Class) PerformanceRequest.class, TraceResult.class);
     }
 
     @Override
-    protected TraceResult executePerfCommand(PerformanceRequest req) throws Exception {
+    protected TraceResult executePerfCommand(PerformanceRequest<?> req) throws Exception {
         logger.debug("[trace] 收到请求: %s", req.getClass().getSimpleName());
 
         if (req instanceof TraceStartRequest) {

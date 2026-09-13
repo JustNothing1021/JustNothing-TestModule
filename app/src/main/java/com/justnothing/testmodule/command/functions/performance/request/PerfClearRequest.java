@@ -1,25 +1,11 @@
 package com.justnothing.testmodule.command.functions.performance.request;
 
 import com.justnothing.testmodule.command.functions.performance.PerformanceRequest;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.justnothing.testmodule.command.functions.performance.PerformanceResult;
 
-@SerializeKeyName("perf:clear")
-public class PerfClearRequest extends PerformanceRequest {
+public class PerfClearRequest extends PerformanceRequest<PerformanceResult> {
 
     public PerfClearRequest() {
         super();
-    }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        return super.toJson();
-    }
-
-    @Override
-    public PerfClearRequest fromJson(JSONObject obj) {
-        setRequestId(obj.optString("requestId"));
-        return this;
     }
 }

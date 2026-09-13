@@ -1,6 +1,5 @@
 package com.justnothing.testmodule.command.framework.annotation;
 
-import com.justnothing.testmodule.command.framework.model.CommandResult;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -14,8 +13,5 @@ public @interface Cmd {
     String group() default "general";
     String description();
     String version() default "";
-    Class<? extends CommandResult> defaultResultType();
-    boolean needsClassContext() default false;
-    String permission() default "USER";
     String helpText() default "";
 }

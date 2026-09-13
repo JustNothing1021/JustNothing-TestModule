@@ -63,14 +63,18 @@ public class CommandAwareHighlighter implements Highlighter {
             }
 
             if (i == 0 && !token.startsWith("-")) {
-                // 第一个非 flag token → 当作命令名
-                // 检查是否含冒号（子路由形式 class:info）
-                if (token.contains(":")) {
-                    int colonIdx = token.indexOf(':');
-                    String cmdPart = token.substring(0, colonIdx);
-                    String subPart = token.substring(colonIdx + 1);
+                // 第一个非 flag token → 当作命令名；子路由形式可能是 class/info（新）或 class:info（旧）
+                int sepIdx = token.indexOf('/');
+                String separator = "/";
+                if (sepIdx < 0) {
+                    sepIdx = token.indexOf(':');
+                    separator = ":";
+                }
+                if (sepIdx > 0) {
+                    String cmdPart = token.substring(0, sepIdx);
+                    String subPart = token.substring(sepIdx + 1);
                     sb.append(cmdPart, STYLE_COMMAND);
-                    sb.append(":", AttributedStyle.DEFAULT);
+                    sb.append(separator, AttributedStyle.DEFAULT);
                     sb.append(subPart, STYLE_SUBROUTE);
                 } else {
                     sb.append(token, STYLE_COMMAND);

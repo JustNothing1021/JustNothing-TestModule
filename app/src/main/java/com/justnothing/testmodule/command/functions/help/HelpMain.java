@@ -2,25 +2,23 @@ package com.justnothing.testmodule.command.functions.help;
 
 import static com.justnothing.testmodule.constants.CommandServer.CMD_HELP_VER;
 
-import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.model.MainCommand;
-import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.model.CommandResult;
 import com.justnothing.testmodule.command.framework.annotation.Cmd;
 import com.justnothing.testmodule.command.framework.annotation.CmdRoutes;
 import com.justnothing.testmodule.command.framework.model.CommandRouter;
+import com.justnothing.testmodule.command.framework.model.NoArgRequest;
 import com.justnothing.testmodule.command.functions.help.impl.HelpCommand;
 
 @Cmd(
     version = CMD_HELP_VER,
     name = "help",
-    description = "获取命令帮助信息",
-    defaultResultType = CommandResult.class
+    description = "获取命令帮助信息"
 )
 @CmdRoutes({
     @CmdRoutes.Route(
         path = "",
-        request = CommandRequest.class,
+        request = NoArgRequest.class,
         handler = HelpCommand.class,
         description = "显示帮助信息"
     )
@@ -34,10 +32,5 @@ public class HelpMain extends MainCommand<CommandResult> {
     @Override
     public String getHelpText() {
         return CommandRouter.getInstance().generateHelpForCommand("help");
-    }
-
-    @Override
-    public CommandResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
-        return new HelpCommand().execute(context);
     }
 }

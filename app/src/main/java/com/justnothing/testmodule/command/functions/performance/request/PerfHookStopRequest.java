@@ -2,12 +2,9 @@ package com.justnothing.testmodule.command.functions.performance.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.functions.performance.PerformanceRequest;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.justnothing.testmodule.command.functions.performance.response.PerfHookResult;
 
-@SerializeKeyName("perf:hook:stop")
-public class PerfHookStopRequest extends PerformanceRequest {
+public class PerfHookStopRequest extends PerformanceRequest<PerfHookResult> {
 
     @CmdParam(
         name = "id",
@@ -23,18 +20,4 @@ public class PerfHookStopRequest extends PerformanceRequest {
 
     public int getTaskId() { return taskId; }
     public void setTaskId(int taskId) { this.taskId = taskId; }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        obj.put("taskId", taskId);
-        return obj;
-    }
-
-    @Override
-    public PerfHookStopRequest fromJson(JSONObject obj) {
-        setRequestId(obj.optString("requestId"));
-        setTaskId(obj.optInt("taskId", 0));
-        return this;
-    }
 }

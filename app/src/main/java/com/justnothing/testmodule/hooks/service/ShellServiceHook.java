@@ -11,7 +11,8 @@ import com.justnothing.testmodule.hooks.base.HookEntry;
 import com.justnothing.testmodule.hooks.base.PackageHook;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 import com.justnothing.testmodule.utils.io.IOManager;
-import com.justnothing.testmodule.utils.io.RootProcessPool;
+import com.justnothing.testmodule.utils.io.ShellExecutionException;
+import com.justnothing.testmodule.utils.io.ShellExecutorProvider;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
 
 import java.lang.reflect.Method;
@@ -70,7 +71,7 @@ public class ShellServiceHook extends PackageHook {
 
             // 方法3：使用命令行检测
             info("testServiceManager: 尝试用命令行检测");
-            IOManager.ProcessResult res = RootProcessPool.executeCommand("service check " + SERVICE_NAME, 1500, false);
+            IOManager.ProcessResult res = ShellExecutorProvider.get().execute("service check " + SERVICE_NAME, 1500);
             info("testServiceManager: 命令行返回: " + res.getOutput());
 
             boolean stat = !res.getOutput().contains("not found");
@@ -180,14 +181,14 @@ public class ShellServiceHook extends PackageHook {
 
     private void logServiceStatus() {
         try {
-            IOManager.ProcessResult listOutput = RootProcessPool.executeCommand("service list");
+            IOManager.ProcessResult listOutput = ShellExecutorProvider.get().execute("service list");
             boolean foundInList = listOutput.getOutput().contains(SERVICE_NAME);
             info("服务在service list中" + (foundInList ? "已找到" : "未找到"));
 
-            IOManager.ProcessResult checkOutput = RootProcessPool.executeCommand("service check " + SERVICE_NAME);
+            IOManager.ProcessResult checkOutput = ShellExecutorProvider.get().execute("service check " + SERVICE_NAME);
             info("service check结果: " + checkOutput.getOutput().trim());
 
-            IOManager.ProcessResult callOutput = RootProcessPool.executeCommand("service call " + SERVICE_NAME + " 1");
+            IOManager.ProcessResult callOutput = ShellExecutorProvider.get().execute("service call " + SERVICE_NAME + " 1");
             info("service call测试: " + callOutput.getOutput().trim());
 
         } catch (Exception e) {

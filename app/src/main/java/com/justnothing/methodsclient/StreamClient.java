@@ -10,7 +10,6 @@ import com.justnothing.methodsclient.repl.ReplClient;
 import com.justnothing.methodsclient.test.TerminalCapabilityTest;
 import com.justnothing.testmodule.utils.logging.Logger;
 
-
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.concurrent.ExecutorService;
@@ -32,7 +31,6 @@ public class StreamClient {
         public void write(int b) { }
     });
 
-
     public static class ClientLogger extends Logger {
         @Override
         public String getTag() {
@@ -43,6 +41,46 @@ public class StreamClient {
     public static final ClientLogger logger = new ClientLogger();
 
     private final ExecutorService executor = Executors.newCachedThreadPool();
+
+    // ==================== 统一执行入口 ====================
+
+    /**
+     * 通过 Socket 执行命令，使用指定的输出格式。
+     *
+     * @param command 命令
+     * @param format  输出格式
+     * @return 执行结果
+     */
+    public SocketCommandExecutor.ExecutionResult executeCommand(String command, SocketCommandExecutor.Format format) {
+        if (!checkSocketServer()) {
+            logger.warn("Socket服务不可用");
+            return new SocketCommandExecutor.ExecutionResult(false, "", "Socket服务不可用");
+        }
+        SocketCommandExecutor executor = new SocketCommandExecutor();
+        return executor.executeWithResult(command, format);
+    }
+
+    /**
+     * 自动选择模式执行命令：先尝试 Socket（彩色交互模式），失败则回退到文件模式。
+     *
+     * @param command 命令
+     * @return true 表示执行成功
+     */
+    public boolean executeAutoCommand(String command) {
+        if (executeCommand(command, SocketCommandExecutor.Format.COLORED).success()) {
+            return true;
+        }
+        logger.warn("Socket模式失败，回退到文件模式");
+        return FileCommandExecutor.executeFile(command);
+    }
+
+    // ==================== 文件模式 ====================
+
+    public static boolean executeFileMode(String command) {
+        return FileCommandExecutor.executeFile(command);
+    }
+
+    // ==================== 静态快捷方法 ====================
 
     public static boolean checkSocketServer() {
         return ClientPortManager.checkSocketServer();
@@ -57,95 +95,6 @@ public class StreamClient {
         return ClientPortManager.getSocketPort();
     }
 
-
-    public boolean executeInteractiveMode(String command) {
-        SocketCommandExecutor executor = new SocketCommandExecutor();
-        return executor.executeInteractiveSocket(command);
-    }
-
-    public boolean executeColoredInteractiveMode(String command) {
-        SocketCommandExecutor executor = new SocketCommandExecutor();
-        return executor.executeInteractiveWithColoredOutput(command, true).success();
-    }
-
-
-    public boolean executeTextSocketCommand(String command) {
-        SocketCommandExecutor executor = new SocketCommandExecutor();
-        return executor.executeTextSocket(command);
-    }
-
-    public static boolean executeFileMode(String command) {
-        return FileCommandExecutor.executeFile(command);
-    }
-
-
-    public static SocketCommandExecutor.ExecutionResult executeTextSocketWithOutput(String command) {
-        if (!checkSocketServer()) {
-            logger.warn("Socket服务不可用");
-            return new SocketCommandExecutor.ExecutionResult(false, "", "Socket服务不可用");
-        }
-        SocketCommandExecutor executor = new SocketCommandExecutor();
-        return executor.executeTextSocketWithOutput(command);
-    }
-
-    public boolean executeAutoCommand(String command) {
-        if (checkSocketServer()) {
-            logger.info("使用交互Socket模式（带颜色）");
-            boolean result = executeColoredInteractiveMode(command);
-            if (!result) {
-                logger.warn("Socket模式失败，回退到文件模式");
-                executeFileMode(command);
-            }
-        } else {
-            logger.warn("Socket服务不可用，使用文件模式");
-            executeFileMode(command);
-        }
-        return true;
-    }
-
-
-
-    // 静态方法
-
-    public static void executeTextMode(String command) {
-        StreamClient client = new StreamClient();
-        boolean success = client.executeTextSocketCommand(command);
-
-        client.executor.shutdown();
-        try {
-            if (!client.executor.awaitTermination(5, TimeUnit.SECONDS)) {
-                client.executor.shutdownNow();
-            }
-        } catch (InterruptedException e) {
-            client.executor.shutdownNow();
-            Thread.currentThread().interrupt();
-        }
-
-        if (!success) {
-            System.exit(1);
-        }
-    }
-
-    public static void executeAuto(String command) {
-        StreamClient client = new StreamClient();
-        boolean success = client.executeAutoCommand(command);
-
-        client.executor.shutdown();
-        try {
-            if (!client.executor.awaitTermination(5, TimeUnit.SECONDS)) {
-                client.executor.shutdownNow();
-            }
-        } catch (InterruptedException e) {
-            client.executor.shutdownNow();
-            Thread.currentThread().interrupt();
-        }
-
-        if (!success) {
-
-            System.exit(1);
-        }
-    }
-
     public static boolean updateSocketPort(int newPort) {
         return ClientPortManager.updateSocketPort(newPort);
     }
@@ -158,6 +107,25 @@ public class StreamClient {
         return FileCommandExecutor.writeHookData(fixPermissions);
     }
 
+    // ==================== CLI 入口 ====================
+
+    public static void executeAuto(String command) {
+        StreamClient client = new StreamClient();
+        boolean success = client.executeAutoCommand(command);
+        client.executor.shutdown();
+        try {
+            if (!client.executor.awaitTermination(5, TimeUnit.SECONDS)) {
+                client.executor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            client.executor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+        if (!success) {
+            System.exit(1);
+        }
+    }
+
     public static String getHelpText() {
         return String.format("""
                 JustNothing XposedModule Java Client
@@ -168,7 +136,6 @@ public class StreamClient {
                 
                 可选项:
                     -s, --socket             通过Socket文本协议执行命令
-                    -t, --text               通过Socket文本交互式协议执行命令
                     -i, --interactive        通过Socket二进制交互式协议执行命令
                     -ip, --interactive-plain 通过Socket二进制交互式协议执行命令, 不带颜色
                     -f, --file               通过文件中转命令(原始模式)
@@ -200,15 +167,12 @@ public class StreamClient {
                 """, CLIENT_VER);
     }
 
-
-
     static {
         origOut = System.out;
         origErr = System.err;
         System.setOut(disabledOut);
         System.setErr(disabledErr);
     }
-
 
     /**
      * 主方法，通过app_process执行。
@@ -273,21 +237,14 @@ public class StreamClient {
                     System.exit(running ? 0 : 1);
                 }
                 case "--help" -> System.err.println(getHelpText());
-                case "--text", "-t" -> {
-                    if (args.length < 2) {
-                        System.err.println("错误: 需要提供命令");
-                        System.exit(1);
-                    }
-                    String command = joinArgs(args, 1);
-                    executeTextMode(command);
-                }
                 case "--interactive", "-i" -> {
                     if (args.length < 2) {
                         System.err.println("错误: 需要提供命令");
                         System.exit(1);
                     }
                     String command = joinArgs(args, 1);
-                    boolean success = new StreamClient().executeColoredInteractiveMode(command);
+                    boolean success = new StreamClient()
+                            .executeCommand(command, SocketCommandExecutor.Format.COLORED).success();
                     System.exit(success ? 0 : 1);
                 }
                 case "--interactive-plain", "-ip" -> {
@@ -296,7 +253,8 @@ public class StreamClient {
                         System.exit(1);
                     }
                     String command = joinArgs(args, 1);
-                    boolean success = new StreamClient().executeInteractiveMode(command);
+                    boolean success = new StreamClient()
+                            .executeCommand(command, SocketCommandExecutor.Format.PLAIN).success();
                     System.exit(success ? 0 : 1);
                 }
                 case "--auto" -> {
@@ -319,7 +277,6 @@ public class StreamClient {
                     }
                 }
                 case "--repl", "-r" -> {
-                    // 持久化 REPL 模式：保持长连接，JLine 交互
                     ReplClient repl = new ReplClient();
                     repl.start();
                 }

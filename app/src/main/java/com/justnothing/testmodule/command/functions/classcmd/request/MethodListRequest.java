@@ -2,12 +2,10 @@ package com.justnothing.testmodule.command.functions.classcmd.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.framework.error.IllegalCommandLineArgumentException;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
-import com.justnothing.testmodule.command.framework.utils.ParamParser;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandRequest;
+import com.justnothing.testmodule.command.functions.classcmd.response.MethodListResult;
 
-@SerializeKeyName("class:methods")
-public class MethodListRequest extends ClassCommandRequest {
+public class MethodListRequest extends ClassCommandRequest<MethodListResult> {
 
     @CmdParam(
         name = "class",
@@ -34,8 +32,4 @@ public class MethodListRequest extends ClassCommandRequest {
     public void setClassName(String className) { this.className = className; }
     public boolean isVerbose() { return verbose; }
     public void setVerbose(boolean verbose) { this.verbose = verbose; }
-    @Override
-    public MethodListRequest fromCommandLine(String[] args) throws IllegalCommandLineArgumentException {
-        return ParamParser.parse(MethodListRequest.class, args);
-    }
 }

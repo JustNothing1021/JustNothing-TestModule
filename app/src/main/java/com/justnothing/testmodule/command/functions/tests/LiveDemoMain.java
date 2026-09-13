@@ -12,12 +12,12 @@ import com.justnothing.testmodule.command.framework.model.CommandResult;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.annotation.Cmd;
 
-@Cmd(name = "livedemo", description = "RichConsole live demo", defaultResultType = CommandResult.class)
+@Cmd(name = "livedemo", description = "RichConsole live demo")
 public class LiveDemoMain extends MainCommand<CommandResult> {
     public LiveDemoMain() { super("LiveDemo", CommandResult.class); }
 
     @Override
-    public CommandResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
+    protected CommandResult executeInternal(CommandExecutor.CmdExecContext<CommandRequest<?>> context) throws Exception {
         Console console = context.console();
         if (console == null) console = Console.of(cfg -> cfg.withForceTerminal(true));
 

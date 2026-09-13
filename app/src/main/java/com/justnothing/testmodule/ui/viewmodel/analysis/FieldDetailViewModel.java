@@ -8,12 +8,18 @@ import androidx.lifecycle.MutableLiveData;
 
 import com.justnothing.testmodule.ui.viewmodel.BaseViewModel;
 import com.justnothing.testmodule.R;
-import com.justnothing.testmodule.command.functions.classcmd.request.GetFieldValueRequest;
-import com.justnothing.testmodule.command.functions.classcmd.request.SetFieldValueRequest;
+import com.justnothing.testmodule.command.functions.classcmd.request.FieldRequest;
 import com.justnothing.testmodule.command.functions.classcmd.response.GetFieldValueResult;
-import com.justnothing.testmodule.command.functions.classcmd.response.SetFieldValueResult;
 
-public class FieldDetailViewModel extends BaseViewModel<GetFieldValueRequest, GetFieldValueResult> {
+/**
+ * 字段详情页。
+ *
+ * <p>服务端 class:field 路由绑定的是 {@link FieldRequest}（用 --get/--set 操作符表达操作），
+ * 旧的 GetFieldValueRequest / SetFieldValueRequest 已不再注册。这里直接设置 FieldRequest 的
+ * useGet/useSet 字段来表达操作——JSON 路径不经过命令行解析，receivedOperators 是空的，
+ * 所以 FieldRequest.getOperationMode() 也认这两个字段。</p>
+ */
+public class FieldDetailViewModel extends BaseViewModel<FieldRequest, GetFieldValueResult> {
 
     private final MutableLiveData<GetFieldValueResult> result = new MutableLiveData<>();
     private final MutableLiveData<Boolean> setSuccess = new MutableLiveData<>();
@@ -33,11 +39,13 @@ public class FieldDetailViewModel extends BaseViewModel<GetFieldValueRequest, Ge
         error.setValue(null);
 
         getExecutor().execute(() -> {
-            GetFieldValueRequest request = new GetFieldValueRequest();
+            FieldRequest request = new FieldRequest();
             request.setClassName(className);
-            request.setFieldName(fieldName);
             request.setTargetInstance(targetInstance);
-            request.setStatic(isStatic);
+            request.setStaticOnly(isStatic);
+            request.setUseGet(true);
+            request.setGetTargetFieldName(fieldName);
+            request.setShowValue(true);
 
             GetFieldValueResult fieldResult = execute(request);
             if (fieldResult != null && fieldResult.isSuccess()) {
@@ -48,22 +56,28 @@ public class FieldDetailViewModel extends BaseViewModel<GetFieldValueRequest, Ge
         });
     }
 
+    /**
+     * 设置字段值。
+     *
+     * <p>class:field 的 FieldRequest 没有类型提示字段，服务端直接按表达式求值
+     * （类型由表达式自身推断），因此这里不需要 valueTypeHint。</p>
+     */
     public void setFieldValue(String className, String fieldName,
                               String targetInstance, String valueExpression,
-                              String valueTypeHint, boolean isStatic) {
+                              boolean isStatic) {
         isLoading.setValue(true);
         setError.setValue(null);
 
         getExecutor().execute(() -> {
-            SetFieldValueRequest request = new SetFieldValueRequest();
+            FieldRequest request = new FieldRequest();
             request.setClassName(className);
-            request.setFieldName(fieldName);
             request.setTargetInstance(targetInstance);
-            request.setValueExpression(valueExpression);
-            request.setValueTypeHint(valueTypeHint);
-            request.setStatic(isStatic);
+            request.setStaticOnly(isStatic);
+            request.setUseSet(true);
+            request.setSetTargetFieldName(fieldName);
+            request.setSetValueToSet(valueExpression);
 
-            SetFieldValueResult setResult = executeAny(request, SetFieldValueResult.class);
+            GetFieldValueResult setResult = execute(request);
             if (setResult != null && setResult.isSuccess()) {
                 setSuccess.postValue(true);
             } else if (setResult != null) {

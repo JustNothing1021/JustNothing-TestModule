@@ -1,9 +1,7 @@
 package com.justnothing.testmodule.command.functions.performance;
 
 import com.justnothing.testmodule.command.framework.model.CommandResult;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
 
-@SerializeKeyName("PerformanceResult")
 public class PerformanceResult extends CommandResult {
 
     private String subCommand;

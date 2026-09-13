@@ -129,10 +129,10 @@ public class TailTipManager {
         if (!cmd.routes().isEmpty()) {
             sb.append("\n");
             for (CommandMetadataScanner.RouteMeta route : cmd.routes()) {
-                // 取路径最后一段作为显示名（如 "class:info" → "info"）
+                // 取路径最后一段作为显示名（如 "class/info" → "info"）
                 String displayName = route.path();
-                if (displayName.contains(":")) {
-                    displayName = displayName.substring(displayName.lastIndexOf(':') + 1);
+                if (displayName.contains("/")) {
+                    displayName = displayName.substring(displayName.lastIndexOf('/') + 1);
                 }
                 sb.append("  ").append(displayName);
 

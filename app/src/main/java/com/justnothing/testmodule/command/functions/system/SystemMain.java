@@ -2,9 +2,7 @@ package com.justnothing.testmodule.command.functions.system;
 
 import static com.justnothing.testmodule.constants.CommandServer.CMD_SYSTEM_VER;
 
-import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.model.MainCommand;
-import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.annotation.Cmd;
 import com.justnothing.testmodule.command.framework.annotation.CmdRoutes;
 import com.justnothing.testmodule.command.framework.model.CommandRouter;
@@ -14,8 +12,7 @@ import com.justnothing.testmodule.command.functions.system.impl.SystemInfoComman
 @Cmd(
     name = "system",
     description = "显示系统信息 (CPU, 内存, OS, 属性)",
-    version = CMD_SYSTEM_VER,
-    defaultResultType = SystemInfoResult.class
+    version = CMD_SYSTEM_VER
 )
 @CmdRoutes({
     @CmdRoutes.Route(
@@ -34,10 +31,5 @@ public class SystemMain extends MainCommand<SystemInfoResult> {
     @Override
     public String getHelpText() {
         return CommandRouter.getInstance().generateHelpForCommand("system");
-    }
-
-    @Override
-    public SystemInfoResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
-        return new SystemInfoCommand().execute(context);
     }
 }

@@ -1,12 +1,11 @@
 package com.justnothing.methodsclient;
 
 import com.justnothing.methodsclient.executor.SocketCommandExecutor;
+import com.justnothing.methodsclient.metadata.CommandMetadataScanner;
 import com.justnothing.testmodule.utils.logging.Logger;
 
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * UI客户端通信层。
@@ -23,7 +22,6 @@ public class UiClient {
     private static final int DEFAULT_PORT = 11451;
     private static final int CONNECT_TIMEOUT_MS = 5000;
     
-    private final ExecutorService executor = Executors.newCachedThreadPool();
     private volatile int port = DEFAULT_PORT;
 
     private UiClient() {}
@@ -32,6 +30,9 @@ public class UiClient {
         if (instance == null) {
             synchronized (UiClient.class) {
                 if (instance == null) {
+                    // 先建好路由表：Request 的 commandType 由路由派生，
+                    // 而 GUI 进程不会执行服务端的自动注册，必须在构造任何 Request 之前补上。
+                    CommandMetadataScanner.ensureRegistered();
                     instance = new UiClient();
                 }
             }
@@ -39,20 +40,10 @@ public class UiClient {
         return instance;
     }
     
-    /**
-     * 检查服务端是否可用。
-     * 
-     * @return 如果服务端可用返回true
-     */
     public boolean isServerAvailable() {
         return checkServer();
     }
     
-    /**
-     * 检查服务端状态。
-     * 
-     * @return 如果服务端可用返回true
-     */
     public boolean checkServer() {
         port = StreamClient.getSocketPort();
         try (Socket socket = new Socket()) {
@@ -65,26 +56,8 @@ public class UiClient {
     }
     
     /**
-     * 设置服务端端口。
-     * 
-     * @param port 端口号
-     */
-    public void setPort(int port) {
-        this.port = port;
-    }
-    
-    /**
-     * 获取当前端口。
-     * 
-     * @return 端口号
-     */
-    public int getPort() {
-        return port;
-    }
-    
-    /**
-     * 执行命令请求并返回结果。
-     * 
+     * 执行命令请求并返回JSON结果。
+     *
      * @param requestJson 请求JSON字符串
      * @return 响应JSON字符串
      */
@@ -92,27 +65,17 @@ public class UiClient {
         try {
             logger.debug("执行命令请求: " + requestJson);
             SocketCommandExecutor executor = new SocketCommandExecutor();
-            String response = executor.executeCommandRequest(requestJson);
-            logger.debug("收到响应: " + response);
-            return response;
+            SocketCommandExecutor.ExecutionResult result = executor.executeWithResult(requestJson, SocketCommandExecutor.Format.JSON);
+            logger.debug("收到响应: " + result.output());
+            return result.success() ? result.output() : "{\"success\":false,\"error\":{\"code\":\"EXECUTION_ERROR\",\"message\":\"" + escapeJson(result.error()) + "\"}}";
         } catch (Exception e) {
             logger.error("执行命令请求失败", e);
-            return "{\"success\":false,\"error\":{\"code\":\"EXECUTION_ERROR\",\"message\":\"执行失败: " + e.getMessage() + "\"}}";
+            return "{\"success\":false,\"error\":{\"code\":\"EXECUTION_ERROR\",\"message\":\"执行失败: " + escapeJson(e.getMessage()) + "\"}}";
         }
     }
     
-    /**
-     * 关闭客户端。
-     */
-    public void shutdown() {
-        executor.shutdown();
-        try {
-            if (!executor.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS)) {
-                executor.shutdownNow();
-            }
-        } catch (InterruptedException e) {
-            executor.shutdownNow();
-            Thread.currentThread().interrupt();
-        }
+    private static String escapeJson(String s) {
+        if (s == null) return "";
+        return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t");
     }
 }

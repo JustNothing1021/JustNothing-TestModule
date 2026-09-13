@@ -1,9 +1,7 @@
 package com.justnothing.testmodule.command.functions.classcmd.response;
 
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandResult;
 
-@SerializeKeyName("InvokeConstructor")
 public class InvokeConstructorResult extends ClassCommandResult {
 
     private String resultString;

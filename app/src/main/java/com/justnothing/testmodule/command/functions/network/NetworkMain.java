@@ -1,12 +1,9 @@
 package com.justnothing.testmodule.command.functions.network;
 
-import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.model.MainCommand;
-import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.annotation.Cmd;
 import com.justnothing.testmodule.command.framework.annotation.CmdRoutes;
 import com.justnothing.testmodule.command.framework.model.CommandRouter;
-import com.justnothing.testmodule.command.framework.output.Colors;
 
 import com.justnothing.testmodule.command.functions.network.request.NetworkListRequest;
 import com.justnothing.testmodule.command.functions.network.request.NetworkInfoRequest;
@@ -25,8 +22,7 @@ import com.justnothing.testmodule.command.functions.network.impl.NetworkQueryCom
 
 @Cmd(
     name = "network",
-    description = "网络请求监控和调试工具",
-    defaultResultType = NetworkResult.class
+    description = "网络请求监控和调试工具"
 )
 @CmdRoutes({
     @CmdRoutes.Route(path = "intercept", request = NetworkInterceptRequest.class, handler = NetworkManageCommand.class, description = "开启/关闭网络拦截"),
@@ -44,9 +40,6 @@ import com.justnothing.testmodule.command.functions.network.impl.NetworkQueryCom
 })
 public class NetworkMain extends MainCommand<NetworkResult> {
 
-    private static final com.justnothing.testmodule.utils.logging.Logger logger =
-        com.justnothing.testmodule.utils.logging.Logger.getLoggerForName("NetworkMain");
-
     public NetworkMain() {
         super("network", NetworkResult.class);
     }
@@ -54,20 +47,5 @@ public class NetworkMain extends MainCommand<NetworkResult> {
     @Override
     public String getHelpText() {
         return CommandRouter.getInstance().generateHelpForCommand("network");
-    }
-
-    @Override
-    public NetworkResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
-        String[] args = context.args();
-
-        logger.debug("执行 network 命令（fallback路径），参数: %s", java.util.Arrays.toString(args));
-
-        if (args.length == 0) {
-            context.println(getHelpText(), Colors.WHITE);
-            return null;
-        }
-
-        context.println("提示: 使用 'network help' 查看路由帮助", Colors.CYAN);
-        return createErrorResult("旧路径已迁移到 @CmdRoutes，请使用新路径");
     }
 }

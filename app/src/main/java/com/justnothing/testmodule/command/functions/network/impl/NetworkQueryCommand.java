@@ -10,7 +10,12 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 
-public class NetworkQueryCommand extends AbstractNetworkCommand<CommandRequest, CommandResult> {
+public class NetworkQueryCommand extends AbstractNetworkCommand<CommandRequest<?>, CommandResult> {
+
+    @SuppressWarnings("unchecked")
+    public NetworkQueryCommand() {
+        super("network query", (Class) CommandRequest.class, CommandResult.class);
+    }
 
     public NetworkResult handleStatus(NetworkStatusRequest request) {
         outln("=== 网络监控状态 ===", Colors.CYAN);
@@ -182,7 +187,7 @@ public class NetworkQueryCommand extends AbstractNetworkCommand<CommandRequest, 
     }
 
     @Override
-    protected CommandResult executeInternal(CommandRequest request) throws Exception {
+    protected CommandResult executeRequest(CommandRequest<?> request) throws Exception {
         if (request instanceof NetworkListRequest r) return handleList(r);
         if (request instanceof NetworkInfoRequest r) return handleInfo(r);
         if (request instanceof NetworkExportRequest r) return handleExport(r);

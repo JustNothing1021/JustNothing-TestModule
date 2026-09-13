@@ -1,6 +1,7 @@
 package com.justnothing.testmodule.command.functions.script.impl;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.model.AbstractCommand;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.model.CommandResult;
 import com.justnothing.testmodule.utils.logging.Logger;
@@ -20,7 +21,8 @@ import com.justnothing.testmodule.utils.reflect.AppClassFinder;
 import com.justnothing.testmodule.utils.reflect.DexClassDefiner;
 import com.justnothing.testmodule.utils.data.DataBridge;
 
-public abstract class AbstractScriptCommand<Req extends CommandRequest, Res extends CommandResult> {
+public abstract class AbstractScriptCommand<Req extends CommandRequest<?>, Res extends CommandResult>
+        extends AbstractCommand<Req, Res> {
 
     public static final Logger logger = Logger.getLoggerForName("Script");
     public static final ConcurrentHashMap<ClassLoader, ScriptRunner> scriptRunners = new ConcurrentHashMap<>();
@@ -33,7 +35,11 @@ public abstract class AbstractScriptCommand<Req extends CommandRequest, Res exte
         systemScriptRunner.setClassFinder(new AppClassFinder());
     }
 
-    protected CommandExecutor.CmdExecContext<?> context;
+    protected CommandExecutor.CmdExecContext<Req> context;
+
+    protected AbstractScriptCommand(String commandName, Class<Req> requestType, Class<Res> returnType) {
+        super(commandName, requestType, returnType);
+    }
 
     protected void out(Object obj, byte color) {
         if (context != null) context.print(obj, color);
@@ -48,20 +54,22 @@ public abstract class AbstractScriptCommand<Req extends CommandRequest, Res exte
         return scriptRunners.computeIfAbsent(cl, ScriptRunner::new);
     }
 
-    @SuppressWarnings("unchecked")
-    public Res execute(CommandExecutor.CmdExecContext<?> ctx) {
-        this.context = ctx;
+    /**
+     * 基类负责把"执行上下文"适配成"请求对象"，子类只关心自己的请求类型。
+     * 异常兜底、请求类型护栏由 {@link AbstractCommand} 统一提供
+     * （此前这里是把异常包成 RuntimeException 直接往外抛，现在统一成返回失败结果）。
+     */
+    @Override
+    protected final Res executeInternal(CommandExecutor.CmdExecContext<Req> context) throws Exception {
+        this.context = context;
         try {
-            Req req = (Req) ctx.getRequest();
-            return executeInternal(req);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+            return executeRequest(context.getRequest());
         } finally {
             this.context = null;
         }
     }
 
-    protected abstract Res executeInternal(Req request) throws Exception;
+    protected abstract Res executeRequest(Req request) throws Exception;
 
     protected String formatSize(long bytes) {
         if (bytes < 1024) return bytes + " B";

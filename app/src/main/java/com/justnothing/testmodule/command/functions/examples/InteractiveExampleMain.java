@@ -8,7 +8,7 @@ import com.justnothing.testmodule.command.framework.output.ICommandOutputHandler
 
 import com.justnothing.testmodule.command.framework.annotation.Cmd;
 
-@Cmd(name = "interactive_test", description = "交互式输入测试", defaultResultType = CommandResult.class)
+@Cmd(name = "interactive_test", description = "交互式输入测试")
 public class InteractiveExampleMain extends MainCommand<CommandResult> {
 
     public InteractiveExampleMain() {
@@ -30,7 +30,7 @@ public class InteractiveExampleMain extends MainCommand<CommandResult> {
     }
 
     @Override
-    public CommandResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
+    protected CommandResult executeInternal(CommandExecutor.CmdExecContext<CommandRequest<?>> context) throws Exception {
         ICommandOutputHandler output = context.output();
         output.println("=== 交互式示例 ===");
         String name = context.readLine("请输入你的名字: ");

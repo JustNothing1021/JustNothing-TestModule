@@ -28,6 +28,7 @@ import com.justnothing.testmodule.hooks.launcher.SafeUtilHook;
 import com.justnothing.testmodule.hooks.service.ShellServiceHook;
 import com.justnothing.testmodule.service.ShellService;
 import com.justnothing.testmodule.hooks.agent.InspectionAgentHook;
+import com.justnothing.testmodule.hooks.api.LoadPackageInfo;
 import com.justnothing.testmodule.utils.data.DataBridge;
 import com.justnothing.testmodule.utils.data.BootMonitor;
 import com.justnothing.testmodule.utils.logging.Logger;
@@ -474,6 +475,20 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
 
     public static XC_LoadPackage.LoadPackageParam getLastLoadPackageParam() {
         return lastLoadPackageParam;
+    }
+
+    /**
+     * 获取最后加载的包信息（不依赖 Xposed 类型）。
+     * <p>命令层和脚本引擎应优先使用此方法。</p>
+     */
+    public static LoadPackageInfo getLastLoadPackageInfo() {
+        XC_LoadPackage.LoadPackageParam p = lastLoadPackageParam;
+        if (p == null) return null;
+        return new LoadPackageInfo(
+                p.packageName, p.processName,
+                p.classLoader, p.appInfo,
+                p.isFirstApplication
+        );
     }
 
 }

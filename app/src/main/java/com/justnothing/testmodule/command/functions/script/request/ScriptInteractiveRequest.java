@@ -1,24 +1,10 @@
 package com.justnothing.testmodule.command.functions.script.request;
 
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.justnothing.testmodule.command.functions.script.ScriptResult;
 
-@SerializeKeyName("script:interactive")
-public class ScriptInteractiveRequest extends ScriptBaseRequest {
+public class ScriptInteractiveRequest extends ScriptBaseRequest<ScriptResult> {
 
     public ScriptInteractiveRequest() {
         super();
-    }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        return super.toJson();
-    }
-
-    @Override
-    public ScriptInteractiveRequest fromJson(JSONObject obj) {
-        setRequestId(obj.optString("requestId"));
-        return this;
     }
 }

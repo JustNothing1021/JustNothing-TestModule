@@ -18,12 +18,12 @@ import com.justnothing.testmodule.command.framework.model.CommandResult;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.annotation.Cmd;
 
-@Cmd(name = "promptdemo", description = "RichConsole noneprompt demo", defaultResultType = CommandResult.class)
+@Cmd(name = "promptdemo", description = "RichConsole noneprompt demo")
 public class NonePromptDemoMain extends MainCommand<CommandResult> {
     public NonePromptDemoMain() { super("NonePromptDemo", CommandResult.class); }
 
     @Override
-    public CommandResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
+    protected CommandResult executeInternal(CommandExecutor.CmdExecContext<CommandRequest<?>> context) throws Exception {
         Console console = context.console();
         if (console == null) console = Console.of(cfg -> cfg.withForceTerminal(true));
 

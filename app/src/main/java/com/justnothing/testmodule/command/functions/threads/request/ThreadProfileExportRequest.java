@@ -2,10 +2,9 @@ package com.justnothing.testmodule.command.functions.threads.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
+import com.justnothing.testmodule.command.functions.threads.response.ThreadProfileExportResult;
 
-@SerializeKeyName("threads:profile:export")
-public class ThreadProfileExportRequest extends CommandRequest {
+public class ThreadProfileExportRequest extends CommandRequest<ThreadProfileExportResult> {
 
     @CmdParam(
         name = "--file",

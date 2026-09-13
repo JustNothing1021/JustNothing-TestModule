@@ -2,17 +2,10 @@ package com.justnothing.testmodule.command.functions.breakpoint.impl;
 
 import static com.justnothing.testmodule.constants.CommandServer.CMD_BREAKPOINT_VER;
 
-import java.util.Arrays;
-
-import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.model.MainCommand;
-import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.annotation.Cmd;
 import com.justnothing.testmodule.command.framework.annotation.CmdRoutes;
-import com.justnothing.testmodule.command.framework.utils.CommandExceptionHandler;
-import com.justnothing.testmodule.command.framework.utils.CmdParamProcessor;
 import com.justnothing.testmodule.command.framework.model.CommandRouter;
-import com.justnothing.testmodule.command.framework.model.AbstractCommand;
 import com.justnothing.testmodule.command.functions.breakpoint.request.BreakpointAddRequest;
 import com.justnothing.testmodule.command.functions.breakpoint.request.BreakpointListRequest;
 import com.justnothing.testmodule.command.functions.breakpoint.request.BreakpointEnableRequest;
@@ -21,13 +14,11 @@ import com.justnothing.testmodule.command.functions.breakpoint.request.Breakpoin
 import com.justnothing.testmodule.command.functions.breakpoint.request.BreakpointClearRequest;
 import com.justnothing.testmodule.command.functions.breakpoint.request.BreakpointHitsRequest;
 import com.justnothing.testmodule.command.functions.breakpoint.response.BreakpointResult;
-import com.justnothing.testmodule.command.framework.output.Colors;
 
 @Cmd(
     name = "breakpoint",
     description = "设置和管理断点",
-    version = CMD_BREAKPOINT_VER,
-    defaultResultType = BreakpointResult.class
+    version = CMD_BREAKPOINT_VER
 )
 @CmdRoutes({
     @CmdRoutes.Route(path = "add", request = BreakpointAddRequest.class, handler = BreakpointManageCommand.class, description = "添加断点"),
@@ -47,49 +38,5 @@ public class BreakpointMain extends MainCommand<BreakpointResult> {
     @Override
     public String getHelpText() {
         return CommandRouter.getInstance().generateHelpForCommand("breakpoint");
-    }
-
-    @Override
-    public BreakpointResult runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception {
-        String[] args = context.args();
-
-        logger.debug("执行breakpoint命令，参数: " + Arrays.toString(args));
-
-        if (args.length < 1) {
-            context.println(getHelpText(), Colors.WHITE);
-            return createErrorResult("参数不足，使用 breakpoint <subcmd> [args...]");
-        }
-
-        String subCommand = args[0].toLowerCase();
-
-        try {
-            CommandRouter.RouteMatch match = CommandRouter.getInstance()
-                .matchRoute("breakpoint", new String[]{subCommand});
-
-            if (match != null && match.routeConfig() != null) {
-                Class<? extends CommandRequest> requestType = match.routeConfig().requestType();
-                CommandRequest request = requestType.getDeclaredConstructor().newInstance();
-                
-                String[] remainingArgs = args.length > 1
-                    ? Arrays.copyOfRange(args, 1, args.length)
-                    : new String[0];
-                CmdParamProcessor.parseCommandLineArgs(request, remainingArgs);
-
-                context.setRequest(request);
-
-                Class<?> handlerClass = match.routeConfig().handlerType();
-                AbstractCommand<?, ?> handler = (AbstractCommand<?, ?>) handlerClass.getDeclaredConstructor().newInstance();
-                return (BreakpointResult) handler.execute(context);
-            }
-
-            context.println("未知子命令: " + subCommand, Colors.RED);
-            context.println(getHelpText(), Colors.WHITE);
-            return createErrorResult("未知子命令: " + subCommand);
-
-        } catch (Exception e) {
-            CommandExceptionHandler.handleException(
-                "breakpoint " + subCommand, e, context, "执行breakpoint的某个子命令时出错");
-            return createErrorResult("执行breakpoint命令失败: " + e.getMessage());
-        }
     }
 }

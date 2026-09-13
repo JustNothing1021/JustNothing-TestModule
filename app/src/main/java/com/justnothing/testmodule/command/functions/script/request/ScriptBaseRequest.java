@@ -1,8 +1,7 @@
 package com.justnothing.testmodule.command.functions.script.request;
 
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
+import com.justnothing.testmodule.command.framework.model.CommandResult;
 
-@SerializeKeyName("script:base")
-public abstract class ScriptBaseRequest extends CommandRequest {
+public abstract class ScriptBaseRequest<R extends CommandResult> extends CommandRequest<R> {
 }

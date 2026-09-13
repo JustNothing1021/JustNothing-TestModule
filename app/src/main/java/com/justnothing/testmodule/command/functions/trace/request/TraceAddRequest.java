@@ -2,12 +2,9 @@ package com.justnothing.testmodule.command.functions.trace.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.justnothing.testmodule.command.functions.trace.TraceResult;
 
-@SerializeKeyName("trace:add")
-public class TraceAddRequest extends CommandRequest {
+public class TraceAddRequest extends CommandRequest<TraceResult> {
 
     @CmdParam(
         name = "className",
@@ -47,22 +44,4 @@ public class TraceAddRequest extends CommandRequest {
 
     public String getSignature() { return signature; }
     public void setSignature(String signature) { this.signature = signature; }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        obj.put("className", className);
-        obj.put("methodName", methodName);
-        if (signature != null) obj.put("signature", signature);
-        return obj;
-    }
-
-    @Override
-    public TraceAddRequest fromJson(JSONObject obj) {
-        setRequestId(obj.optString("requestId"));
-        setClassName(obj.optString("className", null));
-        setMethodName(obj.optString("methodName", null));
-        setSignature(obj.optString("signature", null));
-        return this;
-    }
 }

@@ -2,12 +2,9 @@ package com.justnothing.testmodule.command.functions.hook.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.justnothing.testmodule.command.framework.model.CommandResult;
 
-@SerializeKeyName("hook:info")
-public class HookInfoRequest extends CommandRequest {
+public class HookInfoRequest extends CommandRequest<CommandResult> {
 
     @CmdParam(
         name = "hookId",
@@ -24,18 +21,4 @@ public class HookInfoRequest extends CommandRequest {
 
     public String getHookId() { return hookId; }
     public void setHookId(String hookId) { this.hookId = hookId; }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        if (hookId != null) obj.put("hookId", hookId);
-        return obj;
-    }
-
-    @Override
-    public HookInfoRequest fromJson(JSONObject obj) {
-        setRequestId(obj.optString("requestId"));
-        setHookId(obj.optString("hookId", null));
-        return this;
-    }
 }

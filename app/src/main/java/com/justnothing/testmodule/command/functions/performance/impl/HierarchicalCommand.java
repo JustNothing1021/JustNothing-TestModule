@@ -33,14 +33,15 @@ import java.util.stream.Collectors;
             report [id]                        查看报告 (默认最新)
             export <id> <path>                 导出数据"""
 )
-public class HierarchicalCommand extends AbstractPerfCommand<PerformanceRequest, HierarchicalResult> {
+public class HierarchicalCommand extends AbstractPerfCommand<PerformanceRequest<?>, HierarchicalResult> {
 
+    @SuppressWarnings("unchecked")
     public HierarchicalCommand() {
-        super("performance hierarchical", PerformanceRequest.class, HierarchicalResult.class);
+        super("performance hierarchical", (Class) PerformanceRequest.class, HierarchicalResult.class);
     }
 
     @Override
-    protected HierarchicalResult executePerfCommand(PerformanceRequest req) throws Exception {
+    protected HierarchicalResult executePerfCommand(PerformanceRequest<?> req) throws Exception {
         logger.debug("[hier] 收到请求: %s", req.getClass().getSimpleName());
 
         if (req instanceof HierarchicalStartRequest startReq) {

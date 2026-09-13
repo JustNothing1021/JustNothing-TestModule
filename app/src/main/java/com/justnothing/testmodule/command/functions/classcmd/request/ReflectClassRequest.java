@@ -2,16 +2,14 @@ package com.justnothing.testmodule.command.functions.classcmd.request;
 
 import com.justnothing.testmodule.command.framework.error.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
 import com.justnothing.testmodule.command.framework.model.CustomCommandLineParser;
-import com.justnothing.testmodule.command.framework.utils.ParamParser;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandRequest;
+import com.justnothing.testmodule.command.functions.classcmd.response.ReflectOperationResult;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@SerializeKeyName("class:reflect")
-public class ReflectClassRequest extends ClassCommandRequest 
+public class ReflectClassRequest extends ClassCommandRequest<ReflectOperationResult> 
         implements CustomCommandLineParser {
 
     @CmdParam(
@@ -130,8 +128,4 @@ public class ReflectClassRequest extends ClassCommandRequest
         return this;
     }
 
-    @Override
-    public ReflectClassRequest fromCommandLine(String[] args) throws IllegalCommandLineArgumentException {
-        return (ReflectClassRequest) ParamParser.parse(ReflectClassRequest.class, args);
-    }
 }

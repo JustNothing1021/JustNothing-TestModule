@@ -7,6 +7,8 @@ import com.justnothing.testmodule.command.functions.agent.handlers.InspectionCli
 import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.functions.agent.request.AgentDbListRequest;
 
+import java.util.Locale;
+
 public class AgentDbListCommand extends AbstractCommand<AgentDbListRequest, DbListResult> {
 
     public AgentDbListCommand() {
@@ -22,7 +24,8 @@ public class AgentDbListCommand extends AbstractCommand<AgentDbListRequest, DbLi
             context.println("[" + pkg + "] Databases (" + result.getDbFiles().size() + "):", Colors.CYAN);
             for (DbListResult.DbFileInfo info : result.getDbFiles()) {
                 String tag = info.isDatabase() ? "[DB]" : "[--]";
-                context.println(String.format("  %s %-30s %8d bytes", tag,
+                context.println(String.format(Locale.getDefault(),
+                        "  %s %-30s %8d bytes", tag,
                         info.getName(), info.getSizeBytes()), Colors.WHITE);
             }
         }

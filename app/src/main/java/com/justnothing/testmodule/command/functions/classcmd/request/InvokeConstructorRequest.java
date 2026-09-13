@@ -3,17 +3,16 @@ package com.justnothing.testmodule.command.functions.classcmd.request;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.framework.error.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandRequest;
+import com.justnothing.testmodule.command.functions.classcmd.response.InvokeConstructorResult;
 import com.justnothing.testmodule.command.framework.model.CustomCommandLineParser;
-import com.justnothing.testmodule.command.framework.utils.ParamParser;
+import com.justnothing.testmodule.command.framework.utils.CmdParamProcessor;
 import com.justnothing.testmodule.command.framework.utils.ParamStringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@SerializeKeyName("class:constructor")
-public class InvokeConstructorRequest extends ClassCommandRequest implements CustomCommandLineParser {
+public class InvokeConstructorRequest extends ClassCommandRequest<InvokeConstructorResult> implements CustomCommandLineParser {
 
     @CmdParam(
         name = "class",
@@ -82,29 +81,25 @@ public class InvokeConstructorRequest extends ClassCommandRequest implements Cus
 
     // ========== CustomCommandLineParser 实现 ==========
 
-    @Override
-    public CommandRequest customParse(CustomCommandLineParser.ParseContext context) throws IllegalCommandLineArgumentException {
-        return fromCommandLine(context.originalArgs());
-    }
-
     /**
      * CLI 解析入口:
-     * 1. 用 ParamParser 解析 className, 标志选项
+     * 1. 声明式解析（@CmdParam）：className / 标志选项
      * 2. 手动收集位置2及之后的剩余参数 → paramsRaw (String[])
      * 3. 解析每个参数 token → params + paramTypes 列表
      */
     @Override
-    public InvokeConstructorRequest fromCommandLine(String[] args) throws IllegalCommandLineArgumentException {
-        InvokeConstructorRequest parsed = ParamParser.parse(InvokeConstructorRequest.class, args);
+    public CommandRequest customParse(CustomCommandLineParser.ParseContext context) throws IllegalCommandLineArgumentException {
+        String[] args = context.originalArgs();
+        CmdParamProcessor.parseCommandLineArgs(this, args);
 
         // 从原始参数中提取位置2之后的剩余参数（跳过选项）
         List<String> remaining = collectRemainingPositionalArgs(args, 2);
         if (!remaining.isEmpty()) {
-            parsed.paramsRaw = remaining.toArray(new String[0]);
-            parsed.rebuildParamsFromRaw();
+            this.paramsRaw = remaining.toArray(new String[0]);
+            this.rebuildParamsFromRaw();
         }
 
-        return parsed;
+        return this;
     }
 
     // ========== 内部方法 ==========

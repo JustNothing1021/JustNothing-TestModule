@@ -17,7 +17,7 @@ import java.util.concurrent.CompletableFuture;
  * <p>使用方式：</p>
  * <pre>
  *   ShellExecutor shell = ShellExecutorProvider.get();
- *   ProcessResult result = shell.execute("pm list packages");
+ *   ProcessResult result = shell.executeWithResult("pm list packages");
  * </pre>
  */
 public interface ShellExecutor {

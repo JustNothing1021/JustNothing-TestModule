@@ -1,11 +1,10 @@
 package com.justnothing.testmodule.command.functions.breakpoint.request;
 
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.functions.breakpoint.response.BreakpointResult;
 
-@SerializeKeyName("breakpoint:add")
-public class BreakpointAddRequest extends CommandRequest {
+public class BreakpointAddRequest extends CommandRequest<BreakpointResult> {
 
     @CmdParam(name = "className", position = 1, required = true, description = "类名")
     private String className;

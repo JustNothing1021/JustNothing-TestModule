@@ -2,12 +2,9 @@ package com.justnothing.testmodule.command.functions.performance.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.functions.performance.PerformanceRequest;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.justnothing.testmodule.command.functions.performance.response.SampleResult;
 
-@SerializeKeyName("perf:sample:report")
-public class SampleReportRequest extends PerformanceRequest {
+public class SampleReportRequest extends PerformanceRequest<SampleResult> {
 
     @CmdParam(
         name = "id",
@@ -23,18 +20,4 @@ public class SampleReportRequest extends PerformanceRequest {
 
     public Integer getTaskId() { return taskId; }
     public void setTaskId(Integer taskId) { this.taskId = taskId; }
-
-    @Override
-    public JSONObject toJson() throws JSONException {
-        JSONObject obj = super.toJson();
-        if (taskId != null) obj.put("taskId", taskId);
-        return obj;
-    }
-
-    @Override
-    public SampleReportRequest fromJson(JSONObject obj) throws org.json.JSONException {
-        setRequestId(obj.optString("requestId"));
-        if (obj.has("taskId")) setTaskId(obj.getInt("taskId"));
-        return this;
-    }
 }

@@ -5,8 +5,11 @@ import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
 import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.functions.threads.AbstractThreadsCommand;
 import com.justnothing.testmodule.command.functions.threads.request.ThreadListRequest;
+import com.justnothing.testmodule.command.functions.threads.response.ThreadDetail;
 import com.justnothing.testmodule.command.functions.threads.response.ThreadListResult;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 @SubCommandInfo(
@@ -74,6 +77,9 @@ public class ListCommand extends AbstractThreadsCommand<ThreadListRequest, Threa
         context.println("");
 
         boolean found = false;
+        boolean includeStackTrace = !ThreadListRequest.LEVEL_BASIC.equals(request.getDetailLevel());
+        List<ThreadDetail> details = new ArrayList<>();
+
         for (Map.Entry<Thread, StackTraceElement[]> entry : allStackTraces.entrySet()) {
             Thread thread = entry.getKey();
             StackTraceElement[] stackTrace = entry.getValue();
@@ -84,6 +90,7 @@ public class ListCommand extends AbstractThreadsCommand<ThreadListRequest, Threa
 
             found = true;
             printThreadInfo(context, thread, stackTrace);
+            details.add(ThreadDetail.of(thread, stackTrace, includeStackTrace));
         }
 
         if (!found && (filterId != null || filterName != null || filterState != null)) {
@@ -93,6 +100,8 @@ public class ListCommand extends AbstractThreadsCommand<ThreadListRequest, Threa
         logger.info("线程信息查询完成");
 
         ThreadListResult result = new ThreadListResult();
+        result.setTimestamp(System.currentTimeMillis());
+        result.setThreadDetails(details);
         result.setTotalThreadCount(allStackTraces.size());
         result.setBlockedCount(blockedCount);
         result.setWaitingCount(waitingCount);

@@ -64,7 +64,6 @@ public class AgentRunCommand extends AbstractCommand<AgentRunRequest, CommandRes
 
         CommandResult result = new CommandResult();
         result.setSuccess(true);
-        result.setResultType("dispatch_interactive");
         return result;
     }
 }

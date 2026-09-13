@@ -6,7 +6,8 @@ import com.justnothing.testmodule.command.framework.annotation.CmdRoutes;
 import com.justnothing.testmodule.command.framework.utils.CmdParamProcessor;
 import com.justnothing.testmodule.utils.logging.Logger;
 
-public abstract class MainCommand<Res extends CommandResult> {
+public abstract class MainCommand<Res extends CommandResult>
+        extends AbstractCommand<CommandRequest<?> /* 接受任意类型 */, Res> {
 
     public static class CommandLogger extends Logger {
         private final String tag;
@@ -21,13 +22,13 @@ public abstract class MainCommand<Res extends CommandResult> {
         }
     }
 
-    protected final Class<Res> responseType;
-
     protected CommandLogger logger;
 
-    public MainCommand(String commandName, Class<Res> type) {
+    @SuppressWarnings("unchecked")
+    protected MainCommand(String commandName, Class<Res> type) {
+        // 命令根不绑定具体请求类型：类型护栏退化为"是 CommandRequest 即可"
+        super(commandName, (Class<CommandRequest<?>>) (Class<?>) CommandRequest.class, type);
         logger = new CommandLogger(commandName);
-        this.responseType = type;
     }
 
     /**
@@ -43,6 +44,7 @@ public abstract class MainCommand<Res extends CommandResult> {
      * <p>
      * 子类可以覆盖此方法以提供自定义帮助文本。
      */
+    @Override
     public String getHelpText() {
         Cmd cmdAnnotation = getClass().getAnnotation(Cmd.class);
         if (cmdAnnotation != null) {
@@ -57,31 +59,39 @@ public abstract class MainCommand<Res extends CommandResult> {
                "输入 " + getCommandName() + " --help 查看详细帮助";
     }
 
-    public abstract Res runMain(CommandExecutor.CmdExecContext<CommandRequest> context) throws Exception;
+    /**
+     * 命令根的默认执行体：带 @CmdRoutes 的命令根只作为**路由与帮助的载体**，
+     * 真正的执行由各路由的 handler（AbstractCommand 子类）承担；只有没有路由的命令
+     * （各 demo/test）才需要覆写本方法。
+     */
+    @Override
+    protected Res executeInternal(CommandExecutor.CmdExecContext<CommandRequest<?>> context) throws Exception {
+        throw new UnsupportedOperationException(
+                "命令 " + commandName + " 没有可执行的实现（它只提供路由与帮助）");
+    }
 
     public String getCommandName() {
         return logger.getTag();
     }
 
     protected Res createErrorResult(String message) throws Exception {
-        Res result = responseType.newInstance();
+        Res result = returnType.newInstance();
         result.setSuccess(false);
         result.setMessage(message);
         return result;
     }
 
     protected Res createErrorResult(String message, Throwable t) throws Exception {
-        Res result = responseType.newInstance();
+        Res result = returnType.newInstance();
         result.setSuccess(false);
         result.setError(new CommandResult.ErrorInfo("EXECUTION_FAILED", message, t.toString()));
         return result;
     }
 
     protected Res createSuccessResult(String message) throws Exception {
-        Res result = responseType.newInstance();
+        Res result = returnType.newInstance();
         result.setSuccess(true);
         result.setMessage(message);
         return result;
     }
-
 }

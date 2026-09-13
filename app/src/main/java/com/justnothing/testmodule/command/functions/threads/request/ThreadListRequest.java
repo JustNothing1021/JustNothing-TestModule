@@ -2,10 +2,14 @@ package com.justnothing.testmodule.command.functions.threads.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
+import com.justnothing.testmodule.command.functions.threads.response.ThreadListResult;
 
-@SerializeKeyName("threads:list")
-public class ThreadListRequest extends CommandRequest {
+public class ThreadListRequest extends CommandRequest<ThreadListResult> {
+
+    /** 明细级别：只带线程状态信息（GUI 高频刷新用，不传堆栈） */
+    public static final String LEVEL_BASIC = "basic";
+    /** 明细级别：携带完整堆栈（GUI 手动刷新用） */
+    public static final String LEVEL_FULL = "full";
 
     @CmdParam(
         name = "--id",
@@ -58,6 +62,16 @@ public class ThreadListRequest extends CommandRequest {
     )
     private String filterState;
 
+    @CmdParam(
+        name = "--detail-level",
+        description = "明细级别: basic=不含堆栈, full=含堆栈",
+        required = false,
+        defaultValue = LEVEL_FULL,
+        allowedValues = {LEVEL_BASIC, LEVEL_FULL},
+        serializedName = "detailLevel"
+    )
+    private String detailLevel = LEVEL_FULL;
+
     public ThreadListRequest() {
         super();
     }
@@ -79,4 +93,7 @@ public class ThreadListRequest extends CommandRequest {
 
     public String getFilterState() { return filterState; }
     public void setFilterState(String filterState) { this.filterState = filterState; }
+
+    public String getDetailLevel() { return detailLevel; }
+    public void setDetailLevel(String detailLevel) { this.detailLevel = detailLevel; }
 }

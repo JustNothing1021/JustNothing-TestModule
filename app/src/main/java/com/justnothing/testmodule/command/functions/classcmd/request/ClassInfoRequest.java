@@ -2,12 +2,10 @@ package com.justnothing.testmodule.command.functions.classcmd.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.framework.error.IllegalCommandLineArgumentException;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
-import com.justnothing.testmodule.command.framework.utils.ParamParser;
 import com.justnothing.testmodule.command.functions.classcmd.ClassCommandRequest;
+import com.justnothing.testmodule.command.functions.classcmd.response.ClassInfoResult;
 
-@SerializeKeyName("class:info")
-public class ClassInfoRequest extends ClassCommandRequest {
+public class ClassInfoRequest extends ClassCommandRequest<ClassInfoResult> {
 
     @CmdParam(
         name = "class",
@@ -144,8 +142,4 @@ public class ClassInfoRequest extends ClassCommandRequest {
     public boolean isShowFields() { return showFields; }
     public void setShowFields(boolean showFields) { this.showFields = showFields; }
 
-    @Override
-    public ClassInfoRequest fromCommandLine(String[] args) throws IllegalCommandLineArgumentException {
-        return ParamParser.parse(ClassInfoRequest.class, args);
-    }
 }

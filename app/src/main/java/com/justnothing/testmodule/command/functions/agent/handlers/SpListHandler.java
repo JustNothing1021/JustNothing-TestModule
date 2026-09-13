@@ -4,7 +4,6 @@ import android.content.Context;
 import android.content.SharedPreferences;
 
 import com.justnothing.testmodule.command.framework.model.CommandResult;
-import com.justnothing.testmodule.constants.AgentResultTypes;
 
 import org.json.JSONObject;
 
@@ -21,7 +20,6 @@ public class SpListHandler extends AgentCommandHandler {
     @Override
     public CommandResult handle(JSONObject params, Context context) throws Exception {
         SpListResult result = new SpListResult();
-        result.setResultType(AgentResultTypes.SP_LIST);
 
         File spDir = new File(context.getApplicationInfo().dataDir, "shared_prefs");
 

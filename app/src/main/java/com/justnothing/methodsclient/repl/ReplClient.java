@@ -6,10 +6,10 @@ import com.justnothing.methodsclient.executor.SocketStreamReader;
 import com.justnothing.methodsclient.highlighter.HighlighterManager;
 import com.justnothing.methodsclient.highlighter.SwitchableHighlighter;
 import com.justnothing.methodsclient.monitor.ClientPortManager;
+import com.justnothing.methodsclient.renderer.TerminalRenderer;
 import com.justnothing.methodsclient.tailtip.TailTipManager;
 import com.justnothing.methodsclient.test.TerminalCapabilityTest;
 import com.justnothing.methodsclient.utils.TerminalManager;
-import com.justnothing.testmodule.command.framework.protocol.InteractiveProtocol;
 import com.justnothing.testmodule.command.framework.output.ClientRequirements;
 
 import org.jline.reader.LineReader;
@@ -19,10 +19,8 @@ import org.jline.reader.UserInterruptException;
 import org.jline.widget.TailTipWidgets;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -177,21 +175,16 @@ public class ReplClient {
             socket.setSoTimeout(10000);
             socket.connect(new InetSocketAddress("localhost", serverPort), 5000);
 
-            // 能力协商
-            negotiateCapability(socket.getOutputStream());
+            // 能力经 sys.hello RPC 握手（readRpcStream 内发送）
+            ClientRequirements requirements = SocketStreamReader.buildClientRequirements(true, false);
 
-            // 发送命令
-            InteractiveProtocol.writeMessage(socket.getOutputStream(),
-                    InteractiveProtocol.TYPE_CLIENT_COMMAND,
-                    command.getBytes(StandardCharsets.UTF_8));
-
-            // 同步读取响应直到 COMMAND_END
+            // 同步读取响应直到 cmd.done
             AtomicBoolean reading = new AtomicBoolean(true);
             AtomicLong bytesRead = new AtomicLong(0);
 
-            boolean ok = SocketStreamReader.readColoredInteractiveStream(
+            boolean ok = SocketStreamReader.readRpcStream(
                     socket.getInputStream(), socket.getOutputStream(),
-                    reading, bytesRead, socket, null);
+                    reading, bytesRead, socket, requirements, command, null, new TerminalRenderer());
             if (!ok) {
                 logger.warn("命令执行异常或连接中断: " + command);
             }
@@ -209,35 +202,6 @@ public class ReplClient {
 
         // 命令结束后多输出一个换行分隔
         System.out.println();
-    }
-
-    private void negotiateCapability(OutputStream output) throws IOException {
-        ClientRequirements req = new ClientRequirements(true, false);
-        // 填入终端尺寸和能力
-        var terminal = TerminalManager.getTerminal();
-        if (terminal != null) {
-            try {
-                org.jline.terminal.Size size = terminal.getSize();
-                if (size != null && size.getColumns() > 0) {
-                    req.setWidth(size.getColumns());
-                    req.setHeight(size.getRows());
-                }
-            } catch (Exception ignored) {}
-            req.setSupportsAnsi(!org.jline.terminal.Terminal.TYPE_DUMB.equals(terminal.getType()));
-        }
-        // 颜色系统检测
-        String colorTerm = System.getenv("COLORTERM");
-        String term = System.getenv("TERM");
-        if ("truecolor".equals(colorTerm) || "24bit".equals(colorTerm)) {
-            req.setColorSystem(ClientRequirements.COLOR_TRUECOLOR);
-        } else if (term != null && term.contains("256color")) {
-            req.setColorSystem(ClientRequirements.COLOR_EIGHT_BIT);
-        } else {
-            req.setColorSystem(ClientRequirements.COLOR_STANDARD);
-        }
-        InteractiveProtocol.writeMessage(output,
-                InteractiveProtocol.TYPE_CLIENT_CAPABILITY,
-                InteractiveProtocol.encodeCapability(req));
     }
 
     // ==================== JLine 构建 ====================

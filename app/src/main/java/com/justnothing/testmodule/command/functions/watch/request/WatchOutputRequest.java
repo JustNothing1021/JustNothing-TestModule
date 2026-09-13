@@ -1,11 +1,10 @@
 package com.justnothing.testmodule.command.functions.watch.request;
 
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.functions.watch.response.WatchOutputResult;
 
-@SerializeKeyName("WatchOutput")
-public class WatchOutputRequest extends CommandRequest {
+public class WatchOutputRequest extends CommandRequest<WatchOutputResult> {
 
     @CmdParam(
         name = "target",

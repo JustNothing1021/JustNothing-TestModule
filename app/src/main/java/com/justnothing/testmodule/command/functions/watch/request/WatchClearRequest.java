@@ -1,10 +1,9 @@
 package com.justnothing.testmodule.command.functions.watch.request;
 
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
-import com.justnothing.testmodule.command.framework.annotation.SerializeKeyName;
+import com.justnothing.testmodule.command.functions.watch.response.WatchClearResult;
 
-@SerializeKeyName("WatchClear")
-public class WatchClearRequest extends CommandRequest {
+public class WatchClearRequest extends CommandRequest<WatchClearResult> {
 
     public WatchClearRequest() {
         super();

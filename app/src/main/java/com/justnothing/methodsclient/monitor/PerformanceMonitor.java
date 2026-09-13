@@ -4,7 +4,7 @@ import static com.justnothing.testmodule.constants.CommandClient.PERFORMANCE_DAT
 
 import com.justnothing.methodsclient.StreamClient;
 import com.justnothing.testmodule.utils.io.IOManager;
-import com.justnothing.testmodule.utils.io.RootProcessPool;
+import com.justnothing.testmodule.utils.io.ShellExecutorProvider;
 
 import java.io.File;
 import java.io.IOException;
@@ -139,7 +139,7 @@ public class PerformanceMonitor {
                 return;
             }
             try {
-                IOManager.ProcessResult chmodResult = RootProcessPool.executeCommand("chmod 777 " + dir.getAbsolutePath(), 5000, true);
+                IOManager.ProcessResult chmodResult = ShellExecutorProvider.get().execute("chmod 777 " + dir.getAbsolutePath(), 5000);
                 if (!chmodResult.isSuccess()) {
                     logger.warn("设置性能统计目录权限失败: " + dir.getAbsolutePath());
                 }

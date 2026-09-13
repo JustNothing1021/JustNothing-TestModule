@@ -4,7 +4,6 @@ import android.content.Context;
 import android.content.SharedPreferences;
 
 import com.justnothing.testmodule.command.framework.model.CommandResult;
-import com.justnothing.testmodule.constants.AgentResultTypes;
 
 import org.json.JSONObject;
 
@@ -45,7 +44,6 @@ public class SpWriteHandler extends AgentCommandHandler {
         boolean committed = editor.commit();
 
         SpWriteResult result = new SpWriteResult(committed);
-        result.setResultType(AgentResultTypes.SP_WRITE);
         result.setSpName(spName);
         result.setKey(key);
 

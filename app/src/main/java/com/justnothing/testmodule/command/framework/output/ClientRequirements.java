@@ -1,5 +1,9 @@
 package com.justnothing.testmodule.command.framework.output;
 
+import androidx.annotation.NonNull;
+
+import com.google.gson.JsonObject;
+
 /**
  * 客户端能力需求。
  *
@@ -20,7 +24,6 @@ package com.justnothing.testmodule.command.framework.output;
 public class ClientRequirements {
 
     /** 颜色系统常量 */
-    public static final byte COLOR_NONE = 0;
     public static final byte COLOR_STANDARD = 1;
     public static final byte COLOR_EIGHT_BIT = 2;
     public static final byte COLOR_TRUECOLOR = 3;
@@ -100,6 +103,43 @@ public class ClientRequirements {
         this.colorSystem = colorSystem;
     }
 
+    // ─── RPC 参数序列化（sys.hello）──────────────────────────
+
+    /**
+     * 序列化为 RPC 参数（sys.hello）。
+     *
+     * <p>手写 JsonObject：本类字段无 {@code @Expose} 注解，
+     * 走 GsonFactory 会被过滤掉。params 只携带能力字段。</p>
+     */
+    public static JsonObject toRpcParams(ClientRequirements req) {
+        JsonObject params = new JsonObject();
+        params.addProperty("supportsInput", req.isSupportsInput());
+        params.addProperty("isJsonMode", req.isJsonMode());
+        params.addProperty("width", req.getWidth());
+        params.addProperty("height", req.getHeight());
+        params.addProperty("supportsAnsi", req.isSupportsAnsi());
+        params.addProperty("colorSystem", req.getColorSystem());
+        return params;
+    }
+
+    /**
+     * 从 RPC 参数（sys.hello）还原客户端能力。
+     */
+    public static ClientRequirements fromRpcParams(JsonObject params) {
+        ClientRequirements req = new ClientRequirements();
+        if (params == null) {
+            return req;
+        }
+        if (params.has("supportsInput")) req.setSupportsInput(params.get("supportsInput").getAsBoolean());
+        if (params.has("isJsonMode")) req.setJsonMode(params.get("isJsonMode").getAsBoolean());
+        if (params.has("width")) req.setWidth(params.get("width").getAsInt());
+        if (params.has("height")) req.setHeight(params.get("height").getAsInt());
+        if (params.has("supportsAnsi")) req.setSupportsAnsi(params.get("supportsAnsi").getAsBoolean());
+        if (params.has("colorSystem")) req.setColorSystem(params.get("colorSystem").getAsByte());
+        return req;
+    }
+
+    @NonNull
     @Override
     public String toString() {
         return "ClientRequirements[" +
