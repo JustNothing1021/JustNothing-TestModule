@@ -5,7 +5,6 @@ import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.model.CommandResult;
 import com.justnothing.testmodule.command.framework.model.AbstractCommand;
 import com.justnothing.testmodule.command.functions.breakpoint.util.BreakpointManager;
-import com.justnothing.testmodule.command.functions.breakpoint.response.BreakpointResult;
 import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.utils.logging.Logger;
 
@@ -34,17 +33,7 @@ public abstract class AbstractBreakpointCommand<REQUEST extends CommandRequest<?
     protected void out(String text) { context.println(text, Colors.WHITE); }
     protected void out(String text, byte color) { context.println(text, color); }
 
-    protected BreakpointResult createSuccessResult(String msg) {
-        BreakpointResult r = new BreakpointResult();
-        r.setSuccess(true);
-        r.setMessage(msg);
-        return r;
-    }
-
-    protected BreakpointResult createErrorResult(String msg) {
-        BreakpointResult r = new BreakpointResult();
-        r.setSuccess(false);
-        r.setMessage(msg);
-        return r;
-    }
+    // createSuccessResult / createErrorResult 由 AbstractCommand 统一提供。
+    // 原先这里返回的是具体类型 BreakpointResult（而不是类型变量 RESULT），
+    // 在父类补上同名方法后会变成"继承冲突"，因此删掉改为继承。
 }

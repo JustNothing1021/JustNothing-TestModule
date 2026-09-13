@@ -15,16 +15,7 @@ public abstract class AbstractWatchCommand<Req extends CommandRequest<?>, Res ex
         super(commandName, requestType, responseType);
     }
 
-    protected Res createErrorResult(String message) {
-        try {
-            Res result = returnType.newInstance();
-            result.setSuccess(false);
-            result.setMessage(message);
-            return result;
-        } catch (Exception e) {
-            return null;
-        }
-    }
+    // createErrorResult 由 AbstractCommand 统一提供（原先这里有一份会在失败时返回 null 的副本）
 
     @Override
     protected Res executeInternal(CommandExecutor.CmdExecContext<Req> context) throws Exception {

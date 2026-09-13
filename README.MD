@@ -122,7 +122,6 @@ magisk --install-module /data/local/tmp/magisk-module.zip
  - 然后，更改一下可执行文件的权限
 ```text
 chmod 0775 /system/bin/methods                 # Shell客户端文件
-chmod 0775 /system/bin/methods-daemon          # 守护进程监视器
 
 # 顺便把数据目录也更改一下
 mkdir /data/local/tmp/methods 

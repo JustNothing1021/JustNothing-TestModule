@@ -14,6 +14,7 @@ import com.justnothing.methodsclient.utils.TerminalManager;
 import com.justnothing.testmodule.command.framework.output.InputMode;
 import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.framework.output.ClientRequirements;
+import com.justnothing.testmodule.command.framework.protocol.FrameReader;
 import com.justnothing.testmodule.command.framework.protocol.InteractiveProtocol;
 import com.justnothing.testmodule.command.framework.protocol.ProtocolMethods;
 import com.justnothing.testmodule.command.framework.protocol.RemoteClientTerminal;
@@ -276,19 +277,29 @@ public class SocketStreamReader {
 
             startPingThread(rpcChannel, reading);
 
-            // 读取循环：仅 TYPE_RPC 帧
+            // 读取循环：仅 TYPE_RPC 帧。
+            //
+            // 这里用有状态的 FrameReader 取代无状态的 InteractiveProtocol.readMessage：
+            // 读超时会切断一次 read()，而 readMessage 把"已读到几个字节"放在局部变量里，
+            // 一次超时就会丢掉整个帧的读取进度，而流的位置已经前进 —— 下次再读就把剩余字节
+            // 当成新包头，必然对不上起始标记（Invalid packet start marker），连接随即报废。
+            // FrameReader 把已收到的字节保留在自己的缓冲区里、凑够整帧才消费，
+            // 所以下面这行 1 秒读超时现在只是"这次没有新数据"。
+            FrameReader frameReader = new FrameReader(input);
             while (reading.get() && !commandDone.get() && !Thread.currentThread().isInterrupted()) {
                 try {
                     socket.setSoTimeout(1000);
-                    Object[] packet = InteractiveProtocol.readMessage(input);
+                    Object[] packet = frameReader.tryReadFrame();
 
                     if (packet == null) {
-                        logger.info("服务器已关闭连接");
-                        return true;
-                    }
-
-                    if (isServerTimeout(lastResponseTime)) {
-                        return false;
+                        if (frameReader.isEndOfStream()) {
+                            logger.info("服务器已关闭连接");
+                            return true;
+                        }
+                        if (isServerTimeout(lastResponseTime)) {
+                            return false;
+                        }
+                        continue;
                     }
 
                     byte type = (byte) packet[0];
@@ -305,6 +316,7 @@ public class SocketStreamReader {
                             break;
                     }
                 } catch (SocketTimeoutException e) {
+                    // FrameReader 内部已经吸收了读超时，这里是双保险
                     if (isServerTimeout(lastResponseTime)) {
                         return false;
                     }

@@ -88,7 +88,7 @@
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity
-            android:name=".ui.activity.classanalysis.ClassBrowserActivity"
+            android:name=".ui.activity.ClassBrowserActivity"
             android:exported="false"
             android:theme="@style/Theme.JustNothing" />
         <activity

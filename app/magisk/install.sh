@@ -30,9 +30,7 @@ print_modname() {
 # 文件替换列表
 ##########################################################################################
 
-REPLACE="
-
-"
+REPLACE=""
 
 ##########################################################################################
 # 进行安装
@@ -42,11 +40,6 @@ on_install() {
   ui_print "- 正在释放文件"
   unzip -o "$ZIPFILE" 'system/*' -d $MODPATH >&2
   unzip -o "$ZIPFILE" 'common/*' -d $MODPATH >&2
-
-  ui_print "- 检测设备架构: $ARCH"
-  
-  ui_print "- 安装Busybox..."
-  magisk --install-module "$MODPATH/common/busybox.zip"
 }
 
 ##########################################################################################
@@ -58,5 +51,7 @@ set_permissions() {
 
   set_perm_recursive  $MODPATH         0  0  0755  0644
   set_perm_recursive  $MODPATH/system  0  0  0755  0755
-}
 
+  set_perm  $MODPATH/system/bin/methods  0  0  0755
+  set_perm  $MODPATH/system/bin/test     0  0  0755
+}

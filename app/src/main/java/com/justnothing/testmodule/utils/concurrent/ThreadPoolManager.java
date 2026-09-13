@@ -87,8 +87,14 @@ public class ThreadPoolManager {
                 rejectionHandler
         );
 
+        // 定时任务池的核心线程数就是并发上限（ScheduledThreadPoolExecutor 用的是无界延迟队列，
+        // 线程数到 corePoolSize 之后不会再扩，所以核心线程数等于硬上限）。
+        // 原来写的是 75 / 150，在 4 核手表上会造成大量常驻线程：
+        // 每提交一个定时任务就新建一个线程，核心线程又永不回收 —— 实测有进程留下整整 75 个
+        // Scheduled-Pool 线程、全系统加起来两百多个，纯属白白占用内存与调度资源。
+        // 这些任务绝大多数是短任务（心跳、维护、轮询），16 / 32 已经足够。
         scheduledExecutor = Executors.newScheduledThreadPool(
-                IS_LOW_END_DEVICE ? 75 : 150,
+                IS_LOW_END_DEVICE ? 16 : 32,
                 scheduledThreadFactory
         );
 

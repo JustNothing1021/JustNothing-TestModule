@@ -5,8 +5,6 @@ import com.google.gson.annotations.SerializedName;
 import com.justnothing.testmodule.command.framework.utils.GsonFactory;
 import com.justnothing.testmodule.utils.logging.Logger;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -65,60 +63,6 @@ public abstract class CommandRequest<Res extends CommandResult> {
     }
 
     /**
-     * 从 Gson 反序列化的结果复制字段到 this
-     */
-    private void copyFieldsFrom(CommandRequest<?> source) {
-        try {
-            for (Field field : source.getClass().getDeclaredFields()) {
-                if (Modifier.isStatic(field.getModifiers())) {
-                    continue;
-                }
-                field.setAccessible(true);
-                copyField(field.getName(), field.get(source));
-            }
-
-            Class<?> superClass = source.getClass().getSuperclass();
-            while (superClass != null && superClass != Object.class) {
-                for (Field field : superClass.getDeclaredFields()) {
-                    if (Modifier.isStatic(field.getModifiers())) {
-                        continue;
-                    }
-                    field.setAccessible(true);
-                    copyField(field.getName(), field.get(source));
-                }
-                superClass = superClass.getSuperclass();
-            }
-        } catch (Exception e) {
-            logger.error("Failed to copy fields from Gson result", e);
-        }
-    }
-
-    private void copyField(String name, Object value) throws IllegalAccessException {
-        Field targetField = findField(name);
-        if (targetField != null) {
-            targetField.setAccessible(true);
-            targetField.set(this, value);
-        }
-    }
-
-    /**
-     * 查找字段（包括父类）
-     */
-    private Field findField(String fieldName) {
-        Class<?> currentClass = this.getClass();
-
-        while (currentClass != null && currentClass != Object.class) {
-            try {
-                return currentClass.getDeclaredField(fieldName);
-            } catch (NoSuchFieldException e) {
-                currentClass = currentClass.getSuperclass();
-            }
-        }
-
-        return null;
-    }
-
-    /**
      * 纯 Gson 序列化（推荐使用）
      * 返回 JSON 字符串，完全绕过 org.json
      * 适用于所有环境（包括 Android 测试）
@@ -143,12 +87,11 @@ public abstract class CommandRequest<Res extends CommandResult> {
             T result = (T) GsonFactory.getInstance().fromJson(jsonStr, this.getClass());
 
             if (result != null) {
-                copyFieldsFrom(result);
-                return (T) this;
+                CommandFieldCopier.copy(result, this);
             } else {
                 logger.warn("Gson returned null for " + this.getClass().getSimpleName());
-                return (T) this;
             }
+            return (T) this;
         } catch (Exception e) {
             logger.error("Failed to deserialize from string", e);
             return (T) this;

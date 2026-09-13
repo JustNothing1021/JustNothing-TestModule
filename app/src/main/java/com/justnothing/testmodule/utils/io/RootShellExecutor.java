@@ -63,7 +63,15 @@ public class RootShellExecutor implements ShellExecutor {
             return false;
         }
         RootProcessPool pool = RootProcessPool.getInstance();
-        return pool != null && pool.getStats().contains("total=");
+        if (pool == null) {
+            return false;
+        }
+        // 注意：旧实现是 getStats().contains("total=")，这个判断恒为 true——
+        // 于是每个碰过 ShellExecutorProvider 的进程都会被判定成「有 root」，
+        // 接着就会 spawn 一个 su。而 su 需要 Magisk 授权，在授权拿不到的场景下
+        // （屏幕熄灭 / Magisk 应用正被厂商省电策略杀掉），这等于不停触发授权流程。
+        // 现在改为有界探测：失败会累加失败计数并进入冷却期，冷却期内不再 spawn su。
+        return pool.probeRootAvailability();
     }
 
     @Override

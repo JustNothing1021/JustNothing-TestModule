@@ -43,17 +43,18 @@ import com.justnothing.testmodule.command.functions.watch.WatchMain;
  * 各自维护一份命令类列表，已经漂移过一次（{@code did-you-know} 只在服务端注册）。
  * 现在两份合并为这里的唯一一份，新增命令只改这里。</p>
  *
- * <p>客户端是否展示某个命令由 {@code CommandMetadataScanner} 决定（它会过滤掉
- * 仅供本地调试的 demo/test 命令），清单本身不做区分。</p>
+ * <p>清单分两类：{@link #USER_FACING} 是面向用户的正式命令，help 列表与客户端补全只来自它；
+ * {@link #DEBUG_ONLY} 是仅供本地调试的 demo/test 命令，仍会被注册（可以用命令名手动执行），
+ * 但不会出现在 help 与补全里。{@link #ALL} 是二者的并集，用于注册与路由扫描。</p>
  */
 public final class CommandCatalog {
 
     private CommandCatalog() {
     }
 
-    /** 全部命令类（含仅供本地调试的 demo/test 命令）。 */
+    /** 面向用户的正式命令：help 清单与客户端补全只来自这里。 */
     @SuppressWarnings("unchecked")
-    public static final Class<? extends MainCommand<?>>[] ALL = new Class[]{
+    public static final Class<? extends MainCommand<?>>[] USER_FACING = new Class[]{
             HelpMain.class,
             WatchMain.class,
             TraceMain.class,
@@ -70,6 +71,15 @@ public final class CommandCatalog {
             NetworkMain.class,
             BeanShellExecutorMain.class,
             ScriptExecutorMain.class,
+            ClassMain.class,
+            PackagesMain.class,
+            AgentCliMain.class,
+            DidYouKnowMain.class,
+    };
+
+    /** 仅供本地调试的 demo/test 命令：会注册、可手动执行，但不对用户展示。 */
+    @SuppressWarnings("unchecked")
+    public static final Class<? extends MainCommand<?>>[] DEBUG_ONLY = new Class[]{
             OutputExampleMain.class,
             InteractiveExampleMain.class,
             SandboxTestMain.class,
@@ -84,9 +94,17 @@ public final class CommandCatalog {
             LiveDemoMain.class,
             MarkdownSyntaxDemoMain.class,
             FeatureDemoMain.class,
-            ClassMain.class,
-            PackagesMain.class,
-            AgentCliMain.class,
-            DidYouKnowMain.class,
     };
+
+    /** 全部命令类（{@link #USER_FACING} + {@link #DEBUG_ONLY}），用于注册与路由扫描。 */
+    public static final Class<? extends MainCommand<?>>[] ALL = buildAll();
+
+    @SuppressWarnings("unchecked")
+    private static Class<? extends MainCommand<?>>[] buildAll() {
+        Class<? extends MainCommand<?>>[] combined =
+                new Class[USER_FACING.length + DEBUG_ONLY.length];
+        System.arraycopy(USER_FACING, 0, combined, 0, USER_FACING.length);
+        System.arraycopy(DEBUG_ONLY, 0, combined, USER_FACING.length, DEBUG_ONLY.length);
+        return combined;
+    }
 }

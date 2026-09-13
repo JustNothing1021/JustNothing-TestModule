@@ -512,14 +512,15 @@ public class CommandExecutor {
     private static final String DEFAULT_COMMAND_GROUP = "general";
 
     /**
-     * 从命令清单的唯一真相源 {@link CommandCatalog#ALL} 派生「小节标题 + 命令名 - 描述」清单。
+     * 从面向用户的命令清单 {@link CommandCatalog#USER_FACING} 派生「小节标题 + 命令名 - 描述」清单。
+     * demo/test 命令（{@link CommandCatalog#DEBUG_ONLY}）仍然可执行，但不在这里列出。
      *
      * <p>命令按 {@code @Cmd.group()} 分小节：已知 group 映射为中文小节名，未知 group 原样作标题，
      * 未设置 group 的命令归入默认小节。单个命令读取注解失败只跳过它，不影响整体 help 渲染。</p>
      */
     private static String buildCommandList() {
         Map<String, List<String>> sections = new LinkedHashMap<>();
-        for (Class<? extends MainCommand<?>> cmdClass : CommandCatalog.ALL) {
+        for (Class<? extends MainCommand<?>> cmdClass : CommandCatalog.USER_FACING) {
             try {
                 Cmd cmd = cmdClass.getAnnotation(Cmd.class);
                 if (cmd == null) {

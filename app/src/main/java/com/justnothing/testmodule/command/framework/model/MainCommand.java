@@ -74,24 +74,6 @@ public abstract class MainCommand<Res extends CommandResult>
         return logger.getTag();
     }
 
-    protected Res createErrorResult(String message) throws Exception {
-        Res result = returnType.newInstance();
-        result.setSuccess(false);
-        result.setMessage(message);
-        return result;
-    }
-
-    protected Res createErrorResult(String message, Throwable t) throws Exception {
-        Res result = returnType.newInstance();
-        result.setSuccess(false);
-        result.setError(new CommandResult.ErrorInfo("EXECUTION_FAILED", message, t.toString()));
-        return result;
-    }
-
-    protected Res createSuccessResult(String message) throws Exception {
-        Res result = returnType.newInstance();
-        result.setSuccess(true);
-        result.setMessage(message);
-        return result;
-    }
+    // createErrorResult / createSuccessResult 统一由父类 AbstractCommand 提供，
+    // 子类直接继承，不再各自复制一份。
 }

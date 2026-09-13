@@ -18,9 +18,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Set;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.json.JSONObject;
@@ -265,22 +267,59 @@ public class CommandRouter {
         return null;
     }
     
+    /**
+     * 精确匹配失败后的模糊匹配。
+     *
+     * <p>依次尝试两种候选：大小写不敏感的全等、以及「子命令名以输入为前缀」。
+     * <b>无论哪种，只有候选唯一时才接受。</b>候选不唯一说明输入本身有歧义
+     * （例如 {@code cl} 能同时前缀命中多个子命令），此时返回 null 让调用方走
+     * 「未匹配」分支去提示可用子命令，而不是随机猜一个——
+     * 旧实现在 {@link java.util.HashMap} 上遍历，命中哪个取决于哈希顺序，
+     * 会把拼错的命令静默路由到不相干的子命令。</p>
+     */
     private RouteNode tryFuzzyMatch(RouteNode parent, String arg) {
-        for (Map.Entry<String, RouteNode> entry : parent.children.entrySet()) {
-            if (entry.getKey().equalsIgnoreCase(arg)) {
-                return entry.getValue();
+        String lowerArg = arg.toLowerCase(Locale.ROOT);
+
+        RouteNode match = uniqueCandidate(parent, lowerArg, true);
+        if (match != null) {
+            logger.debug("      [模糊匹配] 大小写不敏感全等命中: '" + arg + "'");
+            return match;
+        }
+
+        if (!lowerArg.isEmpty()) {
+            match = uniqueCandidate(parent, lowerArg, false);
+            if (match != null) {
+                logger.debug("      [模糊匹配] 唯一前缀命中: '" + arg + "'");
+                return match;
             }
         }
-        
-        for (Map.Entry<String, RouteNode> entry : parent.children.entrySet()) {
-            if (entry.getKey().startsWith(arg.toLowerCase()) || 
-                arg.toLowerCase().startsWith(entry.getKey())) {
-                logger.debug("      [模糊匹配] 部分匹配: '" + arg + "' -> '" + entry.getKey() + "'");
-                return entry.getValue();
-            }
-        }
-        
+
+        logger.debug("      [模糊匹配] 无候选或候选不唯一（按未匹配处理）: '" + arg + "'");
         return null;
+    }
+
+    /**
+     * 在子节点里找出唯一命中的那个。
+     *
+     * @param exact true 表示全等匹配，false 表示「子命令名以输入为前缀」
+     * @return 唯一命中的子节点；没有命中或有多个命中（歧义）都返回 null
+     */
+    private RouteNode uniqueCandidate(RouteNode parent, String lowerArg, boolean exact) {
+        RouteNode found = null;
+        // 排序遍历：候选是否唯一与遍历顺序无关，但确定的顺序让日志可复现
+        for (String key : new TreeSet<>(parent.children.keySet())) {
+            String lowerKey = key.toLowerCase(Locale.ROOT);
+            boolean hit = exact ? lowerKey.equals(lowerArg) : lowerKey.startsWith(lowerArg);
+            if (!hit) {
+                continue;
+            }
+            if (found != null) {
+                logger.debug("      [模糊匹配] 候选不唯一: '" + lowerArg + "' 同时命中多个子命令");
+                return null;
+            }
+            found = parent.children.get(key);
+        }
+        return found;
     }
 
     /**

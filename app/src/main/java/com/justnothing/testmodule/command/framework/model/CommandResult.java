@@ -7,8 +7,6 @@ import com.justnothing.testmodule.utils.logging.Logger;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 
 /**
  * 统一的 Result 基类（纯 Gson 实现）
@@ -66,53 +64,10 @@ public class CommandResult {
      */
     private void copyFieldsFrom(CommandResult source) {
         try {
-            for (Field field : source.getClass().getDeclaredFields()) {
-                if (Modifier.isStatic(field.getModifiers())) {
-                    continue;
-                }
-                field.setAccessible(true);
-                copyField(field.getName(), field.get(source));
-            }
-
-            Class<?> superClass = source.getClass().getSuperclass();
-            while (superClass != null && superClass != Object.class) {
-                for (Field field : superClass.getDeclaredFields()) {
-                    if (Modifier.isStatic(field.getModifiers())) {
-                        continue;
-                    }
-                    field.setAccessible(true);
-                    copyField(field.getName(), field.get(source));
-                }
-                superClass = superClass.getSuperclass();
-            }
-        } catch (Exception e) {
+            CommandFieldCopier.copy(source, this);
+        } catch (ReflectiveOperationException e) {
             logger.error("Failed to copy fields from Gson result", e);
         }
-    }
-
-    private void copyField(String name, Object value) throws IllegalAccessException {
-        Field targetField = findField(name);
-        if (targetField != null) {
-            targetField.setAccessible(true);
-            targetField.set(this, value);
-        }
-    }
-
-    /**
-     * 查找字段（包括父类）
-     */
-    private Field findField(String fieldName) {
-        Class<?> currentClass = this.getClass();
-
-        while (currentClass != null && currentClass != Object.class) {
-            try {
-                return currentClass.getDeclaredField(fieldName);
-            } catch (NoSuchFieldException e) {
-                currentClass = currentClass.getSuperclass();
-            }
-        }
-
-        return null;
     }
 
     public static class ErrorInfo {

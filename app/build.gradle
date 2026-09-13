@@ -1,8 +1,5 @@
-import com.android.build.gradle.AppExtension
-
-
 plugins {
-    id 'com.android.application'
+    alias(libs.plugins.android.application)
 }
 
 
@@ -65,11 +62,6 @@ android {
         }
     }
 
-    configurations {
-        all*.exclude group: 'androidx.lifecycle', module: 'lifecycle-viewmodel-ktx'
-    }
-
-
     sourceSets {
         main {
             resources {
@@ -87,13 +79,14 @@ android {
     ndkVersion = '29.0.14206865'
 }
 
+configurations {
+    all*.exclude group: 'androidx.lifecycle', module: 'lifecycle-viewmodel-ktx'
+}
+
 dependencies {
     implementation libs.androidx.appcompat
     implementation libs.material.v1110
     implementation libs.androidx.constraintlayout.v221
-    implementation libs.androidx.navigation.fragment.v277
-    implementation libs.androidx.navigation.ui.v277
-    implementation libs.firebase.crashlytics.buildtools
     implementation libs.bsh
     implementation libs.hutool.all
     implementation libs.gson
@@ -127,6 +120,13 @@ configurations.configureEach {
             details.useVersion "2.7.0"
         }
     }
+}
+
+def debugApkDir = null
+androidComponents {
+    onVariants(selector().withBuildType('debug'), { variant ->
+        debugApkDir = variant.artifacts.get(com.android.build.api.artifact.SingleArtifact.APK.INSTANCE)
+    })
 }
 
 tasks.register('prepareMagiskFiles', Task) {
@@ -168,25 +168,31 @@ description=一个用来调试安卓开发千奇百怪的诡异问题的Xposed�
             into file("${magiskDir}/system")
         }
 
-        def android = project.extensions.getByType(AppExtension)
-        android.applicationVariants.all { variant ->
-            if (variant.buildType.name == 'debug') {
-                variant.outputs.all { output ->
-                    def apkFile = output.outputFile
-                    if (apkFile != null && apkFile.exists()) {
-                        copy {
-                            from apkFile
-                            into file("${magiskDir}/system/framework")
-                            rename { 'methods-client.jar' }
-                        }
-                    }
-                }
-            }
+        if (debugApkDir == null) {
+            throw new GradleException('未找到 debug APK 产物，无法生成 Magisk 模块')
+        }
+        copy {
+            from debugApkDir
+            include '*.apk'
+            into file("${magiskDir}/system/framework")
+            rename { 'methods-client.jar' }
         }
 
         copy {
             from file('magisk/scripts')
             into file("${magiskDir}/system/bin")
+        }
+
+        // Magisk 侧的文件必须是 LF 行尾。
+        // Windows 上只要 git 的 core.autocrlf=true（且没有 .gitattributes 兜底），checkout 出来的
+        // 脚本就是 CRLF，而 shebang 末尾多出的 \r 会让内核去找名为 "/system/bin/sh\r" 的解释器，
+        // 运行时报 "No such file or directory"；同理 install.sh 里的多行字符串与 set_perm_recursive
+        // 的路径也会被 \r 污染（表现为打印一串空的 "- Replace target:"、以及脚本拿不到执行位）。
+        // 这里在打包时统一归一化，不依赖开发者的 git 配置，避免这个坑再犯。
+        fileTree(dir: magiskDir, includes: ['**/*.sh', 'system/bin/**', 'module.prop']).files.each { f ->
+            if (f.isFile()) {
+                f.setText(f.getText('UTF-8').replace('\r\n', '\n').replace('\r', '\n'), 'UTF-8')
+            }
         }
     }
 }
@@ -196,7 +202,6 @@ tasks.register('createMagiskZip', Zip) {
     group = 'build'
     description = '创建Magisk模块压缩包'
 
-    dependsOn 'assembleDebug'
     dependsOn 'prepareMagiskFiles'
 
     archiveFileName = 'magisk-module.zip'

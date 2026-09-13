@@ -53,17 +53,25 @@ public class ShellService extends Binder {
         }
         
         logger.info("检查su是否可用...");
-        int suMaxRetries = 5;
-        long suTimeoutMs = 10000;
-        long suRetryDelayMs = 3000;
+        // 重试次数与超时都要克制：su 需要 Magisk 授权，在授权拿不到的场合
+        // （熄屏 / Magisk 应用正被厂商省电策略杀掉）长时间反复重试，只会不停触发授权流程。
+        // 更彻底的兜底在 RootProcessPool 的「连续失败进入冷却期」逻辑里。
+        int suMaxRetries = 2;
+        long suTimeoutMs = 5000;
+        long suRetryDelayMs = 1000;
         
         boolean suAvailable = false;
         for (int suAttempt = 1; suAttempt <= suMaxRetries; suAttempt++) {
             try {
                 logger.info("su检查尝试 " + suAttempt + "/" + suMaxRetries + " (超时: " + suTimeoutMs + "ms)");
-                IOManager.ProcessResult suCheck = ShellExecutorProvider.get().execute("echo 'su available'", suTimeoutMs);
-                
-                if (suCheck.isSuccess() && suCheck.stdout() != null && suCheck.stdout().contains("su available")) {
+                // 用 `id -u` 真正验证是否拿到 root。
+                // 原来的 `echo 'su available'` 什么都证明不了：即使没有 root、
+                // 命令被降级成普通 shell 执行，它照样会成功并打印 "su available"，
+                // 于是后面的 chmod 必然失败，还要白白走完剩下的重试。
+                IOManager.ProcessResult suCheck = ShellExecutorProvider.get().execute("id -u", suTimeoutMs);
+                String suUid = suCheck.stdout() != null ? suCheck.stdout().trim() : "";
+
+                if (suCheck.isSuccess() && "0".equals(suUid)) {
                     logger.info("su可用，继续执行chmod");
                     suAvailable = true;
                     break;
@@ -95,8 +103,8 @@ public class ShellService extends Binder {
             return false;
         }
         
-        int maxRetries = 3;
-        int retryDelayMs = 2000;
+        int maxRetries = 2;
+        int retryDelayMs = 1000;
         long timeoutMs = 5000;
         
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
