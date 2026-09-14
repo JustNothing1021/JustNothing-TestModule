@@ -35,8 +35,8 @@ testmodule-keystore.jks
 # VSCode 生成的bin文件
 /app/bin
 /engine/bin
-# 由 :app:syncVdexExtractorAssets 生成的命令行工具（vdexExtractor 等）
 /app/src/main/assets/bin/
+/.idea/
 /engine_new/bin
 /engine_v2/bin
 
