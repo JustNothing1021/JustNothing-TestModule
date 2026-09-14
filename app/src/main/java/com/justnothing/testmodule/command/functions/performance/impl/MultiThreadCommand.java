@@ -1,8 +1,8 @@
 package com.justnothing.testmodule.command.functions.performance.impl;
 
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
-import com.justnothing.testmodule.command.functions.performance.PerformanceRequest;
-import com.justnothing.testmodule.command.functions.performance.PerfTaskManager;
+import com.justnothing.testmodule.command.functions.performance.request.PerformanceRequest;
+import com.justnothing.testmodule.command.functions.performance.util.PerfTaskManager;
 import com.justnothing.testmodule.command.functions.performance.request.*;
 import com.justnothing.testmodule.command.functions.performance.response.MultiThreadResult;
 import com.justnothing.testmodule.command.functions.performance.sampler.MultiThreadSampleData;

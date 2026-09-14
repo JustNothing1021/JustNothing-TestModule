@@ -5,9 +5,9 @@ import android.content.Context;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
-import com.justnothing.testmodule.command.functions.memory.GcRequest;
-import com.justnothing.testmodule.command.functions.memory.GcResult;
-import com.justnothing.testmodule.command.functions.memory.MemoryUtils;
+import com.justnothing.testmodule.command.functions.memory.request.GcRequest;
+import com.justnothing.testmodule.command.functions.memory.response.GcResult;
+import com.justnothing.testmodule.command.functions.memory.util.MemoryUtils;
 import com.justnothing.testmodule.command.framework.output.Colors;
 
 import java.util.Locale;
@@ -26,7 +26,7 @@ import java.util.Locale;
               --stats   - 显示GC统计信息
             """
 )
-public class GcCommand extends MemorySubCommand<GcRequest, GcResult> {
+public class GcCommand extends AbstractMemoryCommand<GcRequest, GcResult> {
 
     public GcCommand() {
         super("memory gc", GcRequest.class, GcResult.class);

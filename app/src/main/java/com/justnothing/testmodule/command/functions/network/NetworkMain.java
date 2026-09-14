@@ -19,6 +19,7 @@ import com.justnothing.testmodule.command.functions.network.request.NetworkClear
 import com.justnothing.testmodule.command.functions.network.request.NetworkShutdownRequest;
 import com.justnothing.testmodule.command.functions.network.impl.NetworkManageCommand;
 import com.justnothing.testmodule.command.functions.network.impl.NetworkQueryCommand;
+import com.justnothing.testmodule.command.functions.network.response.NetworkResult;
 
 @Cmd(
     name = "network",

@@ -3,6 +3,7 @@ package com.justnothing.testmodule.command.framework.output;
 import androidx.annotation.NonNull;
 
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 /**
  * 客户端能力需求。
@@ -137,6 +138,30 @@ public class ClientRequirements {
         if (params.has("supportsAnsi")) req.setSupportsAnsi(params.get("supportsAnsi").getAsBoolean());
         if (params.has("colorSystem")) req.setColorSystem(params.get("colorSystem").getAsByte());
         return req;
+    }
+
+    /**
+     * {@link #toRpcParams} 的字符串形式。
+     *
+     * <p>给那些用 {@code org.json} 的地方跨类型传能力用（例如 agent 的 {@code _dispatch}
+     * 请求体是 org.json，没法直接嵌一个 Gson 的 JsonObject）。把字段列表留在本类里，
+     * 调用方只当它是一串不透明的 JSON，加字段时不用跟着改。</p>
+     */
+    public static String toRpcParamsJson(ClientRequirements req) {
+        return toRpcParams(req).toString();
+    }
+
+    /** 从 {@link #toRpcParamsJson} 的产物还原；解析不了时返回 {@code null}。 */
+    public static ClientRequirements fromRpcParamsJson(String json) {
+        if (json == null || json.isEmpty()) {
+            return null;
+        }
+        try {
+            JsonObject params = JsonParser.parseString(json).getAsJsonObject();
+            return fromRpcParams(params);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     @NonNull

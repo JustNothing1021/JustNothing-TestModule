@@ -6,7 +6,7 @@ import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
 import com.justnothing.testmodule.command.functions.breakpoint.request.BreakpointListRequest;
 import com.justnothing.testmodule.command.functions.breakpoint.request.BreakpointHitsRequest;
 import com.justnothing.testmodule.command.functions.breakpoint.response.BreakpointResult;
-import com.justnothing.testmodule.command.functions.intercept.BreakpointInterceptTask;
+import com.justnothing.testmodule.command.functions.intercept.base.BreakpointInterceptTask;
 import com.justnothing.testmodule.command.framework.output.Colors;
 
 import java.util.Date;

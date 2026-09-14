@@ -4,7 +4,7 @@ import android.content.Intent;
 
 import com.justnothing.testmodule.hooks.api.HookParam;
 import com.justnothing.testmodule.hooks.api.MethodReplacement;
-import com.justnothing.testmodule.hooks.base.PackageHook;
+import com.justnothing.testmodule.hooks.PackageHook;
 
 public class XsesServiceHook extends PackageHook {
 

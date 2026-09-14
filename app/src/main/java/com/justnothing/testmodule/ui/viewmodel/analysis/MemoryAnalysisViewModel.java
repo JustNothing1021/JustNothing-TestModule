@@ -8,10 +8,10 @@ import androidx.lifecycle.MutableLiveData;
 
 import com.justnothing.testmodule.ui.viewmodel.BaseViewModel;
 import com.justnothing.testmodule.R;
-import com.justnothing.testmodule.command.functions.memory.GcRequest;
-import com.justnothing.testmodule.command.functions.memory.MemoryInfoRequest;
-import com.justnothing.testmodule.command.functions.memory.GcResult;
-import com.justnothing.testmodule.command.functions.memory.MemoryInfoResult;
+import com.justnothing.testmodule.command.functions.memory.request.GcRequest;
+import com.justnothing.testmodule.command.functions.memory.request.MemoryInfoRequest;
+import com.justnothing.testmodule.command.functions.memory.response.GcResult;
+import com.justnothing.testmodule.command.functions.memory.response.MemoryInfoResult;
 import com.justnothing.testmodule.ui.activity.analysis.memory.MemorySnapshot;
 
 import java.text.SimpleDateFormat;

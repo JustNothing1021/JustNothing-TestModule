@@ -18,9 +18,17 @@ public class BytecodeDumpRequest extends CommandRequest<BytecodeResult> {
         name = "outputPath",
         aliases = {"-o", "--output"},
         required = false,
-        description = "输出路径"
+        description = "输出目录（不填则自动挑一个可写目录）"
     )
     private String outputPath;
+
+    @CmdParam(
+        name = "disasm",
+        aliases = {"-d", "--disasm"},
+        required = false,
+        description = "导出后用设备自带 dexdump 反汇编该类的方法"
+    )
+    private boolean disasm;
 
     public BytecodeDumpRequest() {
         super();
@@ -31,4 +39,7 @@ public class BytecodeDumpRequest extends CommandRequest<BytecodeResult> {
 
     public String getOutputPath() { return outputPath; }
     public void setOutputPath(String outputPath) { this.outputPath = outputPath; }
+
+    public boolean isDisasm() { return disasm; }
+    public void setDisasm(boolean disasm) { this.disasm = disasm; }
 }

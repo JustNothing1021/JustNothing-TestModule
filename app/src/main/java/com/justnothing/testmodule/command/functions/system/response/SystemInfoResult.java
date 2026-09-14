@@ -1,0 +1,30 @@
+package com.justnothing.testmodule.command.functions.system.response;
+
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
+import com.justnothing.testmodule.command.framework.model.CommandResult;
+import com.justnothing.testmodule.command.functions.system.model.SystemFieldInfo;
+
+import java.util.List;
+
+public class SystemInfoResult extends CommandResult {
+
+    @Expose @SerializedName("fields")
+    private List<SystemFieldInfo> fields;
+
+    public SystemInfoResult() {
+        super();
+    }
+
+    public SystemInfoResult(String requestId) {
+        super(requestId);
+    }
+
+    public List<SystemFieldInfo> getFields() {
+        return fields;
+    }
+
+    public void setFields(List<SystemFieldInfo> fields) {
+        this.fields = fields;
+    }
+}

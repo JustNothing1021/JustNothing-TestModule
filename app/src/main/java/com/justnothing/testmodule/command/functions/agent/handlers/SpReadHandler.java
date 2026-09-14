@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 
 import com.justnothing.testmodule.command.framework.model.CommandResult;
+import com.justnothing.testmodule.command.functions.agent.response.SpReadResult;
 
 import org.json.JSONObject;
 

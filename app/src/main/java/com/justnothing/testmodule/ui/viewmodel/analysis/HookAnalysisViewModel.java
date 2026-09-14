@@ -17,8 +17,8 @@ import com.justnothing.testmodule.command.functions.hook.request.HookOutputReque
 import com.justnothing.testmodule.command.functions.hook.request.HookEnableRequest;
 import com.justnothing.testmodule.command.functions.hook.request.HookDisableRequest;
 import com.justnothing.testmodule.command.functions.hook.request.HookClearRequest;
-import com.justnothing.testmodule.command.functions.hook.result.HookAddResult;
-import com.justnothing.testmodule.command.functions.hook.result.HookListResult;
+import com.justnothing.testmodule.command.functions.hook.response.HookAddResult;
+import com.justnothing.testmodule.command.functions.hook.response.HookListResult;
 import com.justnothing.testmodule.ui.activity.analysis.hook.HookSnapshot;
 
 import java.util.Locale;

@@ -1,0 +1,517 @@
+package com.justnothing.testmodule.hooks;
+
+
+import androidx.annotation.Nullable;
+
+import com.justnothing.testmodule.hooks.api.HookAPI;
+import com.justnothing.testmodule.hooks.api.HookParam;
+import com.justnothing.testmodule.hooks.api.MethodHook;
+import com.justnothing.testmodule.hooks.api.MethodReplacement;
+import com.justnothing.testmodule.hooks.conf.ClientHookConfig;
+import com.justnothing.testmodule.utils.logging.Logger;
+
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+
+public abstract class XposedBasicHook<ParamType> extends Logger {
+
+    private Boolean initialized = false;
+    private final List<BaseHook> hooks;
+    private HookCondition<ParamType> hookCondition = null;
+
+    private final String hookName;
+    private final boolean enableCheckEnabled; // final是因为一次启动就不用再改了（懒得做那个逻辑）
+    protected String hookDisplayName;
+    protected String hookDescription;
+    protected boolean defaultEnable = true;
+
+
+    protected XposedBasicHook() {
+        this.hooks = new ArrayList<>();
+        this.enableCheckEnabled = true;
+        hookName = getClass().getSimpleName();  // 放心，是继承的类的类名
+        hookDisplayName = getClass().getSimpleName();
+        if (hookDescription == null) {
+            hookDescription = "该Hook没有详细描述...";
+        }
+    }
+
+
+    protected void setHookDescription(String desc) {
+        this.hookDescription = desc;
+    }
+
+
+
+    protected boolean isHookEnabled() {
+        if (!enableCheckEnabled) return true;
+        return ClientHookConfig.isHookEnabled(hookName);
+    }
+
+    public interface HookCondition<T> {
+        boolean shouldHook(T param);
+    }
+
+    public interface HookCallback<T> {
+        boolean execute(T param);
+    }
+
+    /**
+     * 用于寻找类的类。
+     */
+    public static class HookClassFinder {
+
+        public static final Logger logger = Logger.getLoggerForName("HookClassFinder");
+
+
+        private static final
+            ConcurrentHashMap<ClassLoader,
+                    ConcurrentHashMap<String, Class<?>>>
+                classes = new ConcurrentHashMap<>();
+
+        private static final ConcurrentHashMap<String, Class<?>> systemClasses = new ConcurrentHashMap<>();
+        /**
+         * 获取指定的类。(这个是静态方法，使用系统的ClassLoader)
+         * @param className 类的名称
+         * @see #withClassLoader(ClassLoader)
+         * @return 寻找到的类
+         */
+        public static Class<?> find(String className) {
+            return new ClassFinderImpl(null).find(className);
+        }
+
+        /**
+         * 指定类加载器。
+         * 但是我觉得你应该不会像打这么一长串的，所以:
+         * @see #withCl(ClassLoader)
+         * @param loader 我猜你应该知道
+         * @return 寻找功能实现类
+         */
+        public static ClassFinderImpl withClassLoader(ClassLoader loader) {
+            return new ClassFinderImpl(loader);
+        }
+
+        /**
+         * 简化版，不用敲那么多字母了，可以直接肌肉记忆打出来
+         * @param loader 依旧
+         * @return 寻找功能实现类
+         */
+        public static ClassFinderImpl withCl(ClassLoader loader) {
+            return withClassLoader(loader);
+        }
+
+        /**
+         * 处理真正寻找类的逻辑的类。
+         */
+        public static class ClassFinderImpl {
+            ClassLoader classLoader;
+            private ClassFinderImpl(ClassLoader cl) {
+                classLoader = cl;
+            }
+
+            /**
+             * 寻找指定的类。
+             * 带有缓存机制，虽然不知道到底起没起作用。
+             * @param className 类名
+             * @return 类
+             */
+            @Nullable
+            public Class<?> find(String className) {
+                ConcurrentHashMap<String, Class<?>> mapping = classLoader == null ?
+                systemClasses : classes.computeIfAbsent(classLoader, key -> new ConcurrentHashMap<>());
+                Class<?> clazz = mapping.get(className);
+                if (clazz == null) {
+                    if (classLoader == null) {
+                        clazz = HookAPI.findClassIfExists(className, null);
+                    } else {
+                        clazz = HookAPI.findClassIfExists(className, classLoader);
+                        if (clazz != null) {
+                            mapping.put(className, clazz);
+                        }
+                    }
+                }
+                return clazz;
+            }
+        }
+    }
+
+    public static class HookMethodFinder {
+        public static class MethodSignature {
+            Class<?>[] sign;
+            String name;
+            MethodSignature(String methodName, Class<?>[] signature) {
+                name = methodName;
+                sign = signature;
+            }
+
+            @Override
+            public boolean equals(Object o) {
+                if (o == null || getClass() != o.getClass()) return false;
+                MethodSignature that = (MethodSignature) o;
+                return Objects.deepEquals(this.sign, that.sign) && Objects.equals(this.name, that.name);
+            }
+
+            @Override
+            public int hashCode() {
+                return Objects.hash(Arrays.hashCode(this.sign), this.name);
+            }
+        }
+        private static final
+        ConcurrentHashMap<ClassLoader,
+                ConcurrentHashMap<String,
+                        ConcurrentHashMap<MethodSignature, Method>>>
+                methods = new ConcurrentHashMap<>();
+
+        private static final ConcurrentHashMap<String,
+                ConcurrentHashMap<MethodSignature, Method>>
+                    systemMethods = new ConcurrentHashMap<>();
+
+        public static Method find(String className, String methodName, Class<?>... signature) {
+            return new MethodFinderImpl(null).find(className, new MethodSignature(methodName, signature));
+        }
+
+        /**
+         * 指定类加载器。
+         * 但是我觉得你应该不会像打这么一长串的，所以:
+         * @see #withCl(ClassLoader)
+         * @param loader 我猜你应该知道
+         * @return 寻找功能实现类
+         */
+        public static MethodFinderImpl withClassLoader(ClassLoader loader) {
+            return new MethodFinderImpl(loader);
+        }
+
+        /**
+         * 简化版，不用敲那么多字母了，可以直接肌肉记忆打出来
+         * @param loader 依旧
+         * @return 寻找功能实现类
+         */
+        public static MethodFinderImpl withCl(ClassLoader loader) {
+            return withClassLoader(loader);
+        }
+
+        public static class MethodFinderImpl {
+            ClassLoader classLoader;
+            private MethodFinderImpl(ClassLoader cl) {
+                classLoader = cl;
+            }
+
+            /**
+             * 寻找指定的方法。
+             * 带有缓存机制，虽然不知道到底起没起作用。
+             * @param className 类名
+             * @param methodName 方法名
+             * @param methodSignature 参数列表，作为可变参数形式
+             * @return 方法
+             */
+            @Nullable
+            public Method find(String className, String methodName, Class<?>... methodSignature) {
+                return find(className, new MethodSignature(methodName, methodSignature));
+            }
+
+            /**
+             * 寻找指定的方法。（不过一般不用这个）
+             * 带有缓存机制，虽然不知道到底起没起作用。
+             * @param className 类名
+             * @param signature 签名
+             * @see #find(String, String, Class...)
+             * @return 方法
+             */
+            @Nullable
+            public Method find(String className, MethodSignature signature) {
+                if (classLoader == null) {
+                    ConcurrentHashMap<MethodSignature, Method> m = systemMethods.get(className);
+                    if (m != null) {
+                        Method n = m.get(signature);
+                        if (n != null) return n;
+                    }
+                } else {
+                    ConcurrentHashMap<String, ConcurrentHashMap<MethodSignature, Method>>
+                            m = methods.get(classLoader);
+                    if (m != null) {
+                        ConcurrentHashMap<MethodSignature, Method> n = m.get(className);
+                        if (n != null) {
+                            Method p = n.get(signature);
+                            if (p != null) return p;
+                        }
+                    }
+                }
+                Class<?> clazz = HookClassFinder.withCl(classLoader).find(className);
+                if (clazz == null) return null;
+                Method method = HookAPI.findMethodExactIfExists(clazz, signature.name, signature.sign);
+                if (method != null)
+                    (classLoader == null ?
+                        systemMethods: methods.computeIfAbsent(classLoader, key -> new ConcurrentHashMap<>()))
+                            .computeIfAbsent(className, key -> new ConcurrentHashMap<>())
+                            .put(signature, method);
+                return method;
+            }
+
+            /**
+             * 找到一个类的所有符合名字的方法，不论参数列表是什么。
+             * @param className 类名
+             * @param methodName 方法名
+             * @return 找到的所有方法
+             */
+            @Nullable
+            public List<Method> findAll(String className, String methodName) {
+                Class<?> clazz = HookClassFinder.withCl(classLoader).find(className);
+                if (clazz == null) return null;
+                List<Method> methodArrayList = Arrays.asList(clazz.getDeclaredMethods());
+                methodArrayList.removeIf(m -> !m.getName().equals(methodName));
+                return methodArrayList;
+            }
+        }
+    }
+
+    public abstract class BaseHook {
+        protected final HookCondition<ParamType> shouldHook;
+        public BaseHook (HookCondition<ParamType> cond) {
+            this.shouldHook = cond;
+        }
+
+        public abstract Boolean loads(ParamType param);
+        public Boolean shouldLoad(ParamType param) {
+            return shouldHook == null || shouldHook.shouldHook(param);
+        }
+    }
+
+    public abstract class BaseMethodHook extends BaseHook {
+        protected final String className;
+        protected final String methodName;
+        protected final Class<?>[] signature;
+        protected final MethodHook hook;
+
+        public BaseMethodHook(String className, String methodName, Class<?>[] signature,
+                              MethodHook hook, HookCondition<ParamType> shouldHook) {
+            super(shouldHook);
+            this.className = className;
+            this.methodName = methodName;
+            this.signature = signature;
+            this.hook = hook;
+        }
+
+        public BaseMethodHook(String className, String methodName, Class<?>[] signature,
+                              MethodHook hook) {
+            this(className, methodName, signature, hook, null);
+        }
+
+    }
+
+    public abstract class BaseFieldHook extends BaseHook {
+        protected final String className;
+        protected final String fieldName;
+        protected final Object value;
+
+        public BaseFieldHook(String className, String fieldName,
+                             Object value, HookCondition<ParamType> shouldHook) {
+            super(shouldHook);
+            this.className = className;
+            this.fieldName = fieldName;
+            this.value = value;
+        }
+
+
+    }
+
+    public abstract class BaseCallbackHook extends BaseHook {
+        protected HookCallback<ParamType> callback;
+
+        public BaseCallbackHook(HookCallback<ParamType> hookCallback,
+                                HookCondition<ParamType> shouldLoad) {
+            super(shouldLoad);
+            callback = hookCallback;
+        }
+
+    }
+
+    protected BaseMethodHook createMethodHook(
+            String className, String methodName, Class<?>[] signature, MethodHook hook) {
+        return createMethodHook(className, methodName, signature, hook, null);
+    }
+
+    protected BaseFieldHook createFieldHook(String className, String fieldName, Object value) {
+        return createFieldHook(className, fieldName,  value, null);
+    }
+
+
+    protected BaseCallbackHook createCallbackHook(HookCallback<ParamType> hookCallback) {
+        return createCallbackHook(hookCallback, null);
+    }
+
+    @SuppressWarnings("SameParameterValue")
+    protected abstract BaseMethodHook createMethodHook(
+            String className, String methodName, Class<?>[] signature, MethodHook hook,
+            HookCondition<ParamType> shouldLoad
+    );
+
+    @SuppressWarnings("SameParameterValue")
+    protected abstract BaseFieldHook createFieldHook(
+            String className, String fieldName, Object value,
+            HookCondition<ParamType> shouldLoad
+    );
+
+
+    @SuppressWarnings("SameParameterValue")
+    protected abstract BaseCallbackHook createCallbackHook(
+        HookCallback<ParamType> hookCallback,
+        HookCondition<ParamType> shouldLoad
+    );
+
+
+    protected void hookMethod(String className, String methodName,
+                              Object... sigAndHook) {
+        if (sigAndHook.length < 1) {
+            error("hookMethod参数不足");
+            return;
+        }
+
+        Class<?>[] sig = new Class<?>[sigAndHook.length - 1];
+        for (int i = 0; i < sig.length; i++) {
+            assert sigAndHook[i] instanceof Class<?> : "hookMethod参数错误，第" + (i + 1) + "个参数不是Class<?>类型";
+            sig[i] = (Class<?>) sigAndHook[i];
+        }
+        MethodHook hook = (MethodHook) sigAndHook[sigAndHook.length - 1];
+        addHook(createMethodHook(className, methodName, sig, hook));
+    }
+
+    @SuppressWarnings("unused")
+    protected void hookField(String className, String fieldName, Object value) {
+        addHook(createFieldHook(className, fieldName, value));
+    }
+
+    protected void hookCallback(HookCallback<ParamType> callback) {
+        addHook(createCallbackHook(callback));
+    }
+
+    protected BaseMethodHook createAlwaysTrueHook(
+            String className, String methodName, Class<?>... sig) {
+        MethodHook hook = new MethodReplacement() {
+            @Override
+            protected Object replaceHookedMethod(HookParam param) {
+                if (!SILENT_IN_CONST_HOOK)
+                    info(className + "." + methodName + "被调用，强制返回true");
+                return true;
+            }
+        };
+        return createMethodHook(className, methodName, sig, hook);
+    }
+
+    protected BaseMethodHook createAlwaysFalseHook(
+            String className, String methodName, Class<?>... sig) {
+        MethodHook hook = new MethodReplacement() {
+            @Override
+            protected Object replaceHookedMethod(HookParam param) {
+                if (!SILENT_IN_CONST_HOOK)
+                    info(className + "." + methodName + "被调用，强制返回false");
+                return false;
+            }
+        };
+        return createMethodHook(className, methodName, sig, hook);
+    }
+
+    protected BaseMethodHook createDoNothingHook(
+            String className, String methodName, Class<?>... sig) {
+        MethodHook hook = new MethodReplacement() {
+            @Override
+            protected Object replaceHookedMethod(HookParam param) {
+                if (!SILENT_IN_CONST_HOOK) {
+                    info(className + "." + methodName + "被调用，忽略该操作");
+                    info("参数列表：" + Arrays.toString(param.getArgs()));
+                }
+                return null;
+            }
+        };
+        return createMethodHook(className, methodName, sig, hook);
+    }
+
+    @SuppressWarnings("SameParameterValue")
+    protected void hookAlwaysTrue(String className, String methodName, Class<?>... sig) {
+        addHook(createAlwaysTrueHook(className, methodName, sig));
+    }
+
+    protected void hookAlwaysFalse(String className, String methodName, Class<?>... sig) {
+        addHook(createAlwaysFalseHook(className, methodName, sig));
+    }
+
+    protected void hookDoNothing(String className, String methodName, Class<?>... sig) {
+        addHook(createDoNothingHook(className, methodName, sig));
+    }
+
+    @SuppressWarnings("unused")
+    protected void hookStaticField(String className, String memberName, Object value) {
+        addHook(createFieldHook(className, memberName, value));
+    }
+
+    public boolean shouldLoad(ParamType param) {
+        return hookCondition == null || hookCondition.shouldHook(param);
+    }
+
+    public final void setupHooks() {
+        if (initialized) return;
+        hookImplements();
+        initialized = true;
+    }
+
+    public final Integer getHookCount() {
+        return hooks.size();
+    }
+
+    public String getHookName() {
+        return hookName;
+    }
+
+    public String getHookDisplayName() {
+        return hookDisplayName;
+    }
+
+    public String getHookDescription() {
+        return hookDescription;
+    }
+
+    public Boolean isInitialized() {
+        return initialized;
+    }
+
+    protected void setHookCondition(HookCondition<ParamType> cond) {
+        this.hookCondition = cond;
+    }
+
+    @SuppressWarnings("unused")
+    protected void setDefaultEnable(boolean state) {
+        defaultEnable = state;
+    }
+
+    protected boolean getDefaultEnable() {
+        return defaultEnable;
+    }
+
+    protected void setHookDisplayName(String name) {
+        this.hookDisplayName = name;
+    }
+
+    protected void addHook(BaseHook hook) {
+        hooks.add(hook);
+    }
+
+    protected List<BaseHook> getHooks() {
+        return hooks;
+    }
+
+    protected abstract boolean installHooks(ParamType param);
+
+    @SuppressWarnings("unused")
+    protected final boolean installHooksWithCheck(ParamType param) {
+        if (!isHookEnabled()) {
+            info("Hook已禁用，跳过安装: " + (hookName != null ? hookName : getClass().getSimpleName()));
+            return false;
+        }
+        return installHooks(param);
+    }
+
+    protected abstract void hookImplements();
+}

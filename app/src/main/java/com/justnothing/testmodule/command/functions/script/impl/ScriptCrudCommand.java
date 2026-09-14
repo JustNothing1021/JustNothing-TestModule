@@ -2,7 +2,7 @@ package com.justnothing.testmodule.command.functions.script.impl;
 
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
 import com.justnothing.testmodule.command.framework.output.Colors;
-import com.justnothing.testmodule.command.functions.script.ScriptResult;
+import com.justnothing.testmodule.command.functions.script.response.ScriptResult;
 import com.justnothing.testmodule.command.functions.script.request.ScriptBaseRequest;
 import com.justnothing.testmodule.command.functions.script.request.ScriptCreateRequest;
 import com.justnothing.testmodule.command.functions.script.request.ScriptDeleteRequest;

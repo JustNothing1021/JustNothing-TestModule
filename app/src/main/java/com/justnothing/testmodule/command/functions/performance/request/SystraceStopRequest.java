@@ -1,7 +1,6 @@
 package com.justnothing.testmodule.command.functions.performance.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
-import com.justnothing.testmodule.command.functions.performance.PerformanceRequest;
 import com.justnothing.testmodule.command.functions.performance.response.SystraceResult;
 
 public class SystraceStopRequest extends PerformanceRequest<SystraceResult> {

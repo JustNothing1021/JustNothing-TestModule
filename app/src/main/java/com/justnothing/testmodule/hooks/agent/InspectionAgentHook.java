@@ -3,11 +3,11 @@ package com.justnothing.testmodule.hooks.agent;
 import android.app.Application;
 import android.content.Context;
 
-import com.justnothing.testmodule.command.functions.agent.handlers.InspectionAgent;
+import com.justnothing.testmodule.command.functions.agent.inspect.InspectionAgent;
 import com.justnothing.testmodule.hooks.api.HookAPI;
 import com.justnothing.testmodule.hooks.api.HookParam;
 import com.justnothing.testmodule.hooks.api.MethodHook;
-import com.justnothing.testmodule.hooks.base.PackageHook;
+import com.justnothing.testmodule.hooks.PackageHook;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.constants.FileDirectory;
 import com.justnothing.methodsclient.executor.AsyncChmodExecutor;

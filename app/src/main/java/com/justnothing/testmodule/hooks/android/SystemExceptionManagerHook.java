@@ -2,7 +2,7 @@ package com.justnothing.testmodule.hooks.android;
 
 import com.justnothing.testmodule.hooks.api.HookParam;
 import com.justnothing.testmodule.hooks.api.MethodHook;
-import com.justnothing.testmodule.hooks.base.PackageHook;
+import com.justnothing.testmodule.hooks.PackageHook;
 
 public class SystemExceptionManagerHook extends PackageHook {
 

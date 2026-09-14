@@ -1,6 +1,6 @@
 package com.justnothing.testmodule.ui.activity.analysis.memory;
 
-import com.justnothing.testmodule.command.functions.memory.MemoryInfoResult;
+import com.justnothing.testmodule.command.functions.memory.response.MemoryInfoResult;
 
 import java.io.Serial;
 import java.io.Serializable;

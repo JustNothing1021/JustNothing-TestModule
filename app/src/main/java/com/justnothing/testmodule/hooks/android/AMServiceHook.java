@@ -2,7 +2,7 @@ package com.justnothing.testmodule.hooks.android;
 
 import com.justnothing.testmodule.hooks.api.HookParam;
 import com.justnothing.testmodule.hooks.api.MethodReplacement;
-import com.justnothing.testmodule.hooks.base.PackageHook;
+import com.justnothing.testmodule.hooks.PackageHook;
 import com.justnothing.testmodule.utils.io.ShellExecutionException;
 import com.justnothing.testmodule.utils.io.ShellExecutorProvider;
 

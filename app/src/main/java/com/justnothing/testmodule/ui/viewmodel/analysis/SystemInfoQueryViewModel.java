@@ -8,9 +8,9 @@ import androidx.lifecycle.MutableLiveData;
 
 import com.justnothing.testmodule.ui.viewmodel.BaseViewModel;
 import com.justnothing.testmodule.R;
-import com.justnothing.testmodule.command.functions.system.SystemFieldInfo;
-import com.justnothing.testmodule.command.functions.script.SystemInfoRequest;
-import com.justnothing.testmodule.command.functions.system.SystemInfoResult;
+import com.justnothing.testmodule.command.functions.system.model.SystemFieldInfo;
+import com.justnothing.testmodule.command.functions.script.request.SystemInfoRequest;
+import com.justnothing.testmodule.command.functions.system.response.SystemInfoResult;
 
 import java.util.List;
 

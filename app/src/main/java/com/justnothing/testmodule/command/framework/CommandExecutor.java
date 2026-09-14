@@ -423,11 +423,23 @@ public class CommandExecutor {
         private T request;
         private CommandType executionType = CommandType.COMMAND_LINE;
 
+        /**
+         * 客户端能力（终端宽高 / ANSI / 输入支持）。
+         *
+         * <p>以前构造器收到它就扔了，导致需要它的命令（比如 agent 代理执行时要把能力
+         * 透传给目标进程）只能自己瞎猜，猜出来的宽高是 0x0、ANSI 是不支持 ——
+         * 渲染结果就是一片空白。</p>
+         */
+        private ClientRequirements requirements;
+
         public String cmdName() { return cmdName; }
         public String[] args() { return args; }
         public String targetPackage() { return targetPackage; }
         public ClassLoader classLoader() { return classLoader; }
         public ICommandOutputHandler output() { return output; }
+
+        /** 客户端能力；可能为 null（非交互式调用时没有握手信息）。 */
+        public ClientRequirements requirements() { return requirements; }
 
         public T getRequest() { return request; }
         public void setRequest(T r) { this.request = r; }
@@ -450,6 +462,7 @@ public class CommandExecutor {
             this.targetPackage = targetPackage;
             this.classLoader = classLoader;
             this.output = output;
+            this.requirements = requirements;
         }
 
 
@@ -500,6 +513,12 @@ public class CommandExecutor {
             return output.getConsole();
         }
 
+        /**
+         * RichConsole 的渲染结果能不能真的到达用户眼前。
+         */
+        public boolean supportsRichOutput() {
+            return output != null && output.supportsRichRendering();
+        }
     }
 
     /** @Cmd.group() → help 小节标题；未列出的 group 原样作为小节标题。 */

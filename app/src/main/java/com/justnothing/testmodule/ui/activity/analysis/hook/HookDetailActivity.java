@@ -10,7 +10,7 @@ import androidx.core.content.ContextCompat;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.justnothing.testmodule.R;
-import com.justnothing.testmodule.command.functions.hook.result.HookAddResult;
+import com.justnothing.testmodule.command.functions.hook.response.HookAddResult;
 import com.justnothing.testmodule.ui.viewmodel.analysis.HookAnalysisViewModel;
 
 import java.text.SimpleDateFormat;

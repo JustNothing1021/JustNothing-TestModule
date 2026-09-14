@@ -1,8 +1,7 @@
 package com.justnothing.testmodule.command.functions.classcmd.impl;
 
 import com.justnothing.testmodule.command.framework.model.CommandResult;
-import com.justnothing.testmodule.command.functions.classcmd.ClassCommandContext;
-import com.justnothing.testmodule.command.functions.classcmd.DirectClassCommand;
+import com.justnothing.testmodule.command.functions.classcmd.model.ClassCommandContext;
 import com.justnothing.testmodule.command.functions.classcmd.request.ClassHierarchyRequest;
 import com.justnothing.testmodule.command.functions.classcmd.response.ClassHierarchyResult;
 import com.justnothing.testmodule.command.framework.output.Colors;

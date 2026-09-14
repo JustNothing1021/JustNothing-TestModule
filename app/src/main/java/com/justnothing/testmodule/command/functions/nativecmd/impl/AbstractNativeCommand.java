@@ -4,8 +4,8 @@ import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.model.AbstractCommand;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.model.CommandResult;
-import com.justnothing.testmodule.command.functions.nativecmd.NativeManager;
-import com.justnothing.testmodule.command.functions.nativecmd.NativeResult;
+import com.justnothing.testmodule.command.functions.nativecmd.util.NativeManager;
+import com.justnothing.testmodule.command.functions.nativecmd.response.NativeResult;
 import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.utils.logging.Logger;
 

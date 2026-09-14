@@ -13,6 +13,7 @@ import com.justnothing.testmodule.command.functions.trace.request.TraceStopReque
 import com.justnothing.testmodule.command.functions.trace.request.TraceClearRequest;
 import com.justnothing.testmodule.command.functions.trace.impl.TraceManageCommand;
 import com.justnothing.testmodule.command.functions.trace.impl.TraceQueryCommand;
+import com.justnothing.testmodule.command.functions.trace.response.TraceResult;
 
 @Cmd(
     name = "trace",

@@ -2,7 +2,7 @@ package com.justnothing.testmodule.hooks.launcher;
 
 import android.content.Context;
 
-import com.justnothing.testmodule.hooks.base.PackageHook;
+import com.justnothing.testmodule.hooks.PackageHook;
 
 public class SafeUtilHook extends PackageHook {
 

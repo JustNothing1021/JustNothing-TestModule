@@ -2,7 +2,6 @@ package com.justnothing.testmodule.command.functions.classcmd.response;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import com.justnothing.testmodule.command.functions.classcmd.ClassCommandResult;
 import com.justnothing.testmodule.command.functions.classcmd.model.ClassInfo;
 
 public class ClassInfoResult extends ClassCommandResult {

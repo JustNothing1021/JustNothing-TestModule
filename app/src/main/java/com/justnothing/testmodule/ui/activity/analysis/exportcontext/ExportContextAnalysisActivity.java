@@ -21,7 +21,7 @@ import androidx.core.content.ContextCompat;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.justnothing.testmodule.R;
-import com.justnothing.testmodule.command.functions.exportcontext.ContextFieldInfo;
+import com.justnothing.testmodule.command.functions.exportcontext.model.ContextFieldInfo;
 import com.justnothing.testmodule.ui.viewmodel.analysis.ExportContextQueryViewModel;
 
 import java.util.HashMap;

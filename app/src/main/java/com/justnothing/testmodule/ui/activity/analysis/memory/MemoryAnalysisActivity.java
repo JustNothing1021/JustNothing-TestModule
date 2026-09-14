@@ -15,7 +15,7 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.justnothing.testmodule.R;
-import com.justnothing.testmodule.command.functions.memory.GcResult;
+import com.justnothing.testmodule.command.functions.memory.response.GcResult;
 import com.justnothing.testmodule.ui.viewmodel.analysis.MemoryAnalysisViewModel;
 import com.justnothing.testmodule.utils.io.IOManager;
 

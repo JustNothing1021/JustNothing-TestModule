@@ -15,7 +15,7 @@ import com.justnothing.engine.ScriptRunner;
 import com.justnothing.engine.exception.EvalException;
 import com.justnothing.engine.parser.CythavaParseException;
 
-import com.justnothing.testmodule.command.functions.script.ScriptResult;
+import com.justnothing.testmodule.command.functions.script.response.ScriptResult;
 import com.justnothing.testmodule.command.functions.script.request.ScriptBaseRequest;
 import com.justnothing.testmodule.command.functions.script.request.ScriptRunRequest;
 import com.justnothing.testmodule.command.functions.script.request.ScriptImportRequest;

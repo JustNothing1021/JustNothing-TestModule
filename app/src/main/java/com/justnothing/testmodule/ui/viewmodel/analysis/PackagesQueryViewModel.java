@@ -9,7 +9,7 @@ import androidx.lifecycle.MutableLiveData;
 import com.justnothing.testmodule.ui.viewmodel.BaseViewModel;
 import com.justnothing.testmodule.R;
 import com.justnothing.testmodule.command.functions.packages.request.PackagesRequest;
-import com.justnothing.testmodule.command.functions.packages.PackagesResult;
+import com.justnothing.testmodule.command.functions.packages.response.PackagesResult;
 
 import java.util.List;
 

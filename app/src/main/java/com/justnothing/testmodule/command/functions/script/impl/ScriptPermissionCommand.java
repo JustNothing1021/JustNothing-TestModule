@@ -1,7 +1,7 @@
 package com.justnothing.testmodule.command.functions.script.impl;
 
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
-import com.justnothing.testmodule.command.functions.script.ScriptResult;
+import com.justnothing.testmodule.command.functions.script.response.ScriptResult;
 import com.justnothing.testmodule.command.functions.script.request.ScriptBaseRequest;
 import com.justnothing.testmodule.command.functions.script.request.ScriptPermDenyRequest;
 import com.justnothing.testmodule.command.functions.script.request.ScriptPermGrantRequest;

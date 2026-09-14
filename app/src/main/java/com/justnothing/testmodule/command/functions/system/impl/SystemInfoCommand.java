@@ -8,9 +8,9 @@ import android.os.Build;
 import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.model.AbstractCommand;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
-import com.justnothing.testmodule.command.functions.script.SystemInfoRequest;
-import com.justnothing.testmodule.command.functions.system.SystemFieldInfo;
-import com.justnothing.testmodule.command.functions.system.SystemInfoResult;
+import com.justnothing.testmodule.command.functions.script.request.SystemInfoRequest;
+import com.justnothing.testmodule.command.functions.system.model.SystemFieldInfo;
+import com.justnothing.testmodule.command.functions.system.response.SystemInfoResult;
 import com.justnothing.testmodule.command.framework.output.Colors;
 
 import java.io.BufferedReader;

@@ -1,6 +1,6 @@
 package com.justnothing.testmodule.command.functions.script.request;
 
-import com.justnothing.testmodule.command.functions.script.ScriptResult;
+import com.justnothing.testmodule.command.functions.script.response.ScriptResult;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 
 public class ScriptPermPresetRequest extends ScriptBaseRequest<ScriptResult> {

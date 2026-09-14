@@ -5,7 +5,7 @@ import com.justnothing.testmodule.command.framework.model.MainCommand;
 import com.justnothing.testmodule.command.framework.annotation.Cmd;
 import com.justnothing.testmodule.command.framework.annotation.CmdRoutes;
 import com.justnothing.testmodule.command.framework.model.CommandRouter;
-import com.justnothing.testmodule.command.functions.hook.result.HookListResult;
+import com.justnothing.testmodule.command.functions.hook.response.HookListResult;
 import com.justnothing.testmodule.utils.reflect.DexClassDefiner;
 
 import com.justnothing.testmodule.command.functions.hook.request.HookAddRequest;

@@ -3,9 +3,9 @@ package com.justnothing.testmodule.command.framework;
 import com.justnothing.testmodule.command.framework.model.MainCommand;
 import com.justnothing.testmodule.command.functions.agent.AgentCliMain;
 import com.justnothing.testmodule.command.functions.alias.AliasMain;
-import com.justnothing.testmodule.command.functions.breakpoint.impl.BreakpointMain;
+import com.justnothing.testmodule.command.functions.breakpoint.BreakpointMain;
 import com.justnothing.testmodule.command.functions.bsh.BeanShellExecutorMain;
-import com.justnothing.testmodule.command.functions.bytecode.impl.BytecodeMain;
+import com.justnothing.testmodule.command.functions.bytecode.BytecodeMain;
 import com.justnothing.testmodule.command.functions.classcmd.ClassMain;
 import com.justnothing.testmodule.command.functions.didyouknow.DidYouKnowMain;
 import com.justnothing.testmodule.command.functions.examples.InteractiveExampleMain;
@@ -13,6 +13,7 @@ import com.justnothing.testmodule.command.functions.examples.OutputExampleMain;
 import com.justnothing.testmodule.command.functions.exportcontext.ExportContextMain;
 import com.justnothing.testmodule.command.functions.help.HelpMain;
 import com.justnothing.testmodule.command.functions.hook.HookMain;
+import com.justnothing.testmodule.command.functions.jank.JankMain;
 import com.justnothing.testmodule.command.functions.memory.MemoryMain;
 import com.justnothing.testmodule.command.functions.nativecmd.NativeMain;
 import com.justnothing.testmodule.command.functions.network.NetworkMain;
@@ -75,6 +76,7 @@ public final class CommandCatalog {
             PackagesMain.class,
             AgentCliMain.class,
             DidYouKnowMain.class,
+            JankMain.class,
     };
 
     /** 仅供本地调试的 demo/test 命令：会注册、可手动执行，但不对用户展示。 */

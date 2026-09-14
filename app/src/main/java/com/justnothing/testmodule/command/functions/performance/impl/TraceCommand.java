@@ -1,10 +1,10 @@
 package com.justnothing.testmodule.command.functions.performance.impl;
 
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
-import com.justnothing.testmodule.command.functions.performance.PerformanceRequest;
-import com.justnothing.testmodule.command.functions.performance.PerfTaskManager;
+import com.justnothing.testmodule.command.functions.performance.request.PerformanceRequest;
+import com.justnothing.testmodule.command.functions.performance.util.PerfTaskManager;
 import com.justnothing.testmodule.command.functions.performance.request.*;
-import com.justnothing.testmodule.command.functions.performance.response.TraceResult;
+import com.justnothing.testmodule.command.functions.performance.response.PerfTraceResult;
 import com.justnothing.testmodule.command.functions.performance.trace.TraceData;
 import com.justnothing.testmodule.command.functions.performance.trace.Tracer;
 import com.justnothing.testmodule.command.framework.output.Colors;
@@ -34,15 +34,15 @@ import java.util.Map;
             report [id]                         查看报告 (默认最新)
             export <id> <path>                  导出数据"""
 )
-public class TraceCommand extends AbstractPerfCommand<PerformanceRequest<?>, TraceResult> {
+public class TraceCommand extends AbstractPerfCommand<PerformanceRequest<?>, PerfTraceResult> {
 
     @SuppressWarnings("unchecked")
     public TraceCommand() {
-        super("performance trace", (Class) PerformanceRequest.class, TraceResult.class);
+        super("performance trace", (Class) PerformanceRequest.class, PerfTraceResult.class);
     }
 
     @Override
-    protected TraceResult executePerfCommand(PerformanceRequest<?> req) throws Exception {
+    protected PerfTraceResult executePerfCommand(PerformanceRequest<?> req) throws Exception {
         logger.debug("[trace] 收到请求: %s", req.getClass().getSimpleName());
 
         if (req instanceof TraceStartRequest) {
@@ -60,7 +60,7 @@ public class TraceCommand extends AbstractPerfCommand<PerformanceRequest<?>, Tra
         }
     }
 
-    private TraceResult handleStart() {
+    private PerfTraceResult handleStart() {
         logger.info("[trace/start] 开始 Trace 追踪");
 
         PerfTaskManager mgr = getTaskManager();
@@ -69,7 +69,7 @@ public class TraceCommand extends AbstractPerfCommand<PerformanceRequest<?>, Tra
 
         logger.info("[trace/start] ✅ Tracer 已启动: ID=%d", id);
 
-        TraceResult r = new TraceResult();
+        PerfTraceResult r = new PerfTraceResult();
         r.setTaskId(id);
         r.setStatus("running");
         outln("Tracer 已启动", Colors.GREEN);
@@ -78,7 +78,7 @@ public class TraceCommand extends AbstractPerfCommand<PerformanceRequest<?>, Tra
         return r;
     }
 
-    private TraceResult handleStop(TraceStopRequest req) {
+    private PerfTraceResult handleStop(TraceStopRequest req) {
         int taskId = req.getTaskId();
         PerfTaskManager mgr = getTaskManager();
 
@@ -103,7 +103,7 @@ public class TraceCommand extends AbstractPerfCommand<PerformanceRequest<?>, Tra
 
         logger.debug("[trace/stop] 数据已存储: ID=%d, 追踪数=%d", taskId, traceData.size());
 
-        TraceResult r = new TraceResult();
+        PerfTraceResult r = new PerfTraceResult();
         r.setTaskId(taskId);
         r.setStatus("stopped");
         r.setTraceCount(traceData.size());
@@ -113,7 +113,7 @@ public class TraceCommand extends AbstractPerfCommand<PerformanceRequest<?>, Tra
         return r;
     }
 
-    private TraceResult handleReport(TraceReportRequest req) {
+    private PerfTraceResult handleReport(TraceReportRequest req) {
         Integer taskId = req.getTaskId();
 
         logger.info("[trace/report] 查询报告: ID=%s", taskId != null ? String.valueOf(taskId) : "(最新)");
@@ -160,7 +160,7 @@ public class TraceCommand extends AbstractPerfCommand<PerformanceRequest<?>, Tra
         logger.info("[trace/report] ✅ 找到数据: ID=%d, 追踪数=%d, 总耗时=%s",
                 taskId, data.size(), formatDurationNs(totalDuration));
 
-        TraceResult r = new TraceResult();
+        PerfTraceResult r = new PerfTraceResult();
         r.setTaskId(taskId);
         r.setTraceCount(data.size());
 
@@ -171,14 +171,14 @@ public class TraceCommand extends AbstractPerfCommand<PerformanceRequest<?>, Tra
         out("总耗时: ", Colors.CYAN); outln(formatDurationNs(totalDuration), Colors.WHITE);
         outln("", Colors.DEFAULT);
 
-        ArrayList<TraceResult.TraceEntry> entries = new ArrayList<>();
+        ArrayList<PerfTraceResult.TraceEntry> entries = new ArrayList<>();
         int index = 0;
         for (TraceData d : data) {
             index++;
             outln(String.format(
                     Locale.getDefault(),
                     "[%4d]  %-40s %s (%s)", index, d.name(), d.getDurationString(), d.threadName()), Colors.GRAY);
-            var te = new TraceResult.TraceEntry();
+            var te = new PerfTraceResult.TraceEntry();
             te.setName(d.name());
             te.setStartTime(d.startTime());
             te.setDuration(d.duration());
@@ -192,7 +192,7 @@ public class TraceCommand extends AbstractPerfCommand<PerformanceRequest<?>, Tra
         return r;
     }
 
-    private TraceResult handleExport(TraceExportRequest req) throws JSONException {
+    private PerfTraceResult handleExport(TraceExportRequest req) throws JSONException {
         int taskId = req.getTaskId();
         String filePath = req.getFilePath();
 
@@ -225,7 +225,7 @@ public class TraceCommand extends AbstractPerfCommand<PerformanceRequest<?>, Tra
 
         logger.info("[trace/export] ✅ 导出成功: %s, 追踪数=%d", filePath, td.size());
 
-        TraceResult r = new TraceResult();
+        PerfTraceResult r = new PerfTraceResult();
         r.setTaskId(taskId);
         r.setStatus("exported");
         r.setExportPath(filePath);

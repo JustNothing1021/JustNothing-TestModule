@@ -1,8 +1,8 @@
 package com.justnothing.testmodule.command.functions.breakpoint.util;
 
-import com.justnothing.testmodule.command.functions.intercept.AbstractInterceptManager;
-import com.justnothing.testmodule.command.functions.intercept.BreakpointInterceptTask;
-import com.justnothing.testmodule.command.functions.intercept.TaskType;
+import com.justnothing.testmodule.command.functions.intercept.base.AbstractInterceptManager;
+import com.justnothing.testmodule.command.functions.intercept.base.BreakpointInterceptTask;
+import com.justnothing.testmodule.command.functions.intercept.base.TaskType;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
 
 public class BreakpointManager extends AbstractInterceptManager<BreakpointInterceptTask> {

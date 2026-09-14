@@ -6,9 +6,9 @@ import android.os.Debug;
 
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
 import com.justnothing.testmodule.command.framework.output.Colors;
-import com.justnothing.testmodule.command.functions.memory.MemoryInfoRequest;
-import com.justnothing.testmodule.command.functions.memory.MemoryInfoResult;
-import com.justnothing.testmodule.command.functions.memory.MemoryUtils;
+import com.justnothing.testmodule.command.functions.memory.request.MemoryInfoRequest;
+import com.justnothing.testmodule.command.functions.memory.response.MemoryInfoResult;
+import com.justnothing.testmodule.command.functions.memory.util.MemoryUtils;
 
 import java.util.Locale;
 
@@ -26,7 +26,7 @@ import java.util.Locale;
               -d, --detailed   显示详细内存信息 (默认)
             """
 )
-public class InfoCommand extends MemorySubCommand<MemoryInfoRequest, MemoryInfoResult> {
+public class InfoCommand extends AbstractMemoryCommand<MemoryInfoRequest, MemoryInfoResult> {
 
     public InfoCommand() {
         super("memory info", MemoryInfoRequest.class, MemoryInfoResult.class);

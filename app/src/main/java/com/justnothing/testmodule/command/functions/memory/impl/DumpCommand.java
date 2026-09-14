@@ -1,9 +1,9 @@
 package com.justnothing.testmodule.command.functions.memory.impl;
 
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
-import com.justnothing.testmodule.command.functions.memory.DumpRequest;
-import com.justnothing.testmodule.command.functions.memory.DumpResult;
-import com.justnothing.testmodule.command.functions.memory.MemoryUtils;
+import com.justnothing.testmodule.command.functions.memory.request.DumpRequest;
+import com.justnothing.testmodule.command.functions.memory.response.DumpResult;
+import com.justnothing.testmodule.command.functions.memory.util.MemoryUtils;
 import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.utils.io.IOManager;
 
@@ -31,7 +31,7 @@ import java.util.Map;
               file              - ?????? (???????????)
             """
 )
-public class DumpCommand extends MemorySubCommand<DumpRequest, DumpResult> {
+public class DumpCommand extends AbstractMemoryCommand<DumpRequest, DumpResult> {
 
     public DumpCommand() {
         super("memory dump", DumpRequest.class, DumpResult.class);

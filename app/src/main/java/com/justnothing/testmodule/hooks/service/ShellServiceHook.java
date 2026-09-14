@@ -7,11 +7,10 @@ import android.os.IBinder;
 
 import com.justnothing.testmodule.hooks.api.HookAPI;
 import com.justnothing.testmodule.service.ShellService;
-import com.justnothing.testmodule.hooks.base.HookEntry;
-import com.justnothing.testmodule.hooks.base.PackageHook;
+import com.justnothing.testmodule.hooks.HookEntry;
+import com.justnothing.testmodule.hooks.PackageHook;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 import com.justnothing.testmodule.utils.io.IOManager;
-import com.justnothing.testmodule.utils.io.ShellExecutionException;
 import com.justnothing.testmodule.utils.io.ShellExecutorProvider;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
 

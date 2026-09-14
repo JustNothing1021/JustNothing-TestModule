@@ -178,6 +178,31 @@ public class InteractiveOutputHandler implements ICommandOutputHandler {
     }
 
     /**
+     * 下游（最终客户端）能不能收到并显示渲染结果。
+     *
+     * <p>本地服务端场景下我们就是最后一层，默认 {@code true}。但 agent 代理执行时，
+     * 我们只是中间的一环 —— 后面还有 CLI → 客户端。如果那一层断了，渲染结果发出去也没人看，
+     * 此时必须让 {@link #supportsRichRendering()} 返回 false，命令才会降级成纯文本
+     * 而不是把内容写进黑洞。</p>
+     */
+    private volatile boolean downstreamReachable = true;
+
+    /** 由调用方告知"下游还有没有人接渲染结果"（agent 场景下由 CLI 的能力透传情况决定）。 */
+    public void setDownstreamReachable(boolean reachable) {
+        this.downstreamReachable = reachable;
+    }
+
+    /**
+     * 有 rpcChannel 才建得出真终端；没有的话 {@link #getConsole()} 会退化成
+     * "写进去就丢"的 invalid console（agent 在目标进程里执行就是这种情况）。
+     * 另外还要下游真有人接 —— 见 {@link #setDownstreamReachable}。
+     */
+    @Override
+    public boolean supportsRichRendering() {
+        return downstreamReachable && (remoteTerminal != null || rpcChannel != null);
+    }
+
+    /**
      * 创建 invalid console：基于 ExternalTerminal 的 dumb 终端（不用 TerminalBuilder，
      * 规避 Android 无终端提供器问题）。输出丢弃、输入 read() 抛异常。
      */

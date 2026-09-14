@@ -1,8 +1,8 @@
 package com.justnothing.testmodule.command.functions.hook.impl;
 
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
-import com.justnothing.testmodule.command.functions.hook.result.HookListResult;
-import com.justnothing.testmodule.command.functions.hook.HookManager;
+import com.justnothing.testmodule.command.functions.hook.response.HookListResult;
+import com.justnothing.testmodule.command.functions.hook.util.HookManager;
 import com.justnothing.testmodule.command.functions.hook.request.*;
 import com.justnothing.testmodule.command.framework.output.Colors;
 

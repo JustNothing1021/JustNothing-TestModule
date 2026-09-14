@@ -88,13 +88,17 @@ dependencies {
     implementation libs.material.v1110
     implementation libs.androidx.constraintlayout.v221
     implementation libs.bsh
+    implementation libs.cfr
+    // 只用到 dex2jar 的 DexFileReader + Dex2Asm。d2j-external 是给 d2j-* 命令行工具用的
+    // （里面塞了 com.android.dex 和一份打包进去的 ASM），我们一个都不碰，留着只会让
+    // org.objectweb.asm.* 和项目自己的 libs.asm 撞成 duplicate class。
+    implementation(libs.dex2jar.translator) {
+        exclude group: 'de.femtopedia.dex2jar', module: 'd2j-external'
+    }
     implementation libs.hutool.all
     implementation libs.gson
     implementation libs.androidsvg.aar
     implementation libs.asm
-    implementation libs.asm.tree
-    implementation libs.asm.util
-    implementation libs.cfr
     implementation libs.r8
     implementation libs.mpandroidchart
     implementation libs.jline
@@ -214,4 +218,67 @@ afterEvaluate {
     tasks.named('assembleDebug') {
         finalizedBy 'createMagiskZip'
     }
+}
+
+
+// ── vendored: vdexExtractor（把 vdex 里的 dex 反 quicken / de-odex）────────────
+// 上游: https://github.com/anestisb/vdexExtractor  @78f283b (2020-05-13, Apache-2.0)
+// 本地改动: jni/Android.mk 去掉 -Werror —— 2020 年的 C 代码用现在的 clang 编译会冒出新 warning。
+//
+// 为什么要它：ART 会把 dex 写进 vdex 时就地 quicken（字段访问改成 vtable 索引等），
+// 导致反编译工具读不懂（jadx 报 UNKNOWN(0x52E5) 这类保留 opcode）。而 /system/framework/*.jar
+// 在现代设备上是空壳（实测），唯一的原件就在 vdex 里，所以必须靠它还原。
+//
+// 产物: build/vdexextractor/libs/<abi>/vdexExtractor
+//       → 同步到 build/vdexextractor/assets/bin/<abi>/vdexExtractor（作为 assets 源目录）
+//       → 运行时由 Java 侧按 Build.SUPPORTED_ABIS[0] 取出、chmod 0755、当子进程调用
+def vdexExtractorProjectDir = file("$rootDir/third_party/vdexextractor")
+def vdexExtractorBuildDir = layout.buildDirectory.dir('vdexextractor')
+
+tasks.register('buildVdexExtractor', Exec) {
+    group = 'build'
+    description = '用 NDK 交叉编译 vendored 的 vdexExtractor（产出各 ABI 的可执行文件）'
+
+    def outDir = vdexExtractorBuildDir.get().asFile
+    def ndkDir = new File(android.sdkDirectory, "ndk/${android.ndkVersion}")
+
+    // NDK 缺失时只警告、不打断构建：这个特性是"可选增强"，不该让整个项目编不过
+    onlyIf {
+        if (!new File(ndkDir, 'ndk-build.cmd').isFile()) {
+            logger.warn("跳过 vdexExtractor 构建：未找到 NDK（${ndkDir}）")
+            return false
+        }
+        return true
+    }
+
+    inputs.dir(vdexExtractorProjectDir)
+    outputs.dir(new File(outDir, 'libs'))
+    workingDir vdexExtractorProjectDir
+    commandLine "${ndkDir}/ndk-build.cmd",
+            "NDK_PROJECT_PATH=${vdexExtractorProjectDir}",
+            "APP_BUILD_SCRIPT=jni/Android.mk",
+            "NDK_APPLICATION_MK=jni/Application.mk",
+            "NDK_OUT=${outDir}/obj",
+            "NDK_LIBS_OUT=${outDir}/libs"
+}
+
+// 刻意把产物落到 src/main/assets/bin/，而不是 build/ 下的生成目录。
+// 试过用 android.sourceSets.main.assets.srcDir(TaskProvider) 把它接进 AGP，
+// 实测 TaskProvider 不会被当成 assets 源目录，最终 APK 里什么都没有。
+// 落到源码树里虽然不那么"纯"，但和项目已有做法一致（app/src/main/jniLibs 就是提交进去的
+// 预编译 .so），而且不依赖 NDK、不影响别人构建。该目录已在 .gitignore 中忽略。
+tasks.register('syncVdexExtractorAssets', Copy) {
+    group = 'build'
+    description = '把编译好的 vdexExtractor 放进 src/main/assets/bin/<abi>/，供运行时提取到设备执行'
+    dependsOn 'buildVdexExtractor'
+    from(vdexExtractorBuildDir.map { it.dir('libs') }) {
+        include '*/vdexExtractor'
+    }
+    into file('src/main/assets/bin')
+}
+
+// syncVdexExtractorAssets 会写入 src/main/assets/，而那正是 mergeAssets 的输入目录。
+// Gradle 8 对"某个任务写了另一个任务的输入"是硬性校验失败，所以必须显式声明依赖。
+tasks.matching { it.name.startsWith('merge') && it.name.endsWith('Assets') }.configureEach {
+    dependsOn 'syncVdexExtractorAssets'
 }

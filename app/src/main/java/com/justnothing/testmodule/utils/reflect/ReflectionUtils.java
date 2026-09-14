@@ -334,7 +334,7 @@ public class ReflectionUtils {
 
     /**
      * 使用已找到的 Method 对象直接调用，避免重复查找。
-     * 用于 InvokeCommand 等场景：先 findMethod 找到 Method，再 callMethod 执行，
+     * 用于 ClassInvokeCommand 等场景：先 findMethod 找到 Method，再 callMethod 执行，
      * 保证查找和调用使用同一个 Method 对象。
      */
     public static Object callMethod(Object target, Method method, List<Object> args) throws Exception {

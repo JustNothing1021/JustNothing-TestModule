@@ -1,6 +1,6 @@
 package com.justnothing.testmodule.ui.activity.analysis.hook;
 
-import com.justnothing.testmodule.command.functions.hook.result.HookListResult;
+import com.justnothing.testmodule.command.functions.hook.response.HookListResult;
 
 import java.io.Serial;
 import java.io.Serializable;

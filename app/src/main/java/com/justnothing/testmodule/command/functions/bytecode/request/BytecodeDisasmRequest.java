@@ -18,9 +18,17 @@ public class BytecodeDisasmRequest extends CommandRequest<BytecodeResult> {
         name = "methodName",
         position = 2,
         required = false,
-        description = "方法名(可选)"
+        description = "只看这一个方法（不填则输出该类的全部方法）"
     )
     private String methodName;
+
+    @CmdParam(
+        name = "outputPath",
+        aliases = {"-o", "--output"},
+        required = false,
+        description = "把指令写入文件（不填则直接显示，最多 150 行）"
+    )
+    private String outputPath;
 
     public BytecodeDisasmRequest() {
         super();
@@ -31,4 +39,7 @@ public class BytecodeDisasmRequest extends CommandRequest<BytecodeResult> {
 
     public String getMethodName() { return methodName; }
     public void setMethodName(String methodName) { this.methodName = methodName; }
+
+    public String getOutputPath() { return outputPath; }
+    public void setOutputPath(String outputPath) { this.outputPath = outputPath; }
 }

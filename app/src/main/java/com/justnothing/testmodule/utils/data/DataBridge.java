@@ -5,7 +5,7 @@ import android.util.Log;
 import com.justnothing.methodsclient.StreamClient;
 import com.justnothing.testmodule.constants.AppEnvironment;
 import com.justnothing.testmodule.constants.FileDirectory;
-import com.justnothing.testmodule.hooks.base.HookEntry;
+import com.justnothing.testmodule.hooks.HookEntry;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.hooks.conf.ServerHookConfig;
 import com.justnothing.testmodule.utils.io.IOManager;

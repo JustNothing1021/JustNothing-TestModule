@@ -8,7 +8,7 @@ import com.justnothing.methodsclient.StreamClient;
 import com.justnothing.methodsclient.monitor.PerformanceMonitor;
 import com.justnothing.testmodule.constants.AppEnvironment;
 import com.justnothing.testmodule.constants.FileDirectory;
-import com.justnothing.testmodule.hooks.base.HookEntry;
+import com.justnothing.testmodule.hooks.HookEntry;
 import com.justnothing.testmodule.utils.io.IOManager;
 import com.justnothing.testmodule.utils.io.ShellExecutionException;
 import com.justnothing.testmodule.utils.io.ShellExecutorProvider;

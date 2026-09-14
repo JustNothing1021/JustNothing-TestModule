@@ -6,7 +6,7 @@ import android.net.Uri;
 import com.justnothing.testmodule.hooks.api.HookAPI;
 import com.justnothing.testmodule.hooks.api.HookParam;
 import com.justnothing.testmodule.hooks.api.MethodHook;
-import com.justnothing.testmodule.hooks.base.PackageHook;
+import com.justnothing.testmodule.hooks.PackageHook;
 import com.justnothing.testmodule.utils.reflect.ReflectionUtils;
 
 public class AppInfoProviderHook extends PackageHook {

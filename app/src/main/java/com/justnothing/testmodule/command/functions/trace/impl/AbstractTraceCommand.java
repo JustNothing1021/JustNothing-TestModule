@@ -3,8 +3,8 @@ package com.justnothing.testmodule.command.functions.trace.impl;
 import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.model.AbstractCommand;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
-import com.justnothing.testmodule.command.functions.trace.TraceManager;
-import com.justnothing.testmodule.command.functions.trace.TraceResult;
+import com.justnothing.testmodule.command.functions.trace.util.TraceManager;
+import com.justnothing.testmodule.command.functions.trace.response.TraceResult;
 import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.utils.logging.Logger;
 

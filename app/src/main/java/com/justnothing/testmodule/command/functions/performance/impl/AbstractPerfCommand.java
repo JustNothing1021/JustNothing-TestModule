@@ -3,9 +3,8 @@ package com.justnothing.testmodule.command.functions.performance.impl;
 import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.model.AbstractCommand;
 import com.justnothing.testmodule.command.framework.model.CommandResult;
-import com.justnothing.testmodule.command.functions.performance.PerfTaskManager;
-import com.justnothing.testmodule.command.functions.performance.PerformanceCommand;
-import com.justnothing.testmodule.command.functions.performance.PerformanceRequest;
+import com.justnothing.testmodule.command.functions.performance.util.PerfTaskManager;
+import com.justnothing.testmodule.command.functions.performance.request.PerformanceRequest;
 import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.utils.io.IOManager;
 import com.justnothing.testmodule.utils.logging.Logger;
@@ -15,8 +14,7 @@ import java.io.IOException;
 import java.util.Locale;
 
 public abstract class AbstractPerfCommand<Req extends PerformanceRequest<?>, Res extends CommandResult>
-        extends AbstractCommand<Req, Res>
-        implements PerformanceCommand<Res> {
+        extends AbstractCommand<Req, Res> {
 
     protected static final Logger logger = Logger.getLoggerForName("Performance");
     protected CommandExecutor.CmdExecContext<Req> context;

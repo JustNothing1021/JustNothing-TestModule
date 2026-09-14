@@ -2,7 +2,7 @@ package com.justnothing.testmodule.hooks.tests;
 
 import com.justnothing.testmodule.hooks.api.HookParam;
 import com.justnothing.testmodule.hooks.api.MethodHook;
-import com.justnothing.testmodule.hooks.base.ZygoteHook;
+import com.justnothing.testmodule.hooks.ZygoteHook;
 
 public class SlogHook extends ZygoteHook {
     private static final String TARGET_LOG_KEYWORD = "device has no apply for install permission";

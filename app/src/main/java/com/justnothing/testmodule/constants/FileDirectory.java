@@ -11,6 +11,13 @@ public final class FileDirectory {
     public static final String SDCARD_PATH = SDCARD + "/JustNothing";
     public static final String METHODS_DATA_DIR = "/data/local/tmp/methods";
     public static final String PORT_FILE = METHODS_DATA_DIR + "/methods_port";
+    /**
+     * 从模块 APK 提取出来的命令行工具存放处（目前是 vendored 的 vdexExtractor）。
+     *
+     * <p>放在 METHODS_DATA_DIR 下，和 scripts / agent 等目录并列——这个目录在模块安装时
+     * 已经被 chmod 777，所以任意被注入的进程都能往里写并赋予执行权限。</p>
+     */
+    public static final String TOOLS_DIR = METHODS_DATA_DIR + "/bin";
     public static final String METHODS_CLIENT_JAR = "/system/framework/methods-client.jar";
     public static String DATA_PATH = EXTERNAL_PATH;
     public static final String EXPORT_DIR_NAME = "TestModuleExports";

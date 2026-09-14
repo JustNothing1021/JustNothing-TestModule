@@ -12,11 +12,11 @@ import com.justnothing.testmodule.command.functions.watch.request.WatchStopReque
 import com.justnothing.testmodule.command.functions.watch.request.WatchClearRequest;
 import com.justnothing.testmodule.command.functions.watch.request.WatchOutputRequest;
 import com.justnothing.testmodule.command.functions.watch.response.WatchCommandResult;
-import com.justnothing.testmodule.command.functions.watch.impl.AddCommand;
-import com.justnothing.testmodule.command.functions.watch.impl.ListCommand;
-import com.justnothing.testmodule.command.functions.watch.impl.StopCommand;
-import com.justnothing.testmodule.command.functions.watch.impl.ClearCommand;
-import com.justnothing.testmodule.command.functions.watch.impl.OutputCommand;
+import com.justnothing.testmodule.command.functions.watch.impl.WatchAddCommand;
+import com.justnothing.testmodule.command.functions.watch.impl.WatchListCommand;
+import com.justnothing.testmodule.command.functions.watch.impl.WatchStopCommand;
+import com.justnothing.testmodule.command.functions.watch.impl.WatchClearCommand;
+import com.justnothing.testmodule.command.functions.watch.impl.WatchOutputCommand;
 
 @Cmd(
     name = "watch",
@@ -27,31 +27,31 @@ import com.justnothing.testmodule.command.functions.watch.impl.OutputCommand;
     @CmdRoutes.Route(
         path = "add",
         request = WatchAddRequest.class,
-        handler = AddCommand.class,
+        handler = WatchAddCommand.class,
         description = "添加字段或方法监控任务"
     ),
     @CmdRoutes.Route(
         path = "list",
         request = WatchListRequest.class,
-        handler = ListCommand.class,
+        handler = WatchListCommand.class,
         description = "列出所有监控任务"
     ),
     @CmdRoutes.Route(
         path = "stop",
         request = WatchStopRequest.class,
-        handler = StopCommand.class,
+        handler = WatchStopCommand.class,
         description = "停止指定的监控任务"
     ),
     @CmdRoutes.Route(
         path = "clear",
         request = WatchClearRequest.class,
-        handler = ClearCommand.class,
+        handler = WatchClearCommand.class,
         description = "清除所有监控任务"
     ),
     @CmdRoutes.Route(
         path = "output",
         request = WatchOutputRequest.class,
-        handler = OutputCommand.class,
+        handler = WatchOutputCommand.class,
         description = "获取监控任务的输出"
     )
 })

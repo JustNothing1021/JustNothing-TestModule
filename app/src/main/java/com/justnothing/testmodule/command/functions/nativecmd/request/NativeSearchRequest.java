@@ -1,7 +1,7 @@
 package com.justnothing.testmodule.command.functions.nativecmd.request;
 
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
-import com.justnothing.testmodule.command.functions.nativecmd.NativeResult;
+import com.justnothing.testmodule.command.functions.nativecmd.response.NativeResult;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 
 public class NativeSearchRequest extends CommandRequest<NativeResult> {

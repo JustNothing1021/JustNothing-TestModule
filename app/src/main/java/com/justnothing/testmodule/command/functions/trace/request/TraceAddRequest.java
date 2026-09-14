@@ -2,7 +2,7 @@ package com.justnothing.testmodule.command.functions.trace.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
-import com.justnothing.testmodule.command.functions.trace.TraceResult;
+import com.justnothing.testmodule.command.functions.trace.response.TraceResult;
 
 public class TraceAddRequest extends CommandRequest<TraceResult> {
 

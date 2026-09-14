@@ -4,8 +4,8 @@ import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.model.AbstractCommand;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.model.CommandResult;
-import com.justnothing.testmodule.command.functions.hook.result.HookAddResult;
-import com.justnothing.testmodule.command.functions.hook.result.HookListResult;
+import com.justnothing.testmodule.command.functions.hook.response.HookAddResult;
+import com.justnothing.testmodule.command.functions.hook.response.HookListResult;
 import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.utils.logging.Logger;
 

@@ -121,4 +121,8 @@ public interface ICommandOutputHandler extends IOutputHandler {
     default Console getConsole() {
         return null;
     }
+
+    default boolean supportsRichRendering() {
+        return false;
+    }
 }

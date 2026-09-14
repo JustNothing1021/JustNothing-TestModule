@@ -12,6 +12,7 @@ import com.justnothing.testmodule.command.functions.script.impl.ScriptManageComm
 import com.justnothing.testmodule.command.functions.script.impl.ScriptPermissionCommand;
 
 import com.justnothing.testmodule.command.functions.script.request.*;
+import com.justnothing.testmodule.command.functions.script.response.ScriptResult;
 
 @Cmd(
     name = "script",

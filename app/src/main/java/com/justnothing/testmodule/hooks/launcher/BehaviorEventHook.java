@@ -1,6 +1,6 @@
 package com.justnothing.testmodule.hooks.launcher;
 
-import com.justnothing.testmodule.hooks.base.PackageHook;
+import com.justnothing.testmodule.hooks.PackageHook;
 
 public class BehaviorEventHook extends PackageHook {
 

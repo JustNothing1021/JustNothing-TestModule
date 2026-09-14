@@ -174,23 +174,31 @@ public class TerminalRpcChannel extends RpcChannel {
      * 批量输出就退化成"每行一次跨进程帧"：每帧都要 Gson 序列化 + 两把锁 + 信封编码 + socket flush，
      * 对端还要逐帧解析并重绘。实测约 1.6ms/行。</p>
      *
-     * <p>因此这里不再立即发送，而是先落入 {@code pending}：</p>
-     * <ul>
-     *   <li>距上次发送超过 {@link #IDLE_THRESHOLD_NANOS} → 视为空闲/交互式输出，立即发送（零额外延迟）；</li>
-     *   <li>否则延迟 {@link #COALESCE_DELAY_MS} 作为合并窗口，窗口内到达的数据合成一帧。</li>
-     * </ul>
+     * <p>所以一次"爆发"里的所有 flush 会先落入 {@code pending}，由 {@link #COALESCE_DELAY_MS}
+     * 的合并窗口统一发出去：窗口从第一块数据到达时开始计时，窗口内后续到达的数据只是追加，
+     * 不会重置窗口。取 16ms 是因为它比一次人眼可感知的延迟（~50ms）小得多 ——
+     * 交互式输出（敲一个键、回显一行）最多多花 16ms，感觉不出来。</p>
+     *
+     * <p><b>为什么不能"空闲就立刻发"</b>：以前这里还有一条规则 —— 距上次发送超过 10ms 就
+     * 立即发送，本意是让交互式输出零延迟。但 Live 这类整屏刷新正好撞上它：上一帧是 200ms 前发的，
+     * 早就"空闲"了，于是<b>这一帧的第一块一到达就被立刻发走</b>，剩下的块才走合并窗口 ——
+     * 一帧被拆成两条 {@code term.output}，客户端收到一条画一次，屏幕上就是"先闪出半帧、
+     * 再补上另一半"，看起来一直在抖。现在统一走合并窗口，一帧就是一条消息。</p>
      *
      * <p>会话收尾必须调用 {@link #flushNow()} 同步排出，否则最后一批输出可能晚于 cmd.done 到达。</p>
      */
     public class RpcOutputStream extends OutputStream {
 
         private static final int FLUSH_THRESHOLD = 8192;
-        /** 连续输出时的合并窗口（毫秒）：取一帧时长，兼顾吞吐与实时感。 */
+        /** 一次爆发的合并窗口（毫秒）：窗口内到达的数据合成一条消息。 */
         private static final long COALESCE_DELAY_MS = 16;
-        /** 距上次发送超过该间隔即视为空闲，此时立即发送以保持交互式输出零延迟。 */
-        private static final long IDLE_THRESHOLD_NANOS = 10_000_000L;
-        /** 待发数据达到该字节数时立即发送，不再等窗口——大输出时贴近原生"批量发送"的行为。 */
-        private static final int MAX_PENDING_BYTES = 4096;
+        /**
+         * 待发数据达到该字节数时立即发送，不再等窗口。
+         *
+         * <p>这是<b>内存兜底</b>，不是性能开关 —— 取 64KB 是为了远大于"一帧"（实测整屏刷新
+         * 约 4~8KB），这样正常帧永远不会在窗口中途被强制发出（那样就又会被拆成两条消息）。</p>
+         */
+        private static final int MAX_PENDING_BYTES = 64 * 1024;
 
         private final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         private final Object bufferLock = new Object();
@@ -198,7 +206,6 @@ public class TerminalRpcChannel extends RpcChannel {
         private final ByteArrayOutputStream pending = new ByteArrayOutputStream();
         private final Object pendingLock = new Object();
         private boolean flushScheduled = false;
-        private long lastEmitNanos = 0L;
 
         @Override
         public void write(int b) throws IOException {
@@ -239,10 +246,12 @@ public class TerminalRpcChannel extends RpcChannel {
             boolean needSchedule = false;
             synchronized (pendingLock) {
                 pending.write(data, 0, data.length);
-                if (pending.size() >= MAX_PENDING_BYTES
-                        || System.nanoTime() - lastEmitNanos >= IDLE_THRESHOLD_NANOS) {
+                if (pending.size() >= MAX_PENDING_BYTES) {
+                    // 内存兜底：真的堆到一个帧放不下的量了，先发出去（正常帧不会走到这里）
                     toEmit = takePendingLocked();
                 } else if (!flushScheduled) {
+                    // 只由本次爆发的第一块启动窗口；窗口内的后续数据只是追加，
+                    // 不重置计时 —— 否则持续输出会让窗口永远不到期
                     flushScheduled = true;
                     needSchedule = true;
                 }
@@ -292,12 +301,11 @@ public class TerminalRpcChannel extends RpcChannel {
             return toSend;
         }
 
-        /** 在 pendingLock 内取出全部待发数据并记录发送时刻。 */
+        /** 在 pendingLock 内取出全部待发数据。 */
         private byte[] takePendingLocked() {
             if (pending.size() == 0) return null;
             byte[] data = pending.toByteArray();
             pending.reset();
-            lastEmitNanos = System.nanoTime();
             return data;
         }
 

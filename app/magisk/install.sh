@@ -55,3 +55,4 @@ set_permissions() {
   set_perm  $MODPATH/system/bin/methods  0  0  0755
   set_perm  $MODPATH/system/bin/test     0  0  0755
 }
+

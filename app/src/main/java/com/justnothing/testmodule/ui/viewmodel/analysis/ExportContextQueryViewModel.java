@@ -8,9 +8,9 @@ import androidx.lifecycle.MutableLiveData;
 
 import com.justnothing.testmodule.ui.viewmodel.BaseViewModel;
 import com.justnothing.testmodule.R;
-import com.justnothing.testmodule.command.functions.exportcontext.ContextFieldInfo;
-import com.justnothing.testmodule.command.functions.exportcontext.ExportContextRequest;
-import com.justnothing.testmodule.command.functions.exportcontext.ExportContextResult;
+import com.justnothing.testmodule.command.functions.exportcontext.model.ContextFieldInfo;
+import com.justnothing.testmodule.command.functions.exportcontext.request.ExportContextRequest;
+import com.justnothing.testmodule.command.functions.exportcontext.response.ExportContextResult;
 
 import java.util.ArrayList;
 import java.util.Collections;

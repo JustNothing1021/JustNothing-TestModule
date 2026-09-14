@@ -6,8 +6,9 @@ import com.justnothing.testmodule.command.framework.model.MainCommand;
 import com.justnothing.testmodule.command.framework.annotation.Cmd;
 import com.justnothing.testmodule.command.framework.annotation.CmdRoutes;
 import com.justnothing.testmodule.command.framework.model.CommandRouter;
-import com.justnothing.testmodule.command.functions.script.SystemInfoRequest;
+import com.justnothing.testmodule.command.functions.script.request.SystemInfoRequest;
 import com.justnothing.testmodule.command.functions.system.impl.SystemInfoCommand;
+import com.justnothing.testmodule.command.functions.system.response.SystemInfoResult;
 
 @Cmd(
     name = "system",

@@ -8,6 +8,7 @@ bsh = "2.0b5"
 cfr = "0.152"
 commonmark = "0.24.0"
 constraintlayoutVersion = "2.2.1"
+dex2jar = "2.4.38"
 espressoCoreVersion = "3.7.0"
 hutoolAll = "5.8.44"
 gson = "2.14.0"
@@ -25,13 +26,12 @@ androidx-constraintlayout-v221 = { module = "androidx.constraintlayout:constrain
 androidx-espresso-core-v370 = { module = "androidx.test.espresso:espresso-core", version.ref = "espressoCoreVersion" }
 androidx-junit-v130 = { module = "androidx.test.ext:junit", version.ref = "androidxJunit" }
 asm = { module = "org.ow2.asm:asm", version.ref = "asm" }
-asm-tree = { module = "org.ow2.asm:asm-tree", version.ref = "asm" }
-asm-util = { module = "org.ow2.asm:asm-util", version.ref = "asm" }
 bsh = { module = "org.beanshell:bsh", version.ref = "bsh" }
 cfr = { module = "org.benf:cfr", version.ref = "cfr" }
 commonmark = { module = "org.commonmark:commonmark", version.ref = "commonmark" }
 commonmark-ext-gfm-tables = { module = "org.commonmark:commonmark-ext-gfm-tables", version.ref = "commonmark" }
 commonmark-ext-gfm-strikethrough = { module = "org.commonmark:commonmark-ext-gfm-strikethrough", version.ref = "commonmark" }
+dex2jar-translator = { module = "de.femtopedia.dex2jar:dex-translator", version.ref = "dex2jar" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 hutool-all = { module = "cn.hutool:hutool-all", version.ref = "hutoolAll" }
 jline = { module = "org.jline:jline", version.ref = "jlineReader" }

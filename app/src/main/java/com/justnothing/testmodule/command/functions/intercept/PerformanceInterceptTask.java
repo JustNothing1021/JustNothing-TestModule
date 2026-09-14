@@ -6,6 +6,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.justnothing.testmodule.command.functions.intercept.base.AbstractInterceptTask;
+import com.justnothing.testmodule.command.functions.intercept.base.TaskType;
 import com.justnothing.testmodule.hooks.api.HookParam;
 import com.justnothing.testmodule.hooks.api.MethodHook;
 

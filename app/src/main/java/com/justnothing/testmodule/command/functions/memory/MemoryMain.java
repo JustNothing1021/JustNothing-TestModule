@@ -9,6 +9,9 @@ import com.justnothing.testmodule.command.framework.model.CommandResult;
 import com.justnothing.testmodule.command.functions.memory.impl.InfoCommand;
 import com.justnothing.testmodule.command.functions.memory.impl.GcCommand;
 import com.justnothing.testmodule.command.functions.memory.impl.DumpCommand;
+import com.justnothing.testmodule.command.functions.memory.request.DumpRequest;
+import com.justnothing.testmodule.command.functions.memory.request.GcRequest;
+import com.justnothing.testmodule.command.functions.memory.request.MemoryInfoRequest;
 
 @Cmd(
     name = "memory",

@@ -1,7 +1,5 @@
 package com.justnothing.testmodule.command.functions.classcmd.response;
 
-import com.justnothing.testmodule.command.functions.classcmd.ClassCommandResult;
-
 public class InvokeConstructorResult extends ClassCommandResult {
 
     private String resultString;

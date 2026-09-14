@@ -1,10 +1,9 @@
 package com.justnothing.testmodule.command.functions.performance.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
-import com.justnothing.testmodule.command.functions.performance.PerformanceRequest;
-import com.justnothing.testmodule.command.functions.performance.response.TraceResult;
+import com.justnothing.testmodule.command.functions.performance.response.PerfTraceResult;
 
-public class TraceStopRequest extends PerformanceRequest<TraceResult> {
+public class TraceStopRequest extends PerformanceRequest<PerfTraceResult> {
 
     @CmdParam(
         name = "id",

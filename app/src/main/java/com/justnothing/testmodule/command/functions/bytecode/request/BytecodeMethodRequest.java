@@ -22,14 +22,6 @@ public class BytecodeMethodRequest extends CommandRequest<BytecodeResult> {
     )
     private String methodName;
 
-    @CmdParam(
-        name = "hexFormat",
-        aliases = {"-h", "--hex"},
-        required = false,
-        description = "十六进制格式"
-    )
-    private boolean hexFormat;
-
     public BytecodeMethodRequest() {
         super();
     }
@@ -39,7 +31,4 @@ public class BytecodeMethodRequest extends CommandRequest<BytecodeResult> {
 
     public String getMethodName() { return methodName; }
     public void setMethodName(String methodName) { this.methodName = methodName; }
-
-    public boolean isHexFormat() { return hexFormat; }
-    public void setHexFormat(boolean hexFormat) { this.hexFormat = hexFormat; }
 }

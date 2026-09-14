@@ -4,7 +4,7 @@ import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
-import com.justnothing.testmodule.command.functions.agent.handlers.DbQueryResult;
+import com.justnothing.testmodule.command.functions.agent.response.DbQueryResult;
 
 public class AgentDbQueryRequest extends CommandRequest<DbQueryResult> {
     @Expose @SerializedName("packageName")

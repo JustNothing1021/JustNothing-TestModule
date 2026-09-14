@@ -3,7 +3,6 @@ package com.justnothing.testmodule.command.functions.classcmd.request;
 import com.justnothing.testmodule.command.framework.error.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.framework.model.CustomCommandLineParser;
-import com.justnothing.testmodule.command.functions.classcmd.ClassCommandRequest;
 import com.justnothing.testmodule.command.functions.classcmd.response.ReflectOperationResult;
 
 import java.util.ArrayList;

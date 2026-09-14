@@ -2,11 +2,11 @@ package com.justnothing.testmodule.command.functions.hook.impl;
 
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.model.CommandResult;
-import com.justnothing.testmodule.command.functions.hook.*;
 import com.justnothing.testmodule.command.functions.hook.request.*;
 import com.justnothing.testmodule.command.framework.output.Colors;
-import com.justnothing.testmodule.command.functions.hook.result.HookAddResult;
-import com.justnothing.testmodule.command.functions.hook.result.HookListResult;
+import com.justnothing.testmodule.command.functions.hook.response.HookAddResult;
+import com.justnothing.testmodule.command.functions.hook.response.HookListResult;
+import com.justnothing.testmodule.command.functions.hook.util.HookManager;
 
 import java.util.List;
 import java.util.Map;

@@ -17,6 +17,7 @@ import com.justnothing.testmodule.command.functions.nativecmd.request.NativeHeap
 import com.justnothing.testmodule.command.functions.nativecmd.request.NativeStackRequest;
 import com.justnothing.testmodule.command.functions.nativecmd.request.NativeMapsRequest;
 import com.justnothing.testmodule.command.functions.nativecmd.request.NativeSearchRequest;
+import com.justnothing.testmodule.command.functions.nativecmd.response.NativeResult;
 
 @Cmd(
     name = "native",

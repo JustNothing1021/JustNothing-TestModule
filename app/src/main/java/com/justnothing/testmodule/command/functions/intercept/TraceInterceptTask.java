@@ -2,6 +2,8 @@ package com.justnothing.testmodule.command.functions.intercept;
 
 import androidx.annotation.NonNull;
 
+import com.justnothing.testmodule.command.functions.intercept.base.AbstractInterceptTask;
+import com.justnothing.testmodule.command.functions.intercept.base.TaskType;
 import com.justnothing.testmodule.hooks.api.HookParam;
 import com.justnothing.testmodule.hooks.api.MethodHook;
 import com.justnothing.testmodule.utils.io.IOManager;

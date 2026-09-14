@@ -4,8 +4,8 @@ import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
 import androidx.annotation.NonNull;
 
 import com.justnothing.testmodule.command.functions.intercept.PerformanceInterceptTask;
-import com.justnothing.testmodule.command.functions.performance.PerformanceManager;
-import com.justnothing.testmodule.command.functions.performance.PerformanceRequest;
+import com.justnothing.testmodule.command.functions.performance.util.PerformanceManager;
+import com.justnothing.testmodule.command.functions.performance.request.PerformanceRequest;
 import com.justnothing.testmodule.command.functions.performance.request.*;
 import com.justnothing.testmodule.command.functions.performance.response.PerfHookResult;
 import com.justnothing.testmodule.command.framework.output.Colors;

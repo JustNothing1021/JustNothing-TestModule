@@ -4,7 +4,9 @@ import com.justnothing.testmodule.command.framework.model.MainCommand;
 import com.justnothing.testmodule.command.framework.annotation.Cmd;
 import com.justnothing.testmodule.command.framework.annotation.CmdRoutes;
 import com.justnothing.testmodule.command.framework.model.CommandRouter;
+import com.justnothing.testmodule.command.functions.packages.impl.PackagesCommand;
 import com.justnothing.testmodule.command.functions.packages.request.PackagesRequest;
+import com.justnothing.testmodule.command.functions.packages.response.PackagesResult;
 
 @Cmd(
     name = "packages",
