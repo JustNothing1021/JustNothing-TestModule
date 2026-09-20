@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.threads.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
+import com.justnothing.testmodule.command.functions.threads.ThreadsTexts;
 import com.justnothing.testmodule.command.functions.threads.response.ThreadProfileStartResult;
 import java.util.List;
 
@@ -9,7 +10,7 @@ public class ThreadProfileStartRequest extends CommandRequest<ThreadProfileStart
 
     @CmdParam(
         name = "--duration",
-        description = "分析时长(秒)",
+        description = ThreadsTexts.PARAM_THREADS_PROFILE_START_DURATION_DESC,
         required = false,
         defaultValue = "60",
         min = 1,
@@ -21,7 +22,7 @@ public class ThreadProfileStartRequest extends CommandRequest<ThreadProfileStart
 
     @CmdParam(
         name = "--target-threads",
-        description = "目标线程ID列表",
+        description = ThreadsTexts.PARAM_THREADS_PROFILE_START_TARGET_THREADS_DESC,
         required = false,
         varArgs = true,
         serializedName = "targetThreads"

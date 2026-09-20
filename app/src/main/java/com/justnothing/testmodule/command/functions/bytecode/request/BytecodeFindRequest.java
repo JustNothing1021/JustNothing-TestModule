@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.bytecode.request;
 
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.functions.bytecode.BytecodeTexts;
 import com.justnothing.testmodule.command.functions.bytecode.response.BytecodeResult;
 
 /**
@@ -15,7 +16,7 @@ public class BytecodeFindRequest extends CommandRequest<BytecodeResult> {
     @CmdParam(
         name = "keyword",
         required = true,
-        description = "类名关键词，不区分大小写，匹配类名的任意片段（如 ActivityManager、com.xtc）"
+        description = BytecodeTexts.PARAM_BYTECODE_FIND_KEYWORD_DESC
     )
     private String keyword;
 
@@ -23,7 +24,7 @@ public class BytecodeFindRequest extends CommandRequest<BytecodeResult> {
         name = "source",
         aliases = {"-s", "--source"},
         required = false,
-        description = "只在这个来源里搜（apk/jar/dex/vdex/odex）；不填则搜本进程所有代码来源"
+        description = BytecodeTexts.PARAM_BYTECODE_FIND_SOURCE_DESC
     )
     private String source;
 
@@ -32,7 +33,7 @@ public class BytecodeFindRequest extends CommandRequest<BytecodeResult> {
         aliases = {"-l", "--limit"},
         required = false,
         defaultValue = "50",
-        description = "最多列出多少个命中"
+        description = BytecodeTexts.PARAM_BYTECODE_FIND_LIMIT_DESC
     )
     private int limit = 50;
 

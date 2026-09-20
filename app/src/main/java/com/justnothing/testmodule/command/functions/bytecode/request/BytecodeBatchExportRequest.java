@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.bytecode.request;
 
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.functions.bytecode.BytecodeTexts;
 import com.justnothing.testmodule.command.functions.bytecode.response.BytecodeResult;
 
 public class BytecodeBatchExportRequest extends CommandRequest<BytecodeResult> {
@@ -10,7 +11,7 @@ public class BytecodeBatchExportRequest extends CommandRequest<BytecodeResult> {
         name = "source",
         aliases = {"-s", "--source"},
         required = false,
-        description = "来源文件或目录（目录会递归找 apk/jar/dex/vdex/odex）；不填则导出当前应用的 APK"
+        description = BytecodeTexts.PARAM_BYTECODE_BATCH_EXPORT_SOURCE_DESC
     )
     private String source;
 
@@ -18,7 +19,7 @@ public class BytecodeBatchExportRequest extends CommandRequest<BytecodeResult> {
         name = "outputPath",
         aliases = {"-o", "--output"},
         required = false,
-        description = "输出目录"
+        description = BytecodeTexts.PARAM_BYTECODE_BATCH_EXPORT_OUTPUTPATH_DESC
     )
     private String outputPath;
 
@@ -27,7 +28,7 @@ public class BytecodeBatchExportRequest extends CommandRequest<BytecodeResult> {
         aliases = {"-l", "--limit"},
         required = false,
         defaultValue = "32",
-        description = "最多处理多少个来源文件"
+        description = BytecodeTexts.PARAM_BYTECODE_BATCH_EXPORT_LIMIT_DESC
     )
     private int limit = 32;
 

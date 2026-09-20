@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.classcmd.impl;
 
 import com.justnothing.testmodule.command.framework.error.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.functions.classcmd.ClassTexts;
 import com.justnothing.testmodule.command.functions.classcmd.model.ClassCommandContext;
 import com.justnothing.testmodule.command.functions.classcmd.request.InvokeConstructorRequest;
 import com.justnothing.testmodule.command.functions.classcmd.response.InvokeConstructorResult;
@@ -19,8 +20,8 @@ import java.util.List;
 import java.util.Map;
 
 @SubCommandInfo(
-    description = "创建类的实例, 调用构造函数并返回结果",
-    usage = "class constructor [选项] <class_name> [args...]",
+    description = ClassTexts.SUB_CLASS_CONSTRUCTOR_DESC,
+    usage = ClassTexts.SUB_CLASS_CONSTRUCTOR_USAGE,
     examples = {
         "class constructor java.lang.Integer 114514",
         "class constructor java.lang.Integer int:114514",
@@ -29,24 +30,7 @@ import java.util.Map;
         "class constructor java.util.ArrayList",
         "class constructor java.io.File \"/sdcard/test.txt\""
     },
-    optionsDesc = """
-            参数支持表达式语法，可以直接写值或使用类型提示。
-
-            参数格式:
-                - 直接表达式: 123, "hello", true, null
-                - 带类型提示: int:123, String:"hello", boolean:true
-
-            表达式支持:
-                - 字面量: 114514, 3.14, "text", true, null
-                - 算术运算: 1 + 2, 10 * 5
-                - 字符串拼接: "Hello " + "World"
-                - 方法调用: Math.abs(-5)
-                - 字段访问: SomeClass.FIELD
-                - 对象创建: new ArrayList()
-
-            选项:
-                -f, --free      自由模式（跳过类型推断）
-            """
+    optionsDesc = ClassTexts.SUB_CLASS_CONSTRUCTOR_OPTIONS
 )
 public class ClassConstructorCommand extends AbstractClassCommand<InvokeConstructorRequest, InvokeConstructorResult> {
 

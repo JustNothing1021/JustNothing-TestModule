@@ -2,13 +2,10 @@ package com.justnothing.testmodule.ui.activity;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.view.View;
 import android.widget.TextView;
 
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.cardview.widget.CardView;
-
 import com.justnothing.testmodule.R;
+import com.justnothing.testmodule.databinding.ActivitySystemAnalysisBinding;
 import com.justnothing.methodsclient.UiClient;
 import com.justnothing.testmodule.ui.activity.analysis.classanalysis.ClassAnalysisActivity;
 import com.justnothing.testmodule.ui.activity.analysis.memory.MemoryAnalysisActivity;
@@ -33,110 +30,90 @@ import com.justnothing.testmodule.ui.activity.analysis.alias.AliasAnalysisActivi
  * </ul>
  * </p>
  */
-public class SystemAnalysisActivity extends AppCompatActivity {
-    
-    private CardView cardClassAnalysis;
-    private CardView cardMemoryAnalysis;
-    private CardView cardHookManager;
-    private CardView cardThreadAnalysis;
-    private CardView cardNetworkAnalysis;
-    private CardView cardPackages;
-    private CardView cardExportContext;
-    private CardView cardSystemInfo;
-    private CardView cardAlias;
-    private View tvServerStatus;
-    
+public class SystemAnalysisActivity extends BaseActivity {
+
+    private ActivitySystemAnalysisBinding binding;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_system_analysis);
-        
+        binding = ActivitySystemAnalysisBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
+
         initViews();
         setupListeners();
         checkServerStatus();
     }
-    
+
     private void initViews() {
-        cardClassAnalysis = findViewById(R.id.card_class_analysis);
-        cardMemoryAnalysis = findViewById(R.id.card_memory_analysis);
-        cardHookManager = findViewById(R.id.card_hook_manager);
-        cardThreadAnalysis = findViewById(R.id.card_thread_analysis);
-        cardNetworkAnalysis = findViewById(R.id.card_network_analysis);
-        cardPackages = findViewById(R.id.card_packages);
-        cardExportContext = findViewById(R.id.card_export_context);
-        cardSystemInfo = findViewById(R.id.card_system_info);
-        cardAlias = findViewById(R.id.card_alias);
-        tvServerStatus = findViewById(R.id.tv_server_status);
-        
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
             getSupportActionBar().setTitle(getString(R.string.system_analysis));
         }
     }
-    
+
     private void setupListeners() {
-        cardClassAnalysis.setOnClickListener(v -> {
+        binding.cardClassAnalysis.setOnClickListener(v -> {
             startActivity(new Intent(this, ClassAnalysisActivity.class));
         });
-        
-        cardMemoryAnalysis.setOnClickListener(v -> {
+
+        binding.cardMemoryAnalysis.setOnClickListener(v -> {
             startActivity(new Intent(this, MemoryAnalysisActivity.class));
         });
-        
-        cardHookManager.setOnClickListener(v -> {
+
+        binding.cardHookManager.setOnClickListener(v -> {
             startActivity(new Intent(this, HookManagerActivity.class));
         });
-        
-        cardThreadAnalysis.setOnClickListener(v -> {
+
+        binding.cardThreadAnalysis.setOnClickListener(v -> {
             startActivity(new Intent(this, ThreadAnalysisActivity.class));
         });
-        
-        cardNetworkAnalysis.setOnClickListener(v -> {
+
+        binding.cardNetworkAnalysis.setOnClickListener(v -> {
             startActivity(new Intent(this, NetworkAnalysisActivity.class));
         });
 
-        cardPackages.setOnClickListener(v -> {
+        binding.cardPackages.setOnClickListener(v -> {
             startActivity(new Intent(this, PackagesAnalysisActivity.class));
         });
 
-        cardExportContext.setOnClickListener(v -> {
+        binding.cardExportContext.setOnClickListener(v -> {
             startActivity(new Intent(this, ExportContextAnalysisActivity.class));
         });
 
-        cardSystemInfo.setOnClickListener(v -> {
+        binding.cardSystemInfo.setOnClickListener(v -> {
             startActivity(new Intent(this, SystemInfoAnalysisActivity.class));
         });
 
-        cardAlias.setOnClickListener(v -> {
+        binding.cardAlias.setOnClickListener(v -> {
             startActivity(new Intent(this, AliasAnalysisActivity.class));
         });
     }
-    
+
     private void checkServerStatus() {
         new Thread(() -> {
             boolean available = UiClient.getInstance().isServerAvailable();
             runOnUiThread(() -> updateServerStatus(available));
         }).start();
     }
-    
+
     private void updateServerStatus(boolean available) {
-        if (tvServerStatus instanceof TextView statusView) {
-            if (available) {
-                statusView.setText(getString(R.string.analysis_server_connected));
-                statusView.setTextColor(getColor(R.color.green));
-            } else {
-                statusView.setText(getString(R.string.analysis_server_disconnected));
-                statusView.setTextColor(getColor(R.color.red));
-            }
+        TextView statusView = binding.tvServerStatus;
+        if (available) {
+            statusView.setText(getString(R.string.analysis_server_connected));
+            statusView.setTextColor(getColor(R.color.green));
+        } else {
+            statusView.setText(getString(R.string.analysis_server_disconnected));
+            statusView.setTextColor(getColor(R.color.red));
         }
     }
-    
+
     @Override
     protected void onResume() {
         super.onResume();
         checkServerStatus();
     }
-    
+
     @Override
     public boolean onSupportNavigateUp() {
         onBackPressed();

@@ -1,11 +1,12 @@
 package com.justnothing.testmodule.command.functions.script.request;
 
+import com.justnothing.testmodule.command.functions.script.ScriptTexts;
 import com.justnothing.testmodule.command.functions.script.response.ScriptResult;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 
 public class ScriptDeleteRequest extends ScriptBaseRequest<ScriptResult> {
 
-    @CmdParam(name = "name", position = 1, required = true, description = "脚本名称")
+    @CmdParam(name = "name", position = 1, required = true, description = ScriptTexts.PARAM_SCRIPT_DELETE_NAME_DESC)
     private String name;
 
     public ScriptDeleteRequest() {

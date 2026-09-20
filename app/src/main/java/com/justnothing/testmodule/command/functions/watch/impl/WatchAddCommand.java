@@ -7,12 +7,13 @@ import com.justnothing.testmodule.command.framework.utils.CommandExceptionHandle
 import com.justnothing.testmodule.command.functions.watch.util.WatchManager;
 import com.justnothing.testmodule.command.functions.watch.request.WatchAddRequest;
 import com.justnothing.testmodule.command.functions.watch.response.WatchAddResult;
+import com.justnothing.testmodule.command.functions.watch.WatchTexts;
 
 import java.util.HashMap;
 import java.util.Map;
 
 @SubCommandInfo(
-    description = "添加字段或方法监控任务",
+    description = WatchTexts.SUB_WATCH_ADD_DESC,
     usage = "watch add <field|method> <class_name> <member_name> [sig/signature <signature>] [interval: ms]",
     examples = {
         "watch add field java.lang.System out 1000",

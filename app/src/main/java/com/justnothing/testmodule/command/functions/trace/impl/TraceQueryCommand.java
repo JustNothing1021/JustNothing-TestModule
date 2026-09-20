@@ -9,11 +9,12 @@ import com.justnothing.testmodule.command.functions.trace.request.TraceListReque
 import com.justnothing.testmodule.command.functions.trace.request.TraceShowRequest;
 import com.justnothing.testmodule.command.functions.trace.request.TraceExportRequest;
 import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.functions.trace.TraceTexts;
 
 import java.util.List;
 
 @SubCommandInfo(
-    description = "Trace 查询操作 - 列表/显示/导出",
+    description = TraceTexts.SUB_TRACE_QUERY_DESC,
     examples = {
         "trace list                        列出所有任务",
         "trace show <id>                   显示调用树",

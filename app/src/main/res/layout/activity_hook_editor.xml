@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Hook 编辑器：间距走 @dimen/spacing_*，颜色走 ?attr/color* 主题角色；结构与 id 未动。 -->
 <androidx.coordinatorlayout.widget.CoordinatorLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -27,13 +28,13 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:padding="@dimen/spacing_16">
 
             <!-- 类名 -->
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="10dp"
+                android:layout_marginBottom="@dimen/spacing_12"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
                 <com.google.android.material.textfield.TextInputEditText
@@ -50,7 +51,7 @@
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="10dp"
+                android:layout_marginBottom="@dimen/spacing_12"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
                 <com.google.android.material.textfield.TextInputEditText
@@ -68,7 +69,7 @@
                 android:id="@+id/card_signature"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
+                android:layout_marginBottom="@dimen/spacing_12"
                 app:cardCornerRadius="8dp"
                 app:cardElevation="1dp">
 
@@ -76,7 +77,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="10dp">
+                    android:padding="@dimen/spacing_12">
 
                     <!-- 标题栏 -->
                     <LinearLayout
@@ -91,8 +92,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="@string/analysis_hook_add_signature"
-                            android:textAppearance="?attr/textAppearanceTitleSmall"
-                            android:textStyle="bold" />
+                            android:textAppearance="@style/TextAppearance.App.Caption.Bold" />
 
                         <ImageView
                             android:id="@+id/iv_signature_expand"
@@ -110,7 +110,7 @@
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
                         android:visibility="gone"
-                        android:layout_marginTop="8dp">
+                        android:layout_marginTop="@dimen/spacing_8">
 
                         <TextView
                             android:id="@+id/tv_no_params"
@@ -118,9 +118,9 @@
                             android:layout_height="wrap_content"
                             android:text="@string/analysis_hook_no_params_hint"
                             android:textAppearance="?attr/textAppearanceBodySmall"
-                            android:textColor="@android:color/darker_gray"
+                            android:textColor="?attr/colorOnSurfaceVariant"
                             android:gravity="center"
-                            android:padding="8dp"
+                            android:padding="@dimen/spacing_8"
                             android:visibility="visible" />
 
                         <!-- 参数输入项会动态添加到这里 -->
@@ -132,7 +132,7 @@
                         android:id="@+id/btn_add_param"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
+                        android:layout_marginTop="@dimen/spacing_8"
                         android:text="@string/analysis_hook_add_param"
                         app:icon="@android:drawable/ic_input_add"
                         style="@style/Widget.Material3.Button.OutlinedButton"
@@ -147,13 +147,13 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/analysis_hook_add_phase_before"
-                android:layout_marginBottom="4dp" />
+                android:layout_marginBottom="@dimen/spacing_4" />
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/layout_before_code"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
+                android:layout_marginBottom="@dimen/spacing_12"
                 android:visibility="gone"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
@@ -174,13 +174,13 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/analysis_hook_add_phase_after"
-                android:layout_marginBottom="4dp" />
+                android:layout_marginBottom="@dimen/spacing_4" />
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/layout_after_code"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
+                android:layout_marginBottom="@dimen/spacing_12"
                 android:visibility="gone"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
@@ -201,13 +201,13 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/analysis_hook_add_phase_replace"
-                android:layout_marginBottom="4dp" />
+                android:layout_marginBottom="@dimen/spacing_4" />
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/layout_replace_code"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
+                android:layout_marginBottom="@dimen/spacing_16"
                 android:visibility="gone"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 

@@ -1,6 +1,7 @@
 package com.justnothing.testmodule.command.functions.classcmd.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.functions.classcmd.ClassTexts;
 import com.justnothing.testmodule.command.functions.classcmd.response.GetFieldValueResult;
 
 public class FieldRequest extends ClassCommandRequest<GetFieldValueResult> {
@@ -9,7 +10,7 @@ public class FieldRequest extends ClassCommandRequest<GetFieldValueResult> {
 
     @CmdParam(
         name = "class",
-        description = "目标类名",
+        description = ClassTexts.PARAM_CLASS_FIELD_CLASS_DESC,
         position = 1,
         required = true,
         serializedName = "className"
@@ -18,7 +19,7 @@ public class FieldRequest extends ClassCommandRequest<GetFieldValueResult> {
 
     @CmdParam(
         name = "--instance",
-        description = "目标实例表达式 (用于操作非静态字段, 支持代码表达式)",
+        description = ClassTexts.PARAM_CLASS_FIELD_INSTANCE_DESC,
         aliases = {"-i"},
         required = false,
         readMode = CmdParam.ReadMode.PRESERVED,
@@ -30,7 +31,7 @@ public class FieldRequest extends ClassCommandRequest<GetFieldValueResult> {
 
     @CmdParam(
         name = "--value",
-        description = "显示字段值",
+        description = ClassTexts.PARAM_CLASS_FIELD_VALUE_DESC,
         aliases = {"-v"},
         serializedName = "showValue"
     )
@@ -38,7 +39,7 @@ public class FieldRequest extends ClassCommandRequest<GetFieldValueResult> {
 
     @CmdParam(
         name = "--type",
-        description = "显示字段类型",
+        description = ClassTexts.PARAM_CLASS_FIELD_TYPE_DESC,
         aliases = {"-t"},
         serializedName = "showType"
     )
@@ -46,7 +47,7 @@ public class FieldRequest extends ClassCommandRequest<GetFieldValueResult> {
 
     @CmdParam(
         name = "--modifiers",
-        description = "显示修饰符",
+        description = ClassTexts.PARAM_CLASS_FIELD_MODIFIERS_DESC,
         aliases = {"-m"},
         serializedName = "showModifiers"
     )
@@ -54,7 +55,7 @@ public class FieldRequest extends ClassCommandRequest<GetFieldValueResult> {
 
     @CmdParam(
         name = "--all",
-        description = "显示所有信息 (默认)",
+        description = ClassTexts.PARAM_CLASS_FIELD_ALL_DESC,
         aliases = {"-a"},
         serializedName = "showAll"
     )
@@ -64,21 +65,21 @@ public class FieldRequest extends ClassCommandRequest<GetFieldValueResult> {
 
     @CmdParam(
         name = "--super",
-        description = "访问父类字段",
+        description = ClassTexts.PARAM_CLASS_FIELD_SUPER_DESC,
         serializedName = "accessSuper"
     )
     private boolean accessSuper;
 
     @CmdParam(
         name = "--interfaces",
-        description = "访问接口字段",
+        description = ClassTexts.PARAM_CLASS_FIELD_INTERFACES_DESC,
         serializedName = "accessInterfaces"
     )
     private boolean accessInterfaces;
 
     @CmdParam(
         name = "--static",
-        description = "仅静态字段",
+        description = ClassTexts.PARAM_CLASS_FIELD_STATIC_DESC,
         aliases = {"--static-only"},
         serializedName = "staticOnly"
     )
@@ -88,7 +89,7 @@ public class FieldRequest extends ClassCommandRequest<GetFieldValueResult> {
 
     @CmdParam(
         name = "--get",
-        description = "获取字段值 (支持: --get name / get name / -g name)",
+        description = ClassTexts.PARAM_CLASS_FIELD_GET_DESC,
         aliases = {"-g", "get"},
         isOperator = true,
         operatorArgs = 1,
@@ -101,7 +102,7 @@ public class FieldRequest extends ClassCommandRequest<GetFieldValueResult> {
 
     @CmdParam(
         name = "--get-target",
-        description = "要获取的字段名",
+        description = ClassTexts.PARAM_CLASS_FIELD_GET_TARGET_DESC,
         belongsToOperator = "get",
         operatorIndex = 1,  // get 的第1个参数
         required = false,
@@ -113,7 +114,7 @@ public class FieldRequest extends ClassCommandRequest<GetFieldValueResult> {
 
     @CmdParam(
         name = "--set",
-        description = "设置字段值 (支持: --set name val / set name val / -s name val)",
+        description = ClassTexts.PARAM_CLASS_FIELD_SET_DESC,
         aliases = {"-s", "set"},
         isOperator = true,
         operatorArgs = 2,
@@ -126,7 +127,7 @@ public class FieldRequest extends ClassCommandRequest<GetFieldValueResult> {
 
     @CmdParam(
         name = "--set-target",
-        description = "要设置的字段名",
+        description = ClassTexts.PARAM_CLASS_FIELD_SET_TARGET_DESC,
         belongsToOperator = "set",
         operatorIndex = 1,  // set 的第1个参数
         required = false,
@@ -136,7 +137,7 @@ public class FieldRequest extends ClassCommandRequest<GetFieldValueResult> {
 
     @CmdParam(
         name = "--set-value",
-        description = "要设置的值",
+        description = ClassTexts.PARAM_CLASS_FIELD_SET_VALUE_DESC,
         readMode = CmdParam.ReadMode.PRESERVED,
         belongsToOperator = "set",
         operatorIndex = 2,  // set 的第2个参数

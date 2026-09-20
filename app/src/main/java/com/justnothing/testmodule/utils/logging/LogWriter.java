@@ -80,6 +80,21 @@ public class LogWriter {
             return String.format("[%s] [%5s] %20s %s", timestamp, level, tag, message);
         }
 
+        /**
+         * 这一行是不是一条新日志的开头。
+         * <p>
+         * 日志正文里可能带换行（堆栈、JSON 报文），写出去时是一条记录、读回来却是好几行。
+         * 只有形如 {@code [时间] [级别] ...} 的才是新记录，其余都是上一条的续行。
+         */
+        public static boolean isHeaderLine(String logLine) {
+            return logLine.matches("^\\[.*] \\[.*].*");
+        }
+
+        /** 把续行并进这一条。并进去而不是新开一条，否则它会顶着一个凭空捏造的时间戳乱序。 */
+        public LogEntry withAppendedLine(String line) {
+            return new LogEntry(timestamp, timestampMs, level, tag, message + "\n" + line);
+        }
+
         public static LogEntry fromString(String logLine) {
             try {
                 String timestamp = "";
@@ -334,13 +349,17 @@ public class LogWriter {
         if (!logsText.isEmpty()) {
             String[] lines = logsText.split("\n");
             for (String line : lines) {
-                if (!line.trim().isEmpty()) {
-                    try {
-                        LogEntry entry = LogEntry.fromString(line);
-                        logs.add(entry);
-                    } catch (Exception e) {
-                        Log.e(TAG, "解析日志失败: " + line, e);
+                if (line.trim().isEmpty()) continue;
+                try {
+                    if (LogEntry.isHeaderLine(line)) {
+                        logs.add(LogEntry.fromString(line));
+                    } else if (!logs.isEmpty()) {
+                        // 多行正文的续行：并进上一条，不要新开一条
+                        int last = logs.size() - 1;
+                        logs.set(last, logs.get(last).withAppendedLine(line));
                     }
+                } catch (Exception e) {
+                    Log.e(TAG, "解析日志失败: " + line, e);
                 }
             }
         }

@@ -4,6 +4,7 @@ import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.annotation.Cmd;
 import com.justnothing.testmodule.command.framework.annotation.CmdRoutes;
 import com.justnothing.testmodule.command.framework.utils.CmdParamProcessor;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
 import com.justnothing.testmodule.utils.logging.Logger;
 
 public abstract class MainCommand<Res extends CommandResult>
@@ -53,8 +54,7 @@ public abstract class MainCommand<Res extends CommandResult>
             } catch (Exception ignored) {
             }
         }
-        return "用法: " + getCommandName() + " [args...]\n" +
-               "输入 " + getCommandName() + " --help 查看详细帮助";
+        return CliMessages.HELP_FALLBACK_USAGE.format(getCommandName(), getCommandName());
     }
 
     /**

@@ -23,7 +23,7 @@ import com.justnothing.testmodule.command.functions.threads.response.ThreadComma
 @Cmd(
     name = "threads",
     group = "system",
-    description = "线程管理和分析工具",
+    description = ThreadsTexts.CMD_THREADS_DESC,
     version = CMD_THREADS_VER
 )
 @CmdRoutes({
@@ -31,37 +31,37 @@ import com.justnothing.testmodule.command.functions.threads.response.ThreadComma
         path = "list",
         request = ThreadListRequest.class,
         handler = ThreadListCommand.class,
-        description = "列出所有线程及其状态"
+        description = ThreadsTexts.ROUTE_THREADS_LIST_DESC
     ),
     @CmdRoutes.Route(
         path = "deadlock",
         request = ThreadDeadlockRequest.class,
         handler = ThreadDeadlockCommand.class,
-        description = "检测Java应用程序中的死锁"
+        description = ThreadsTexts.ROUTE_THREADS_DEADLOCK_DESC
     ),
     @CmdRoutes.Route(
         path = "profile/start",
         request = ThreadProfileStartRequest.class,
         handler = ThreadProfileStartCommand.class,
-        description = "开始性能分析"
+        description = ThreadsTexts.ROUTE_THREADS_PROFILE_START_DESC
     ),
     @CmdRoutes.Route(
         path = "profile/stop",
         request = ThreadProfileStopRequest.class,
         handler = ThreadProfileStopCommand.class,
-        description = "停止当前分析"
+        description = ThreadsTexts.ROUTE_THREADS_PROFILE_STOP_DESC
     ),
     @CmdRoutes.Route(
         path = "profile/show",
         request = ThreadProfileShowRequest.class,
         handler = ThreadProfileShowCommand.class,
-        description = "显示分析结果"
+        description = ThreadsTexts.ROUTE_THREADS_PROFILE_SHOW_DESC
     ),
     @CmdRoutes.Route(
         path = "profile/export",
         request = ThreadProfileExportRequest.class,
         handler = ThreadProfileExportCommand.class,
-        description = "导出分析结果到文件"
+        description = ThreadsTexts.ROUTE_THREADS_PROFILE_EXPORT_DESC
     )
 })
 public class ThreadsMain extends MainCommand<ThreadCommandResult> {

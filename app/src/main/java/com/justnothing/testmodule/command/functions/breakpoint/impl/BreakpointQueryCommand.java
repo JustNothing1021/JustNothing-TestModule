@@ -3,6 +3,7 @@ package com.justnothing.testmodule.command.functions.breakpoint.impl;
 import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.functions.breakpoint.BreakpointTexts;
 import com.justnothing.testmodule.command.functions.breakpoint.request.BreakpointListRequest;
 import com.justnothing.testmodule.command.functions.breakpoint.request.BreakpointHitsRequest;
 import com.justnothing.testmodule.command.functions.breakpoint.response.BreakpointResult;
@@ -13,7 +14,7 @@ import java.util.Date;
 import java.util.List;
 
 @SubCommandInfo(
-    description = "断点查询命令（列表、命中统计）",
+    description = BreakpointTexts.SUB_BREAKPOINT_QUERY_DESC,
     usage = "breakpoint <list|hits>",
     examples = {
         "breakpoint list",

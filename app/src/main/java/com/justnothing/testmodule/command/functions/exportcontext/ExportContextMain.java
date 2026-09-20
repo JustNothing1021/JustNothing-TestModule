@@ -11,7 +11,7 @@ import com.justnothing.testmodule.command.functions.exportcontext.response.Expor
 @Cmd(
     name = "export-context",
     group = "system",
-    description = "导出设备上下文信息, 包括HTTP配置, 设备标识等",
+    description = ExportContextTexts.CMD_EXPORT_CONTEXT_DESC,
     version = "1.0.0"
 )
 @CmdRoutes({
@@ -19,7 +19,7 @@ import com.justnothing.testmodule.command.functions.exportcontext.response.Expor
         path = "",
         request = ExportContextRequest.class,
         handler = ExportContextCommand.class,
-        description = "导出设备上下文信息"
+        description = ExportContextTexts.ROUTE_EXPORT_CONTEXT_DESC
     )
 })
 public class ExportContextMain extends MainCommand<ExportContextResult> {

@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.script.request;
 
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.functions.system.SystemTexts;
 import com.justnothing.testmodule.command.functions.system.response.SystemInfoResult;
 
 // key 必须等于服务端路由的完整路径。system 路由的 path 为空，
@@ -10,7 +11,7 @@ public class SystemInfoRequest extends CommandRequest<SystemInfoResult> {
 
     @CmdParam(
         name = "--cpu",
-        description = "显示CPU信息",
+        description = SystemTexts.PARAM_SYSTEM_CPU_DESC,
         required = false,
         aliases = {"-c"}
     )
@@ -18,7 +19,7 @@ public class SystemInfoRequest extends CommandRequest<SystemInfoResult> {
 
     @CmdParam(
         name = "--memory",
-        description = "显示内存信息",
+        description = SystemTexts.PARAM_SYSTEM_MEMORY_DESC,
         required = false,
         aliases = {"-m"}
     )
@@ -26,7 +27,7 @@ public class SystemInfoRequest extends CommandRequest<SystemInfoResult> {
 
     @CmdParam(
         name = "--os",
-        description = "显示操作系统信息",
+        description = SystemTexts.PARAM_SYSTEM_OS_DESC,
         required = false,
         aliases = {"-o"}
     )
@@ -34,7 +35,7 @@ public class SystemInfoRequest extends CommandRequest<SystemInfoResult> {
 
     @CmdParam(
         name = "--props",
-        description = "显示系统属性",
+        description = SystemTexts.PARAM_SYSTEM_PROPS_DESC,
         required = false,
         aliases = {"-p"}
     )
@@ -42,7 +43,7 @@ public class SystemInfoRequest extends CommandRequest<SystemInfoResult> {
 
     @CmdParam(
         name = "--all",
-        description = "显示所有信息（默认）",
+        description = SystemTexts.PARAM_SYSTEM_ALL_DESC,
         required = false,
         defaultValue = "true"
     )

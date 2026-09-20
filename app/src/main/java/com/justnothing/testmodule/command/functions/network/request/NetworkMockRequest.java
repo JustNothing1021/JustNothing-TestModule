@@ -1,27 +1,28 @@
 package com.justnothing.testmodule.command.functions.network.request;
 
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
+import com.justnothing.testmodule.command.functions.network.NetworkTexts;
 import com.justnothing.testmodule.command.functions.network.response.NetworkResult;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 
 public class NetworkMockRequest extends CommandRequest<NetworkResult> {
 
-    @CmdParam(name = "subCommand", required = false, description = "子命令 (add/header/remove/list/clear)")
+    @CmdParam(name = "subCommand", required = false, description = NetworkTexts.PARAM_NETWORK_MOCK_SUBCOMMAND_DESC)
     private String subCommand;
 
-    @CmdParam(name = "pattern", required = false, description = "匹配模式")
+    @CmdParam(name = "pattern", required = false, description = NetworkTexts.PARAM_NETWORK_MOCK_PATTERN_DESC)
     private String pattern;
 
-    @CmdParam(name = "response", required = false, description = "响应内容")
+    @CmdParam(name = "response", required = false, description = NetworkTexts.PARAM_NETWORK_MOCK_RESPONSE_DESC)
     private String response;
 
-    @CmdParam(name = "statusCode", required = false, description = "状态码")
+    @CmdParam(name = "statusCode", required = false, description = NetworkTexts.PARAM_NETWORK_MOCK_STATUSCODE_DESC)
     private Integer statusCode;
 
-    @CmdParam(name = "headerName", required = false, description = "头部名称")
+    @CmdParam(name = "headerName", required = false, description = NetworkTexts.PARAM_NETWORK_MOCK_HEADERNAME_DESC)
     private String headerName;
 
-    @CmdParam(name = "headerValue", required = false, description = "头部值")
+    @CmdParam(name = "headerValue", required = false, description = NetworkTexts.PARAM_NETWORK_MOCK_HEADERVALUE_DESC)
     private String headerValue;
 
     public String getSubCommand() { return subCommand; }

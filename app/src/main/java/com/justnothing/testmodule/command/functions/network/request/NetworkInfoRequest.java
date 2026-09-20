@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.network.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
+import com.justnothing.testmodule.command.functions.network.NetworkTexts;
 import com.justnothing.testmodule.command.framework.model.CommandResult;
 
 public class NetworkInfoRequest extends CommandRequest<CommandResult> {
@@ -10,7 +11,7 @@ public class NetworkInfoRequest extends CommandRequest<CommandResult> {
         name = "id",
         position = 1,
         required = true,
-        description = "请求 ID",
+        description = NetworkTexts.PARAM_NETWORK_INFO_ID_DESC,
         serializedName = "targetRequestId"
     )
     private int targetRequestId;

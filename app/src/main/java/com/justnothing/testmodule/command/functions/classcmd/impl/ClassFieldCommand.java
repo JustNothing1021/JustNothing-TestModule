@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.classcmd.impl;
 
 import com.justnothing.testmodule.command.framework.error.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.functions.classcmd.ClassTexts;
 import com.justnothing.testmodule.command.functions.classcmd.model.ClassCommandContext;
 import com.justnothing.testmodule.command.functions.classcmd.request.FieldRequest;
 import com.justnothing.testmodule.command.functions.classcmd.response.GetFieldValueResult;
@@ -12,33 +13,14 @@ import com.justnothing.testmodule.utils.format.DescriptorColorizer;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 
-@SubCommandInfo(description = "查看或修改类的字段值，支持静态字段和实例字段", usage = "class field <class_name> [operation] [args...]", examples = {
+@SubCommandInfo(description = ClassTexts.SUB_CLASS_FIELD_DESC, usage = "class field <class_name> [operation] [args...]", examples = {
         "class field java.lang.String",
         "class field java.lang.String --get value",
         "class field java.lang.String get value",
         "class field java.lang.String --set value \"hello\"",
         "class field java.lang.String set value \"hello\"",
         "class field MyClass get myField -i \"myInstance\""
-}, optionsDesc = """
-        操作符:
-            get, --get, -g         获取字段值 (需提供字段名)
-            set, --set, -s         设置字段值 (格式: set <field> <value>)
-
-        目标选项:
-            --class               目标类名 (位置参数 position=1)
-            --instance, -i        目标实例表达式 (用于非静态字段)
-
-        显示选项:
-            -v, --value           显示字段值
-            -t, --type            显示字段类型
-            -m, --modifiers       显示修饰符
-            -a, --all             显示所有信息 (默认)
-
-        访问控制:
-            --super               访问父类字段
-            --interfaces          访问接口字段
-            --static-only         仅静态字段
-        """)
+}, optionsDesc = ClassTexts.SUB_CLASS_FIELD_OPTIONS)
 public class ClassFieldCommand extends AbstractClassCommand<FieldRequest, GetFieldValueResult> {
 
     public ClassFieldCommand() {

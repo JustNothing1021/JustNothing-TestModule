@@ -3,6 +3,7 @@ package com.justnothing.testmodule.command.functions.threads.impl;
 import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
 import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.functions.threads.ThreadsTexts;
 import com.justnothing.testmodule.command.framework.utils.CommandArgumentParser;
 import com.justnothing.testmodule.command.framework.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.command.functions.threads.util.ProfileManager;
@@ -10,7 +11,7 @@ import com.justnothing.testmodule.command.functions.threads.request.ThreadProfil
 import com.justnothing.testmodule.command.functions.threads.response.ThreadProfileStartResult;
 
 @SubCommandInfo(
-    description = "开始性能分析",
+    description = ThreadsTexts.SUB_THREADS_PROFILE_START_DESC,
     usage = "threads profile start [duration: seconds]",
     examples = {
         "threads profile start",

@@ -6,7 +6,6 @@ import android.text.style.ForegroundColorSpan;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
@@ -14,6 +13,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.justnothing.testmodule.R;
 import com.justnothing.testmodule.command.functions.classcmd.model.FieldInfo;
+import com.justnothing.testmodule.databinding.ItemFieldInfoBinding;
 import com.justnothing.testmodule.utils.format.DescriptorColorizer;
 
 import java.util.ArrayList;
@@ -43,9 +43,9 @@ public class FieldAdapter extends RecyclerView.Adapter<FieldAdapter.ViewHolder> 
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext())
-            .inflate(R.layout.item_field_info, parent, false);
-        return new ViewHolder(view);
+        ItemFieldInfoBinding binding = ItemFieldInfoBinding.inflate(
+            LayoutInflater.from(parent.getContext()), parent, false);
+        return new ViewHolder(binding);
     }
 
     @Override
@@ -59,17 +59,11 @@ public class FieldAdapter extends RecyclerView.Adapter<FieldAdapter.ViewHolder> 
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {
-        private final TextView tvFieldName;
-        private final TextView tvFieldType;
-        private final TextView tvModifiers;
-        private final TextView tvInheritedFrom;
+        private final ItemFieldInfoBinding binding;
 
-        public ViewHolder(@NonNull View itemView) {
-            super(itemView);
-            tvFieldName = itemView.findViewById(R.id.tv_field_name);
-            tvFieldType = itemView.findViewById(R.id.tv_field_type);
-            tvModifiers = itemView.findViewById(R.id.tv_modifiers);
-            tvInheritedFrom = itemView.findViewById(R.id.tv_inherited_from);
+        public ViewHolder(@NonNull ItemFieldInfoBinding binding) {
+            super(binding.getRoot());
+            this.binding = binding;
 
             itemView.setOnClickListener(v -> {
                 if (onItemClickListener != null) {
@@ -82,7 +76,7 @@ public class FieldAdapter extends RecyclerView.Adapter<FieldAdapter.ViewHolder> 
         }
 
         public void bind(FieldInfo field) {
-            tvFieldName.setText(field.getName());
+            binding.tvFieldName.setText(field.getName());
 
             int colorGreen = ContextCompat.getColor(itemView.getContext(), R.color.green);
 
@@ -100,7 +94,7 @@ public class FieldAdapter extends RecyclerView.Adapter<FieldAdapter.ViewHolder> 
             int typeStart = typeBuilder.length();
             typeBuilder.append(typeName);
             typeBuilder.setSpan(new ForegroundColorSpan(colorGreen), typeStart, typeBuilder.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            tvFieldType.setText(typeBuilder);
+            binding.tvFieldType.setText(typeBuilder);
 
             String modifier = field.getModifiersString();
             String modifierLabel = itemView.getContext().getString(R.string.analysis_field_modifiers_label);
@@ -111,18 +105,18 @@ public class FieldAdapter extends RecyclerView.Adapter<FieldAdapter.ViewHolder> 
             } else {
                 modifierBuilder.append(itemView.getContext().getString(R.string.analysis_field_no_modifiers));
             }
-            tvModifiers.setText(modifierBuilder.toString());
+            binding.tvModifiers.setText(modifierBuilder.toString());
             
             String declaringClass = field.getDeclaringClass();
             if (declaringClass != null && !declaringClass.equals(currentClassName)) {
-                tvInheritedFrom.setVisibility(View.VISIBLE);
+                binding.tvInheritedFrom.setVisibility(View.VISIBLE);
                 if (field.isDeclaringClassIsInterface()) {
-                    tvInheritedFrom.setText(String.format(itemView.getContext().getString(R.string.implements_implements_bracket), DescriptorColorizer.formatTypeName(declaringClass)));
+                    binding.tvInheritedFrom.setText(String.format(itemView.getContext().getString(R.string.implements_implements_bracket), DescriptorColorizer.formatTypeName(declaringClass)));
                 } else {
-                    tvInheritedFrom.setText(String.format(itemView.getContext().getString(R.string.analysis_invoke_extends_bracket), DescriptorColorizer.formatTypeName(declaringClass)));
+                    binding.tvInheritedFrom.setText(String.format(itemView.getContext().getString(R.string.analysis_invoke_extends_bracket), DescriptorColorizer.formatTypeName(declaringClass)));
                 }
             } else {
-                tvInheritedFrom.setVisibility(View.GONE);
+                binding.tvInheritedFrom.setVisibility(View.GONE);
             }
         }
     }

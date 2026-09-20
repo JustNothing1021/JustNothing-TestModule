@@ -8,6 +8,7 @@ import com.justnothing.testmodule.command.functions.performance.response.MultiTh
 import com.justnothing.testmodule.command.functions.performance.sampler.MultiThreadSampleData;
 import com.justnothing.testmodule.command.functions.performance.sampler.MultiThreadSampler;
 import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.functions.performance.PerformanceTexts;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -19,7 +20,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 @SubCommandInfo(
-    description = "多线程采样分析，分别统计各线程的方法调用情况",
+    description = PerformanceTexts.SUB_PERFORMANCE_MULTITHREAD_DESC,
     usage = "performance multithread <action> [args...]",
     examples = {
         "performance multithread start 1000",
@@ -27,12 +28,7 @@ import java.util.stream.Collectors;
         "performance multithread report 1",
         "performance multithread export 1 /sdcard/mt.json"
     },
-    optionsDesc = """
-        Actions:
-            start [rate] [--exclude pattern]   开始多线程采样
-            stop <id>                          停止采样
-            report [id]                        查看报告 (默认最新)
-            export <id> <path>                 导出数据"""
+    optionsDesc = PerformanceTexts.SUB_PERFORMANCE_MULTITHREAD_OPTIONS
 )
 public class MultiThreadCommand extends AbstractPerfCommand<PerformanceRequest<?>, MultiThreadResult> {
 

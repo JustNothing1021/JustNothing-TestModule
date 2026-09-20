@@ -13,28 +13,28 @@ import com.justnothing.testmodule.command.functions.classcmd.response.ClassComma
 @Cmd(
     name = "class",
     group = "system",
-    description = "查看类的详细信息, 包括继承关系, 接口, 构造函数等",
+    description = ClassTexts.CMD_CLASS_DESC,
     version = CMD_CLASS_VER
 )
 @CmdRoutes({
     @CmdRoutes.Route(path = "info", request = ClassInfoRequest.class,
-            handler = ClassInfoCommand.class, description = "查看类的详细信息"),
+            handler = ClassInfoCommand.class, description = ClassTexts.ROUTE_CLASS_INFO_DESC),
     @CmdRoutes.Route(path = "graph", request = ClassGraphRequest.class,
-            handler = ClassGraphCommand.class, description = "生成类继承图"),
+            handler = ClassGraphCommand.class, description = ClassTexts.ROUTE_CLASS_GRAPH_DESC),
     @CmdRoutes.Route(path = "analyze", request = AnalyzeClassRequest.class,
-            handler = ClassAnalyzeCommand.class, description = "分析类的字段和方法"),
+            handler = ClassAnalyzeCommand.class, description = ClassTexts.ROUTE_CLASS_ANALYZE_DESC),
     @CmdRoutes.Route(path = "list", request = MethodListRequest.class,
-            handler = ClassListCommand.class, description = "列出一个类的所有方法"),
+            handler = ClassListCommand.class, description = ClassTexts.ROUTE_CLASS_LIST_DESC),
     @CmdRoutes.Route(path = "invoke", request = InvokeMethodRequest.class,
-            handler = ClassInvokeCommand.class, description = "调用类中的方法"),
+            handler = ClassInvokeCommand.class, description = ClassTexts.ROUTE_CLASS_INVOKE_DESC),
     @CmdRoutes.Route(path = "field", request = FieldRequest.class,
-            handler = ClassFieldCommand.class, description = "查看或操作字段"),
+            handler = ClassFieldCommand.class, description = ClassTexts.ROUTE_CLASS_FIELD_DESC),
     @CmdRoutes.Route(path = "constructor", request = InvokeConstructorRequest.class,
-            handler = ClassConstructorCommand.class, description = "创建类的实例"),
+            handler = ClassConstructorCommand.class, description = ClassTexts.ROUTE_CLASS_CONSTRUCTOR_DESC),
     @CmdRoutes.Route(path = "reflect", request = ReflectClassRequest.class,
-            handler = ClassReflectCommand.class, description = "使用反射访问和操作类的私有成员"),
+            handler = ClassReflectCommand.class, description = ClassTexts.ROUTE_CLASS_REFLECT_DESC),
     @CmdRoutes.Route(path = "hierarchy", request = ClassHierarchyRequest.class,
-            handler = ClassHierarchyCommand.class, description = "查看类的继承层次结构")
+            handler = ClassHierarchyCommand.class, description = ClassTexts.ROUTE_CLASS_HIERARCHY_DESC)
 })
 public class ClassMain extends MainCommand<ClassCommandResult> {
 

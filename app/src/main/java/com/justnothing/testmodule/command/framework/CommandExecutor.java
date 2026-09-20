@@ -2,6 +2,8 @@ package com.justnothing.testmodule.command.framework;
 
 import com.justnothing.testmodule.command.framework.model.MainCommand;
 import com.justnothing.testmodule.command.framework.annotation.Cmd;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
+import com.justnothing.testmodule.command.framework.i18n.CliTexts;
 import com.justnothing.testmodule.command.framework.model.CommandRouter;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.model.CommandResult;
@@ -521,12 +523,20 @@ public class CommandExecutor {
         }
     }
 
-    /** @Cmd.group() → help 小节标题；未列出的 group 原样作为小节标题。 */
-    private static final Map<String, String> HELP_GROUP_TITLES = Map.of(
-            "general", "可用命令",
-            "system", "系统命令",
-            "fun", "娱乐性命令"
-    );
+    /**
+     * @Cmd.group() → help 小节标题；未列出的 group 原样作为小节标题。
+     *
+     * <p>写成方法而不是静态 Map：语言是运行时可变的（{@code CliMessages.useLanguage}），
+     * 静态 Map 会在类加载那一刻就把当时的语言固化下来。</p>
+     */
+    private static String groupTitle(String group) {
+        switch (group) {
+            case "general": return CliMessages.HELP_GROUP_GENERAL.text();
+            case "system": return CliMessages.HELP_GROUP_SYSTEM.text();
+            case "fun": return CliMessages.HELP_GROUP_FUN.text();
+            default: return group;
+        }
+    }
 
     private static final String DEFAULT_COMMAND_GROUP = "general";
 
@@ -548,7 +558,7 @@ public class CommandExecutor {
                 String group = (cmd.group() == null || cmd.group().isEmpty())
                         ? DEFAULT_COMMAND_GROUP : cmd.group();
                 sections.computeIfAbsent(group, k -> new ArrayList<>())
-                        .add(String.format("  %-34s - %s", cmd.name(), cmd.description()));
+                        .add(String.format("  %-34s - %s", cmd.name(), CliTexts.resolve(cmd.description())));
             } catch (Throwable t) {
                 logger.warn("渲染 help 命令清单时跳过 " + cmdClass.getSimpleName() + ": " + t.getMessage());
             }
@@ -557,7 +567,7 @@ public class CommandExecutor {
         StringBuilder sb = new StringBuilder();
         for (Map.Entry<String, List<String>> entry : sections.entrySet()) {
             sb.append('\n')
-              .append(HELP_GROUP_TITLES.getOrDefault(entry.getKey(), entry.getKey()))
+              .append(groupTitle(entry.getKey()))
               .append(":\n");
             for (String line : entry.getValue()) {
                 sb.append(line).append('\n');
@@ -567,19 +577,6 @@ public class CommandExecutor {
     }
 
     public static String getHelpText() {
-        return String.format("""
-            Xposed Method CLI (Command Line Interface) Server端 %s
-            作者: JustNothing1021, DeepSeek 和 GLM-4.7
-            
-            一个用来调试安卓开发千奇百怪的诡异问题的Xp模块/命令行工具.
-            
-            命令语法: methods [options] <command> [args...]
-            %s
-            获取一个子命令的帮助:
-              help <cmd_name>
-            
-            可选项:
-              -cl, --classloader <package>      - 指定类加载器（软件包名，没找到会是默认的类加载器）
-            """, MAIN_MODULE_VER, buildCommandList());
+        return CliMessages.HELP_BANNER.format(MAIN_MODULE_VER, buildCommandList());
     }
 }

@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  深色模式下的颜色覆盖。
+
+  这里只需要写「浅色版本在深色背景上不能用」的那些颜色，其余自动沿用 values/colors.xml。
+  资源系统会按当前 uiMode 自动挑这一个文件，Java 那边 getColor(R.color.xxx) 不用改一行 ——
+  这就是把颜色做成资源、而不是在代码里写字面量的意义。
+
+  挑值的规律：深色背景上高饱和色会「发光」，所以统一取同一色相更亮、饱和度更低的那一档
+  （Material 调色板的 200/300 号）。
+-->
+<resources>
+    <!-- ==================== 状态色 ==================== -->
+    <color name="green">#FF81C784</color>
+    <color name="light_green">#FFAED581</color>
+    <color name="red">#FFEF9A9A</color>
+    <color name="yellow">#FFFFD54F</color>
+    <color name="orange">#FFFFB74D</color>
+
+    <!-- ==================== 语法高亮 / 标记色 ==================== -->
+    <color name="blue">#FF4FC3F7</color>
+    <color name="cyan">#FF4DD0E1</color>
+    <color name="magenta">#FFEA80FC</color>
+
+    <!-- ==================== 中性色（浅色下是「白底」的那批） ==================== -->
+    <!-- grey_100 在浅色主题里当表头底色用，深色主题里必须变成「比背景亮一点的面」 -->
+    <color name="grey_100">#FF2B2930</color>
+    <!-- grey_800 在浅色主题里当正文用，深色主题里要变成浅色文字 -->
+    <color name="grey_800">#FFCAC4D0</color>
+
+    <!-- ==================== 强调色 ==================== -->
+    <!-- purple_700 在浅色主题里当标题色用（深字），深色主题里要反过来（浅字） -->
+    <color name="purple_700">#FFD0BCFF</color>
+    <!-- purple_200 在浅色主题里当分隔线用（浅线），深色主题里要变成深线 -->
+    <color name="purple_200">#FF4A4458</color>
+
+    <!--
+      注意：log_debug / log_info / log_warn / log_error / log_unknown 刻意没有覆盖。
+
+      这批颜色本身是「高饱和亮色」，正好就是深色背景上该用的一档（例如 log_warn 的橙色
+      压在这边的深底上是 8.4:1），所以不需要再配一份。
+
+      反过来说，它们在**浅色**模式下偏亮（log_warn 只有 2.16:1），这是这个文件的老问题。
+      要修的话得往暗里调浅色那一档，但那批颜色在别处（状态圆点之类）也当当前景色用，
+      改动面比看起来大，暂时不动。
+    -->
+
+    <!--
+      ==================== 主界面功能入口色 ====================
+
+      上面那条「取更亮的一档」的规律在这里正好反过来 ——
+      那些颜色是当前景色（文字/圆点）压在深背景上，太暗就看不见，所以要提亮。
+      而这批是**按钮底色**，上面压的是白字，所以必须往暗里走：
+      底色越暗，白字越清楚。
+
+      取的是同一色相在 Material 调色板里 800/900 号那一档。白字对比度都 ≥ 4.5:1，
+      最低的橙色是 5.01。橙色没直接取 900 号（#E65100，只有 3.79）也没取用得更顺手的
+      #BF360C（那是 deep_orange，两个按钮在深色下会撞成同一个颜色），
+      而是挑了一个保住橙色色相的更暗值。
+    -->
+    <color name="entry_indigo">#283593</color>
+    <color name="entry_green">#2E7D32</color>
+    <color name="entry_blue">#1565C0</color>
+    <color name="entry_orange">#A65D00</color>
+    <color name="entry_purple">#6A1B9A</color>
+    <color name="entry_pink">#AD1457</color>
+    <color name="entry_cyan">#00838F</color>
+    <color name="entry_deep_orange">#BF360C</color>
+    <color name="entry_blue_grey">#37474F</color>
+    <color name="entry_deep_purple">#4527A0</color>
+    <color name="entry_brown">#4E342E</color>
+</resources>

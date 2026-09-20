@@ -1,15 +1,12 @@
 package com.justnothing.testmodule.ui.adapter.analysis;
 
 import android.view.LayoutInflater;
-import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.justnothing.testmodule.R;
+import com.justnothing.testmodule.databinding.ItemPackageBinding;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,9 +30,9 @@ public class PackagesAdapter extends RecyclerView.Adapter<PackagesAdapter.ViewHo
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_package, parent, false);
-        return new ViewHolder(view, clickListener);
+        ItemPackageBinding binding = ItemPackageBinding.inflate(
+                LayoutInflater.from(parent.getContext()), parent, false);
+        return new ViewHolder(binding, clickListener);
     }
 
     @Override
@@ -51,21 +48,19 @@ public class PackagesAdapter extends RecyclerView.Adapter<PackagesAdapter.ViewHo
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
 
-        private final TextView tvPackageName;
-        private final ImageView ivCopy;
+        private final ItemPackageBinding binding;
         private final OnPackageClickListener clickListener;
 
-        public ViewHolder(@NonNull View itemView, OnPackageClickListener clickListener) {
-            super(itemView);
+        public ViewHolder(@NonNull ItemPackageBinding binding, OnPackageClickListener clickListener) {
+            super(binding.getRoot());
+            this.binding = binding;
             this.clickListener = clickListener;
-            tvPackageName = itemView.findViewById(R.id.tv_package_name);
-            ivCopy = itemView.findViewById(R.id.iv_copy);
         }
 
         public void bind(String pkgName) {
-            tvPackageName.setText(pkgName);
+            binding.tvPackageName.setText(pkgName);
 
-            ivCopy.setOnClickListener(v -> {
+            binding.ivCopy.setOnClickListener(v -> {
                 if (clickListener != null) {
                     clickListener.onPackageClick(pkgName);
                 }

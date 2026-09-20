@@ -1,23 +1,19 @@
 package com.justnothing.testmodule.ui.adapter.analysis;
 
-import android.content.Context;
 import android.view.LayoutInflater;
-import android.view.View;
 import android.view.ViewGroup;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.justnothing.testmodule.R;
 import com.justnothing.testmodule.command.functions.alias.model.AliasInfo;
+import com.justnothing.testmodule.databinding.ItemAliasBinding;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class AliasAdapter extends RecyclerView.Adapter<AliasAdapter.AliasViewHolder> {
 
-    private final Context context;
     private final OnAliasClickListener listener;
     private List<AliasInfo> aliases;
 
@@ -25,8 +21,7 @@ public class AliasAdapter extends RecyclerView.Adapter<AliasAdapter.AliasViewHol
         void onAliasClick(AliasInfo alias);
     }
 
-    public AliasAdapter(Context context, OnAliasClickListener listener) {
-        this.context = context;
+    public AliasAdapter(OnAliasClickListener listener) {
         this.listener = listener;
         this.aliases = new ArrayList<>();
     }
@@ -39,8 +34,8 @@ public class AliasAdapter extends RecyclerView.Adapter<AliasAdapter.AliasViewHol
     @NonNull
     @Override
     public AliasViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(context).inflate(R.layout.item_alias, parent, false);
-        return new AliasViewHolder(view);
+        ItemAliasBinding binding = ItemAliasBinding.inflate(LayoutInflater.from(parent.getContext()), parent, false);
+        return new AliasViewHolder(binding);
     }
 
     @Override
@@ -56,13 +51,11 @@ public class AliasAdapter extends RecyclerView.Adapter<AliasAdapter.AliasViewHol
 
     public class AliasViewHolder extends RecyclerView.ViewHolder {
 
-        private final TextView tvName;
-        private final TextView tvCommand;
+        private final ItemAliasBinding binding;
 
-        public AliasViewHolder(@NonNull View itemView) {
-            super(itemView);
-            tvName = itemView.findViewById(R.id.tv_alias_name);
-            tvCommand = itemView.findViewById(R.id.tv_alias_command);
+        public AliasViewHolder(@NonNull ItemAliasBinding binding) {
+            super(binding.getRoot());
+            this.binding = binding;
 
             itemView.setOnClickListener(v -> {
                 int position = getAdapterPosition();
@@ -73,8 +66,8 @@ public class AliasAdapter extends RecyclerView.Adapter<AliasAdapter.AliasViewHol
         }
 
         public void bind(AliasInfo alias) {
-            tvName.setText(alias.getName());
-            tvCommand.setText(alias.getCommand());
+            binding.tvAliasName.setText(alias.getName());
+            binding.tvAliasCommand.setText(alias.getCommand());
         }
     }
 }

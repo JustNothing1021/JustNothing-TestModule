@@ -13,14 +13,9 @@ import android.text.TextUtils;
 import android.text.style.ForegroundColorSpan;
 import android.util.Log;
 import android.view.LayoutInflater;
-import android.view.View;
 import android.view.ViewGroup;
-import android.widget.EditText;
-import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -29,7 +24,11 @@ import com.justnothing.methodsclient.executor.SocketCommandExecutor;
 import com.justnothing.testmodule.R;
 import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.constants.FileDirectory;
-import com.justnothing.testmodule.utils.logging.Logger;
+import com.justnothing.testmodule.databinding.ActivityScriptManagerBinding;
+import com.justnothing.testmodule.databinding.DialogAddScriptBinding;
+import com.justnothing.testmodule.databinding.DialogImportScriptBinding;
+import com.justnothing.testmodule.databinding.DialogScriptResultBinding;
+import com.justnothing.testmodule.databinding.ItemScriptBinding;
 import com.justnothing.testmodule.utils.io.IOManager;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
@@ -42,9 +41,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ScriptManagerActivity extends AppCompatActivity {
+public class ScriptManagerActivity extends BaseActivity {
 
-    private static final Logger logger = Logger.getLoggerForName("ScriptManagerActivity");
+    private ActivityScriptManagerBinding binding;
     private static final String NAME = "name";
     private static final String DESCRIPTION = "description";
     private static final String COMMAND = "commands";
@@ -52,25 +51,24 @@ public class ScriptManagerActivity extends AppCompatActivity {
     private List<Script> scripts;
     private ScriptAdapter adapter;
     private File scriptsFile;
-    private RecyclerView recyclerView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_script_manager);
+        binding = ActivityScriptManagerBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
         scriptsFile = new File(getFilesDir(), FileDirectory.SCRIPTS_FILE_NAME);
         initViews();
         loadScripts();
     }
 
     private void initViews() {
-        recyclerView = findViewById(R.id.script_list);
-        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        binding.scriptList.setLayoutManager(new LinearLayoutManager(this));
         adapter = new ScriptAdapter();
-        recyclerView.setAdapter(adapter);
+        binding.scriptList.setAdapter(adapter);
 
-        findViewById(R.id.btn_add_script).setOnClickListener(v -> showAddScriptDialog());
-        findViewById(R.id.btn_import).setOnClickListener(v -> showImportDialog());
+        binding.btnAddScript.setOnClickListener(v -> showAddScriptDialog());
+        binding.btnImport.setOnClickListener(v -> showImportDialog());
     }
 
     private void loadScripts() {
@@ -138,28 +136,24 @@ public class ScriptManagerActivity extends AppCompatActivity {
             logger.info("保存了 " + scripts.size() + " 个脚本");
         } catch (Exception e) {
             logger.error("保存脚本失败", e);
-            Toast.makeText(this, getString(R.string.script_save_failure, e.getMessage()), Toast.LENGTH_SHORT).show();
+            showToast(getString(R.string.script_save_failure, e.getMessage()));
         }
     }
 
     private void showAddScriptDialog() {
-        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_add_script, null);
-        EditText editName = dialogView.findViewById(R.id.edit_script_name);
-        EditText editDescription = dialogView.findViewById(R.id.edit_script_description);
-        EditText editCommands = dialogView.findViewById(R.id.edit_script_commands);
-        EditText editCategory = dialogView.findViewById(R.id.edit_script_category);
+        DialogAddScriptBinding dialogBinding = DialogAddScriptBinding.inflate(getLayoutInflater());
 
         new AlertDialog.Builder(this)
                 .setTitle(getString(R.string.script_add))
-                .setView(dialogView)
+                .setView(dialogBinding.getRoot())
                 .setPositiveButton(getString(R.string.general_save), (dialog, which) -> {
-                    String name = editName.getText().toString().trim();
-                    String description = editDescription.getText().toString().trim();
-                    String commands = editCommands.getText().toString().trim();
-                    String category = editCategory.getText().toString().trim();
+                    String name = dialogBinding.editScriptName.getText().toString().trim();
+                    String description = dialogBinding.editScriptDescription.getText().toString().trim();
+                    String commands = dialogBinding.editScriptCommands.getText().toString().trim();
+                    String category = dialogBinding.editScriptCategory.getText().toString().trim();
 
                     if (TextUtils.isEmpty(name) || TextUtils.isEmpty(commands)) {
-                        Toast.makeText(this, getString(R.string.script_name_and_content_cant_be_empty), Toast.LENGTH_SHORT).show();
+                        showToast(getString(R.string.script_name_and_content_cant_be_empty));
                         return;
                     }
 
@@ -168,7 +162,7 @@ public class ScriptManagerActivity extends AppCompatActivity {
                     scripts.add(script);
                     saveScripts();
                     adapter.notifyItemInserted(newPosition);
-                    recyclerView.smoothScrollToPosition(newPosition); // 滚动到新项
+                    binding.scriptList.smoothScrollToPosition(newPosition); // 滚动到新项
                     logger.info("添加脚本: " + name);
                 })
                 .setNegativeButton(getString(R.string.general_cancel), null)
@@ -176,16 +170,15 @@ public class ScriptManagerActivity extends AppCompatActivity {
     }
 
     private void showImportDialog() {
-        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_import_script, null);
-        EditText editContent = dialogView.findViewById(R.id.edit_import_content);
+        DialogImportScriptBinding dialogBinding = DialogImportScriptBinding.inflate(getLayoutInflater());
 
         new AlertDialog.Builder(this)
                 .setTitle(getString(R.string.import_script))
-                .setView(dialogView)
+                .setView(dialogBinding.getRoot())
                 .setPositiveButton(getString(R.string.general_import), (dialog, which) -> {
-                    String content = editContent.getText().toString().trim();
+                    String content = dialogBinding.editImportContent.getText().toString().trim();
                     if (TextUtils.isEmpty(content)) {
-                        Toast.makeText(this, getString(R.string.error_content_cannot_be_empty), Toast.LENGTH_SHORT).show();
+                        showToast(getString(R.string.error_content_cannot_be_empty));
                         return;
                     }
 
@@ -201,12 +194,12 @@ public class ScriptManagerActivity extends AppCompatActivity {
                         scripts.add(script);
                         saveScripts();
                         adapter.notifyItemInserted(newPosition);
-                        recyclerView.smoothScrollToPosition(newPosition);
+                        binding.scriptList.smoothScrollToPosition(newPosition);
                         logger.info("导入脚本: " + script.name);
-                        Toast.makeText(this, getString(R.string.script_import_succeed), Toast.LENGTH_SHORT).show();
+                        showToast(getString(R.string.script_import_succeed));
                     } catch (JSONException e) {
                         logger.error("导入脚本失败", e);
-                        Toast.makeText(this, getString(R.string.script_import_failed, e.getMessage()), Toast.LENGTH_SHORT).show();
+                        showToast(getString(R.string.script_import_failed, e.getMessage()));
                     }
                 })
                 .setNegativeButton(getString(R.string.general_cancel), null)
@@ -221,7 +214,7 @@ public class ScriptManagerActivity extends AppCompatActivity {
         File parentDir = file.getParentFile();
         if (parentDir != null && !parentDir.exists()) {
             if (!IOManager.createDirectory(parentDir)) {
-                throw new IOException("无法创建目录: " + parentDir.getAbsolutePath());
+                throw new IOException(getString(R.string.script_create_directory_failed_format, parentDir.getAbsolutePath()));
             }
         }
         IOManager.writeFile(file.getAbsolutePath(), content);
@@ -245,9 +238,9 @@ public class ScriptManagerActivity extends AppCompatActivity {
         @NonNull
         @Override
         public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            View view = LayoutInflater.from(parent.getContext())
-                    .inflate(R.layout.item_script, parent, false);
-            return new ViewHolder(view);
+            ItemScriptBinding itemBinding = ItemScriptBinding.inflate(
+                    LayoutInflater.from(parent.getContext()), parent, false);
+            return new ViewHolder(itemBinding);
         }
 
         @Override
@@ -262,24 +255,18 @@ public class ScriptManagerActivity extends AppCompatActivity {
         }
 
         class ViewHolder extends RecyclerView.ViewHolder {
-            TextView textName;
-            TextView textDescription;
-            TextView textCategory;
-            TextView textCommands;
+            private final ItemScriptBinding binding;
 
-            ViewHolder(View itemView) {
-                super(itemView);
-                textName = itemView.findViewById(R.id.text_script_name);
-                textDescription = itemView.findViewById(R.id.text_script_description);
-                textCategory = itemView.findViewById(R.id.text_script_category);
-                textCommands = itemView.findViewById(R.id.text_script_commands);
+            ViewHolder(ItemScriptBinding binding) {
+                super(binding.getRoot());
+                this.binding = binding;
             }
 
             void bind(Script script, int position) {
-                textName.setText(script.name);
-                textDescription.setText(TextUtils.isEmpty(script.description) ? getString(R.string.script_no_description) : script.description);
-                textCategory.setText(script.category);
-                textCommands.setText(script.command);
+                binding.textScriptName.setText(script.name);
+                binding.textScriptDescription.setText(TextUtils.isEmpty(script.description) ? getString(R.string.script_no_description) : script.description);
+                binding.textScriptCategory.setText(script.category);
+                binding.textScriptCommands.setText(script.command);
                 itemView.setOnClickListener(v -> showScriptOptions(script, position));
             }
         }
@@ -329,7 +316,7 @@ public class ScriptManagerActivity extends AppCompatActivity {
                     SocketCommandExecutor.ColoredExecutionResult result =
                             socketExecutor.executeWithResult(trimmedCmd, false);
 
-                    runOnUiThread(() -> Toast.makeText(this, getString(R.string.script_execute_finished), Toast.LENGTH_SHORT).show());
+                    runOnUiThread(() -> showToast(getString(R.string.script_execute_finished)));
 
                     if (result.success()) {
                         SpannableString resultSpan = buildColoredSpan(result.segments());
@@ -345,28 +332,26 @@ public class ScriptManagerActivity extends AppCompatActivity {
                 boolean finalSucceed = succeed;
                 runOnUiThread(() -> {
                     if (finalSucceed) {
-                        Toast.makeText(this, getString(R.string.script_result_toast_execution_succeed, script.name), Toast.LENGTH_SHORT).show();
+                        showToast(getString(R.string.script_result_toast_execution_succeed, script.name));
                     } else {
-                        Toast.makeText(this, getString(R.string.script_result_toast_execution_failure, script.name), Toast.LENGTH_SHORT).show();
+                        showToast(getString(R.string.script_result_toast_execution_failure, script.name));
                     }
 
-                    View dialogView = LayoutInflater.from(ScriptManagerActivity.this).inflate(R.layout.dialog_script_result, null);
-                    TextView textTitle = dialogView.findViewById(R.id.text_title);
-                    TextView textResult = dialogView.findViewById(R.id.text_result);
+                    DialogScriptResultBinding dialogBinding = DialogScriptResultBinding.inflate(getLayoutInflater());
 
-                    textTitle.setText(getString(R.string.script_result_info_result_of, script.name));
-                    textResult.setText(coloredOutput);
+                    dialogBinding.textTitle.setText(getString(R.string.script_result_info_result_of, script.name));
+                    dialogBinding.textResult.setText(coloredOutput);
 
                     new AlertDialog.Builder(ScriptManagerActivity.this)
-                            .setView(dialogView)
+                            .setView(dialogBinding.getRoot())
                             .setPositiveButton(getString(R.string.general_confirm), null)
                             .show();
                 });
             } catch (Exception e) {
                 logger.error("执行脚本失败", e);
                 runOnUiThread(() -> {
-                    Toast.makeText(this, getString(R.string.script_result_toast_execution_unexpected_exception,
-                            script.name, e.getMessage()), Toast.LENGTH_SHORT).show();
+                    showToast(getString(R.string.script_result_toast_execution_unexpected_exception,
+                            script.name, e.getMessage()));
                     new AlertDialog.Builder(this)
                             .setTitle(getString(R.string.script_result_info_unexpected_exception, script.name))
                             .setMessage(getString(R.string.script_result_info_exception_info, Log.getStackTraceString(e)))
@@ -438,25 +423,21 @@ public class ScriptManagerActivity extends AppCompatActivity {
     }
 
     private void editScript(Script script, int position) {
-        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_add_script, null);
-        EditText editName = dialogView.findViewById(R.id.edit_script_name);
-        EditText editDescription = dialogView.findViewById(R.id.edit_script_description);
-        EditText editCommands = dialogView.findViewById(R.id.edit_script_commands);
-        EditText editCategory = dialogView.findViewById(R.id.edit_script_category);
+        DialogAddScriptBinding dialogBinding = DialogAddScriptBinding.inflate(getLayoutInflater());
 
-        editName.setText(script.name);
-        editDescription.setText(script.description);
-        editCommands.setText(script.command);
-        editCategory.setText(script.category);
+        dialogBinding.editScriptName.setText(script.name);
+        dialogBinding.editScriptDescription.setText(script.description);
+        dialogBinding.editScriptCommands.setText(script.command);
+        dialogBinding.editScriptCategory.setText(script.category);
 
         new AlertDialog.Builder(this)
                 .setTitle(getString(R.string.script_edit))
-                .setView(dialogView)
+                .setView(dialogBinding.getRoot())
                 .setPositiveButton(getString(R.string.general_save), (dialog, which) -> {
-                    script.name = editName.getText().toString().trim();
-                    script.description = editDescription.getText().toString().trim();
-                    script.command = editCommands.getText().toString().trim();
-                    script.category = editCategory.getText().toString().trim();
+                    script.name = dialogBinding.editScriptName.getText().toString().trim();
+                    script.description = dialogBinding.editScriptDescription.getText().toString().trim();
+                    script.command = dialogBinding.editScriptCommands.getText().toString().trim();
+                    script.category = dialogBinding.editScriptCategory.getText().toString().trim();
                     saveScripts();
                     adapter.notifyItemChanged(position);
                     logger.info("编辑脚本: " + script.name);
@@ -482,13 +463,13 @@ public class ScriptManagerActivity extends AppCompatActivity {
                                 (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
                         ClipData clip = ClipData.newPlainText("script", json);
                         clipboard.setPrimaryClip(clip);
-                        Toast.makeText(this, getString(R.string.toast_copied_to_clipboard), Toast.LENGTH_SHORT).show();
+                        showToast(getString(R.string.toast_copied_to_clipboard));
                     })
                     .setNegativeButton(getString(R.string.general_close), null)
                     .show();
         } catch (JSONException e) {
             logger.error("导出脚本失败", e);
-            Toast.makeText(this, getString(R.string.script_export_toast_failed), Toast.LENGTH_SHORT).show();
+            showToast(getString(R.string.script_export_toast_failed));
         }
     }
 

@@ -3,42 +3,40 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="@dimen/spacing_16">
 
     <TextView
         android:id="@+id/text_title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:textColor="#212121"
-        android:paddingBottom="12dp" />
+        android:textAppearance="@style/TextAppearance.App.Section"
+        android:textColor="?attr/colorOnSurface"
+        android:paddingBottom="@dimen/spacing_12" />
 
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:maxHeight="300dp"
         android:scrollbars="vertical">
-        
+
         <HorizontalScrollView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:scrollbars="horizontal">
-            
+
             <TextView
                 android:id="@+id/text_result"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="12sp"
-                android:textColor="#757575"
+                android:textAppearance="@style/TextAppearance.App.Label"
+                android:textColor="?attr/colorOnSurfaceVariant"
                 android:fontFamily="monospace"
-                android:background="#F5F5F5"
-                android:padding="8dp"
+                android:padding="@dimen/spacing_8"
                 android:ellipsize="none"
                 android:scrollHorizontally="true" />
-                
+
         </HorizontalScrollView>
-        
+
     </androidx.core.widget.NestedScrollView>
 
 </LinearLayout>

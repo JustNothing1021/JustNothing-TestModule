@@ -1,13 +1,14 @@
 package com.justnothing.testmodule.command.functions.classcmd.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.functions.classcmd.ClassTexts;
 import com.justnothing.testmodule.command.functions.classcmd.response.ClassHierarchyResult;
 
 public class ClassHierarchyRequest extends ClassCommandRequest<ClassHierarchyResult> {
 
     @CmdParam(
         name = "class",
-        description = "类名",
+        description = ClassTexts.PARAM_CLASS_HIERARCHY_CLASS_DESC,
         position = 1,
         required = true,
         serializedName = "className"

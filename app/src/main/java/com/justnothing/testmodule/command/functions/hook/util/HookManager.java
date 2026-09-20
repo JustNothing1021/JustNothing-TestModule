@@ -73,6 +73,15 @@ public class HookManager {
             }
         }
 
+    /**
+     * 取当前方法调用上下文的两个等价名字。
+     * <p>
+     * 内置示例脚本（{@code assets/codebase/*}）用的是 {@code getParam}，早期代码用的是
+     * {@code getMethodHookParam}，两个都注册，谁都不用改。
+     * </p>
+     */
+    private static final String[] PARAM_ACCESSOR_NAMES = {"getParam", "getMethodHookParam"};
+
     public static void addHookBuiltIn(EvalContext context,
                                       HookParam methodHookParam,
                                       LoadPackageInfo loadPackageInfo,
@@ -80,12 +89,14 @@ public class HookManager {
                                       String phase,
                                       AtomicBoolean returnValueSet
     ) {
-            context.addBuiltIn("getMethodHookParam", args -> {
-                if (!args.isEmpty()) {
-                    logger.warn("getMethodHookParam() 不接受任何参数，忽略参数");
-                }
-                return Value.of(methodHookParam);
-            });
+            for (String name : PARAM_ACCESSOR_NAMES) {
+                context.addBuiltIn(name, args -> {
+                    if (!args.isEmpty()) {
+                        logger.warn(name + "() 不接受任何参数，忽略参数");
+                    }
+                    return Value.of(methodHookParam);
+                });
+            }
 
             context.addBuiltIn("getPhase", args -> {
                 if (!args.isEmpty()) {
@@ -237,7 +248,7 @@ public class HookManager {
     }
 
     private static final String[] HOOK_BUILTIN_NAMES = {
-        "getMethodHookParam", "getPhase", "getHookId", "getLoadPackageParam",
+        "getParam", "getMethodHookParam", "getPhase", "getHookId", "getLoadPackageParam",
         "getHookInfo", "setReturnValue", "setThrowable", "getReturnValue"
     };
 
@@ -350,14 +361,16 @@ public class HookManager {
                         return;
                     }
 
+                    // 计数放在这里、且只放一次：beforeHookedMethod 每次方法调用必被调用，
+                    // 之前是 before 和 replace 各数一次，挂了两个阶段的方法会被数成两次。
+                    hookInfo.incrementCallCount();
+
                     if (hasBefore) {
                         logger.info("准备执行before Hook，id = " + hookInfo.getId());
-                        hookInfo.incrementCallCount();
                         executeHookCode(hookInfo, hookInfo.getBeforeParsed(), param, "before");
                     }
 
                     logger.info("准备执行replace Hook，id = " + hookInfo.getId());
-                    hookInfo.incrementCallCount();
 
                     AtomicBoolean returnValueSet = new AtomicBoolean(false);
                     executeHookCodeWithReturnFlag(hookInfo, hookInfo.getReplaceParsed(), param, "replace", returnValueSet);
@@ -374,7 +387,6 @@ public class HookManager {
                     }
 
                     logger.info("准备执行after Hook，id = " + hookInfo.getId());
-                    hookInfo.incrementCallCount();
                     executeHookCode(hookInfo, hookInfo.getAfterParsed(), param, "after");
                 }
             };
@@ -407,16 +419,20 @@ public class HookManager {
             MethodHook methodHook = new MethodHook() {
                 @Override
                 protected void beforeHookedMethod(HookParam param) {
-                    if (!hasBefore) {
+                    if (!hookInfo.isEnabled() || !hookInfo.isActive()) {
+                        logger.debug("hook未启用或未激活，跳过Hook执行，id = " + hookInfo.getId());
                         return;
                     }
-                    if (!hookInfo.isEnabled() || !hookInfo.isActive()) {
-                        logger.debug("hook未启用或未激活，跳过before Hook执行，id = " + hookInfo.getId());
+
+                    // 只在这里数一次。只挂了 after 阶段时也要在这里数，否则 beforeHookedMethod
+                    // 提前返回，after 那边再数就又多一次，两边加起来才是「方法被调用了多少次」。
+                    hookInfo.incrementCallCount();
+
+                    if (!hasBefore) {
                         return;
                     }
 
                     logger.info("准备执行before Hook，id = " + hookInfo.getId());
-                    hookInfo.incrementCallCount();
                     executeHookCode(hookInfo, hookInfo.getBeforeParsed(), param, "before");
                 }
 
@@ -430,7 +446,6 @@ public class HookManager {
                         return;
                     }
                     logger.info("准备执行after Hook，id = " + hookInfo.getId());
-                    hookInfo.incrementCallCount();
                     executeHookCode(hookInfo, hookInfo.getAfterParsed(), param, "after");
                 }
             };
@@ -513,7 +528,9 @@ public class HookManager {
 
 
             if (!codebase.contains("/") && !codebase.contains("\\")) {
-                scriptFile = DataBridge.getScriptFile(codebase);
+                // 名字带不带 .java 后缀都认：脚本目录里的文件是「名字 + .java」，
+                // 而命令参数里大家习惯写裸名字
+                scriptFile = DataBridge.resolveScriptFile(codebase);
 
                 if (scriptFile.exists()) {
                     logger.info("从codebase目录加载脚本: " + codebase);
@@ -602,10 +619,10 @@ public class HookManager {
         }
     }
 
-    public static void removeHook(String hookId) {
+    public static boolean removeHook(String hookId) {
         HookInfo hookInfo = hooks.get(hookId);
         if (hookInfo == null) {
-            return;
+            return false;
         }
 
         UnhookHandle unhook = activeHooks.remove(hookId);
@@ -622,32 +639,28 @@ public class HookManager {
         }
 
         logger.info("Hook移除成功: " + hookId);
+        return true;
     }
 
-    public static void removeHook(String hookId, CommandExecutor.CmdExecContext<?> ctx) {
-        HookInfo hookInfo = hooks.get(hookId);
-        if (hookInfo == null) {
+    /**
+     * 按 ID 移除 Hook，并把结果告诉调用方。
+     * <p>
+     * 找不到时返回 false 而不是安静地当成功 —— 以前这里只打一行日志就走了，调用方照样报
+     * 「移除成功」，于是 {@code hook remove 随便编一个ID} 也能「成功」。
+     * </p>
+     *
+     * @return 真的移除了才为 true
+     */
+    public static boolean removeHook(String hookId, CommandExecutor.CmdExecContext<?> ctx) {
+        if (!removeHook(hookId)) {
             ctx.print("Hook不存在: ", Colors.RED);
             ctx.println(hookId, Colors.YELLOW);
-            return;
+            return false;
         }
 
-        UnhookHandle unhook = activeHooks.remove(hookId);
-        if (unhook != null) {
-            unhook.unhook();
-        }
-
-        hookInfo.setActive(false);
-        hooks.remove(hookId);
-
-        ScriptRunner runner = scriptRunners.remove(hookId);
-        if (runner != null) {
-            runner.clearVariables();
-        }
-
-        logger.info("Hook移除成功: " + hookId);
         ctx.print("Hook移除成功: ", Colors.LIGHT_GREEN);
         ctx.println(hookId, Colors.YELLOW);
+        return true;
     }
 
     public static void listHooks(CommandExecutor.CmdExecContext<?> ctx) {
@@ -681,32 +694,34 @@ public class HookManager {
         hookInfo.printDisplayInfo(ctx);
     }
 
-    public static void enableHook(String hookId, CommandExecutor.CmdExecContext<?> ctx) {
+    public static boolean enableHook(String hookId, CommandExecutor.CmdExecContext<?> ctx) {
         HookInfo hookInfo = hooks.get(hookId);
         if (hookInfo == null) {
             ctx.print("Hook不存在: ", Colors.RED);
             ctx.println(hookId, Colors.YELLOW);
-            return;
+            return false;
         }
 
         hookInfo.setEnabled(true);
         logger.info("启用Hook: " + hookId);
         ctx.print("Hook已启用: ", Colors.LIGHT_GREEN);
         ctx.println(hookId, Colors.YELLOW);
+        return true;
     }
 
-    public static void disableHook(String hookId, CommandExecutor.CmdExecContext<?> ctx) {
+    public static boolean disableHook(String hookId, CommandExecutor.CmdExecContext<?> ctx) {
         HookInfo hookInfo = hooks.get(hookId);
         if (hookInfo == null) {
             ctx.print("Hook不存在: ", Colors.RED);
             ctx.println(hookId, Colors.YELLOW);
-            return;
+            return false;
         }
 
         hookInfo.setEnabled(false);
         logger.info("禁用Hook: " + hookId);
         ctx.print("Hook已禁用: ", Colors.GRAY);
         ctx.println(hookId, Colors.YELLOW);
+        return true;
     }
 
     public static void getHookOutput(String hookId, CommandExecutor.CmdExecContext<?> ctx, int count) {

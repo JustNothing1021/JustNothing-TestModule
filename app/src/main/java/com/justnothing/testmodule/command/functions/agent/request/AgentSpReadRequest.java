@@ -4,17 +4,18 @@ import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.functions.agent.AgentTexts;
 import com.justnothing.testmodule.command.functions.agent.response.SpReadResult;
 
 public class AgentSpReadRequest extends CommandRequest<SpReadResult> {
     @Expose @SerializedName("packageName")
-    @CmdParam(name = "pkg", position = 1, description = "目标应用包名")
+    @CmdParam(name = "pkg", position = 1, description = AgentTexts.PARAM_AGENT_SP_READ_PKG_DESC)
     private String packageName;
     @Expose @SerializedName("spName")
-    @CmdParam(name = "name", position = 2, description = "SharedPreferences 名称")
+    @CmdParam(name = "name", position = 2, description = AgentTexts.PARAM_AGENT_SP_READ_NAME_DESC)
     private String spName;
     @Expose @SerializedName("keyFilter")
-    @CmdParam(name = "key", position = 3, required = false, description = "键名过滤（可选）")
+    @CmdParam(name = "key", position = 3, required = false, description = AgentTexts.PARAM_AGENT_SP_READ_KEY_DESC)
     private String keyFilter;
 
     public AgentSpReadRequest() {}

@@ -9,40 +9,34 @@ import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.justnothing.testmodule.R;
 import com.justnothing.testmodule.command.functions.exportcontext.model.ContextFieldInfo;
+import com.justnothing.testmodule.databinding.ActivityExportContextAnalysisBinding;
+import com.justnothing.testmodule.ui.activity.BaseActivity;
 import com.justnothing.testmodule.ui.viewmodel.analysis.ExportContextQueryViewModel;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class ExportContextAnalysisActivity extends AppCompatActivity {
+public class ExportContextAnalysisActivity extends BaseActivity {
 
     private ExportContextQueryViewModel viewModel;
-
-    private View layoutResult;
-    private View layoutLoading;
-    private View layoutEmpty;
-    private TextView tvTotalCount;
-    private Button btnRefresh;
-    private LinearLayout layoutTablesContainer;
+    private ActivityExportContextAnalysisBinding binding;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_export_context_analysis);
+        binding = ActivityExportContextAnalysisBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
 
         initViews();
         initViewModel();
@@ -52,14 +46,6 @@ public class ExportContextAnalysisActivity extends AppCompatActivity {
     }
 
     private void initViews() {
-        layoutResult = findViewById(R.id.layout_result);
-        layoutLoading = findViewById(R.id.layout_loading);
-        layoutEmpty = findViewById(R.id.layout_empty);
-
-        tvTotalCount = findViewById(R.id.tv_total_count);
-        btnRefresh = findViewById(R.id.btn_refresh);
-        layoutTablesContainer = findViewById(R.id.layout_tables_container);
-
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
             getSupportActionBar().setTitle(getString(R.string.analysis_export_context));
@@ -71,27 +57,27 @@ public class ExportContextAnalysisActivity extends AppCompatActivity {
 
         viewModel.isLoading().observe(this, isLoading -> {
             if (isLoading) {
-                layoutLoading.setVisibility(View.VISIBLE);
-                layoutResult.setVisibility(View.GONE);
-                layoutEmpty.setVisibility(View.GONE);
+                binding.layoutLoading.setVisibility(View.VISIBLE);
+                binding.layoutResult.setVisibility(View.GONE);
+                binding.layoutEmpty.setVisibility(View.GONE);
             }
-            btnRefresh.setEnabled(!isLoading);
+            binding.btnRefresh.setEnabled(!isLoading);
         });
 
         viewModel.getFields().observe(this, this::displayContextFields);
 
         viewModel.getError().observe(this, error -> {
             if (error != null && !error.isEmpty()) {
-                layoutLoading.setVisibility(View.GONE);
-                layoutResult.setVisibility(View.GONE);
-                layoutEmpty.setVisibility(View.VISIBLE);
-                ((TextView) layoutEmpty.findViewById(R.id.tv_error_message)).setText(error);
+                binding.layoutLoading.setVisibility(View.GONE);
+                binding.layoutResult.setVisibility(View.GONE);
+                binding.layoutEmpty.setVisibility(View.VISIBLE);
+                binding.tvErrorMessage.setText(error);
             }
         });
     }
 
     private void setupListeners() {
-        btnRefresh.setOnClickListener(v -> viewModel.queryContext());
+        binding.btnRefresh.setOnClickListener(v -> viewModel.queryContext());
 
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
@@ -106,21 +92,21 @@ public class ExportContextAnalysisActivity extends AppCompatActivity {
     private void displayContextFields(List<ContextFieldInfo> allFields) {
         if (allFields == null || allFields.isEmpty()) return;
 
-        layoutLoading.setVisibility(View.GONE);
-        layoutEmpty.setVisibility(View.GONE);
-        layoutResult.setVisibility(View.VISIBLE);
+        binding.layoutLoading.setVisibility(View.GONE);
+        binding.layoutEmpty.setVisibility(View.GONE);
+        binding.layoutResult.setVisibility(View.VISIBLE);
 
-        tvTotalCount.setText(getString(R.string.analysis_export_context_total_format, allFields.size()));
+        binding.tvTotalCount.setText(getString(R.string.analysis_export_context_total_format, allFields.size()));
 
-        layoutTablesContainer.removeAllViews();
+        binding.layoutTablesContainer.removeAllViews();
 
         TextView tipView = new TextView(this);
         tipView.setText(getString(R.string.analysis_export_context_tip));
-        tipView.setTextSize(12f);
+        tipView.setTextAppearance(R.style.TextAppearance_App_Label);
         tipView.setTextColor(ContextCompat.getColor(this, R.color.grey_800));
         tipView.setGravity(Gravity.CENTER);
         tipView.setPadding(0, dpToPx(4), 0, dpToPx(8));
-        layoutTablesContainer.addView(tipView);
+        binding.layoutTablesContainer.addView(tipView);
 
         String currentCategory = null;
         TableLayout currentTable = null;
@@ -131,10 +117,10 @@ public class ExportContextAnalysisActivity extends AppCompatActivity {
                 currentCategory = field.getCategory();
 
                 LinearLayout headerSection = createSectionHeader(currentCategory);
-                layoutTablesContainer.addView(headerSection);
+                binding.layoutTablesContainer.addView(headerSection);
 
                 currentTable = createTable();
-                layoutTablesContainer.addView(currentTable);
+                binding.layoutTablesContainer.addView(currentTable);
             }
 
             addTableRow(currentTable, field.getLabel(), field.getValue());
@@ -154,7 +140,7 @@ public class ExportContextAnalysisActivity extends AppCompatActivity {
         TextView titleView = new TextView(this);
         titleView.setText(localizedCategory);
         titleView.setTypeface(null, Typeface.BOLD);
-        titleView.setTextSize(16f);
+        titleView.setTextAppearance(R.style.TextAppearance_App_Body);
         titleView.setTextColor(ContextCompat.getColor(this, R.color.purple_700));
         header.addView(titleView);
 
@@ -223,7 +209,7 @@ public class ExportContextAnalysisActivity extends AppCompatActivity {
     private TextView createLabelCell(String text, boolean isHeader) {
         TextView tv = new TextView(this);
         tv.setText(text);
-        tv.setTextSize(isHeader ? 14f : 13f);
+        tv.setTextAppearance(R.style.TextAppearance_App_Caption);
         tv.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         int paddingH = dpToPx(12);
         int paddingV = dpToPx(8);
@@ -234,7 +220,7 @@ public class ExportContextAnalysisActivity extends AppCompatActivity {
     private TextView createValueCell(String text, boolean isHeader) {
         TextView tv = new TextView(this);
         tv.setText(text != null ? text : "");
-        tv.setTextSize(isHeader ? 14f : 13f);
+        tv.setTextAppearance(R.style.TextAppearance_App_Caption);
         tv.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         if (!isHeader) {
             tv.setTypeface(Typeface.MONOSPACE);
@@ -259,10 +245,6 @@ public class ExportContextAnalysisActivity extends AppCompatActivity {
             return getString(resId);
         }
         return categoryKey;
-    }
-
-    private void showToast(String message) {
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
 
     @Override

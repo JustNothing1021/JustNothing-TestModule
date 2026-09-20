@@ -10,6 +10,7 @@ import com.justnothing.testmodule.command.functions.alias.util.AliasManager;
 import com.justnothing.testmodule.utils.data.DataDirectoryManager;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.functions.alias.AliasTexts;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -17,16 +18,10 @@ import java.util.List;
 import java.util.Map;
 
 @SubCommandInfo(
-    description = "列出所有已定义的命令别名",
+    description = AliasTexts.SUB_ALIAS_LIST_DESC,
     usage = "alias list",
     examples = {"alias list"},
-    optionsDesc = """
-            显示所有已保存的别名，包括名称和对应的完整命令。
-            
-            示例:
-              alias list                    # 列出所有别名
-              alias                        # 默认就是 list
-            """
+    optionsDesc = AliasTexts.SUB_ALIAS_LIST_OPTIONS
 )
 public class AliasListCommand extends AbstractCommand<AliasListRequest, AliasResult> {
 

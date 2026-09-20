@@ -3,12 +3,13 @@ package com.justnothing.testmodule.command.functions.watch.request;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.functions.watch.response.WatchStopResult;
+import com.justnothing.testmodule.command.functions.watch.WatchTexts;
 
 public class WatchStopRequest extends CommandRequest<WatchStopResult> {
 
     @CmdParam(
         name = "watchId",
-        description = "要停止的Watch ID",
+        description = WatchTexts.PARAM_WATCH_STOP_WATCHID_DESC,
         required = false,
         position = 1
     )

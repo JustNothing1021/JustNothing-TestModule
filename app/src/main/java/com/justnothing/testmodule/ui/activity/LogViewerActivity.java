@@ -1,25 +1,21 @@
 package com.justnothing.testmodule.ui.activity;
 
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.EditText;
-import android.widget.ProgressBar;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.justnothing.testmodule.R;
+import com.justnothing.testmodule.databinding.ActivityLogViewerBinding;
+import com.justnothing.testmodule.databinding.ItemLogEntryBinding;
 import com.justnothing.testmodule.utils.data.DataBridge;
 import com.justnothing.testmodule.utils.logging.LogWriter;
 import com.justnothing.testmodule.utils.logging.Logger;
@@ -30,7 +26,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
-public class LogViewerActivity extends AppCompatActivity {
+public class LogViewerActivity extends BaseActivity {
 
     private static class ViewerLogger extends Logger {
         @Override
@@ -58,13 +54,16 @@ public class LogViewerActivity extends AppCompatActivity {
         }
     }
 
-    private final ViewerLogger logger = new ViewerLogger();
+    private ActivityLogViewerBinding binding;
+
+    // 这个界面故意不用父类那个写文件的 logger：它显示的就是日志文件本身，
+    // 再把自己看日志的动作写进去，就成了自我引用的噪声（每刷新一次多一条）。
+    // 所以这里单独持有 ViewerLogger，只用不落盘的两个方法。
+    private final ViewerLogger viewerLogger = new ViewerLogger();
 
     private LogWriter logWriter;
     private LogAdapter adapter;
-    private Handler handler;
     private Runnable updateRunnable;
-    private ProgressBar progressBar;
     private boolean autoScroll = true;
     private String currentFilter = "ALL";
     private String searchText = "";
@@ -78,25 +77,22 @@ public class LogViewerActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_log_viewer);
+        binding = ActivityLogViewerBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
 
         logWriter = new LogWriter();
-        handler = new Handler(Looper.getMainLooper());
 
         initViews();
         startAutoUpdate();
     }
 
     private void initViews() {
-        RecyclerView recyclerView = findViewById(R.id.log_list);
+        RecyclerView recyclerView = binding.logList;
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         adapter = new LogAdapter();
         recyclerView.setAdapter(adapter);
 
-        progressBar = findViewById(R.id.progress_loading);
-
-        EditText editSearch = findViewById(R.id.edit_search);
-        editSearch.addTextChangedListener(new TextWatcher() {
+        binding.editSearch.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
             }
@@ -105,7 +101,7 @@ public class LogViewerActivity extends AppCompatActivity {
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 searchText = s.toString();
                 List<LogWriter.LogEntry> filteredLogs = filterLogs(allCachedLogs);
-                handler.post(() -> adapter.setEntries(filteredLogs));
+                mainHandler.post(() -> adapter.setEntries(filteredLogs));
             }
 
             @Override
@@ -113,29 +109,29 @@ public class LogViewerActivity extends AppCompatActivity {
             }
         });
 
-        findViewById(R.id.btn_clear).setOnClickListener(v -> {
+        binding.btnClear.setOnClickListener(v -> {
             logWriter.clearLogs();
             refreshLogs();
-            logger.infoWithoutFile("日志已清除");
+            viewerLogger.infoWithoutFile("日志已清除");
         });
 
-        findViewById(R.id.btn_all).setOnClickListener(v -> setFilter("ALL"));
-        findViewById(R.id.btn_debug).setOnClickListener(v -> setFilter("DEBUG"));
-        findViewById(R.id.btn_info).setOnClickListener(v -> setFilter("INFO"));
-        findViewById(R.id.btn_warn).setOnClickListener(v -> setFilter("WARN"));
-        findViewById(R.id.btn_error).setOnClickListener(v -> setFilter("ERROR"));
+        binding.btnAll.setOnClickListener(v -> setFilter("ALL"));
+        binding.btnDebug.setOnClickListener(v -> setFilter("DEBUG"));
+        binding.btnInfo.setOnClickListener(v -> setFilter("INFO"));
+        binding.btnWarn.setOnClickListener(v -> setFilter("WARN"));
+        binding.btnError.setOnClickListener(v -> setFilter("ERROR"));
 
-        findViewById(R.id.btn_auto_scroll).setOnClickListener(v -> {
+        binding.btnAutoScroll.setOnClickListener(v -> {
             autoScroll = !autoScroll;
-            ((TextView) v).setText(autoScroll ? getString(R.string.auto_scroll_on) : getString(R.string.auto_scroll_off));
+            binding.btnAutoScroll.setText(autoScroll ? getString(R.string.auto_scroll_on) : getString(R.string.auto_scroll_off));
         });
 
-        findViewById(R.id.btn_load_more).setOnClickListener(v -> {
+        binding.btnLoadMore.setOnClickListener(v -> {
             currentDisplayLimit += LOAD_MORE_INCREMENT;
             List<LogWriter.LogEntry> filteredLogs = filterLogs(allCachedLogs);
-            handler.post(() -> {
+            mainHandler.post(() -> {
                 adapter.setEntries(filteredLogs);
-                logger.infoWithoutFile("加载更多日志，当前显示限制: " + currentDisplayLimit);
+                viewerLogger.infoWithoutFile("加载更多日志，当前显示限制: " + currentDisplayLimit);
             });
         });
 
@@ -145,9 +141,9 @@ public class LogViewerActivity extends AppCompatActivity {
     private void setFilter(String filter) {
         currentFilter = filter;
         List<LogWriter.LogEntry> filteredLogs = filterLogs(allCachedLogs);
-        handler.post(() -> {
+        mainHandler.post(() -> {
             adapter.setEntries(filteredLogs);
-            logger.infoWithoutFile("切换日志过滤: " + filter);
+            viewerLogger.infoWithoutFile("切换日志过滤: " + filter);
         });
     }
 
@@ -156,16 +152,16 @@ public class LogViewerActivity extends AppCompatActivity {
             @Override
             public void run() {
                 refreshLogs();
-                handler.postDelayed(this, REFRESH_INTERVAL);
+                mainHandler.postDelayed(this, REFRESH_INTERVAL);
             }
         };
-        handler.post(updateRunnable);
+        mainHandler.post(updateRunnable);
     }
 
     private void refreshLogs() {
-        handler.post(() -> {
-            if (progressBar != null) {
-                progressBar.setVisibility(View.VISIBLE);
+        mainHandler.post(() -> {
+            if (binding.progressLoading != null) {
+                binding.progressLoading.setVisibility(View.VISIBLE);
             }
         });
 
@@ -180,18 +176,23 @@ public class LogViewerActivity extends AppCompatActivity {
                     List<LogWriter.LogEntry> newEntries = new ArrayList<>();
                     if (!logsText.isEmpty()) {
                         String[] lines = logsText.split("\n");
-                        
-                        logger.infoWithoutFile("日志行数: " + lines.length);
-                        
+
+                        viewerLogger.infoWithoutFile("日志行数: " + lines.length);
+
                         for (String line : lines) {
-                            if (!line.trim().isEmpty()) {
-                                try {
-                                    LogWriter.LogEntry entry = LogWriter.LogEntry.fromString(line);
-                                    newEntries.add(entry);
-                                } catch (Exception e) {
-                                    logger.errorWithoutFile("解析日志失败: " + line, e);
-                                    newEntries.add(new LogWriter.LogEntry("ERROR", "ParseError", line));
+                            if (line.trim().isEmpty()) continue;
+                            try {
+                                if (LogWriter.LogEntry.isHeaderLine(line)) {
+                                    newEntries.add(LogWriter.LogEntry.fromString(line));
+                                } else if (!newEntries.isEmpty()) {
+                                    // 多行正文的续行（堆栈、JSON 报文）：并进上一条。
+                                    // 不能新开一条 —— 那样它会拿到「当前时间」当时间戳，
+                                    // 排序时永远排在最后，自动滚动又正好停在末尾，一屏就全是 UnknownTag。
+                                    int last = newEntries.size() - 1;
+                                    newEntries.set(last, newEntries.get(last).withAppendedLine(line));
                                 }
+                            } catch (Exception e) {
+                                viewerLogger.errorWithoutFile("解析日志失败: " + line, e);
                             }
                         }
                     }
@@ -201,30 +202,30 @@ public class LogViewerActivity extends AppCompatActivity {
                     
                     List<LogWriter.LogEntry> filteredLogs = filterLogs(allCachedLogs);
                     
-                    handler.post(() -> {
+                    mainHandler.post(() -> {
                         adapter.setEntries(filteredLogs);
                         if (autoScroll) {
-                            RecyclerView recyclerView = findViewById(R.id.log_list);
+                            RecyclerView recyclerView = binding.logList;
                             if (recyclerView != null && recyclerView.getLayoutManager() != null) {
                                 recyclerView.getLayoutManager().scrollToPosition(filteredLogs.size() - 1);
                             }
                         }
-                        if (progressBar != null) {
-                            progressBar.setVisibility(View.GONE);
+                        if (binding.progressLoading != null) {
+                            binding.progressLoading.setVisibility(View.GONE);
                         }
                     });
                 } else {
-                    handler.post(() -> {
-                        if (progressBar != null) {
-                            progressBar.setVisibility(View.GONE);
+                    mainHandler.post(() -> {
+                        if (binding.progressLoading != null) {
+                            binding.progressLoading.setVisibility(View.GONE);
                         }
                     });
                 }
             } catch (Exception e) {
-                logger.errorWithoutFile("刷新日志失败", e);
-                handler.post(() -> {
-                    if (progressBar != null) {
-                        progressBar.setVisibility(View.GONE);
+                viewerLogger.errorWithoutFile("刷新日志失败", e);
+                mainHandler.post(() -> {
+                    if (binding.progressLoading != null) {
+                        binding.progressLoading.setVisibility(View.GONE);
                     }
                 });
             }
@@ -268,8 +269,8 @@ public class LogViewerActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (handler != null && updateRunnable != null) {
-            handler.removeCallbacks(updateRunnable);
+        if (updateRunnable != null) {
+            mainHandler.removeCallbacks(updateRunnable);
         }
     }
 
@@ -279,9 +280,9 @@ public class LogViewerActivity extends AppCompatActivity {
         @NonNull
         @Override
         public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            View view = LayoutInflater.from(parent.getContext())
-                    .inflate(R.layout.item_log_entry, parent, false);
-            return new ViewHolder(view);
+            ItemLogEntryBinding itemBinding = ItemLogEntryBinding.inflate(
+                    LayoutInflater.from(parent.getContext()), parent, false);
+            return new ViewHolder(itemBinding);
         }
 
         @Override
@@ -334,24 +335,18 @@ public class LogViewerActivity extends AppCompatActivity {
         }
 
         class ViewHolder extends RecyclerView.ViewHolder {
-            TextView textTimestamp;
-            TextView textLevel;
-            TextView textTag;
-            TextView textMessage;
+            private final ItemLogEntryBinding binding;
 
-            ViewHolder(View itemView) {
-                super(itemView);
-                textTimestamp = itemView.findViewById(R.id.text_timestamp);
-                textLevel = itemView.findViewById(R.id.text_level);
-                textTag = itemView.findViewById(R.id.text_tag);
-                textMessage = itemView.findViewById(R.id.text_message);
+            ViewHolder(ItemLogEntryBinding binding) {
+                super(binding.getRoot());
+                this.binding = binding;
             }
 
             void bind(LogWriter.LogEntry entry) {
-                textTimestamp.setText(entry.timestamp);
-                textLevel.setText(entry.level);
-                textTag.setText(entry.tag);
-                textMessage.setText(entry.message);
+                binding.textTimestamp.setText(entry.timestamp);
+                binding.textLevel.setText(entry.level);
+                binding.textTag.setText(entry.tag);
+                binding.textMessage.setText(entry.message);
 
                 int colorRes = switch (entry.level) {
                     case "DEBUG" -> R.color.log_debug;
@@ -360,7 +355,7 @@ public class LogViewerActivity extends AppCompatActivity {
                     case "ERROR" -> R.color.log_error;
                     default -> R.color.log_unknown;
                 };
-                textLevel.setTextColor(getColor(colorRes));
+                binding.textLevel.setTextColor(getColor(colorRes));
             }
         }
     }

@@ -1,40 +1,52 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  这是「设计系统」的样板界面 —— 改其他界面前先看这一份。三条规则：
+
+  1. 颜色只用 ?attr/xxx 主题角色，不写 #RRGGBB，也不引用 colors.xml 里的颜色。
+     （colors.xml 里一个名字只有一个值，区分不了浅色/深色，它是留给 Java 里
+       动态取色用的；?attr/xxx 由主题提供，两种模式各有一套。）
+  2. margin / padding 用 @dimen/spacing_*，不写 dp 字面量。
+  3. 控件套 @style/Widget.App.*，文字套 android:textAppearance="@style/TextAppearance.App.*"。
+
+  顺带一个便利：主题是 Material3，AppCompatActivity 会把 <Button>、<TextView> 这类标签
+  自动换成对应的 Material 控件，所以不需要写 com.google.android.material... 全限定名。
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="@dimen/spacing_16">
 
     <LinearLayout
-        style="?android:attr/buttonBarStyle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center"
-        android:paddingBottom="16dp">
+        android:paddingBottom="@dimen/spacing_16">
 
+        <!-- 主操作：实心按钮 -->
         <Button
             android:id="@+id/btn_refresh"
-            style="?android:attr/buttonBarButtonStyle"
+            style="@style/Widget.App.Button"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
             android:layout_weight="1"
-            android:text="@string/refresh"
-            android:textColor="#5C6BC0" />
+            android:layout_marginEnd="@dimen/spacing_8"
+            android:text="@string/refresh" />
 
+        <!-- 次要操作：tonal 按钮 -->
         <Button
             android:id="@+id/btn_enable_all"
-            style="?android:attr/buttonBarButtonStyle"
+            style="@style/Widget.App.Button.Tonal"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:layout_marginEnd="8dp"
+            android:layout_marginEnd="@dimen/spacing_8"
             android:text="@string/enable_all" />
 
         <Button
             android:id="@+id/btn_disable_all"
-            style="?android:attr/buttonBarButtonStyle"
+            style="@style/Widget.App.Button.Tonal"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -57,8 +69,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:text="@string/hook_empty"
-            android:textColor="#999999"
-            android:textSize="16sp"
+            android:textAppearance="@style/TextAppearance.App.Caption"
             android:visibility="gone" />
 
     </FrameLayout>

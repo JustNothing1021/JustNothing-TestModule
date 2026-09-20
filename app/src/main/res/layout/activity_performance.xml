@@ -8,15 +8,14 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="8dp"
-        android:background="#E0E0E0">
+        android:padding="@dimen/spacing_8">
 
         <Button
             android:id="@+id/btn_refresh"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:layout_marginEnd="4dp"
+            android:layout_marginEnd="@dimen/spacing_4"
             android:text="@string/refresh" />
 
         <Button
@@ -24,7 +23,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:layout_marginStart="4dp"
+            android:layout_marginStart="@dimen/spacing_4"
             android:text="@string/general_clear" />
     </LinearLayout>
 
@@ -32,10 +31,9 @@
         android:id="@+id/text_status"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="12dp"
-        android:textSize="14sp"
-        android:textColor="#333333"
-        android:background="#F5F5F5" />
+        android:padding="@dimen/spacing_12"
+        android:textAppearance="@style/TextAppearance.App.Caption"
+        android:textColor="?attr/colorOnSurface" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/stats_list"

@@ -5,29 +5,33 @@ import android.view.View;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.ViewModelProvider;
 
+import com.google.android.material.color.MaterialColors;
 import com.justnothing.testmodule.R;
 import com.justnothing.testmodule.command.functions.hook.response.HookAddResult;
+import com.justnothing.testmodule.databinding.ActivityHookDetailBinding;
+import com.justnothing.testmodule.ui.activity.BaseActivity;
 import com.justnothing.testmodule.ui.viewmodel.analysis.HookAnalysisViewModel;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
-public class HookDetailActivity extends AppCompatActivity {
+public class HookDetailActivity extends BaseActivity {
 
     public static final String EXTRA_HOOK_ITEM = "hook_item";
 
     private HookAnalysisViewModel viewModel;
+    private ActivityHookDetailBinding binding;
     private String currentHookId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_hook_detail);
+        binding = ActivityHookDetailBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
 
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
@@ -62,12 +66,12 @@ public class HookDetailActivity extends AppCompatActivity {
     }
 
     private void displayHookInfo(HookSnapshot.HookItem item) {
-        TextView tvId = findViewById(R.id.tv_detail_id);
-        TextView tvTarget = findViewById(R.id.tv_detail_target);
-        TextView tvStatus = findViewById(R.id.tv_detail_status);
-        TextView tvCallCount = findViewById(R.id.tv_detail_call_count);
-        TextView tvCreateTime = findViewById(R.id.tv_detail_create_time);
-        TextView tvSignature = findViewById(R.id.tv_detail_signature);
+        TextView tvId = binding.tvDetailId;
+        TextView tvTarget = binding.tvDetailTarget;
+        TextView tvStatus = binding.tvDetailStatus;
+        TextView tvCallCount = binding.tvDetailCallCount;
+        TextView tvCreateTime = binding.tvDetailCreateTime;
+        TextView tvSignature = binding.tvDetailSignature;
 
         if (tvId != null) tvId.setText(item.id());
         if (tvTarget != null) tvTarget.setText(item.targetDisplay());
@@ -90,18 +94,16 @@ public class HookDetailActivity extends AppCompatActivity {
                 tvSignature.setText(item.signature());
             } else {
                 tvSignature.setText("(auto)");
-                tvSignature.setTextColor(ContextCompat.getColor(this, android.R.color.darker_gray));
+                tvSignature.setTextColor(MaterialColors.getColor(tvSignature, com.google.android.material.R.attr.colorOnSurfaceVariant));
             }
         }
 
-        showCodeSection(R.id.label_before_code, R.id.tv_detail_before_code, item.hasBefore(), item.beforeCodePreview());
-        showCodeSection(R.id.label_after_code, R.id.tv_detail_after_code, item.hasAfter(), item.afterCodePreview());
-        showCodeSection(R.id.label_replace_code, R.id.tv_detail_replace_code, item.hasReplace(), item.replaceCodePreview());
+        showCodeSection(binding.labelBeforeCode, binding.tvDetailBeforeCode, item.hasBefore(), item.beforeCodePreview());
+        showCodeSection(binding.labelAfterCode, binding.tvDetailAfterCode, item.hasAfter(), item.afterCodePreview());
+        showCodeSection(binding.labelReplaceCode, binding.tvDetailReplaceCode, item.hasReplace(), item.replaceCodePreview());
     }
 
-    private void showCodeSection(int labelId, int textId, boolean hasPhase, String codePreview) {
-        View label = findViewById(labelId);
-        TextView textView = findViewById(textId);
+    private void showCodeSection(View label, TextView textView, boolean hasPhase, String codePreview) {
         if (label == null || textView == null) return;
 
         if (hasPhase && codePreview != null && !codePreview.isEmpty()) {
@@ -131,16 +133,16 @@ public class HookDetailActivity extends AppCompatActivity {
     }
 
     private void setupButtons() {
-        findViewById(R.id.btn_remove).setOnClickListener(v -> showRemoveConfirmDialog());
+        binding.btnRemove.setOnClickListener(v -> showRemoveConfirmDialog());
 
-        findViewById(R.id.btn_toggle_enable).setOnClickListener(v -> {
+        binding.btnToggleEnable.setOnClickListener(v -> {
             viewModel.performAction(
                     "enable",
                     currentHookId
             );
         });
 
-        findViewById(R.id.btn_refresh_output).setOnClickListener(v -> {
+        binding.btnRefreshOutput.setOnClickListener(v -> {
             viewModel.performAction("output", currentHookId, 50);
         });
     }
@@ -150,7 +152,7 @@ public class HookDetailActivity extends AppCompatActivity {
 
         viewModel.getActionResult().observe(this, result -> {
             if (result != null && result.getDetail() != null && !result.getDetail().isEmpty()) {
-                TextView outputTv = findViewById(R.id.tv_detail_output);
+                TextView outputTv = binding.tvDetailOutput;
                 if (outputTv != null) {
                     StringBuilder sb = new StringBuilder();
                     for (HookAddResult.HookDetailInfo info : result.getDetail()) {

@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.memory.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
+import com.justnothing.testmodule.command.functions.memory.MemoryTexts;
 import com.justnothing.testmodule.command.functions.memory.response.MemoryInfoResult;
 
 public class MemoryInfoRequest extends CommandRequest<MemoryInfoResult> {
@@ -11,7 +12,7 @@ public class MemoryInfoRequest extends CommandRequest<MemoryInfoResult> {
 
     @CmdParam(
         name = "--detail-level",
-        description = "信息详细程度",
+        description = MemoryTexts.PARAM_MEMORY_INFO_DETAIL_LEVEL_DESC,
         required = false,
         defaultValue = "full",
         allowedValues = {"basic", "full"},
@@ -21,7 +22,7 @@ public class MemoryInfoRequest extends CommandRequest<MemoryInfoResult> {
 
     @CmdParam(
         name = "--heap",
-        description = "只显示堆内存信息",
+        description = MemoryTexts.PARAM_MEMORY_INFO_HEAP_DESC,
         required = false,
         aliases = {"-h"},
         serializedName = "heapOnly"
@@ -30,7 +31,7 @@ public class MemoryInfoRequest extends CommandRequest<MemoryInfoResult> {
 
     @CmdParam(
         name = "--detailed",
-        description = "显示详细内存信息 (默认)",
+        description = MemoryTexts.PARAM_MEMORY_INFO_DETAILED_DESC,
         required = false,
         defaultValue = "true",
         aliases = {"-d"},

@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.bytecode.request;
 
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.functions.bytecode.BytecodeTexts;
 import com.justnothing.testmodule.command.functions.bytecode.response.BytecodeResult;
 
 public class BytecodeAnalyzeRequest extends CommandRequest<BytecodeResult> {
@@ -10,7 +11,7 @@ public class BytecodeAnalyzeRequest extends CommandRequest<BytecodeResult> {
         name = "className",
         position = 1,
         required = true,
-        description = "类名"
+        description = BytecodeTexts.PARAM_BYTECODE_ANALYZE_CLASSNAME_DESC
     )
     private String className;
 
@@ -18,7 +19,7 @@ public class BytecodeAnalyzeRequest extends CommandRequest<BytecodeResult> {
         name = "verbose",
         aliases = {"-v", "--verbose"},
         required = false,
-        description = "详细输出"
+        description = BytecodeTexts.PARAM_BYTECODE_ANALYZE_VERBOSE_DESC
     )
     private boolean verbose;
 

@@ -1,163 +1,173 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  主界面：11 个功能入口。
+
+  这 11 个按钮是这个项目里唯一一处「每个控件一个颜色」的地方，值得单独说明，
+  因为它和别处的规矩看起来是矛盾的。
+
+  规矩是：布局里不写颜色，用 ?attr/colorXxx 主题角色。
+  但主题角色是「槽位」—— 正文、辅助文字、容器、分隔线，一共十几个。
+  它回答的是「这块内容扮演什么角色」，不是为了表达「这个和那个不一样」。
+  而 11 个入口要的恰恰是「不一样」，主题槽位里装不下 11 个身份。
+
+  所以这批颜色走了另一条路：做成 @color/entry_* 资源（浅色在 values/colors.xml，
+  深色在 values-night/colors.xml），布局里直接引用。
+
+  关键区别不在于「写在布局里还是写在资源里」，而在于**有没有深浅两套值**：
+      android:backgroundTint="#FF9800"        ← 错：只有一个值，深色下没法换
+      android:backgroundTint="@color/entry_orange"  ← 对：资源系统按 uiMode 自动挑
+
+  另外注意 style 用的是 Widget.App.Button.Entry 而不是 Widget.App.Button.Tonal。
+  因为按钮文字色必须钉成白色（详见 themes.xml 里的注释），
+  浅色下主题默认的 colorOnPrimary 正好是白色，深色下却会变成深紫，压在深底色上看不见。
+-->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="#F5F5F5">
+    android:layout_height="match_parent">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center"
         android:orientation="vertical"
-        android:padding="12dp">
+        android:gravity="center"
+        android:padding="@dimen/spacing_12">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="30dp"
-            android:layout_marginBottom="8dp"
+            android:layout_marginTop="@dimen/spacing_32"
+            android:layout_marginBottom="@dimen/spacing_8"
             android:text="@string/welcome_app_title"
-            android:textColor="#333333"
-            android:textSize="28sp"
-            android:textStyle="bold" />
+            android:textAppearance="@style/TextAppearance.App.Display" />
 
         <TextView
             android:id="@+id/align"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
+            android:layout_marginBottom="@dimen/spacing_12"
             android:text="@string/welcome_subtitle_description"
             android:textAlignment="center"
-            android:textColor="#666666"
-            android:textSize="14sp" />
+            android:textAppearance="@style/TextAppearance.App.Caption" />
 
+        <!--
+          原来这里是 28dp，刻度里没有 28 这一档，就近归到 32。
+          选大的那个是有理由的：这个间距的语义是「标题区和下面的按钮列表分开」，
+          属于段落级留白（spacing_32 那一条），不是普通的 24。
+        -->
         <TextView
             android:id="@+id/tv_subtitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="28dp"
+            android:layout_marginBottom="@dimen/spacing_32"
             android:text="@string/welcome_app_subtitle"
-            android:textColor="#666666"
-            android:textSize="14sp" />
+            android:textAppearance="@style/TextAppearance.App.Caption" />
 
         <Button
             android:id="@+id/btn_system_analysis"
+            style="@style/Widget.App.Button.Entry"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:backgroundTint="#3F51B5"
-            android:padding="16dp"
-            android:text="@string/system_analysis"
-            android:textSize="16sp" />
+            android:layout_marginBottom="@dimen/spacing_16"
+            android:backgroundTint="@color/entry_indigo"
+            android:text="@string/system_analysis" />
 
         <Button
             android:id="@+id/btn_hook_config"
+            style="@style/Widget.App.Button.Entry"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:backgroundTint="#4CAF50"
-            android:padding="16dp"
-            android:text="@string/hook_config_management"
-            android:textSize="16sp" />
+            android:layout_marginBottom="@dimen/spacing_16"
+            android:backgroundTint="@color/entry_green"
+            android:text="@string/hook_config_management" />
 
         <Button
             android:id="@+id/btn_get_httpconf"
+            style="@style/Widget.App.Button.Entry"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:backgroundTint="#2196F3"
-            android:padding="16dp"
-            android:text="@string/get_http_config"
-            android:textSize="16sp" />
+            android:layout_marginBottom="@dimen/spacing_16"
+            android:backgroundTint="@color/entry_blue"
+            android:text="@string/get_http_config" />
 
         <Button
             android:id="@+id/btn_log_viewer"
+            style="@style/Widget.App.Button.Entry"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:backgroundTint="#FF9800"
-            android:padding="16dp"
-            android:text="@string/log_viewer"
-            android:textSize="16sp" />
+            android:layout_marginBottom="@dimen/spacing_16"
+            android:backgroundTint="@color/entry_orange"
+            android:text="@string/log_viewer" />
 
         <Button
             android:id="@+id/btn_script_manager"
+            style="@style/Widget.App.Button.Entry"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:backgroundTint="#9C27B0"
-            android:padding="16dp"
-            android:text="@string/script_manager"
-            android:textSize="16sp" />
+            android:layout_marginBottom="@dimen/spacing_16"
+            android:backgroundTint="@color/entry_purple"
+            android:text="@string/script_manager" />
 
         <Button
             android:id="@+id/btn_module_status"
+            style="@style/Widget.App.Button.Entry"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:backgroundTint="#E91E63"
-            android:padding="16dp"
-            android:text="@string/module_status_monitor"
-            android:textSize="16sp" />
+            android:layout_marginBottom="@dimen/spacing_16"
+            android:backgroundTint="@color/entry_pink"
+            android:text="@string/module_status_monitor" />
 
         <Button
             android:id="@+id/btn_performance"
+            style="@style/Widget.App.Button.Entry"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:backgroundTint="#00BCD4"
-            android:padding="16dp"
-            android:text="@string/performance_monitor"
-            android:textSize="16sp" />
+            android:layout_marginBottom="@dimen/spacing_16"
+            android:backgroundTint="@color/entry_cyan"
+            android:text="@string/performance_monitor" />
 
         <Button
             android:id="@+id/btn_data_export"
+            style="@style/Widget.App.Button.Entry"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:backgroundTint="#FF5722"
-            android:padding="16dp"
-            android:text="@string/data_export"
-            android:textSize="16sp" />
+            android:layout_marginBottom="@dimen/spacing_16"
+            android:backgroundTint="@color/entry_deep_orange"
+            android:text="@string/data_export" />
 
         <Button
             android:id="@+id/btn_settings"
+            style="@style/Widget.App.Button.Entry"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:backgroundTint="#607D8B"
-            android:padding="16dp"
-            android:text="@string/interface_settings"
-            android:textSize="16sp" />
+            android:layout_marginBottom="@dimen/spacing_16"
+            android:backgroundTint="@color/entry_blue_grey"
+            android:text="@string/interface_settings" />
 
         <Button
             android:id="@+id/btn_did_you_know"
+            style="@style/Widget.App.Button.Entry"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:backgroundTint="#673AB7"
-            android:padding="16dp"
-            android:text="@string/did_you_know"
-            android:textSize="16sp" />
+            android:layout_marginBottom="@dimen/spacing_16"
+            android:backgroundTint="@color/entry_deep_purple"
+            android:text="@string/did_you_know" />
 
         <Button
             android:id="@+id/btn_about"
+            style="@style/Widget.App.Button.Entry"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:backgroundTint="#795548"
-            android:padding="16dp"
-            android:text="@string/about"
-            android:textSize="16sp" />
+            android:layout_marginBottom="@dimen/spacing_16"
+            android:backgroundTint="@color/entry_brown"
+            android:text="@string/about" />
 
         <TextView
             android:id="@+id/tv_version"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="48dp"
+            android:layout_marginTop="@dimen/spacing_48"
             android:text="@string/version_not_loaded"
-            android:textColor="#999999"
-            android:textSize="14sp" />
+            android:textAppearance="@style/TextAppearance.App.Caption" />
 
     </LinearLayout>
 

@@ -4,6 +4,8 @@ import com.justnothing.testmodule.command.framework.annotation.Cmd;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.framework.annotation.CmdRoutes;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
+import com.justnothing.testmodule.command.framework.i18n.CliTexts;
 import com.justnothing.testmodule.command.framework.model.CommandRouter;
 
 import java.util.ArrayList;
@@ -15,6 +17,14 @@ import java.util.stream.Collectors;
 
 /**
  * 帮助文档生成。
+ *
+ * <p>注解里的文字元素（{@code description} / {@code helpText} / {@code optionsDesc} / 参数说明）
+ * 存的是<b>文案 id</b>而不是原文，所以这里每取一处都要过 {@link CliTexts#resolve(String)}。
+ * {@code resolve} 对「已经是原文的旧写法」是透明的（查不到就原样返回），
+ * 所以没迁移完的命令不会因此显示异常 —— 迁移可以一个族一个族地做。</p>
+ *
+ * <p>{@code usage} / {@code examples} / {@code seeAlso} 不走 resolve：
+ * 它们是命令语法和命令名，不随语言变。</p>
  */
 public class CmdHelpGenerator {
 
@@ -23,10 +33,11 @@ public class CmdHelpGenerator {
 
         Cmd cmdAnnotation = cmdClass.getAnnotation(Cmd.class);
         if (cmdAnnotation != null) {
-            sb.append(cmdAnnotation.name()).append(" - ").append(cmdAnnotation.description()).append("\n\n");
+            sb.append(cmdAnnotation.name()).append(" - ")
+              .append(CliTexts.resolve(cmdAnnotation.description())).append("\n\n");
 
             if (!cmdAnnotation.helpText().isEmpty()) {
-                sb.append(cmdAnnotation.helpText()).append("\n\n");
+                sb.append(CliTexts.resolve(cmdAnnotation.helpText())).append("\n\n");
             }
         }
 
@@ -46,24 +57,26 @@ public class CmdHelpGenerator {
             }
 
             // ========== 子命令（带分类前缀 + 内联位置参数）==========
-            sb.append("子命令:\n");
+            sb.append(CliMessages.HELP_SUBCOMMANDS.text());
             for (Map.Entry<String, List<CmdRoutes.Route>> entry : categories.entrySet()) {
                 String category = entry.getKey();
                 sb.append(String.format("  %s:\n", category));
                 for (CmdRoutes.Route route : entry.getValue()) {
                     String sig = buildRouteSignature(route);
-                    sb.append("    ").append(padRight(sig, 37)).append(route.description()).append("\n");
+                    sb.append("    ").append(padRight(sig, 37))
+                      .append(CliTexts.resolve(route.description())).append("\n");
                 }
                 sb.append("\n");
             }
             for (CmdRoutes.Route route : flatRoutes) {
                 String sig = buildRouteSignature(route);
-                sb.append("  ").append(padRight(sig, 37)).append(route.description()).append("\n");
+                sb.append("  ").append(padRight(sig, 37))
+                  .append(CliTexts.resolve(route.description())).append("\n");
             }
             if (!flatRoutes.isEmpty()) sb.append("\n");
 
             // ========== 参数详情（逐子命令列出所有参数描述和约束）==========
-            sb.append("参数详情:\n");
+            sb.append(CliMessages.HELP_PARAM_DETAILS.text());
             boolean hasAnyDetails = false;
 
             for (Map.Entry<String, List<CmdRoutes.Route>> entry : categories.entrySet()) {
@@ -100,14 +113,14 @@ public class CmdHelpGenerator {
             }
 
             if (!hasAnyDetails) {
-                sb.append("  (所有子命令暂无参数)\n\n");
+                sb.append(CliMessages.HELP_NO_PARAMS.text());
             }
         } else if (cmdAnnotation == null) {
             // 兼容：对于没有 @Cmd/@CmdRoutes 的 Request 类，直接显示其参数
             List<CmdParamProcessor.FieldInfo> params = CmdParamProcessor.getCmdParamFields(cmdClass);
             if (!params.isEmpty()) {
                 String className = cmdClass.getSimpleName();
-                sb.append(className).append(" 参数:\n\n");
+                sb.append(CliMessages.HELP_CLASS_PARAMS.format(className));
 
                 for (CmdParamProcessor.FieldInfo fi : params) {
                     sb.append("  ").append(formatParamHelp(fi)).append("\n");
@@ -130,10 +143,10 @@ public class CmdHelpGenerator {
         }
         sb.append("  ").append(padRight(nameStr, 22));
 
-        sb.append("  ").append(padRight(p.description(), 30));
+        sb.append("  ").append(padRight(CliTexts.resolve(p.description()), 30));
 
         List<String> attrs = new ArrayList<>();
-        attrs.add(p.required() ? "必需" : "可选");
+        attrs.add(p.required() ? CliMessages.PARAM_REQUIRED.text() : CliMessages.PARAM_OPTIONAL.text());
 
         String typeName = inferTypeName(fi.field().getType());
         attrs.add(typeName);
@@ -141,24 +154,25 @@ public class CmdHelpGenerator {
         if (!p.required()) {
             String defVal = p.defaultValue();
             if (!defVal.isEmpty()) {
-                attrs.add("默认=" + defVal);
+                attrs.add(CliMessages.PARAM_DEFAULT_PREFIX.text() + defVal);
             }
         }
 
         if (p.varArgs()) {
-            attrs.add("可变参数");
+            attrs.add(CliMessages.PARAM_VARARGS.text());
         }
 
         if (p.min() > Double.NEGATIVE_INFINITY || p.max() < Double.POSITIVE_INFINITY) {
-            attrs.add("范围: " + formatRange(p.min(), p.max()));
+            attrs.add(CliMessages.PARAM_RANGE_PREFIX.text() + formatRange(p.min(), p.max()));
         }
 
         if (p.allowedValues().length > 0) {
-            attrs.add("枚举: {" + String.join("|", p.allowedValues()) + "}");
+            attrs.add(CliMessages.PARAM_ENUM_PREFIX.text() + String.join("|", p.allowedValues()) + "}");
         }
 
         if (p.isOperator()) {
-            String opStr = "操作符";
+            // "(N args)" 里的 args 本来就是英文缩写，不随语言变，所以留在代码里
+            String opStr = CliMessages.PARAM_OPERATOR.text();
             if (p.operatorArgs() > 0) opStr += "(" + p.operatorArgs() + " args)";
             attrs.add(opStr);
         }
@@ -190,14 +204,14 @@ public class CmdHelpGenerator {
     }
 
     private static String inferTypeName(Class<?> type) {
-        if (type == int.class || type == Integer.class) return "整数";
-        if (type == long.class || type == Long.class) return "长整数";
-        if (type == double.class || type == Double.class) return "浮点数";
-        if (type == float.class || type == Float.class) return "浮点数";
-        if (type == boolean.class || type == Boolean.class) return "布尔值";
-        if (type == String.class) return "字符串";
-        if (type.isArray()) return inferTypeName(type.getComponentType()) + "列表";
-        if (List.class.isAssignableFrom(type)) return "列表";
+        if (type == int.class || type == Integer.class) return CliMessages.TYPE_INT.text();
+        if (type == long.class || type == Long.class) return CliMessages.TYPE_LONG.text();
+        if (type == double.class || type == Double.class) return CliMessages.TYPE_DOUBLE.text();
+        if (type == float.class || type == Float.class) return CliMessages.TYPE_DOUBLE.text();
+        if (type == boolean.class || type == Boolean.class) return CliMessages.TYPE_BOOLEAN.text();
+        if (type == String.class) return CliMessages.TYPE_STRING.text();
+        if (type.isArray()) return inferTypeName(type.getComponentType()) + CliMessages.TYPE_LIST.text();
+        if (List.class.isAssignableFrom(type)) return CliMessages.TYPE_LIST.text();
         return type.getSimpleName();
     }
 
@@ -216,7 +230,7 @@ public class CmdHelpGenerator {
         StringBuilder sb = new StringBuilder();
 
         Cmd cmdAnnotation = cmdClass.getAnnotation(Cmd.class);
-        if (cmdAnnotation == null) return "错误: 无法生成帮助文档; 该命令没有打上 @Cmd 注解";
+        if (cmdAnnotation == null) return CliMessages.HELP_NO_ANNOTATION.text();
         String name = cmdAnnotation.name();
         String fullPath = routeConfig.path();
         // 路由 key 统一用 "/" 分层（如 class/info）；path 为空的路由其 key 就等于命令名。
@@ -241,21 +255,26 @@ public class CmdHelpGenerator {
             subCmdInfo = routeConfig.requestType().getAnnotation(SubCommandInfo.class);
         }
 
-        if (subCmdInfo != null) {
-            // 使用 @SubCommandInfo 的详细描述
-            sb.append(" - ").append(subCmdInfo.description()).append("\n\n");
-        } else {
-            // 回退到 RouteConfig 的简单描述
-            sb.append(" - ").append(routeConfig.description()).append("\n\n");
+        // 注解里没写 description 时回落到路由注册的那一行（@SubCommandInfo 的默认值已改成空串，
+        // 所以「没写」和「写了空」是同一件事，不会再出现「这个命令没有描述信息...」这种占位串）
+        String description = subCmdInfo != null
+                ? CliTexts.resolve(subCmdInfo.description())
+                : CliTexts.resolve(routeConfig.description());
+        if (description.isEmpty() && subCmdInfo != null) {
+            description = CliTexts.resolve(routeConfig.description());
         }
+        sb.append(" - ").append(description).append("\n\n");
 
         // 2. 用法说明（优先使用 @SubCommandInfo.usage）
-        if (subCmdInfo != null && !subCmdInfo.usage().isEmpty()) {
-            sb.append("用法:\n");
-            sb.append("  ").append(subCmdInfo.usage()).append("\n\n");
+        //    用法多数是纯命令语法（memory gc [options]），不含中文，所以 resolve 通常原样返回；
+        //    万一某条用法里写了中文，把它拆成 id 也能直接被这里解析，不需要改这一行。
+        String usage = subCmdInfo != null ? CliTexts.resolve(subCmdInfo.usage()) : "";
+        if (!usage.isEmpty()) {
+            sb.append(CliMessages.HELP_USAGE.text());
+            sb.append("  ").append(usage).append("\n\n");
         } else {
             // 自动生成用法
-            sb.append("用法:\n");
+            sb.append(CliMessages.HELP_USAGE.text());
             sb.append("  ").append(cmdAnnotation.name()).append(" ").append(subCommandPath);
 
             List<CmdParamProcessor.FieldInfo> routeParams = CmdParamProcessor.getCmdParamFields(routeConfig.requestType());
@@ -265,7 +284,7 @@ public class CmdHelpGenerator {
                     .collect(Collectors.toList());
 
             for (CmdParamProcessor.FieldInfo fi : positionalParams) {
-                sb.append(" <").append(fi.param().description()).append(">");
+                sb.append(" <").append(CliTexts.resolve(fi.param().description())).append(">");
             }
 
             List<CmdParamProcessor.FieldInfo> optionalParams = routeParams.stream()
@@ -273,15 +292,15 @@ public class CmdHelpGenerator {
                 .collect(Collectors.toList());
 
             if (!optionalParams.isEmpty()) {
-                sb.append(" [选项]");
+                sb.append(CliMessages.HELP_OPTIONS_SUFFIX.text());
             }
 
             sb.append("\n\n");
         }
 
-        // 3. 实际示例（来自 @SubCommandInfo.examples）
+        // 3. 实际示例（来自 @SubCommandInfo.examples。示例是命令语法，不随语言变，不走 resolve）
         if (subCmdInfo != null && subCmdInfo.examples().length > 0) {
-            sb.append("示例:\n");
+            sb.append(CliMessages.HELP_EXAMPLES.text());
             for (String example : subCmdInfo.examples()) {
                 sb.append("  ").append(example).append("\n");
             }
@@ -291,7 +310,7 @@ public class CmdHelpGenerator {
         // 4. 参数列表（始终显示）
         List<CmdParamProcessor.FieldInfo> routeParams = CmdParamProcessor.getCmdParamFields(routeConfig.requestType());
         if (!routeParams.isEmpty()) {
-            sb.append("选项:\n");
+            sb.append(CliMessages.HELP_OPTIONS.text());
 
             for (CmdParamProcessor.FieldInfo fi : routeParams) {
                 sb.append("  ").append(formatParamHelp(fi)).append("\n");
@@ -301,12 +320,13 @@ public class CmdHelpGenerator {
         }
 
         // 5. 选项详细说明（来自 @SubCommandInfo.optionsDesc）
-        if (subCmdInfo != null && !subCmdInfo.optionsDesc().isEmpty() &&
-            !subCmdInfo.optionsDesc().startsWith("这个命令没有帮助信息")) {
-            sb.append("选项详情:\n");
-            String optionsText = subCmdInfo.optionsDesc().trim();
+        //    以前这里靠 startsWith("这个命令没有帮助信息") 判断「注解没写」，
+        //    那是拿中文内容当标记用；现在默认值是空串，「没写」就是 isEmpty()。
+        String optionsDesc = subCmdInfo != null ? CliTexts.resolve(subCmdInfo.optionsDesc()) : "";
+        if (!optionsDesc.isEmpty()) {
+            sb.append(CliMessages.HELP_OPTION_DETAILS.text());
             // 缩进每一行
-            for (String line : optionsText.split("\n")) {
+            for (String line : optionsDesc.trim().split("\n")) {
                 if (!line.trim().isEmpty()) {
                     sb.append("  ").append(line.trim()).append("\n");
                 }
@@ -314,9 +334,9 @@ public class CmdHelpGenerator {
             sb.append("\n");
         }
 
-        // 6. 相关命令（来自 @SubCommandInfo.seeAlso）
+        // 6. 相关命令（来自 @SubCommandInfo.seeAlso。命令名不随语言变，不走 resolve）
         if (subCmdInfo != null && subCmdInfo.seeAlso().length > 0) {
-            sb.append("相关命令:\n");
+            sb.append(CliMessages.HELP_SEE_ALSO.text());
             for (String related : subCmdInfo.seeAlso()) {
                 sb.append("  ").append(related).append("\n");
             }
@@ -371,12 +391,12 @@ public class CmdHelpGenerator {
             sb.append(", ").append(String.join(", ", p.aliases()));
         }
 
-        sb.append("  ").append(p.description());
+        sb.append("  ").append(CliTexts.resolve(p.description()));
 
         if (!p.required()) {
             String defVal = p.defaultValue();
             if (!defVal.isEmpty()) {
-                sb.append(" (默认: ").append(defVal).append(")");
+                sb.append(CliMessages.PARAM_DEFAULT_INLINE.text()).append(defVal).append(")");
             }
         }
 
@@ -395,16 +415,19 @@ public class CmdHelpGenerator {
 
         // 显示操作符信息（isOperator 时）
         if (p.isOperator()) {
-            sb.append(" [操作符");
+            sb.append(CliMessages.PARAM_OPERATOR_INLINE.text());
             if (p.operatorArgs() > 0) {
-                sb.append(", 消费").append(p.operatorArgs()).append("个参数");
+                sb.append(CliMessages.PARAM_OPERATOR_CONSUMES_PREFIX.text())
+                  .append(p.operatorArgs())
+                  .append(CliMessages.PARAM_OPERATOR_CONSUMES_SUFFIX.text());
             }
             sb.append("]");
         }
 
         // 显示互斥约束
         if (p.mutexWith().length > 0) {
-            sb.append(" [互斥: ").append(String.join(", ", p.mutexWith())).append("]");
+            sb.append(CliMessages.PARAM_MUTEX_PREFIX.text())
+              .append(String.join(", ", p.mutexWith())).append("]");
         }
 
         return sb.toString();

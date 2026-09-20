@@ -1,9 +1,12 @@
 package com.justnothing.testmodule.ui.activity.analysis.hook;
 
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ImageView;
@@ -11,12 +14,15 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.ViewModelProvider;
 
-import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.color.MaterialColors;
 import com.justnothing.testmodule.R;
+import com.justnothing.testmodule.databinding.ActivityHookManagerBinding;
+import com.justnothing.testmodule.databinding.ItemHookBinding;
+import com.justnothing.testmodule.databinding.ItemHookGroupHeaderBinding;
+import com.justnothing.testmodule.ui.activity.BaseActivity;
 import com.justnothing.testmodule.ui.viewmodel.analysis.HookAnalysisViewModel;
 
 import java.util.ArrayList;
@@ -25,14 +31,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-public class HookManagerActivity extends AppCompatActivity {
+public class HookManagerActivity extends BaseActivity {
 
     private static final String[] STATUS_ORDER = {"ENABLED", "DISABLED", "INACTIVE"};
 
     private HookAnalysisViewModel viewModel;
-
-    private TextView tvLastUpdateTime, tvHookStats;
-    private LinearLayout layoutHookGroups;
+    private ActivityHookManagerBinding binding;
 
     private String currentSearchText = "";
     private List<HookSnapshot.HookItem> allHooks = new ArrayList<>();
@@ -41,22 +45,17 @@ public class HookManagerActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_hook_manager);
+        binding = ActivityHookManagerBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
 
         initViews();
         initViewModel();
     }
 
     private void initViews() {
-        tvLastUpdateTime = findViewById(R.id.tv_last_update_time);
-        ((TextView) findViewById(R.id.tv_last_update_label)).setText(R.string.analysis_hook_last_update);
+        binding.tvLastUpdateLabel.setText(R.string.analysis_hook_last_update);
 
-        tvHookStats = findViewById(R.id.tv_hook_stats);
-
-        TextInputEditText etSearch = findViewById(R.id.et_search);
-        layoutHookGroups = findViewById(R.id.layout_hook_groups);
-
-        etSearch.addTextChangedListener(new TextWatcher() {
+        binding.etSearch.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
                 currentSearchText = s.toString().trim();
@@ -65,12 +64,12 @@ public class HookManagerActivity extends AppCompatActivity {
             @Override public void afterTextChanged(Editable s) {}
         });
 
-        findViewById(R.id.btn_refresh).setOnClickListener(v -> viewModel.queryHookList());
-        findViewById(R.id.btn_add).setOnClickListener(v -> {
+        binding.btnRefresh.setOnClickListener(v -> viewModel.queryHookList());
+        binding.btnAdd.setOnClickListener(v -> {
             Intent intent = new Intent(this, HookEditorActivity.class);
             startActivity(intent);
         });
-        findViewById(R.id.btn_clear_all).setOnClickListener(v -> showClearConfirmDialog());
+        binding.btnClearAll.setOnClickListener(v -> showClearConfirmDialog());
     }
 
     private void initViewModel() {
@@ -82,7 +81,7 @@ public class HookManagerActivity extends AppCompatActivity {
         });
 
         viewModel.getLastUpdateTime().observe(this, time -> {
-            if (time != null) tvLastUpdateTime.setText(time);
+            if (time != null) binding.tvLastUpdateTime.setText(time);
         });
 
         viewModel.getActionResult().observe(this, result -> {
@@ -102,7 +101,7 @@ public class HookManagerActivity extends AppCompatActivity {
     private int snapshotTotalCount = 0;
 
     private void displayHookSnapshot(HookSnapshot snapshot) {
-        tvHookStats.setText(getString(R.string.analysis_hook_overview_format, snapshot.totalHookCount(), snapshot.activeCount()));
+        binding.tvHookStats.setText(getString(R.string.analysis_hook_overview_format, snapshot.totalHookCount(), snapshot.activeCount()));
         snapshotTotalCount = snapshot.totalHookCount();
 
         allHooks = new ArrayList<>(snapshot.hooks());
@@ -123,7 +122,7 @@ public class HookManagerActivity extends AppCompatActivity {
     }
 
     private void rebuildGroupList() {
-        layoutHookGroups.removeAllViews();
+        binding.layoutHookGroups.removeAllViews();
 
         List<HookSnapshot.HookItem> filtered = getFilteredHooks();
 
@@ -131,10 +130,10 @@ public class HookManagerActivity extends AppCompatActivity {
             TextView emptyTv = new TextView(this);
             emptyTv.setText(currentSearchText.isEmpty() ? getString(R.string.analysis_hook_empty) : getString(R.string.analysis_hook_search_empty));
             emptyTv.setTextAppearance(android.R.style.TextAppearance_Medium);
-            emptyTv.setTextColor(ContextCompat.getColor(this, android.R.color.darker_gray));
-            emptyTv.setGravity(android.view.Gravity.CENTER);
+            emptyTv.setTextColor(MaterialColors.getColor(emptyTv, com.google.android.material.R.attr.colorOnSurfaceVariant));
+            emptyTv.setGravity(Gravity.CENTER);
             emptyTv.setPadding(0, dpToPx(32), 0, dpToPx(32));
-            layoutHookGroups.addView(emptyTv);
+            binding.layoutHookGroups.addView(emptyTv);
             return;
         }
 
@@ -150,21 +149,13 @@ public class HookManagerActivity extends AppCompatActivity {
         }
     }
 
-    private int getStatusColorRes(String status) {
-        return switch (status) {
-            case "ENABLED" -> R.color.light_green;
-            case "DISABLED" -> R.color.yellow;
-            case "INACTIVE" -> R.color.gray;
-            default -> android.R.color.darker_gray;
-        };
-    }
-
     private int getStatusIndicatorColor(String status) {
         return switch (status) {
             case "ENABLED" -> ContextCompat.getColor(this, R.color.light_green);
             case "DISABLED" -> ContextCompat.getColor(this, R.color.yellow);
             case "INACTIVE" -> ContextCompat.getColor(this, R.color.gray);
-            default -> ContextCompat.getColor(this, android.R.color.darker_gray);
+            default -> MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant,
+                    ContextCompat.getColor(this, R.color.gray));
         };
     }
 
@@ -181,18 +172,17 @@ public class HookManagerActivity extends AppCompatActivity {
         LayoutInflater inflater = LayoutInflater.from(this);
         int color = getStatusIndicatorColor(statusLabel);
 
-        LinearLayout headerLayout = (LinearLayout) inflater.inflate(
-                R.layout.item_hook_group_header, layoutHookGroups, false);
+        ItemHookGroupHeaderBinding headerBinding = ItemHookGroupHeaderBinding.inflate(
+                inflater, binding.layoutHookGroups, false);
+        LinearLayout headerLayout = headerBinding.getRoot();
 
-        View leftBar = headerLayout.findViewById(R.id.view_header_left_bar);
-        leftBar.setBackgroundColor(color);
+        headerBinding.viewHeaderLeftBar.setBackgroundColor(color);
 
-        ImageView ivExpand = headerLayout.findViewById(R.id.iv_group_expand);
+        ImageView ivExpand = headerBinding.ivGroupExpand;
         ivExpand.setRotation(expanded ? 0f : 180f);
 
-        TextView tvTitle = headerLayout.findViewById(R.id.tv_group_title);
-        tvTitle.setText(getStatusLabel(statusLabel).replace("0", String.valueOf(hooks.size())));
-        tvTitle.setTextColor(color);
+        headerBinding.tvGroupTitle.setText(getStatusLabel(statusLabel).replace("0", String.valueOf(hooks.size())));
+        headerBinding.tvGroupTitle.setTextColor(color);
 
         LinearLayout contentLayout = new LinearLayout(this);
         contentLayout.setOrientation(LinearLayout.VERTICAL);
@@ -200,15 +190,14 @@ public class HookManagerActivity extends AppCompatActivity {
 
         for (int i = 0; i < hooks.size(); i++) {
             HookSnapshot.HookItem item = hooks.get(i);
-            View hookView = inflater.inflate(R.layout.item_hook, contentLayout, false);
+            ItemHookBinding hookBinding = ItemHookBinding.inflate(inflater, contentLayout, false);
 
-            View indicator = hookView.findViewById(R.id.view_status_indicator);
-            indicator.setBackgroundColor(getStatusIndicatorColor(item.statusKey()));
+            hookBinding.viewStatusIndicator.setBackgroundColor(getStatusIndicatorColor(item.statusKey()));
 
-            TextView targetTv = hookView.findViewById(R.id.tv_hook_target);
+            TextView targetTv = hookBinding.tvHookTarget;
             targetTv.setText(item.targetDisplay());
 
-            TextView metaTv = hookView.findViewById(R.id.tv_hook_meta);
+            TextView metaTv = hookBinding.tvHookMeta;
             StringBuilder meta = new StringBuilder();
             meta.append(item.phaseLabel());
             if (item.callCount() > 0) {
@@ -216,8 +205,10 @@ public class HookManagerActivity extends AppCompatActivity {
             }
             metaTv.setText(meta.toString());
 
-            TextView infoTv = hookView.findViewById(R.id.tv_hook_info);
+            TextView infoTv = hookBinding.tvHookInfo;
             infoTv.setText(String.valueOf(item.callCount()));
+
+            View hookView = hookBinding.getRoot();
 
             final HookSnapshot.HookItem capturedItem = item;
             hookView.setOnClickListener(v -> {
@@ -232,11 +223,10 @@ public class HookManagerActivity extends AppCompatActivity {
                         + "\nStatus: " + capturedItem.statusKey()
                         + "\nCalls: " + capturedItem.callCount()
                         + "\nPhases: " + capturedItem.phaseLabel();
-                android.content.ClipboardManager clipboard = (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+                ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
                 if (clipboard != null) {
-                    clipboard.setPrimaryClip(android.content.ClipData.newPlainText("hook_info", text));
-                    android.widget.Toast.makeText(this, getString(R.string.analysis_thread_copy_success),
-                            android.widget.Toast.LENGTH_SHORT).show();
+                    clipboard.setPrimaryClip(ClipData.newPlainText("hook_info", text));
+                    showToast(getString(R.string.analysis_thread_copy_success));
                 }
                 return true;
             });
@@ -245,7 +235,7 @@ public class HookManagerActivity extends AppCompatActivity {
 
             if (i < hooks.size() - 1) {
                 View divider = new View(this);
-                divider.setBackgroundColor(0x0AFFFFFF);
+                divider.setBackgroundColor(MaterialColors.getColor(divider, com.google.android.material.R.attr.colorOutlineVariant));
                 LinearLayout.LayoutParams divParams = new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT, 1);
                 divider.setLayoutParams(divParams);
@@ -260,8 +250,8 @@ public class HookManagerActivity extends AppCompatActivity {
             groupExpandedMap.put(statusLabel, !isExpanded);
         });
 
-        layoutHookGroups.addView(headerLayout);
-        layoutHookGroups.addView(contentLayout);
+        binding.layoutHookGroups.addView(headerLayout);
+        binding.layoutHookGroups.addView(contentLayout);
     }
 
     private void showClearConfirmDialog() {
@@ -272,10 +262,6 @@ public class HookManagerActivity extends AppCompatActivity {
                         viewModel.performAction("clear", null))
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
-    }
-
-    private void showToast(String msg) {
-        android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_SHORT).show();
     }
 
     @Override

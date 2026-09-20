@@ -27,9 +27,8 @@
             android:id="@+id/tv_trend_title"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="16dp"
-            android:textAppearance="?attr/textAppearanceTitleMedium"
-            android:textStyle="bold" />
+            android:padding="@dimen/spacing_16"
+            android:textAppearance="@style/TextAppearance.App.Title.Bold" />
 
         <ProgressBar
             android:id="@+id/progress_bar"
@@ -42,9 +41,9 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:padding="32dp"
+            android:padding="@dimen/spacing_32"
             android:textAppearance="?attr/textAppearanceBodyMedium"
-            android:textColor="@android:color/darker_gray"
+            android:textColor="?attr/colorOnSurfaceVariant"
             android:visibility="gone" />
 
         <com.github.mikephil.charting.charts.LineChart

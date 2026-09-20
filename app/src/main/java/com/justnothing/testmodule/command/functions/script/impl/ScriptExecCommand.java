@@ -15,6 +15,7 @@ import com.justnothing.engine.ScriptRunner;
 import com.justnothing.engine.exception.EvalException;
 import com.justnothing.engine.parser.CythavaParseException;
 
+import com.justnothing.testmodule.command.functions.script.ScriptTexts;
 import com.justnothing.testmodule.command.functions.script.response.ScriptResult;
 import com.justnothing.testmodule.command.functions.script.request.ScriptBaseRequest;
 import com.justnothing.testmodule.command.functions.script.request.ScriptRunRequest;
@@ -34,7 +35,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
 @SubCommandInfo(
-    description = "脚本执行引擎 - run/import/export/interactive",
+    description = ScriptTexts.SUB_SCRIPT_EXEC_DESC,
     examples = {
         "script run <name>                 执行脚本",
         "script import <path>              导入外部文件",
@@ -80,8 +81,7 @@ public class ScriptExecCommand extends AbstractScriptCommand<ScriptBaseRequest<?
             return r;
         }
 
-        File scriptsDir = DataBridge.getScriptsDirectory();
-        File targetFile = new File(scriptsDir, fileName);
+        File targetFile = DataBridge.resolveScriptFile(fileName);
 
         if (!targetFile.exists()) {
             context.print("错误: 文件 '", Colors.RED);
@@ -243,26 +243,12 @@ public class ScriptExecCommand extends AbstractScriptCommand<ScriptBaseRequest<?
             return r;
         }
 
-        File sourceFile = null;
-        String fileType = null;
+        File sourceFile = DataBridge.resolveScriptFile(fileName);
 
-        File scriptFile = DataBridge.getScriptFile(fileName);
-        if (scriptFile.exists()) {
-            sourceFile = scriptFile;
-            fileType = "脚本";
-        } else {
-            File codebaseDir = DataBridge.getScriptsDirectory();
-            File codebaseFile = new File(codebaseDir, fileName);
-            if (codebaseFile.exists()) {
-                sourceFile = codebaseFile;
-                fileType = "Codebase文件";
-            }
-        }
-
-        if (sourceFile == null) {
+        if (!sourceFile.exists()) {
             context.print("错误: 文件 '", Colors.RED);
             context.print(fileName, Colors.YELLOW);
-            context.println("' 不存在（已检查脚本和codebase目录）", Colors.RED);
+            context.println("' 不存在", Colors.RED);
             r.setSuccess(false);
             r.setOutput("文件不存在: " + fileName);
             return r;
@@ -273,7 +259,7 @@ public class ScriptExecCommand extends AbstractScriptCommand<ScriptBaseRequest<?
 
         IOManager.writeFile(exportFile.getAbsolutePath(), content);
 
-        context.print(fileType, Colors.GREEN);
+        context.print("脚本", Colors.GREEN);
         context.println("导出成功", Colors.GREEN);
         context.print("文件: ", Colors.CYAN);
         context.println(fileName, Colors.YELLOW);

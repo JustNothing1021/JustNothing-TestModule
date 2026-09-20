@@ -3,7 +3,6 @@ package com.justnothing.testmodule.ui.general;
 import android.content.Context;
 import android.content.DialogInterface;
 import androidx.appcompat.app.AlertDialog;
-import android.graphics.Color;
 import android.text.TextUtils;
 import android.text.method.ScrollingMovementMethod;
 import android.view.LayoutInflater;
@@ -11,7 +10,9 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
+import com.google.android.material.color.MaterialColors;
 import com.justnothing.testmodule.R;
+import com.justnothing.testmodule.databinding.DialogErrorBinding;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -42,11 +43,11 @@ public class ErrorDialog {
 
     public void show() {
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
-        builder.setTitle(fatal ? "致命错误" : "错误");
+        builder.setTitle(fatal ? context.getString(R.string.general_fatal_error) : context.getString(R.string.general_error_title));
 
-        View view = LayoutInflater.from(context).inflate(R.layout.dialog_error, null);
-        TextView textMessage = view.findViewById(R.id.text_error_message);
-        TextView textStackTrace = view.findViewById(R.id.text_error_stacktrace);
+        DialogErrorBinding binding = DialogErrorBinding.inflate(LayoutInflater.from(context));
+        TextView textMessage = binding.textErrorMessage;
+        TextView textStackTrace = binding.textErrorStacktrace;
 
         textMessage.setText(errorMessage);
 
@@ -68,15 +69,15 @@ public class ErrorDialog {
 
         textStackTrace.setMovementMethod(new ScrollingMovementMethod());
 
-        builder.setView(view);
+        builder.setView(binding.getRoot());
 
         if (fatal) {
-            builder.setPositiveButton("退出应用", (dialog, which) -> {
+            builder.setPositiveButton(context.getString(R.string.general_exit_app), (dialog, which) -> {
                 dialog.dismiss();
                 System.exit(1);
             });
         } else {
-            builder.setPositiveButton("确定", (dialog, which) -> dialog.dismiss());
+            builder.setPositiveButton(context.getString(R.string.general_confirm), (dialog, which) -> dialog.dismiss());
         }
 
         AlertDialog dialog = builder.create();
@@ -87,7 +88,7 @@ public class ErrorDialog {
 
         Button positiveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
         if (positiveButton != null) {
-            positiveButton.setTextColor(Color.parseColor("#5C6BC0"));
+            positiveButton.setTextColor(MaterialColors.getColor(positiveButton, androidx.appcompat.R.attr.colorPrimary));
         }
     }
 

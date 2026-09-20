@@ -12,7 +12,7 @@ import com.justnothing.testmodule.command.functions.system.response.SystemInfoRe
 
 @Cmd(
     name = "system",
-    description = "显示系统信息 (CPU, 内存, OS, 属性)",
+    description = SystemTexts.CMD_SYSTEM_DESC,
     version = CMD_SYSTEM_VER
 )
 @CmdRoutes({
@@ -20,7 +20,7 @@ import com.justnothing.testmodule.command.functions.system.response.SystemInfoRe
         path = "",
         request = SystemInfoRequest.class,
         handler = SystemInfoCommand.class,
-        description = "显示系统信息"
+        description = SystemTexts.ROUTE_SYSTEM_DESC
     )
 })
 public class SystemMain extends MainCommand<SystemInfoResult> {

@@ -4,9 +4,7 @@ import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.style.ForegroundColorSpan;
 import android.view.LayoutInflater;
-import android.view.View;
 import android.view.ViewGroup;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
@@ -14,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.justnothing.testmodule.R;
 import com.justnothing.testmodule.command.functions.classcmd.model.MethodInfo;
+import com.justnothing.testmodule.databinding.ItemConstructorBinding;
 import com.justnothing.testmodule.utils.format.DescriptorColorizer;
 
 import java.util.ArrayList;
@@ -41,9 +40,9 @@ public class ConstructorAdapter extends RecyclerView.Adapter<ConstructorAdapter.
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext())
-            .inflate(R.layout.item_constructor, parent, false);
-        return new ViewHolder(view);
+        ItemConstructorBinding binding = ItemConstructorBinding.inflate(
+            LayoutInflater.from(parent.getContext()), parent, false);
+        return new ViewHolder(binding);
     }
 
     @Override
@@ -57,12 +56,12 @@ public class ConstructorAdapter extends RecyclerView.Adapter<ConstructorAdapter.
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {
-        private final TextView tvSignature;
+        private final ItemConstructorBinding binding;
 
-        public ViewHolder(@NonNull View itemView) {
-            super(itemView);
-            tvSignature = itemView.findViewById(R.id.tv_signature);
-            
+        public ViewHolder(@NonNull ItemConstructorBinding binding) {
+            super(binding.getRoot());
+            this.binding = binding;
+
             itemView.setOnClickListener(v -> {
                 if (onItemClickListener != null) {
                     int pos = getAdapterPosition();
@@ -98,7 +97,7 @@ public class ConstructorAdapter extends RecyclerView.Adapter<ConstructorAdapter.
                     sb.append(DescriptorColorizer.formatTypeName(genericParamTypes.get(i)));
                 }
             }
-            tvSignature.setText(sb);
+            binding.tvSignature.setText(sb);
         }
     }
 }

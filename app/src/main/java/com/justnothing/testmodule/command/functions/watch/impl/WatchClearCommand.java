@@ -6,9 +6,10 @@ import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.functions.watch.util.WatchManager;
 import com.justnothing.testmodule.command.functions.watch.request.WatchClearRequest;
 import com.justnothing.testmodule.command.functions.watch.response.WatchClearResult;
+import com.justnothing.testmodule.command.functions.watch.WatchTexts;
 
 @SubCommandInfo(
-    description = "清除所有监控任务",
+    description = WatchTexts.SUB_WATCH_CLEAR_DESC,
     usage = "watch clear",
     examples = {"watch clear"}
 )

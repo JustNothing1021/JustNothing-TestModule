@@ -2,15 +2,18 @@ package com.justnothing.testmodule.ui.activity.analysis.classanalysis;
 
 import android.os.Bundle;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import com.justnothing.testmodule.R;
+import com.justnothing.testmodule.databinding.ActivityPlaceholderBinding;
+import com.justnothing.testmodule.ui.activity.BaseActivity;
 
-public class MethodInvokeActivity extends AppCompatActivity {
+public class MethodInvokeActivity extends BaseActivity {
+    private ActivityPlaceholderBinding binding;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_placeholder);
+        binding = ActivityPlaceholderBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
             getSupportActionBar().setTitle(getString(R.string.analysis_invoke_methods));

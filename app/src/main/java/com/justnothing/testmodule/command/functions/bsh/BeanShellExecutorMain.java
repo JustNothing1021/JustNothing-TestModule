@@ -23,7 +23,7 @@ import com.justnothing.testmodule.command.functions.bsh.response.BeanShellResult
 
 @Cmd(
     name = "bsh",
-    description = "用BeanShell解释器执行代码",
+    description = BshTexts.CMD_BSH_DESC,
     version = CMD_BEAN_SHELL_VER
 )
 @CmdRoutes({
@@ -31,67 +31,67 @@ import com.justnothing.testmodule.command.functions.bsh.response.BeanShellResult
         path = "run_code",
         request = BshExecuteRequest.class,
         handler = BshManageCommand.class,
-        description = "执行BeanShell代码"
+        description = BshTexts.ROUTE_BSH_RUN_CODE_DESC
     ),
     @CmdRoutes.Route(
         path = "vars",
         request = BshVarsRequest.class,
         handler = BshQueryCommand.class,
-        description = "显示BeanShell执行器的变量列表"
+        description = BshTexts.ROUTE_BSH_VARS_DESC
     ),
     @CmdRoutes.Route(
         path = "clear",
         request = BshClearRequest.class,
         handler = BshManageCommand.class,
-        description = "清空BeanShell执行器的所有变量"
+        description = BshTexts.ROUTE_BSH_CLEAR_DESC
     ),
     @CmdRoutes.Route(
         path = "script",
         request = BshScriptCreateRequest.class,
         handler = BshManageCommand.class,
-        description = "BeanShell脚本管理"
+        description = BshTexts.ROUTE_BSH_SCRIPT_DESC
     ),
     @CmdRoutes.Route(
         path = "script/edit",
         request = BshScriptEditRequest.class,
         handler = BshManageCommand.class,
-        description = "编辑脚本"
+        description = BshTexts.ROUTE_BSH_SCRIPT_EDIT_DESC
     ),
     @CmdRoutes.Route(
         path = "script/list",
         request = BshScriptListRequest.class,
         handler = BshQueryCommand.class,
-        description = "列出所有脚本"
+        description = BshTexts.ROUTE_BSH_SCRIPT_LIST_DESC
     ),
     @CmdRoutes.Route(
         path = "script/show",
         request = BshScriptShowRequest.class,
         handler = BshQueryCommand.class,
-        description = "显示脚本内容"
+        description = BshTexts.ROUTE_BSH_SCRIPT_SHOW_DESC
     ),
     @CmdRoutes.Route(
         path = "script/delete",
         request = BshScriptDeleteRequest.class,
         handler = BshManageCommand.class,
-        description = "删除脚本"
+        description = BshTexts.ROUTE_BSH_SCRIPT_DELETE_DESC
     ),
     @CmdRoutes.Route(
         path = "script/run",
         request = BshScriptRunRequest.class,
         handler = BshManageCommand.class,
-        description = "执行脚本"
+        description = BshTexts.ROUTE_BSH_SCRIPT_RUN_DESC
     ),
     @CmdRoutes.Route(
         path = "script/import",
         request = BshScriptImportRequest.class,
         handler = BshManageCommand.class,
-        description = "导入脚本文件"
+        description = BshTexts.ROUTE_BSH_SCRIPT_IMPORT_DESC
     ),
     @CmdRoutes.Route(
         path = "script/export",
         request = BshScriptExportRequest.class,
         handler = BshManageCommand.class,
-        description = "导出脚本文件"
+        description = BshTexts.ROUTE_BSH_SCRIPT_EXPORT_DESC
     )
 })
 public class BeanShellExecutorMain extends MainCommand<BeanShellResult> {

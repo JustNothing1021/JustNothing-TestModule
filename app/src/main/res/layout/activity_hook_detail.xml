@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Hook 详情：间距走 @dimen/spacing_*，颜色走 ?attr/color* 主题角色；结构与 id 未动。 -->
 <androidx.coordinatorlayout.widget.CoordinatorLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -26,22 +27,21 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="12dp">
+            android:padding="@dimen/spacing_12">
 
             <!-- Hook ID + 状态 -->
             <TextView
                 android:id="@+id/tv_detail_id"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textAppearance="?attr/textAppearanceHeadlineSmall"
-                android:textStyle="bold"
+                android:textAppearance="@style/TextAppearance.App.Headline"
                 android:textColor="@color/yellow" />
 
             <TextView
                 android:id="@+id/tv_detail_target"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
+                android:layout_marginTop="@dimen/spacing_4"
                 android:textAppearance="?attr/textAppearanceBodyLarge"
                 android:textColor="@color/light_green" />
 
@@ -50,28 +50,27 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:layout_marginTop="10dp">
+                android:layout_marginTop="@dimen/spacing_12">
 
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:orientation="vertical"
-                    android:paddingEnd="6dp">
+                    android:paddingEnd="@dimen/spacing_8">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/analysis_hook_detail_status"
                         android:textAppearance="?attr/textAppearanceLabelSmall"
-                        android:textColor="@android:color/darker_gray" />
+                        android:textColor="?attr/colorOnSurfaceVariant" />
 
                     <TextView
                         android:id="@+id/tv_detail_status"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:textAppearance="?attr/textAppearanceBodyMedium"
-                        android:textStyle="bold" />
+                        android:textAppearance="@style/TextAppearance.App.Caption.Bold" />
 
                 </LinearLayout>
 
@@ -80,14 +79,14 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:orientation="vertical"
-                    android:paddingStart="6dp">
+                    android:paddingStart="@dimen/spacing_8">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/analysis_hook_detail_call_count"
                         android:textAppearance="?attr/textAppearanceLabelSmall"
-                        android:textColor="@android:color/darker_gray" />
+                        android:textColor="?attr/colorOnSurfaceVariant" />
 
                     <TextView
                         android:id="@+id/tv_detail_call_count"
@@ -103,21 +102,21 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:layout_marginTop="8dp">
+                android:layout_marginTop="@dimen/spacing_8">
 
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:orientation="vertical"
-                    android:paddingEnd="6dp">
+                    android:paddingEnd="@dimen/spacing_8">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/analysis_hook_detail_create_time"
                         android:textAppearance="?attr/textAppearanceLabelSmall"
-                        android:textColor="@android:color/darker_gray" />
+                        android:textColor="?attr/colorOnSurfaceVariant" />
 
                     <TextView
                         android:id="@+id/tv_detail_create_time"
@@ -132,14 +131,14 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:orientation="vertical"
-                    android:paddingStart="6dp">
+                    android:paddingStart="@dimen/spacing_8">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/analysis_hook_detail_signature"
                         android:textAppearance="?attr/textAppearanceLabelSmall"
-                        android:textColor="@android:color/darker_gray" />
+                        android:textColor="?attr/colorOnSurfaceVariant" />
 
                     <TextView
                         android:id="@+id/tv_detail_signature"
@@ -155,17 +154,16 @@
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:layout_marginTop="14dp"
-                android:background="#1AFFFFFF" />
+                android:layout_marginTop="@dimen/spacing_16"
+                android:background="?attr/colorSurfaceVariant" />
 
             <!-- 代码预览区域 -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="@dimen/spacing_12"
                 android:text="@string/analysis_hook_detail_code_before"
-                android:textAppearance="?attr/textAppearanceTitleSmall"
-                android:textStyle="bold"
+                android:textAppearance="@style/TextAppearance.App.Caption.Bold"
                 android:textColor="@color/magenta"
                 android:visibility="gone"
                 android:id="@+id/label_before_code" />
@@ -174,22 +172,21 @@
                 android:id="@+id/tv_detail_before_code"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="@dimen/spacing_4"
                 android:textAppearance="?attr/textAppearanceLabelSmall"
                 android:fontFamily="monospace"
                 android:textIsSelectable="true"
-                android:textColor="#CCFFFFFF"
-                android:background="#0DFFFFFF"
-                android:padding="8dp"
+                android:textColor="?attr/colorOnSurface"
+                android:background="?attr/colorSurfaceVariant"
+                android:padding="@dimen/spacing_8"
                 android:visibility="gone" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
+                android:layout_marginTop="@dimen/spacing_12"
                 android:text="@string/analysis_hook_detail_code_after"
-                android:textAppearance="?attr/textAppearanceTitleSmall"
-                android:textStyle="bold"
+                android:textAppearance="@style/TextAppearance.App.Caption.Bold"
                 android:textColor="@color/magenta"
                 android:visibility="gone"
                 android:id="@+id/label_after_code" />
@@ -198,22 +195,21 @@
                 android:id="@+id/tv_detail_after_code"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="@dimen/spacing_4"
                 android:textAppearance="?attr/textAppearanceLabelSmall"
                 android:fontFamily="monospace"
                 android:textIsSelectable="true"
-                android:textColor="#CCFFFFFF"
-                android:background="#0DFFFFFF"
-                android:padding="8dp"
+                android:textColor="?attr/colorOnSurface"
+                android:background="?attr/colorSurfaceVariant"
+                android:padding="@dimen/spacing_8"
                 android:visibility="gone" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
+                android:layout_marginTop="@dimen/spacing_12"
                 android:text="@string/analysis_hook_detail_code_replace"
-                android:textAppearance="?attr/textAppearanceTitleSmall"
-                android:textStyle="bold"
+                android:textAppearance="@style/TextAppearance.App.Caption.Bold"
                 android:textColor="@color/magenta"
                 android:visibility="gone"
                 android:id="@+id/label_replace_code" />
@@ -222,44 +218,43 @@
                 android:id="@+id/tv_detail_replace_code"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="@dimen/spacing_4"
                 android:textAppearance="?attr/textAppearanceLabelSmall"
                 android:fontFamily="monospace"
                 android:textIsSelectable="true"
-                android:textColor="#CCFFFFFF"
-                android:background="#0DFFFFFF"
-                android:padding="8dp"
+                android:textColor="?attr/colorOnSurface"
+                android:background="?attr/colorSurfaceVariant"
+                android:padding="@dimen/spacing_8"
                 android:visibility="gone" />
 
             <!-- 输出日志 -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
+                android:layout_marginTop="@dimen/spacing_16"
                 android:text="@string/analysis_hook_detail_output_log"
-                android:textAppearance="?attr/textAppearanceTitleSmall"
-                android:textStyle="bold"
+                android:textAppearance="@style/TextAppearance.App.Caption.Bold"
                 android:textColor="@color/cyan" />
 
             <TextView
                 android:id="@+id/tv_detail_output"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="@dimen/spacing_4"
                 android:textAppearance="?attr/textAppearanceLabelSmall"
                 android:fontFamily="monospace"
                 android:textIsSelectable="true"
-                android:textColor="#AAFFFFFF"
+                android:textColor="?attr/colorOnSurface"
                 android:minHeight="60dp"
-                android:background="#0DFFFFFF"
-                android:padding="8dp" />
+                android:background="?attr/colorSurfaceVariant"
+                android:padding="@dimen/spacing_8" />
 
             <!-- 操作按钮 -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="@dimen/spacing_12"
                 android:gravity="center">
 
                 <com.google.android.material.button.MaterialButton
@@ -267,7 +262,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:layout_marginEnd="6dp"
+                    android:layout_marginEnd="@dimen/spacing_8"
                     android:text="@string/analysis_hook_detail_btn_remove"
                     app:icon="@android:drawable/ic_menu_delete"
                     style="@style/Widget.Material3.Button.OutlinedButton" />
@@ -277,7 +272,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:layout_marginEnd="6dp"
+                    android:layout_marginEnd="@dimen/spacing_8"
                     android:text="@string/analysis_hook_detail_btn_disable"
                     app:icon="@android:drawable/ic_media_pause"
                     style="@style/Widget.Material3.Button.OutlinedButton" />

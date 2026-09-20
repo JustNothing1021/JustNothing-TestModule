@@ -1,6 +1,7 @@
 package com.justnothing.testmodule.command.functions.performance.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.functions.performance.PerformanceTexts;
 import com.justnothing.testmodule.command.functions.performance.response.PerfHookResult;
 
 public class PerfHookReportRequest extends PerformanceRequest<PerfHookResult> {
@@ -9,7 +10,7 @@ public class PerfHookReportRequest extends PerformanceRequest<PerfHookResult> {
         name = "id",
         position = 1,
         required = false,
-        description = "任务 ID（可选，默认显示最新）"
+        description = PerformanceTexts.PARAM_PERFORMANCE_HOOK_REPORT_ID_DESC
     )
     private Integer taskId;
 

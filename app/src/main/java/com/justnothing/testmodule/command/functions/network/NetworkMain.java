@@ -23,21 +23,21 @@ import com.justnothing.testmodule.command.functions.network.response.NetworkResu
 
 @Cmd(
     name = "network",
-    description = "网络请求监控和调试工具"
+    description = NetworkTexts.CMD_NETWORK_DESC
 )
 @CmdRoutes({
-    @CmdRoutes.Route(path = "intercept", request = NetworkInterceptRequest.class, handler = NetworkManageCommand.class, description = "开启/关闭网络拦截"),
-    @CmdRoutes.Route(path = "record", request = NetworkRecordRequest.class, handler = NetworkManageCommand.class, description = "开启/关闭请求记录"),
-    @CmdRoutes.Route(path = "status", request = NetworkStatusRequest.class, handler = NetworkQueryCommand.class, description = "显示当前状态"),
-    @CmdRoutes.Route(path = "list", request = NetworkListRequest.class, handler = NetworkQueryCommand.class, description = "列出请求记录"),
-    @CmdRoutes.Route(path = "info", request = NetworkInfoRequest.class, handler = NetworkQueryCommand.class, description = "查看请求详情"),
-    @CmdRoutes.Route(path = "filter", request = NetworkFilterRequest.class, handler = NetworkManageCommand.class, description = "过滤特定主机的请求"),
-    @CmdRoutes.Route(path = "mock", request = NetworkMockRequest.class, handler = NetworkManageCommand.class, description = "Mock 规则管理"),
-    @CmdRoutes.Route(path = "hook", request = NetworkHookRequest.class, handler = NetworkManageCommand.class, description = "Hook 管理"),
-    @CmdRoutes.Route(path = "watch", request = NetworkWatchRequest.class, handler = NetworkQueryCommand.class, description = "实时监控"),
-    @CmdRoutes.Route(path = "export", request = NetworkExportRequest.class, handler = NetworkQueryCommand.class, description = "导出请求记录"),
-    @CmdRoutes.Route(path = "clear", request = NetworkClearRequest.class, handler = NetworkManageCommand.class, description = "清除请求记录"),
-    @CmdRoutes.Route(path = "shutdown", request = NetworkShutdownRequest.class, handler = NetworkManageCommand.class, description = "关闭网络监控")
+    @CmdRoutes.Route(path = "intercept", request = NetworkInterceptRequest.class, handler = NetworkManageCommand.class, description = NetworkTexts.ROUTE_NETWORK_INTERCEPT_DESC),
+    @CmdRoutes.Route(path = "record", request = NetworkRecordRequest.class, handler = NetworkManageCommand.class, description = NetworkTexts.ROUTE_NETWORK_RECORD_DESC),
+    @CmdRoutes.Route(path = "status", request = NetworkStatusRequest.class, handler = NetworkQueryCommand.class, description = NetworkTexts.ROUTE_NETWORK_STATUS_DESC),
+    @CmdRoutes.Route(path = "list", request = NetworkListRequest.class, handler = NetworkQueryCommand.class, description = NetworkTexts.ROUTE_NETWORK_LIST_DESC),
+    @CmdRoutes.Route(path = "info", request = NetworkInfoRequest.class, handler = NetworkQueryCommand.class, description = NetworkTexts.ROUTE_NETWORK_INFO_DESC),
+    @CmdRoutes.Route(path = "filter", request = NetworkFilterRequest.class, handler = NetworkManageCommand.class, description = NetworkTexts.ROUTE_NETWORK_FILTER_DESC),
+    @CmdRoutes.Route(path = "mock", request = NetworkMockRequest.class, handler = NetworkManageCommand.class, description = NetworkTexts.ROUTE_NETWORK_MOCK_DESC),
+    @CmdRoutes.Route(path = "hook", request = NetworkHookRequest.class, handler = NetworkManageCommand.class, description = NetworkTexts.ROUTE_NETWORK_HOOK_DESC),
+    @CmdRoutes.Route(path = "watch", request = NetworkWatchRequest.class, handler = NetworkQueryCommand.class, description = NetworkTexts.ROUTE_NETWORK_WATCH_DESC),
+    @CmdRoutes.Route(path = "export", request = NetworkExportRequest.class, handler = NetworkQueryCommand.class, description = NetworkTexts.ROUTE_NETWORK_EXPORT_DESC),
+    @CmdRoutes.Route(path = "clear", request = NetworkClearRequest.class, handler = NetworkManageCommand.class, description = NetworkTexts.ROUTE_NETWORK_CLEAR_DESC),
+    @CmdRoutes.Route(path = "shutdown", request = NetworkShutdownRequest.class, handler = NetworkManageCommand.class, description = NetworkTexts.ROUTE_NETWORK_SHUTDOWN_DESC)
 })
 public class NetworkMain extends MainCommand<NetworkResult> {
 

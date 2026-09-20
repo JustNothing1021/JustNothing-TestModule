@@ -10,26 +10,18 @@ import com.justnothing.testmodule.command.functions.alias.util.AliasManager;
 import com.justnothing.testmodule.utils.data.DataDirectoryManager;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.functions.alias.AliasTexts;
 
 import java.io.File;
 
 @SubCommandInfo(
-    description = "添加新的命令别名，用于简化常用命令",
-    usage = "alias add <别名> <命令>",
+    description = AliasTexts.SUB_ALIAS_ADD_DESC,
+    usage = AliasTexts.SUB_ALIAS_ADD_USAGE,
     examples = {
         "alias add bi class info",
         "alias add ls class list -v"
     },
-    optionsDesc = """
-            参数:
-              <别名>   简短的替代名称（建议 2-6 个字符）
-              <命令>   完整的原始命令（支持多词命令）
-            
-            示例:
-              alias add bi class info                    # bi → class info
-              alias add ls class list -v                 # ls → class list -v
-              alias add pkg packages                     # pkg → packages
-            """
+    optionsDesc = AliasTexts.SUB_ALIAS_ADD_OPTIONS
 )
 public class AliasAddCommand extends AbstractCommand<AliasAddRequest, AliasResult> {
 

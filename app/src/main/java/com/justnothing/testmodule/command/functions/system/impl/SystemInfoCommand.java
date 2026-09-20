@@ -9,6 +9,7 @@ import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.model.AbstractCommand;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
 import com.justnothing.testmodule.command.functions.script.request.SystemInfoRequest;
+import com.justnothing.testmodule.command.functions.system.SystemTexts;
 import com.justnothing.testmodule.command.functions.system.model.SystemFieldInfo;
 import com.justnothing.testmodule.command.functions.system.response.SystemInfoResult;
 import com.justnothing.testmodule.command.framework.output.Colors;
@@ -22,20 +23,14 @@ import java.util.List;
 import java.util.Locale;
 
 @SubCommandInfo(
-    description = "显示系统信息, 包括操作系统、Android、CPU、内存等",
+    description = SystemTexts.SUB_SYSTEM_DESC,
     usage = "system [options]",
     examples = {
         "system",
         "system --cpu",
         "system --memory"
     },
-    optionsDesc = """
-            选项:
-              --cpu     - 只显示CPU信息
-              --memory  - 只显示内存信息
-              --os      - 只显示操作系统信息
-              --props   - 只显示系统属性
-            """
+    optionsDesc = SystemTexts.SUB_SYSTEM_OPTIONS
 )
 public class SystemInfoCommand extends AbstractCommand<SystemInfoRequest, SystemInfoResult> {
 

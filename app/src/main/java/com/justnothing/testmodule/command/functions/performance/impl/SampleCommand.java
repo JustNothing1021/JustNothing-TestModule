@@ -8,6 +8,7 @@ import com.justnothing.testmodule.command.functions.performance.response.SampleR
 import com.justnothing.testmodule.command.functions.performance.sampler.SimpleSampleData;
 import com.justnothing.testmodule.command.functions.performance.sampler.SimpleSampler;
 import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.functions.performance.PerformanceTexts;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -18,7 +19,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @SubCommandInfo(
-    description = "单线程方法采样分析，统计方法调用频率和热点",
+    description = PerformanceTexts.SUB_PERFORMANCE_SAMPLE_DESC,
     usage = "performance sample <action> [args...]",
     examples = {
         "performance sample start 1000",
@@ -28,12 +29,7 @@ import java.util.stream.Collectors;
         "performance sample report",
         "performance sample export 1 /sdcard/sample.json"
     },
-    optionsDesc = """
-        Actions:
-            start [rate] [--exclude pattern]   开始采样 (默认100Hz)
-            stop <id>                          停止采样
-            report [id]                        查看报告 (默认最新)
-            export <id> <path>                 导出数据"""
+    optionsDesc = PerformanceTexts.SUB_PERFORMANCE_SAMPLE_OPTIONS
 )
 public class SampleCommand extends AbstractPerfCommand<PerformanceRequest<?>, SampleResult> {
 

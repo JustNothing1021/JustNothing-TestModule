@@ -10,14 +10,14 @@ import com.justnothing.testmodule.command.functions.packages.response.PackagesRe
 
 @Cmd(
     name = "packages",
-    description = "列出当前进程的所有已知包名"
+    description = PackagesTexts.CMD_PACKAGES_DESC
 )
 @CmdRoutes({
     @CmdRoutes.Route(
         path = "list",
         request = PackagesRequest.class,
         handler = PackagesCommand.class,
-        description = "列出所有包名"
+        description = PackagesTexts.ROUTE_PACKAGES_LIST_DESC
     )
 })
 public class PackagesMain extends MainCommand<PackagesResult> {

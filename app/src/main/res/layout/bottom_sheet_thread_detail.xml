@@ -4,21 +4,19 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="@dimen/spacing_16">
 
     <View
         android:layout_width="40dp"
         android:layout_height="4dp"
         android:layout_gravity="center_horizontal"
-        android:layout_marginBottom="16dp"
-        android:background="@android:color/darker_gray" />
+        android:layout_marginBottom="@dimen/spacing_16" />
 
     <TextView
         android:id="@+id/tv_detail_name"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textAppearance="?attr/textAppearanceHeadlineSmall"
-        android:textStyle="bold"
+        android:textAppearance="@style/TextAppearance.App.Headline"
         android:singleLine="true"
         android:ellipsize="middle" />
 
@@ -26,7 +24,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginTop="12dp">
+        android:layout_marginTop="@dimen/spacing_12">
 
         <LinearLayout
             android:layout_width="0dp"
@@ -39,7 +37,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/analysis_thread_detail_id"
                 android:textAppearance="?attr/textAppearanceLabelSmall"
-                android:textColor="@android:color/darker_gray" />
+                android:textColor="?attr/colorOnSurfaceVariant" />
 
             <TextView
                 android:id="@+id/tv_detail_id"
@@ -60,14 +58,13 @@
                 android:layout_height="wrap_content"
                 android:text="@string/analysis_thread_detail_state"
                 android:textAppearance="?attr/textAppearanceLabelSmall"
-                android:textColor="@android:color/darker_gray" />
+                android:textColor="?attr/colorOnSurfaceVariant" />
 
             <TextView
                 android:id="@+id/tv_detail_state"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textAppearance="?attr/textAppearanceBodyMedium"
-                android:textStyle="bold" />
+                android:textAppearance="@style/TextAppearance.App.Caption.Bold" />
 
         </LinearLayout>
     </LinearLayout>
@@ -76,7 +73,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginTop="8dp">
+        android:layout_marginTop="@dimen/spacing_8">
 
         <LinearLayout
             android:layout_width="0dp"
@@ -89,7 +86,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/analysis_thread_detail_priority"
                 android:textAppearance="?attr/textAppearanceLabelSmall"
-                android:textColor="@android:color/darker_gray" />
+                android:textColor="?attr/colorOnSurfaceVariant" />
 
             <TextView
                 android:id="@+id/tv_detail_priority"
@@ -110,7 +107,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/analysis_thread_detail_daemon"
                 android:textAppearance="?attr/textAppearanceLabelSmall"
-                android:textColor="@android:color/darker_gray" />
+                android:textColor="?attr/colorOnSurfaceVariant" />
 
             <TextView
                 android:id="@+id/tv_detail_daemon"
@@ -125,7 +122,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginTop="8dp">
+        android:layout_marginTop="@dimen/spacing_8">
 
         <LinearLayout
             android:layout_width="0dp"
@@ -138,7 +135,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/analysis_thread_detail_interrupted"
                 android:textAppearance="?attr/textAppearanceLabelSmall"
-                android:textColor="@android:color/darker_gray" />
+                android:textColor="?attr/colorOnSurfaceVariant" />
 
             <TextView
                 android:id="@+id/tv_detail_interrupted"
@@ -159,7 +156,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/analysis_thread_detail_alive"
                 android:textAppearance="?attr/textAppearanceLabelSmall"
-                android:textColor="@android:color/darker_gray" />
+                android:textColor="?attr/colorOnSurfaceVariant" />
 
             <TextView
                 android:id="@+id/tv_detail_alive"
@@ -174,17 +171,16 @@
         android:id="@+id/label_stack"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="@dimen/spacing_16"
         android:text="@string/analysis_thread_detail_stack"
-        android:textAppearance="?attr/textAppearanceTitleSmall"
-        android:textStyle="bold"
+        android:textAppearance="@style/TextAppearance.App.Caption.Bold"
         android:textColor="@color/cyan" />
 
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:maxHeight="300dp"
-        android:layout_marginTop="8dp">
+        android:layout_marginTop="@dimen/spacing_8">
 
         <LinearLayout
             android:id="@+id/layout_stack_trace"

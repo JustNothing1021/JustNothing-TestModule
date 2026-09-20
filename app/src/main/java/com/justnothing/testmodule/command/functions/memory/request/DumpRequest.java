@@ -2,13 +2,14 @@ package com.justnothing.testmodule.command.functions.memory.request;
 
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.functions.memory.MemoryTexts;
 import com.justnothing.testmodule.command.functions.memory.response.DumpResult;
 
 public class DumpRequest extends CommandRequest<DumpResult> {
 
     @CmdParam(
         name = "--heap",
-        description = "只导出堆信息",
+        description = MemoryTexts.PARAM_MEMORY_DUMP_HEAP_DESC,
         required = false,
         aliases = {"-h"}
     )
@@ -16,14 +17,14 @@ public class DumpRequest extends CommandRequest<DumpResult> {
 
     @CmdParam(
         name = "--threads",
-        description = "只导出线程信息",
+        description = MemoryTexts.PARAM_MEMORY_DUMP_THREADS_DESC,
         required = false
     )
     private boolean threadsOnly = false;
 
     @CmdParam(
         name = "--full",
-        description = "导出完整信息 (默认)",
+        description = MemoryTexts.PARAM_MEMORY_DUMP_FULL_DESC,
         required = false,
         defaultValue = "true"
     )
@@ -31,7 +32,7 @@ public class DumpRequest extends CommandRequest<DumpResult> {
 
     @CmdParam(
         name = "filePath",
-        description = "输出文件路径",
+        description = MemoryTexts.PARAM_MEMORY_DUMP_FILE_PATH_DESC,
         required = false,
         position = 1
     )

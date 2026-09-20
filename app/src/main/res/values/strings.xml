@@ -546,4 +546,44 @@
     <string name="analysis_alias_clear_message">确定要清空所有自定义别名吗？（默认别名会保留）</string>
     <string name="analysis_execution_failed_format">执行失败: %s</string>
     <string name="error_server_returned_void">服务端没有返回数据</string>
+
+    <!-- 布局硬编码文案抽取（class_browser / class_query / placeholder / script_import / exported_file / hook_detail / hook_param） -->
+    <string name="analysis_class_name_input_hint">输入类名</string>
+    <string name="class_browser_server_status_checking">检查服务端状态...</string>
+    <string name="class_browser_super_class_label">父类:</string>
+    <string name="class_browser_interfaces_label">接口:</string>
+    <string name="class_browser_modifiers_label">修饰符:</string>
+    <string name="class_browser_methods_list">方法列表</string>
+    <string name="class_browser_fields_list">字段列表</string>
+    <string name="class_query_loading">加载中...</string>
+    <string name="placeholder_feature_in_development">功能开发中...</string>
+    <string name="placeholder_stay_tuned">敬请期待</string>
+    <string name="script_import_paste_json_hint">粘贴JSON格式的脚本数据</string>
+    <string name="script_import_json_example_hint">[{\"name\":\"脚本名\",\"description\":\"描述\",\"commands\":\"命令1\n命令2\",\"category\":\"分类\"}]</string>
+    <string name="hook_param_type_hint">参数类型（如：java.lang.String）</string>
+    <string name="hook_detail_no_stats">无统计信息</string>
+
+    <!-- 下列为列表项的占位初值（运行时会被代码替换成带参数的格式串），与原布局文案保持一致 -->
+    <string name="exported_file_name_placeholder">文件名: -</string>
+    <string name="exported_file_directory_placeholder">路径: -</string>
+    <string name="exported_file_size_placeholder">大小: -</string>
+    <string name="hook_detail_hook_name_placeholder">Hook名称: -</string>
+    <string name="hook_detail_hook_type_placeholder">类型: -</string>
+    <string name="hook_detail_initialized_placeholder">初始化状态: -</string>
+    <string name="hook_detail_hook_count_placeholder">Hook数量: -</string>
+    <string name="general_fatal_error">致命错误</string>
+    <string name="general_error_title">错误</string>
+    <string name="http_config_data_label">数据</string>
+    <string name="http_config_no_save_permission">没有保存文件的权限</string>
+    <string name="http_config_file_saved_to">文件保存到%1$s</string>
+    <string name="http_config_save_failed_format">保存失败: %1$s，请查看日志</string>
+    <string name="hook_config_state_uninitialized_hint">(未设置激活状态, 同步了服务端的状态)</string>
+    <string name="hook_config_state_mismatch_hint">(服务端状态不同, 重启后更新)</string>
+    <string name="analysis_hook_add_failed">添加失败</string>
+    <string name="analysis_hook_add_class_name_required">请输入类名</string>
+    <string name="analysis_hook_add_method_name_required">请输入方法名</string>
+    <string name="analysis_response_parse_failed">响应解析失败</string>
+    <string name="analysis_unregistered_route_error_format">请求未注册路由，无法推导结果类型: %1$s</string>
+    <string name="analysis_class_browser_title">类浏览器</string>
+    <string name="script_create_directory_failed_format">无法创建目录: %1$s</string>
 </resources>

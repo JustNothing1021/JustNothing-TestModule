@@ -9,6 +9,7 @@ import com.justnothing.testmodule.command.functions.performance.request.Performa
 import com.justnothing.testmodule.command.functions.performance.request.*;
 import com.justnothing.testmodule.command.functions.performance.response.PerfHookResult;
 import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.functions.performance.PerformanceTexts;
 
 import org.json.JSONObject;
 
@@ -16,7 +17,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @SubCommandInfo(
-    description = "性能 Hook 注入，在目标方法前后插入计时探针",
+    description = PerformanceTexts.SUB_PERFORMANCE_HOOK_DESC,
     usage = "performance hook <action> [args...]",
     examples = {
         "performance hook start com.example.MyClass myMethod",
@@ -25,12 +26,7 @@ import java.util.stream.Collectors;
         "performance hook report 1",
         "performance hook export 1 /sdcard/hook.json"
     },
-    optionsDesc = """
-        Actions:
-            start <class> <method> [sig]         添加性能 Hook
-            stop <id>                            停止 Hook
-            report [id]                          查看报告 (默认最新)
-            export <id> <path>                   导出数据"""
+    optionsDesc = PerformanceTexts.SUB_PERFORMANCE_HOOK_OPTIONS
 )
 public class HookCommand extends AbstractPerfCommand<PerformanceRequest<?>, PerfHookResult> {
 

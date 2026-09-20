@@ -2,13 +2,14 @@ package com.justnothing.testmodule.command.functions.memory.request;
 
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.functions.memory.MemoryTexts;
 import com.justnothing.testmodule.command.functions.memory.response.GcResult;
 
 public class GcRequest extends CommandRequest<GcResult> {
 
     @CmdParam(
         name = "--full",
-        description = "执行完整的GC",
+        description = MemoryTexts.PARAM_MEMORY_GC_FULL_DESC,
         required = false,
         aliases = {"-f"}
     )
@@ -16,7 +17,7 @@ public class GcRequest extends CommandRequest<GcResult> {
 
     @CmdParam(
         name = "--stats",
-        description = "显示GC统计信息",
+        description = MemoryTexts.PARAM_MEMORY_GC_STATS_DESC,
         required = false,
         aliases = {"-s"}
     )

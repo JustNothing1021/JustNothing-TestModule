@@ -16,7 +16,7 @@ import com.justnothing.testmodule.command.functions.memory.request.MemoryInfoReq
 @Cmd(
     name = "memory",
     group = "system",
-    description = "内存调试和管理工具, 包括内存信息查询、GC、堆转储等功能",
+    description = MemoryTexts.CMD_MEMORY_DESC,
     version = CMD_MEMORY_VER
 )
 @CmdRoutes({
@@ -24,19 +24,19 @@ import com.justnothing.testmodule.command.functions.memory.request.MemoryInfoReq
         path = "info",
         request = MemoryInfoRequest.class,
         handler = InfoCommand.class,
-        description = "显示详细的内存使用情况"
+        description = MemoryTexts.ROUTE_MEMORY_INFO_DESC
     ),
     @CmdRoutes.Route(
         path = "gc",
         request = GcRequest.class,
         handler = GcCommand.class,
-        description = "手动触发垃圾回收"
+        description = MemoryTexts.ROUTE_MEMORY_GC_DESC
     ),
     @CmdRoutes.Route(
         path = "dump",
         request = DumpRequest.class,
         handler = DumpCommand.class,
-        description = "导出堆信息和系统状态"
+        description = MemoryTexts.ROUTE_MEMORY_DUMP_DESC
     )
 })
 public class MemoryMain extends MainCommand<CommandResult> {

@@ -1,18 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<!--
+  列表项样板，规则同 activity_hook_config.xml：
+  颜色走 ?attr/xxx、间距走 @dimen/spacing_*、外观走 @style/Widget.App.*。
+
+  对比改动前的版本：
+    CardView（旧）                → MaterialCardView，M3 的卡片会自己按主题取色
+    写死的黑色/深灰文字色          → 删掉，交给 TextAppearance.App.Title / .Caption
+                                    （原来那两行在深色模式下就是「深底深字」，看不见）
+    Switch（旧）                  → MaterialSwitch，M3 的开关样式
+-->
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/Widget.App.Card"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="8dp"
-    app:cardCornerRadius="8dp"
-    app:cardElevation="4dp">
+    android:layout_margin="@dimen/spacing_8">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="16dp"
-        android:gravity="center_vertical">
+        android:gravity="center_vertical"
+        android:padding="@dimen/spacing_16">
 
         <LinearLayout
             android:layout_width="0dp"
@@ -24,23 +33,21 @@
                 android:id="@+id/text_hook_name"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:textColor="@android:color/black" />
+                android:textAppearance="@style/TextAppearance.App.Title" />
 
             <TextView
                 android:id="@+id/text_hook_description"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:textSize="14sp"
-                android:textColor="@android:color/darker_gray" />
+                android:layout_marginTop="@dimen/spacing_4"
+                android:textAppearance="@style/TextAppearance.App.Caption" />
         </LinearLayout>
 
-        <Switch
+        <com.google.android.material.materialswitch.MaterialSwitch
             android:id="@+id/switch_hook_enabled"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/spacing_8" />
     </LinearLayout>
 
-</androidx.cardview.widget.CardView>
+</com.google.android.material.card.MaterialCardView>

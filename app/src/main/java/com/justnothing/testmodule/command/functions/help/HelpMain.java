@@ -13,14 +13,14 @@ import com.justnothing.testmodule.command.functions.help.impl.HelpCommand;
 @Cmd(
     version = CMD_HELP_VER,
     name = "help",
-    description = "获取命令帮助信息"
+    description = HelpTexts.CMD_HELP_DESC
 )
 @CmdRoutes({
     @CmdRoutes.Route(
         path = "",
         request = NoArgRequest.class,
         handler = HelpCommand.class,
-        description = "显示帮助信息"
+        description = HelpTexts.ROUTE_HELP_DESC
     )
 })
 public class HelpMain extends MainCommand<CommandResult> {

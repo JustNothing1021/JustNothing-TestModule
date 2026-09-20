@@ -19,17 +19,17 @@ import com.justnothing.testmodule.command.functions.breakpoint.response.Breakpoi
 
 @Cmd(
     name = "breakpoint",
-    description = "设置和管理断点",
+    description = BreakpointTexts.CMD_BREAKPOINT_DESC,
     version = CMD_BREAKPOINT_VER
 )
 @CmdRoutes({
-    @CmdRoutes.Route(path = "add", request = BreakpointAddRequest.class, handler = BreakpointManageCommand.class, description = "添加断点"),
-    @CmdRoutes.Route(path = "list", request = BreakpointListRequest.class, handler = BreakpointQueryCommand.class, description = "列出所有断点"),
-    @CmdRoutes.Route(path = "enable", request = BreakpointEnableRequest.class, handler = BreakpointManageCommand.class, description = "启用断点"),
-    @CmdRoutes.Route(path = "disable", request = BreakpointDisableRequest.class, handler = BreakpointManageCommand.class, description = "禁用断点"),
-    @CmdRoutes.Route(path = "remove", request = BreakpointRemoveRequest.class, handler = BreakpointManageCommand.class, description = "移除断点"),
-    @CmdRoutes.Route(path = "clear", request = BreakpointClearRequest.class, handler = BreakpointManageCommand.class, description = "清除所有断点"),
-    @CmdRoutes.Route(path = "hits", request = BreakpointHitsRequest.class, handler = BreakpointQueryCommand.class, description = "显示断点命中统计")
+    @CmdRoutes.Route(path = "add", request = BreakpointAddRequest.class, handler = BreakpointManageCommand.class, description = BreakpointTexts.ROUTE_BREAKPOINT_ADD_DESC),
+    @CmdRoutes.Route(path = "list", request = BreakpointListRequest.class, handler = BreakpointQueryCommand.class, description = BreakpointTexts.ROUTE_BREAKPOINT_LIST_DESC),
+    @CmdRoutes.Route(path = "enable", request = BreakpointEnableRequest.class, handler = BreakpointManageCommand.class, description = BreakpointTexts.ROUTE_BREAKPOINT_ENABLE_DESC),
+    @CmdRoutes.Route(path = "disable", request = BreakpointDisableRequest.class, handler = BreakpointManageCommand.class, description = BreakpointTexts.ROUTE_BREAKPOINT_DISABLE_DESC),
+    @CmdRoutes.Route(path = "remove", request = BreakpointRemoveRequest.class, handler = BreakpointManageCommand.class, description = BreakpointTexts.ROUTE_BREAKPOINT_REMOVE_DESC),
+    @CmdRoutes.Route(path = "clear", request = BreakpointClearRequest.class, handler = BreakpointManageCommand.class, description = BreakpointTexts.ROUTE_BREAKPOINT_CLEAR_DESC),
+    @CmdRoutes.Route(path = "hits", request = BreakpointHitsRequest.class, handler = BreakpointQueryCommand.class, description = BreakpointTexts.ROUTE_BREAKPOINT_HITS_DESC)
 })
 public class BreakpointMain extends MainCommand<BreakpointResult> {
 

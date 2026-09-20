@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.script.impl;
 
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
 import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.functions.script.ScriptTexts;
 import com.justnothing.testmodule.command.functions.script.response.ScriptResult;
 import com.justnothing.testmodule.command.functions.script.request.ScriptBaseRequest;
 import com.justnothing.testmodule.command.functions.script.request.ScriptCreateRequest;
@@ -19,7 +20,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 @SubCommandInfo(
-    description = "脚本 CRUD 操作 - 创建/显示/删除",
+    description = ScriptTexts.SUB_SCRIPT_CRUD_DESC,
     examples = {
         "script create <name>              创建新脚本",
         "script show <name>                显示脚本内容",
@@ -111,8 +112,7 @@ public class ScriptCrudCommand extends AbstractScriptCommand<ScriptBaseRequest<?
             return r;
         }
 
-        File scriptsDir = DataBridge.getScriptsDirectory();
-        File targetFile = new File(scriptsDir, fileName);
+        File targetFile = DataBridge.resolveScriptFile(fileName);
 
         if (!targetFile.exists()) {
             context.print("错误: 文件 '", Colors.RED);
@@ -148,8 +148,7 @@ public class ScriptCrudCommand extends AbstractScriptCommand<ScriptBaseRequest<?
             return r;
         }
 
-        File scriptsDir = DataBridge.getScriptsDirectory();
-        File targetFile = new File(scriptsDir, fileName);
+        File targetFile = DataBridge.resolveScriptFile(fileName);
 
         if (!targetFile.exists()) {
             context.print("错误: 文件 '", Colors.RED);

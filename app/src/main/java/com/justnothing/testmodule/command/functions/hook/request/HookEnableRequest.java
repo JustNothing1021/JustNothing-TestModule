@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.hook.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
+import com.justnothing.testmodule.command.functions.hook.HookTexts;
 import com.justnothing.testmodule.command.functions.hook.response.HookListResult;
 
 public class HookEnableRequest extends CommandRequest<HookListResult> {
@@ -10,7 +11,7 @@ public class HookEnableRequest extends CommandRequest<HookListResult> {
         name = "hookId",
         position = 1,
         required = true,
-        description = "Hook ID",
+        description = HookTexts.PARAM_HOOK_ENABLE_HOOKID_DESC,
         serializedName = "hookId"
     )
     private String hookId;

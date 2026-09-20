@@ -3,34 +3,39 @@ package com.justnothing.testmodule.ui.activity.analysis.thread;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import com.google.android.material.card.MaterialCardView;
 import com.justnothing.testmodule.R;
+import com.justnothing.testmodule.databinding.ActivityThreadDetailBinding;
+import com.justnothing.testmodule.ui.activity.BaseActivity;
 import com.justnothing.testmodule.ui.activity.analysis.classanalysis.ClassDetailActivity;
 
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class ThreadDetailActivity extends AppCompatActivity {
+public class ThreadDetailActivity extends BaseActivity {
 
     public static final String EXTRA_THREAD_ITEM = "thread_item";
 
     private static final Pattern STACK_FRAME_PATTERN =
             Pattern.compile("at\\s+([\\w$]+(?:\\.[\\w$]+)+)\\.([\\w$<>-]+)\\(([^:]+)(?::(\\d+))?\\)");
 
+    private ActivityThreadDetailBinding binding;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_thread_detail);
+        binding = ActivityThreadDetailBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
 
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
@@ -54,13 +59,13 @@ public class ThreadDetailActivity extends AppCompatActivity {
     }
 
     private void displayThreadInfo(ThreadSnapshot.ThreadItem item) {
-        TextView tvName = findViewById(R.id.tv_detail_name);
-        TextView tvId = findViewById(R.id.tv_detail_id);
-        TextView tvState = findViewById(R.id.tv_detail_state);
-        TextView tvPriority = findViewById(R.id.tv_detail_priority);
-        TextView tvDaemon = findViewById(R.id.tv_detail_daemon);
-        TextView tvInterrupted = findViewById(R.id.tv_detail_interrupted);
-        TextView tvAlive = findViewById(R.id.tv_detail_alive);
+        TextView tvName = binding.tvDetailName;
+        TextView tvId = binding.tvDetailId;
+        TextView tvState = binding.tvDetailState;
+        TextView tvPriority = binding.tvDetailPriority;
+        TextView tvDaemon = binding.tvDetailDaemon;
+        TextView tvInterrupted = binding.tvDetailInterrupted;
+        TextView tvAlive = binding.tvDetailAlive;
 
         if (tvName != null) {
             tvName.setText(item.name());
@@ -76,9 +81,9 @@ public class ThreadDetailActivity extends AppCompatActivity {
         if (tvInterrupted != null) tvInterrupted.setText(item.interrupted() ? "Y" : "N");
         if (tvAlive != null) tvAlive.setText(item.alive() ? "Y" : "N");
 
-        LinearLayout layoutStack = findViewById(R.id.layout_stack_trace);
+        LinearLayout layoutStack = binding.layoutStackTrace;
         if (layoutStack != null && item.stackTrace().isEmpty()) {
-            findViewById(R.id.label_stack).setVisibility(View.GONE);
+            binding.labelStack.setVisibility(View.GONE);
             layoutStack.setVisibility(View.GONE);
         }
     }
@@ -95,7 +100,7 @@ public class ThreadDetailActivity extends AppCompatActivity {
     }
 
     private void buildStackFrames(List<String> frames) {
-        LinearLayout parent = findViewById(R.id.layout_stack_trace);
+        LinearLayout parent = binding.layoutStackTrace;
         if (parent == null || frames.isEmpty()) return;
 
         LayoutInflater inflater = LayoutInflater.from(this);
@@ -114,9 +119,8 @@ public class ThreadDetailActivity extends AppCompatActivity {
             innerLayout.setPadding(dpToPx(10), dpToPx(8), dpToPx(10), dpToPx(8));
 
             TextView frameTv = new TextView(this);
-            frameTv.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 12f);
-            frameTv.setTypeface(android.graphics.Typeface.MONOSPACE);
-            frameTv.setTextColor(0xFF000000);
+            frameTv.setTextAppearance(R.style.TextAppearance_App_Label);
+            frameTv.setTypeface(Typeface.MONOSPACE);
 
             String className = null;
 
@@ -147,7 +151,6 @@ public class ThreadDetailActivity extends AppCompatActivity {
             if (className != null) {
                 card.setClickable(true);
                 card.setFocusable(true);
-                card.setCardBackgroundColor(0x0DFFFFFF);
                 card.setRippleColor(ColorStateList.valueOf(ContextCompat.getColor(this, R.color.cyan)));
                 String finalClassName = className;
                 card.setOnClickListener(v -> {
@@ -158,7 +161,7 @@ public class ThreadDetailActivity extends AppCompatActivity {
 
                 TextView hintTv = new TextView(this);
                 hintTv.setText(R.string.analysis_thread_stack_click_hint);
-                hintTv.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 9f);
+                hintTv.setTextAppearance(R.style.TextAppearance_App_Label);
                 hintTv.setTextColor(ContextCompat.getColor(this, R.color.cyan));
                 hintTv.setPadding(0, dpToPx(4), 0, 0);
                 innerLayout.addView(hintTv);

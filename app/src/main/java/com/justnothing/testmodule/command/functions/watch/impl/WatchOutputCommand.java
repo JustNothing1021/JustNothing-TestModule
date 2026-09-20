@@ -6,9 +6,10 @@ import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.functions.watch.util.WatchManager;
 import com.justnothing.testmodule.command.functions.watch.request.WatchOutputRequest;
 import com.justnothing.testmodule.command.functions.watch.response.WatchOutputResult;
+import com.justnothing.testmodule.command.functions.watch.WatchTexts;
 
 @SubCommandInfo(
-    description = "获取监控任务的输出",
+    description = WatchTexts.SUB_WATCH_OUTPUT_DESC,
     usage = "watch output <id|all> [limit]",
     examples = {
         "watch output 1",

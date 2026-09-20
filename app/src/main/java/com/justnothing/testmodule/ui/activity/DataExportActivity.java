@@ -5,33 +5,29 @@ import android.annotation.SuppressLint;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.view.LayoutInflater;
-import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.justnothing.testmodule.R;
+import com.justnothing.testmodule.databinding.ActivityDataExportBinding;
+import com.justnothing.testmodule.databinding.ItemExportedFileBinding;
 import com.justnothing.testmodule.utils.data.DataExporter;
-import com.justnothing.testmodule.utils.logging.Logger;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-public class DataExportActivity extends AppCompatActivity {
-
-    private final Logger logger = Logger.getLoggerForName("DataExportActivity");
+public class DataExportActivity extends BaseActivity {
 
     private static final int REQUEST_STORAGE_PERMISSION = 1001;
+    private ActivityDataExportBinding binding;
     private DataExporter exporter;
     private final List<File> exportedFiles = new ArrayList<>();
     private ExportedFilesAdapter adapter;
@@ -39,7 +35,8 @@ public class DataExportActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_data_export);
+        binding = ActivityDataExportBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
 
         exporter = new DataExporter();
         logger.info("数据导出界面启动");
@@ -50,26 +47,19 @@ public class DataExportActivity extends AppCompatActivity {
     }
 
     private void setupRecyclerView() {
-        RecyclerView recyclerView = findViewById(R.id.recycler_exported_files);
+        RecyclerView recyclerView = binding.recyclerExportedFiles;
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         adapter = new ExportedFilesAdapter();
         recyclerView.setAdapter(adapter);
     }
 
     private void setupButtons() {
-        Button btnExportAll = findViewById(R.id.btn_export_all);
-        Button btnExportConfig = findViewById(R.id.btn_export_config);
-        Button btnExportStatus = findViewById(R.id.btn_export_status);
-        Button btnExportPerformance = findViewById(R.id.btn_export_performance);
-        Button btnRefresh = findViewById(R.id.btn_refresh);
-        Button btnClearAll = findViewById(R.id.btn_clear_all);
-
-        btnExportAll.setOnClickListener(v -> exportAllData());
-        btnExportConfig.setOnClickListener(v -> exportConfig());
-        btnExportStatus.setOnClickListener(v -> exportStatus());
-        btnExportPerformance.setOnClickListener(v -> exportPerformance());
-        btnRefresh.setOnClickListener(v -> refreshFileList());
-        btnClearAll.setOnClickListener(v -> clearAllExports());
+        binding.btnExportAll.setOnClickListener(v -> exportAllData());
+        binding.btnExportConfig.setOnClickListener(v -> exportConfig());
+        binding.btnExportStatus.setOnClickListener(v -> exportStatus());
+        binding.btnExportPerformance.setOnClickListener(v -> exportPerformance());
+        binding.btnRefresh.setOnClickListener(v -> refreshFileList());
+        binding.btnClearAll.setOnClickListener(v -> clearAllExports());
     }
 
     private void checkStoragePermission() {
@@ -91,7 +81,7 @@ public class DataExportActivity extends AppCompatActivity {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 refreshFileList();
             } else {
-                Toast.makeText(this, getString(R.string.data_export_permission_warn), Toast.LENGTH_LONG).show();
+                showToast(getString(R.string.data_export_permission_warn), Toast.LENGTH_LONG);
             }
         }
     }
@@ -99,13 +89,13 @@ public class DataExportActivity extends AppCompatActivity {
     private void exportAllData() {
         try {
             String path = exporter.exportAllData();
-            Toast.makeText(this, getString(R.string.data_export_all_data_exported_to, path),
-                    Toast.LENGTH_LONG).show();
+            showToast(getString(R.string.data_export_all_data_exported_to, path),
+                    Toast.LENGTH_LONG);
             logger.info("全部数据导出成功: " + path);
             refreshFileList();
         } catch (Exception e) {
-            Toast.makeText(this, getString(R.string.data_export_exception_info, e.getMessage()),
-                    Toast.LENGTH_LONG).show();
+            showToast(getString(R.string.data_export_exception_info, e.getMessage()),
+                    Toast.LENGTH_LONG);
             logger.error("导出失败", e);
         }
     }
@@ -113,13 +103,13 @@ public class DataExportActivity extends AppCompatActivity {
     private void exportConfig() {
         try {
             String path = exporter.saveToFile("hook_config", exporter.exportHookConfig());
-            Toast.makeText(this, getString(R.string.data_export_hook_conf_exported_to, path),
-                    Toast.LENGTH_LONG).show();
+            showToast(getString(R.string.data_export_hook_conf_exported_to, path),
+                    Toast.LENGTH_LONG);
             logger.info("Hook配置导出成功: " + path);
             refreshFileList();
         } catch (Exception e) {
-            Toast.makeText(this, getString(R.string.data_export_exception_info, e.getMessage()),
-                    Toast.LENGTH_LONG).show();
+            showToast(getString(R.string.data_export_exception_info, e.getMessage()),
+                    Toast.LENGTH_LONG);
             logger.error("导出失败", e);
         }
     }
@@ -127,13 +117,13 @@ public class DataExportActivity extends AppCompatActivity {
     private void exportStatus() {
         try {
             String path = exporter.saveToFile("module_status", exporter.exportModuleStatus());
-            Toast.makeText(this, getString(R.string.data_export_module_stat_exported_to, path),
-                    Toast.LENGTH_LONG).show();
+            showToast(getString(R.string.data_export_module_stat_exported_to, path),
+                    Toast.LENGTH_LONG);
             logger.info("模块状态导出成功: " + path);
             refreshFileList();
         } catch (Exception e) {
-            Toast.makeText(this, getString(R.string.data_export_exception_info, e.getMessage()),
-                    Toast.LENGTH_LONG).show();
+            showToast(getString(R.string.data_export_exception_info, e.getMessage()),
+                    Toast.LENGTH_LONG);
             logger.error("导出失败", e);
         }
     }
@@ -141,13 +131,13 @@ public class DataExportActivity extends AppCompatActivity {
     private void exportPerformance() {
         try {
             String path = exporter.saveToFile("performance_data", exporter.exportPerformanceData());
-            Toast.makeText(this, getString(R.string.data_export_perf_data_exported_to, path),
-                    Toast.LENGTH_LONG).show();
+            showToast(getString(R.string.data_export_perf_data_exported_to, path),
+                    Toast.LENGTH_LONG);
             logger.info("性能数据导出成功: " + path);
             refreshFileList();
         } catch (Exception e) {
-            Toast.makeText(this, getString(R.string.data_export_exception_info, e.getMessage()),
-                    Toast.LENGTH_LONG).show();
+            showToast(getString(R.string.data_export_exception_info, e.getMessage()),
+                    Toast.LENGTH_LONG);
             logger.error("导出失败", e);
         }
     }
@@ -157,20 +147,17 @@ public class DataExportActivity extends AppCompatActivity {
         exportedFiles.clear();
         exportedFiles.addAll(exporter.getExportedFiles());
         adapter.notifyDataSetChanged();
-        TextView textFileCount = findViewById(R.id.text_file_count);
-        textFileCount.setText(getString(R.string.exported_file_count, exportedFiles.size()));
+        binding.textFileCount.setText(getString(R.string.exported_file_count, exportedFiles.size()));
         logger.info("刷新文件列表完成，共 " + exportedFiles.size() + " 个文件");
     }
 
     private void clearAllExports() {
         if (exporter.clearAllExports()) {
-            Toast.makeText(this, getString(R.string.data_export_all_data_cleared),
-                    Toast.LENGTH_SHORT).show();
+            showToast(getString(R.string.data_export_all_data_cleared));
             logger.info("清除所有导出文件成功");
             refreshFileList();
         } else {
-            Toast.makeText(this, getString(R.string.data_export_clear_all_data_failed),
-                    Toast.LENGTH_SHORT).show();
+            showToast(getString(R.string.data_export_clear_all_data_failed));
             logger.error("清除导出文件失败");
         }
     }
@@ -180,9 +167,9 @@ public class DataExportActivity extends AppCompatActivity {
         @NonNull
         @Override
         public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-            View view = LayoutInflater.from(parent.getContext())
-                    .inflate(R.layout.item_exported_file, parent, false);
-            return new ViewHolder(view);
+            ItemExportedFileBinding itemBinding = ItemExportedFileBinding.inflate(
+                    LayoutInflater.from(parent.getContext()), parent, false);
+            return new ViewHolder(itemBinding);
         }
 
         @Override
@@ -196,33 +183,25 @@ public class DataExportActivity extends AppCompatActivity {
         }
 
         class ViewHolder extends RecyclerView.ViewHolder {
-            TextView textFileName;
-            TextView textFilePath;
-            TextView textFileSize;
-            Button btnDelete;
+            private final ItemExportedFileBinding binding;
 
-            ViewHolder(View itemView) {
-                super(itemView);
-                textFileName = itemView.findViewById(R.id.text_file_name);
-                textFilePath = itemView.findViewById(R.id.text_file_path);
-                textFileSize = itemView.findViewById(R.id.text_file_size);
-                btnDelete = itemView.findViewById(R.id.btn_delete_file);
+            ViewHolder(ItemExportedFileBinding binding) {
+                super(binding.getRoot());
+                this.binding = binding;
             }
 
             void bind(File file) {
-                textFileName.setText(getString(R.string.exported_file_name, file.getName()));
-                textFilePath.setText(getString(R.string.exported_file_directory, file.getAbsolutePath()));
-                textFileSize.setText(getString(R.string.exported_file_size, formatFileSize(file.length())));
+                binding.textFileName.setText(getString(R.string.exported_file_name, file.getName()));
+                binding.textFilePath.setText(getString(R.string.exported_file_directory, file.getAbsolutePath()));
+                binding.textFileSize.setText(getString(R.string.exported_file_size, formatFileSize(file.length())));
 
-                btnDelete.setOnClickListener(v -> {
+                binding.btnDeleteFile.setOnClickListener(v -> {
                     if (exporter.deleteExportedFile(file)) {
-                        Toast.makeText(DataExportActivity.this, 
-                                getString(R.string.data_export_file_cleared, file.getName()), Toast.LENGTH_SHORT).show();
+                        showToast(getString(R.string.data_export_file_cleared, file.getName()));
                         logger.info("删除文件成功: " + file.getName());
                         refreshFileList();
                     } else {
-                        Toast.makeText(DataExportActivity.this, 
-                                getString(R.string.data_export_file_clear_failed, file.getName()), Toast.LENGTH_SHORT).show();
+                        showToast(getString(R.string.data_export_file_clear_failed, file.getName()));
                         logger.error("删除文件失败: " + file.getName());
                     }
                 });

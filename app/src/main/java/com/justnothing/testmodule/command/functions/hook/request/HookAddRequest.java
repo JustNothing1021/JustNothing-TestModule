@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.hook.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
+import com.justnothing.testmodule.command.functions.hook.HookTexts;
 import com.justnothing.testmodule.command.functions.hook.response.HookListResult;
 
 public class HookAddRequest extends CommandRequest<HookListResult> {
@@ -10,7 +11,7 @@ public class HookAddRequest extends CommandRequest<HookListResult> {
         name = "className",
         position = 1,
         required = true,
-        description = "目标类名",
+        description = HookTexts.PARAM_HOOK_ADD_CLASSNAME_DESC,
         serializedName = "className"
     )
     private String className;
@@ -19,7 +20,7 @@ public class HookAddRequest extends CommandRequest<HookListResult> {
         name = "methodName",
         position = 2,
         required = true,
-        description = "目标方法名",
+        description = HookTexts.PARAM_HOOK_ADD_METHODNAME_DESC,
         serializedName = "methodName"
     )
     private String methodName;
@@ -28,7 +29,7 @@ public class HookAddRequest extends CommandRequest<HookListResult> {
         name = "--sig",
         aliases = {"--signature"},
         required = false,
-        description = "方法签名",
+        description = HookTexts.PARAM_HOOK_ADD_SIG_DESC,
         serializedName = "signature"
     )
     private String signature;
@@ -36,42 +37,42 @@ public class HookAddRequest extends CommandRequest<HookListResult> {
     @CmdParam(
         name = "--before-code",
         required = false,
-        description = "before阶段内联代码"
+        description = HookTexts.PARAM_HOOK_ADD_BEFORE_CODE_DESC
     )
     private String beforeCode;
 
     @CmdParam(
         name = "--before-codebase",
         required = false,
-        description = "before阶段代码文件"
+        description = HookTexts.PARAM_HOOK_ADD_BEFORE_CODEBASE_DESC
     )
     private String beforeCodebase;
 
     @CmdParam(
         name = "--after-code",
         required = false,
-        description = "after阶段内联代码"
+        description = HookTexts.PARAM_HOOK_ADD_AFTER_CODE_DESC
     )
     private String afterCode;
 
     @CmdParam(
         name = "--after-codebase",
         required = false,
-        description = "after阶段代码文件"
+        description = HookTexts.PARAM_HOOK_ADD_AFTER_CODEBASE_DESC
     )
     private String afterCodebase;
 
     @CmdParam(
         name = "--replace-code",
         required = false,
-        description = "replace阶段内联代码"
+        description = HookTexts.PARAM_HOOK_ADD_REPLACE_CODE_DESC
     )
     private String replaceCode;
 
     @CmdParam(
         name = "--replace-codebase",
         required = false,
-        description = "replace阶段代码文件"
+        description = HookTexts.PARAM_HOOK_ADD_REPLACE_CODEBASE_DESC
     )
     private String replaceCodebase;
 

@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.script.impl;
 
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
 import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.functions.script.ScriptTexts;
 import com.justnothing.testmodule.command.functions.script.response.ScriptResult;
 import com.justnothing.testmodule.command.functions.script.request.*;
 import com.justnothing.testmodule.utils.data.DataBridge;
@@ -11,7 +12,7 @@ import java.io.File;
 import java.io.IOException;
 
 @SubCommandInfo(
-    description = "脚本列表与交互式管理器",
+    description = ScriptTexts.SUB_SCRIPT_MANAGE_DESC,
     examples = {
         "script list                       列出所有脚本",
         "script vars                       列出脚本执行器变量",
@@ -291,7 +292,7 @@ public class ScriptManageCommand extends AbstractScriptCommand<ScriptBaseRequest
     }
 
     protected void handleEdit(String name) throws IOException {
-        File scriptFile = DataBridge.getScriptFile(name);
+        File scriptFile = DataBridge.resolveScriptFile(name);
 
         if (!scriptFile.exists()) {
             out("错误: 脚本 '", Colors.RED);

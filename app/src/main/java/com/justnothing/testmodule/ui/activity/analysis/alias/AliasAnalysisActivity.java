@@ -2,42 +2,31 @@ package com.justnothing.testmodule.ui.activity.analysis.alias;
 
 import android.os.Bundle;
 import android.view.View;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
-import androidx.recyclerview.widget.RecyclerView;
 
 import com.justnothing.testmodule.R;
 import com.justnothing.testmodule.command.functions.alias.model.AliasInfo;
+import com.justnothing.testmodule.databinding.ActivityAliasAnalysisBinding;
+import com.justnothing.testmodule.ui.activity.BaseActivity;
 import com.justnothing.testmodule.ui.adapter.analysis.AliasAdapter;
 import com.justnothing.testmodule.ui.viewmodel.analysis.AliasQueryViewModel;
 
 import java.util.List;
 
-public class AliasAnalysisActivity extends AppCompatActivity {
+public class AliasAnalysisActivity extends BaseActivity {
 
     private AliasQueryViewModel viewModel;
-
-    private View layoutContent;
-    private View layoutLoading;
-    private View layoutEmpty;
-    private TextView tvTotalCount;
-    private EditText etAliasName;
-    private EditText etAliasCommand;
-    private Button btnAddAlias;
-    private Button btnClearAll;
+    private ActivityAliasAnalysisBinding binding;
 
     private AliasAdapter adapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_alias_analysis);
+        binding = ActivityAliasAnalysisBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
 
         initViews();
         initViewModel();
@@ -47,27 +36,16 @@ public class AliasAnalysisActivity extends AppCompatActivity {
     }
 
     private void initViews() {
-        layoutContent = findViewById(R.id.layout_content);
-        layoutLoading = findViewById(R.id.layout_loading);
-        layoutEmpty = findViewById(R.id.layout_empty);
-
-        tvTotalCount = findViewById(R.id.tv_total_count);
-        RecyclerView recyclerAliases = findViewById(R.id.recycler_aliases);
-        etAliasName = findViewById(R.id.et_alias_name);
-        etAliasCommand = findViewById(R.id.et_alias_command);
-        btnAddAlias = findViewById(R.id.btn_add_alias);
-        btnClearAll = findViewById(R.id.btn_clear_all);
-
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
             getSupportActionBar().setTitle(getString(R.string.analysis_alias));
         }
 
-        adapter = new AliasAdapter(this, alias -> {
+        adapter = new AliasAdapter(alias -> {
             // 点击删除
             showDeleteDialog(alias);
         });
-        recyclerAliases.setAdapter(adapter);
+        binding.recyclerAliases.setAdapter(adapter);
     }
 
     private void initViewModel() {
@@ -75,11 +53,11 @@ public class AliasAnalysisActivity extends AppCompatActivity {
 
         viewModel.isLoading().observe(this, isLoading -> {
             if (isLoading) {
-                layoutLoading.setVisibility(View.VISIBLE);
-                layoutContent.setVisibility(View.GONE);
-                layoutEmpty.setVisibility(View.GONE);
+                binding.layoutLoading.setVisibility(View.VISIBLE);
+                binding.layoutContent.setVisibility(View.GONE);
+                binding.layoutEmpty.setVisibility(View.GONE);
             } else {
-                layoutLoading.setVisibility(View.GONE);
+                binding.layoutLoading.setVisibility(View.GONE);
             }
         });
 
@@ -87,9 +65,9 @@ public class AliasAnalysisActivity extends AppCompatActivity {
 
         viewModel.getError().observe(this, error -> {
             if (error != null && !error.isEmpty()) {
-                layoutEmpty.setVisibility(View.VISIBLE);
-                layoutContent.setVisibility(View.GONE);
-                ((TextView) layoutEmpty.findViewById(R.id.tv_error_message)).setText(error);
+                binding.layoutEmpty.setVisibility(View.VISIBLE);
+                binding.layoutContent.setVisibility(View.GONE);
+                binding.tvErrorMessage.setText(error);
                 showToast(error);
             }
         });
@@ -102,13 +80,13 @@ public class AliasAnalysisActivity extends AppCompatActivity {
     }
 
     private void setupListeners() {
-        btnAddAlias.setOnClickListener(v -> addAlias());
-        btnClearAll.setOnClickListener(v -> showClearDialog());
+        binding.btnAddAlias.setOnClickListener(v -> addAlias());
+        binding.btnClearAll.setOnClickListener(v -> showClearDialog());
     }
 
     private void addAlias() {
-        String name = etAliasName.getText().toString().trim();
-        String command = etAliasCommand.getText().toString().trim();
+        String name = binding.etAliasName.getText().toString().trim();
+        String command = binding.etAliasCommand.getText().toString().trim();
 
         if (name.isEmpty()) {
             showToast(getString(R.string.analysis_alias_name_empty));
@@ -121,22 +99,22 @@ public class AliasAnalysisActivity extends AppCompatActivity {
         }
 
         viewModel.addAlias(name, command);
-        etAliasName.setText("");
-        etAliasCommand.setText("");
+        binding.etAliasName.setText("");
+        binding.etAliasCommand.setText("");
     }
 
     private void displayAliases(List<AliasInfo> aliases) {
         if (aliases == null || aliases.isEmpty()) {
-            layoutEmpty.setVisibility(View.VISIBLE);
-            layoutContent.setVisibility(View.GONE);
-            ((TextView) layoutEmpty.findViewById(R.id.tv_error_message)).setText(getString(R.string.analysis_alias_empty));
+            binding.layoutEmpty.setVisibility(View.VISIBLE);
+            binding.layoutContent.setVisibility(View.GONE);
+            binding.tvErrorMessage.setText(getString(R.string.analysis_alias_empty));
             return;
         }
 
-        layoutEmpty.setVisibility(View.GONE);
-        layoutContent.setVisibility(View.VISIBLE);
+        binding.layoutEmpty.setVisibility(View.GONE);
+        binding.layoutContent.setVisibility(View.VISIBLE);
 
-        tvTotalCount.setText(getString(R.string.analysis_alias_total_format, aliases.size()));
+        binding.tvTotalCount.setText(getString(R.string.analysis_alias_total_format, aliases.size()));
         adapter.setAliases(aliases);
     }
 
@@ -160,10 +138,6 @@ public class AliasAnalysisActivity extends AppCompatActivity {
                 })
                 .setNegativeButton(getString(R.string.general_cancel), null)
                 .show();
-    }
-
-    private void showToast(String message) {
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
 
     @Override

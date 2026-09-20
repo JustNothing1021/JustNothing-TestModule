@@ -12,7 +12,7 @@ import com.justnothing.testmodule.command.functions.didyouknow.response.DidYouKn
 @Cmd(
     name = "did-you-know",
     group = "fun",
-    description = "你知道吗？显示有趣的冷知识和彩蛋",
+    description = DidYouKnowTexts.CMD_DID_YOU_KNOW_DESC,
     version = CMD_DYK_VER
 )
 @CmdRoutes({
@@ -20,7 +20,7 @@ import com.justnothing.testmodule.command.functions.didyouknow.response.DidYouKn
         path = "",
         request = DidYouKnowRequest.class,
         handler = DidYouKnowCommand.class,
-        description = "显示一条随机的'你知道吗'提示"
+        description = DidYouKnowTexts.ROUTE_DID_YOU_KNOW_DESC
     )
 })
 public class DidYouKnowMain extends MainCommand<DidYouKnowResult> {

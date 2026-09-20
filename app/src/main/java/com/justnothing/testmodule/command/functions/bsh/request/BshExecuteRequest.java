@@ -3,6 +3,7 @@ package com.justnothing.testmodule.command.functions.bsh.request;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.functions.bsh.response.BeanShellResult;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.functions.bsh.BshTexts;
 
 public class BshExecuteRequest extends CommandRequest<BeanShellResult> {
 
@@ -10,7 +11,7 @@ public class BshExecuteRequest extends CommandRequest<BeanShellResult> {
         name = "code",
         position = 1,
         required = false,
-        description = "BeanShell代码",
+        description = BshTexts.PARAM_BSH_RUN_CODE_CODE_DESC,
         varArgs = true
     )
     private String code;

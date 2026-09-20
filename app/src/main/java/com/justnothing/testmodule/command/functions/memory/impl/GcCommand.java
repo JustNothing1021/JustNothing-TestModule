@@ -9,22 +9,19 @@ import com.justnothing.testmodule.command.functions.memory.request.GcRequest;
 import com.justnothing.testmodule.command.functions.memory.response.GcResult;
 import com.justnothing.testmodule.command.functions.memory.util.MemoryUtils;
 import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.functions.memory.MemoryTexts;
 
 import java.util.Locale;
 
 @SubCommandInfo(
-    description = "手动触发垃圾回收, 可选完整GC或显示统计信息",
+    description = MemoryTexts.SUB_MEMORY_GC_DESC,
     usage = "memory gc [options]",
     examples = {
         "memory gc",
         "memory gc --full",
         "memory gc --stats"
     },
-    optionsDesc = """
-            选项:
-              --full    - 执行完整的GC (建议开启)
-              --stats   - 显示GC统计信息
-            """
+    optionsDesc = MemoryTexts.SUB_MEMORY_GC_OPTIONS
 )
 public class GcCommand extends AbstractMemoryCommand<GcRequest, GcResult> {
 

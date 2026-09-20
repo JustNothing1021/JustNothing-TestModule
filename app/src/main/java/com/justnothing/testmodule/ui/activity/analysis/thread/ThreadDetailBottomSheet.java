@@ -17,6 +17,7 @@ import androidx.core.content.ContextCompat;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.android.material.card.MaterialCardView;
 import com.justnothing.testmodule.R;
+import com.justnothing.testmodule.databinding.BottomSheetThreadDetailBinding;
 import com.justnothing.testmodule.ui.activity.analysis.classanalysis.ClassDetailActivity;
 
 import java.util.List;
@@ -30,6 +31,8 @@ public class ThreadDetailBottomSheet extends BottomSheetDialogFragment {
     private static final Pattern STACK_FRAME_PATTERN =
             Pattern.compile("at\\s+([\\w$]+(?:\\.[\\w$]+)+)\\.([\\w$]+)\\(([^:]+)(?::(\\d+))?\\)");
 
+    private BottomSheetThreadDetailBinding binding;
+
     public static ThreadDetailBottomSheet newInstance(ThreadSnapshot.ThreadItem item) {
         ThreadDetailBottomSheet fragment = new ThreadDetailBottomSheet();
         Bundle args = new Bundle();
@@ -42,7 +45,8 @@ public class ThreadDetailBottomSheet extends BottomSheetDialogFragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.bottom_sheet_thread_detail, container, false);
+        binding = BottomSheetThreadDetailBinding.inflate(inflater, container, false);
+        return binding.getRoot();
     }
 
     @Override
@@ -55,14 +59,14 @@ public class ThreadDetailBottomSheet extends BottomSheetDialogFragment {
         ThreadSnapshot.ThreadItem item = (ThreadSnapshot.ThreadItem) args.getSerializable(ARG_THREAD_ITEM);
         if (item == null) return;
 
-        TextView tvName = view.findViewById(R.id.tv_detail_name);
-        TextView tvId = view.findViewById(R.id.tv_detail_id);
-        TextView tvState = view.findViewById(R.id.tv_detail_state);
-        TextView tvPriority = view.findViewById(R.id.tv_detail_priority);
-        TextView tvDaemon = view.findViewById(R.id.tv_detail_daemon);
-        TextView tvInterrupted = view.findViewById(R.id.tv_detail_interrupted);
-        TextView tvAlive = view.findViewById(R.id.tv_detail_alive);
-        LinearLayout layoutStack = view.findViewById(R.id.layout_stack_trace);
+        TextView tvName = binding.tvDetailName;
+        TextView tvId = binding.tvDetailId;
+        TextView tvState = binding.tvDetailState;
+        TextView tvPriority = binding.tvDetailPriority;
+        TextView tvDaemon = binding.tvDetailDaemon;
+        TextView tvInterrupted = binding.tvDetailInterrupted;
+        TextView tvAlive = binding.tvDetailAlive;
+        LinearLayout layoutStack = binding.layoutStackTrace;
 
         if (tvName != null) {
             tvName.setText(item.name());
@@ -82,7 +86,7 @@ public class ThreadDetailBottomSheet extends BottomSheetDialogFragment {
         if (layoutStack != null && !item.stackTrace().isEmpty()) {
             buildStackFrames(layoutStack, item.stackTrace(), requireContext());
         } else if (layoutStack != null) {
-            view.findViewById(R.id.label_stack).setVisibility(View.GONE);
+            binding.labelStack.setVisibility(View.GONE);
             layoutStack.setVisibility(View.GONE);
         }
     }
@@ -112,9 +116,8 @@ public class ThreadDetailBottomSheet extends BottomSheetDialogFragment {
             innerLayout.setPadding(dpToPx(10, context), dpToPx(8, context), dpToPx(10, context), dpToPx(8, context));
 
             TextView frameTv = new TextView(context);
-            frameTv.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 12f);
+            frameTv.setTextAppearance(R.style.TextAppearance_App_Label);
             frameTv.setTypeface(android.graphics.Typeface.MONOSPACE);
-            frameTv.setTextColor(0xFFCCCCCC);
             frameTv.setTextIsSelectable(true);
 
             String className;
@@ -157,7 +160,7 @@ public class ThreadDetailBottomSheet extends BottomSheetDialogFragment {
 
                 TextView hintTv = new TextView(context);
                 hintTv.setText(R.string.analysis_thread_stack_click_hint);
-                hintTv.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 9f);
+                hintTv.setTextAppearance(R.style.TextAppearance_App_Label);
                 hintTv.setTextColor(ContextCompat.getColor(context, R.color.cyan));
                 hintTv.setPadding(0, dpToPx(4, context), 0, 0);
                 innerLayout.addView(hintTv);

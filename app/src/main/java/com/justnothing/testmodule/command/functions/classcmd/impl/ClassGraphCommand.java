@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.classcmd.impl;
 
 import com.justnothing.testmodule.command.framework.error.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.functions.classcmd.ClassTexts;
 import com.justnothing.testmodule.command.functions.classcmd.model.ClassCommandContext;
 import com.justnothing.testmodule.command.functions.classcmd.request.ClassGraphRequest;
 import com.justnothing.testmodule.command.functions.classcmd.response.ClassGraphResult;
@@ -12,20 +13,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 @SubCommandInfo(
-    description = "生成类的继承关系图.",
+    description = ClassTexts.SUB_CLASS_GRAPH_DESC,
     usage = "class graph [options] <class_name>",
     examples = {
         "class graph java.util.ArrayList",
         "class graph --depth 5 android.view.View",
         "class graph --compact java.util.HashMap"
     },
-    optionsDesc = """
-            选项:
-                --no-subclasses    不显示子类
-                --no-interfaces    不显示接口
-                --compact          紧凑模式输出
-                --depth <N>       最大遍历深度 (默认10)
-            """
+    optionsDesc = ClassTexts.SUB_CLASS_GRAPH_OPTIONS
 )
 public class ClassGraphCommand extends AbstractClassCommand<ClassGraphRequest, ClassGraphResult> {
 

@@ -1,104 +1,112 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  样板界面 2：「只换了颜色」→「完成态」要补的三件事
+
+  1. 背景色也是颜色。
+     原来 ScrollView 上写着 android:background="#F5F5F5"，这是把背景钉死在近白色上。
+     只改文字色不改背景，深色模式下就变成浅色字压浅色底，比不改还糟。
+     背景不要在这个页面写死 —— 窗口背景由主题给，页面需要区分层级时才用 ?attr/colorSurface 之类。
+
+  2. 间距要「等价替换」：值一个都不能变。
+     48dp→24dp 这种不是统一，是把设计改小了，而且以后你分不清哪些是原本就这么紧、
+     哪些是被你压扁的。刻度不够就补刻度（spacing_xl / spacing_48），不要就近压扁。
+
+  3. textSize + textStyle + textColor 三件套 → 一个 android:textAppearance。
+     字号是设计决策，应该集中在 themes.xml 里看得见，而不是散在 61 个布局里。
+-->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="#F5F5F5">
+    android:layout_height="match_parent">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="24dp"
-        android:gravity="center">
+        android:gravity="center"
+        android:padding="@dimen/spacing_24">
 
+        <!-- 页面标题 -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="48dp"
-            android:layout_marginBottom="8dp"
+            android:layout_marginTop="@dimen/spacing_48"
+            android:layout_marginBottom="@dimen/spacing_8"
             android:text="@string/welcome_app_title"
-            android:textColor="#333333"
-            android:textSize="26sp"
-            android:textStyle="bold" />
+            android:textAppearance="@style/TextAppearance.App.Headline" />
 
+        <!-- 副标题：比正文大一号、又是次要色，所以用 Body.Secondary 而不是另开一级 -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="48dp"
+            android:layout_marginBottom="@dimen/spacing_48"
             android:text="@string/welcome_app_subtitle"
-            android:textColor="#666666"
-            android:textSize="18sp" />
+            android:textAppearance="@style/TextAppearance.App.Body.Secondary" />
 
+        <!-- 区块标题 -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="32dp"
+            android:layout_marginBottom="@dimen/spacing_24"
             android:text="@string/about"
-            android:textColor="#333333"
-            android:textSize="24sp"
-            android:textStyle="bold" />
+            android:textAppearance="@style/TextAppearance.App.Headline" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/spacing_8"
             android:text="@string/about_author"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:textColor="#333333"
-            android:layout_marginBottom="8dp" />
+            android:textAppearance="@style/TextAppearance.App.Section" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
+            android:layout_marginBottom="@dimen/spacing_24"
             android:text="@string/about_author_info"
-            android:textColor="#666666"
-            android:textSize="16sp" />
+            android:textAppearance="@style/TextAppearance.App.Body.Secondary" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
+            android:layout_marginBottom="@dimen/spacing_8"
             android:text="@string/about_assistant_development"
-            android:textColor="#333333"
-            android:textSize="18sp"
-            android:textStyle="bold" />
+            android:textAppearance="@style/TextAppearance.App.Section" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/spacing_24"
             android:text="@string/about_assistant_info"
-            android:textSize="16sp"
-            android:textColor="#666666"
-            android:layout_marginBottom="24dp" />
+            android:textAppearance="@style/TextAppearance.App.Body.Secondary" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/spacing_8"
             android:text="@string/about_version"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:textColor="#333333"
-            android:layout_marginBottom="8dp" />
+            android:textAppearance="@style/TextAppearance.App.Section" />
 
         <TextView
             android:id="@+id/tv_version"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="48dp"
+            android:layout_marginBottom="@dimen/spacing_48"
             android:text="@string/about_version"
-            android:textColor="#666666"
-            android:textSize="16sp" />
+            android:textAppearance="@style/TextAppearance.App.Body.Secondary" />
 
+        <!--
+          返回是个中性动作，所以用 tonal 按钮而不是实心主按钮。
+          原来这里用 backgroundTint 刷了一层灰 —— 那等于绕过了设计系统：
+          底色该由 colorPrimary / colorSecondaryContainer 决定，一旦手刷，
+          按钮上的文字对比色就跟底色对不上了（深色模式下尤其容易灰底灰字）。
+          另外按钮的 padding 和字号都由样式管，不要再手写。
+        -->
         <Button
             android:id="@+id/btn_back"
+            style="@style/Widget.App.Button.Tonal"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:padding="16dp"
-            android:text="@string/general_back"
-            android:textSize="16sp"
-            android:backgroundTint="#607D8B" />
+            android:layout_marginBottom="@dimen/spacing_16"
+            android:text="@string/general_back" />
 
     </LinearLayout>
 

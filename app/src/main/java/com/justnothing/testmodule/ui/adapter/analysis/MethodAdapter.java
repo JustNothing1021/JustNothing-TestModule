@@ -4,18 +4,22 @@ import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.style.ForegroundColorSpan;
 import android.view.LayoutInflater;
-import android.view.View;
 import android.view.ViewGroup;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
+import androidx.core.widget.NestedScrollView;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.color.MaterialColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.justnothing.testmodule.R;
 import com.justnothing.testmodule.command.functions.classcmd.model.MethodInfo;
+import com.justnothing.testmodule.databinding.DialogSelectOverloadBinding;
+import com.justnothing.testmodule.databinding.ItemMethodInfoBinding;
+import com.justnothing.testmodule.databinding.ItemOverloadBinding;
 import com.justnothing.testmodule.utils.format.DescriptorColorizer;
 
 import java.util.ArrayList;
@@ -66,9 +70,9 @@ public class MethodAdapter extends RecyclerView.Adapter<MethodAdapter.ViewHolder
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext())
-            .inflate(R.layout.item_method_info, parent, false);
-        return new ViewHolder(view);
+        ItemMethodInfoBinding binding = ItemMethodInfoBinding.inflate(
+            LayoutInflater.from(parent.getContext()), parent, false);
+        return new ViewHolder(binding);
     }
 
     @Override
@@ -82,13 +86,11 @@ public class MethodAdapter extends RecyclerView.Adapter<MethodAdapter.ViewHolder
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {
-        private final TextView tvMethodName;
-        private final TextView tvOverloads;
+        private final ItemMethodInfoBinding binding;
 
-        public ViewHolder(@NonNull View itemView) {
-            super(itemView);
-            tvMethodName = itemView.findViewById(R.id.tv_method_name);
-            tvOverloads = itemView.findViewById(R.id.tv_overloads);
+        public ViewHolder(@NonNull ItemMethodInfoBinding binding) {
+            super(binding.getRoot());
+            this.binding = binding;
         }
 
         public void bind(MethodGroup group) {
@@ -107,10 +109,10 @@ public class MethodAdapter extends RecyclerView.Adapter<MethodAdapter.ViewHolder
             }
             nameBuilder.append(group.name);
             nameBuilder.append(" (").append(String.valueOf(count)).append(")");
-            tvMethodName.setText(nameBuilder);
+            binding.tvMethodName.setText(nameBuilder);
 
             int colorGreen = ContextCompat.getColor(itemView.getContext(), R.color.green);
-            int colorGray = ContextCompat.getColor(itemView.getContext(), android.R.color.darker_gray);
+            int colorGray = MaterialColors.getColor(itemView, com.google.android.material.R.attr.colorOnSurfaceVariant);
 
             SpannableStringBuilder sb = new SpannableStringBuilder();
 
@@ -155,7 +157,7 @@ public class MethodAdapter extends RecyclerView.Adapter<MethodAdapter.ViewHolder
                     sb.setSpan(new ForegroundColorSpan(colorGray), inheritStart, sb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 }
             }
-            tvOverloads.setText(itemView.getContext().getString(R.string.analysis_method_return_type_label, sb.toString()));
+            binding.tvOverloads.setText(itemView.getContext().getString(R.string.analysis_method_return_type_label, sb.toString()));
 
             itemView.setOnClickListener(v -> {
                 if (onItemClickListener != null && group.overloads.size() == 1) {
@@ -167,12 +169,12 @@ public class MethodAdapter extends RecyclerView.Adapter<MethodAdapter.ViewHolder
         }
 
         private void showOverloadSelector(MethodGroup group) {
-            View dialogView = LayoutInflater.from(itemView.getContext())
-                .inflate(R.layout.dialog_select_overload, null);
+            DialogSelectOverloadBinding dialogBinding = DialogSelectOverloadBinding.inflate(
+                LayoutInflater.from(itemView.getContext()));
             
-            androidx.core.widget.NestedScrollView scrollView = dialogView.findViewById(R.id.nested_scroll);
+            NestedScrollView scrollView = dialogBinding.nestedScroll;
             
-            RecyclerView rvOverloads = dialogView.findViewById(R.id.rv_overloads);
+            RecyclerView rvOverloads = dialogBinding.rvOverloads;
             rvOverloads.setLayoutManager(new LinearLayoutManager(itemView.getContext()));
             
             OverloadAdapter adapter = new OverloadAdapter(group.overloads, (position, method) -> {
@@ -182,8 +184,8 @@ public class MethodAdapter extends RecyclerView.Adapter<MethodAdapter.ViewHolder
             });
             rvOverloads.setAdapter(adapter);
             
-            androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(itemView.getContext())
-                .setView(dialogView)
+            AlertDialog dialog = new MaterialAlertDialogBuilder(itemView.getContext())
+                .setView(dialogBinding.getRoot())
                 .create();
             
             dialog.show();
@@ -217,9 +219,9 @@ public class MethodAdapter extends RecyclerView.Adapter<MethodAdapter.ViewHolder
         @NonNull
         @Override
         public OverloadViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_overload, parent, false);
-            return new OverloadViewHolder(view);
+            ItemOverloadBinding binding = ItemOverloadBinding.inflate(
+                LayoutInflater.from(parent.getContext()), parent, false);
+            return new OverloadViewHolder(binding);
         }
 
         @Override
@@ -233,17 +235,15 @@ public class MethodAdapter extends RecyclerView.Adapter<MethodAdapter.ViewHolder
         }
 
         class OverloadViewHolder extends RecyclerView.ViewHolder {
-            private final TextView tvIndex;
-            private final TextView tvParams;
+            private final ItemOverloadBinding binding;
 
-            OverloadViewHolder(@NonNull View itemView) {
-                super(itemView);
-                tvIndex = itemView.findViewById(R.id.tv_index);
-                tvParams = itemView.findViewById(R.id.tv_params);
+            OverloadViewHolder(@NonNull ItemOverloadBinding binding) {
+                super(binding.getRoot());
+                this.binding = binding;
             }
 
             void bind(MethodInfo method, int position) {
-                tvIndex.setText(String.format(itemView.getContext().getString(R.string.index_format), position + 1));
+                binding.tvIndex.setText(String.format(itemView.getContext().getString(R.string.index_format), position + 1));
                 
                 int colorBlue = ContextCompat.getColor(itemView.getContext(), R.color.blue);
                 
@@ -267,7 +267,7 @@ public class MethodAdapter extends RecyclerView.Adapter<MethodAdapter.ViewHolder
                         paramsBuilder.append(DescriptorColorizer.formatTypeName(paramTypes.get(j)));
                     }
                 }
-                tvParams.setText(paramsBuilder.toString());
+                binding.tvParams.setText(paramsBuilder.toString());
 
                 itemView.setOnClickListener(v -> {
                     if (listener != null) {

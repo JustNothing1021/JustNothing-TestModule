@@ -21,7 +21,7 @@ import com.justnothing.testmodule.command.functions.jank.response.JankResult;
  */
 @Cmd(
     name = "jank",
-    description = "检测系统卡顿（连续采样 CPU/内存/队列/进程变动）",
+    description = JankTexts.CMD_JANK_DESC,
     version = CMD_JANK_VER
 )
 @CmdRoutes({
@@ -29,13 +29,13 @@ import com.justnothing.testmodule.command.functions.jank.response.JankResult;
         path = "sample",
         request = JankSampleRequest.class,
         handler = JankSampleCommand.class,
-        description = "采样一段时间，实时显示卡顿指标"
+        description = JankTexts.ROUTE_JANK_SAMPLE_DESC
     ),
     @CmdRoutes.Route(
         path = "watch",
         request = JankWatchRequest.class,
         handler = JankWatchCommand.class,
-        description = "监视所有进程的出现与消失（差分流，长跑）"
+        description = JankTexts.ROUTE_JANK_WATCH_DESC
     )
 })
 public class JankMain extends MainCommand<JankResult> {

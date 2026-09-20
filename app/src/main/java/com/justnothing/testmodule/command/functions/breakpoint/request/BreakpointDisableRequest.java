@@ -2,11 +2,12 @@ package com.justnothing.testmodule.command.functions.breakpoint.request;
 
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.functions.breakpoint.BreakpointTexts;
 import com.justnothing.testmodule.command.functions.breakpoint.response.BreakpointResult;
 
 public class BreakpointDisableRequest extends CommandRequest<BreakpointResult> {
 
-    @CmdParam(name = "id", position = 1, required = true, description = "断点ID")
+    @CmdParam(name = "id", position = 1, required = true, description = BreakpointTexts.PARAM_BREAKPOINT_DISABLE_ID_DESC)
     private String id;
 
     public BreakpointDisableRequest() {

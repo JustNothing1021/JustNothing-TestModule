@@ -21,19 +21,19 @@ import com.justnothing.testmodule.command.functions.nativecmd.response.NativeRes
 
 @Cmd(
     name = "native",
-    description = "查看和调试Native代码，分析JNI函数和库",
+    description = NativeTexts.CMD_NATIVE_DESC,
     version = CMD_NATIVE_VER
 )
 @CmdRoutes({
-    @CmdRoutes.Route(path = "list", request = NativeListRequest.class, handler = NativeQueryCommand.class, description = "列出已加载的native库"),
-    @CmdRoutes.Route(path = "info", request = NativeInfoRequest.class, handler = NativeQueryCommand.class, description = "查看native库的详细信息"),
-    @CmdRoutes.Route(path = "cli", request = NativeCliRequest.class, handler = NativeManageCommand.class, description = "列出类的native方法"),
-    @CmdRoutes.Route(path = "symbols", request = NativeSymbolsRequest.class, handler = NativeQueryCommand.class, description = "查看库的符号表"),
-    @CmdRoutes.Route(path = "memory", request = NativeMemoryRequest.class, handler = NativeQueryCommand.class, description = "查看native内存使用情况"),
-    @CmdRoutes.Route(path = "heap", request = NativeHeapRequest.class, handler = NativeQueryCommand.class, description = "查看native堆内存"),
-    @CmdRoutes.Route(path = "stack", request = NativeStackRequest.class, handler = NativeManageCommand.class, description = "查看线程的native栈"),
-    @CmdRoutes.Route(path = "maps", request = NativeMapsRequest.class, handler = NativeQueryCommand.class, description = "查看进程内存映射"),
-    @CmdRoutes.Route(path = "search", request = NativeSearchRequest.class, handler = NativeManageCommand.class, description = "搜索native库或函数")
+    @CmdRoutes.Route(path = "list", request = NativeListRequest.class, handler = NativeQueryCommand.class, description = NativeTexts.ROUTE_NATIVE_LIST_DESC),
+    @CmdRoutes.Route(path = "info", request = NativeInfoRequest.class, handler = NativeQueryCommand.class, description = NativeTexts.ROUTE_NATIVE_INFO_DESC),
+    @CmdRoutes.Route(path = "cli", request = NativeCliRequest.class, handler = NativeManageCommand.class, description = NativeTexts.ROUTE_NATIVE_CLI_DESC),
+    @CmdRoutes.Route(path = "symbols", request = NativeSymbolsRequest.class, handler = NativeQueryCommand.class, description = NativeTexts.ROUTE_NATIVE_SYMBOLS_DESC),
+    @CmdRoutes.Route(path = "memory", request = NativeMemoryRequest.class, handler = NativeQueryCommand.class, description = NativeTexts.ROUTE_NATIVE_MEMORY_DESC),
+    @CmdRoutes.Route(path = "heap", request = NativeHeapRequest.class, handler = NativeQueryCommand.class, description = NativeTexts.ROUTE_NATIVE_HEAP_DESC),
+    @CmdRoutes.Route(path = "stack", request = NativeStackRequest.class, handler = NativeManageCommand.class, description = NativeTexts.ROUTE_NATIVE_STACK_DESC),
+    @CmdRoutes.Route(path = "maps", request = NativeMapsRequest.class, handler = NativeQueryCommand.class, description = NativeTexts.ROUTE_NATIVE_MAPS_DESC),
+    @CmdRoutes.Route(path = "search", request = NativeSearchRequest.class, handler = NativeManageCommand.class, description = NativeTexts.ROUTE_NATIVE_SEARCH_DESC)
 })
 public class NativeMain extends MainCommand<NativeResult> {
 

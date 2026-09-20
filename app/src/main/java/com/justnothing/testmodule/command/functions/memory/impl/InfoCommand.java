@@ -6,6 +6,7 @@ import android.os.Debug;
 
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
 import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.functions.memory.MemoryTexts;
 import com.justnothing.testmodule.command.functions.memory.request.MemoryInfoRequest;
 import com.justnothing.testmodule.command.functions.memory.response.MemoryInfoResult;
 import com.justnothing.testmodule.command.functions.memory.util.MemoryUtils;
@@ -13,18 +14,14 @@ import com.justnothing.testmodule.command.functions.memory.util.MemoryUtils;
 import java.util.Locale;
 
 @SubCommandInfo(
-    description = "显示详细的内存使用情况, 包括Java堆、原生堆、进程内存等",
+    description = MemoryTexts.SUB_MEMORY_INFO_DESC,
     usage = "memory info [options]",
     examples = {
         "memory info",
         "memory info -h",
         "memory info --detailed"
     },
-    optionsDesc = """
-            选项:
-              -h, --heap       只显示堆内存信息
-              -d, --detailed   显示详细内存信息 (默认)
-            """
+    optionsDesc = MemoryTexts.SUB_MEMORY_INFO_OPTIONS
 )
 public class InfoCommand extends AbstractMemoryCommand<MemoryInfoRequest, MemoryInfoResult> {
 

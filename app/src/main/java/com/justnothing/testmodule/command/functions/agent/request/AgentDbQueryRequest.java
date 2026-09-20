@@ -4,20 +4,21 @@ import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.functions.agent.AgentTexts;
 import com.justnothing.testmodule.command.functions.agent.response.DbQueryResult;
 
 public class AgentDbQueryRequest extends CommandRequest<DbQueryResult> {
     @Expose @SerializedName("packageName")
-    @CmdParam(name = "pkg", position = 1, description = "目标应用包名")
+    @CmdParam(name = "pkg", position = 1, description = AgentTexts.PARAM_AGENT_DB_QUERY_PKG_DESC)
     private String packageName;
     @Expose @SerializedName("dbName")
-    @CmdParam(name = "db", position = 2, description = "数据库名称")
+    @CmdParam(name = "db", position = 2, description = AgentTexts.PARAM_AGENT_DB_QUERY_DB_DESC)
     private String dbName;
     @Expose @SerializedName("sql")
-    @CmdParam(name = "sql", position = 3, description = "SQL 查询语句")
+    @CmdParam(name = "sql", position = 3, description = AgentTexts.PARAM_AGENT_DB_QUERY_SQL_DESC)
     private String sql;
     @Expose @SerializedName("limit")
-    @CmdParam(name = "limit", required = false, description = "结果行数限制")
+    @CmdParam(name = "limit", required = false, description = AgentTexts.PARAM_AGENT_DB_QUERY_LIMIT_DESC)
     private int limit;
 
     public AgentDbQueryRequest() {}

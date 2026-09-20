@@ -13,7 +13,7 @@
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            app:title="构造函数"
+            app:title="@string/analysis_constructors_label"
             app:navigationIcon="?attr/homeAsUpIndicator" />
 
     </com.google.android.material.appbar.AppBarLayout>
@@ -27,67 +27,64 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:padding="@dimen/spacing_16">
 
-            <androidx.cardview.widget.CardView
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.App.Card"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp">
+                android:layout_height="wrap_content">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="@dimen/spacing_16">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/analysis_constructor_info_title"
-                        android:textAppearance="?attr/textAppearanceTitleMedium"
-                        android:textStyle="bold" />
+                        android:textAppearance="@style/TextAppearance.App.Title.Bold" />
 
                     <TextView
                         android:id="@+id/tv_class_name"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
+                        android:layout_marginTop="@dimen/spacing_12"
                         android:textAppearance="?attr/textAppearanceBodyMedium" />
 
                     <TextView
                         android:id="@+id/tv_modifiers"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
+                        android:layout_marginTop="@dimen/spacing_4"
                         android:textColor="@color/blue"
-                        android:textSize="12sp" />
+                        android:textAppearance="@style/TextAppearance.App.Label" />
 
                     <TextView
                         android:id="@+id/tv_signature"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
+                        android:layout_marginTop="@dimen/spacing_8"
                         android:textAppearance="?attr/textAppearanceBodyMedium"
                         android:fontFamily="monospace" />
 
                 </LinearLayout>
 
-            </androidx.cardview.widget.CardView>
+            </com.google.android.material.card.MaterialCardView>
 
-            <androidx.cardview.widget.CardView
+            <com.google.android.material.card.MaterialCardView
                 android:id="@+id/card_params"
+                style="@style/Widget.App.Card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp">
+                android:layout_marginTop="@dimen/spacing_16">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="@dimen/spacing_16">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -100,8 +97,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="@string/analysis_invoke_params_title"
-                            android:textAppearance="?attr/textAppearanceTitleMedium"
-                            android:textStyle="bold" />
+                            android:textAppearance="@style/TextAppearance.App.Title.Bold" />
 
                         <com.google.android.material.switchmaterial.SwitchMaterial
                             android:id="@+id/switch_free_mode"
@@ -115,23 +111,23 @@
                         android:id="@+id/tv_no_params"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
+                        android:layout_marginTop="@dimen/spacing_12"
                         android:text="@string/analysis_constructor_no_params_hint"
-                        android:textColor="@android:color/darker_gray"
+                        android:textColor="?attr/colorOnSurfaceVariant"
                         android:visibility="gone" />
 
                     <LinearLayout
                         android:id="@+id/layout_params"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
+                        android:layout_marginTop="@dimen/spacing_12"
                         android:orientation="vertical" />
 
                     <ImageButton
                         android:id="@+id/btn_add_param"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
+                        android:layout_marginTop="@dimen/spacing_8"
                         android:layout_gravity="center"
                         android:src="@android:drawable/ic_input_add"
                         android:background="?attr/selectableItemBackgroundBorderless"
@@ -140,69 +136,67 @@
 
                 </LinearLayout>
 
-            </androidx.cardview.widget.CardView>
+            </com.google.android.material.card.MaterialCardView>
 
             <Button
                 android:id="@+id/btn_invoke"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="@dimen/spacing_16"
                 android:text="@string/analysis_construct" />
 
-            <androidx.cardview.widget.CardView
+            <com.google.android.material.card.MaterialCardView
                 android:id="@+id/card_result"
+                style="@style/Widget.App.Card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:visibility="gone"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp">
+                android:layout_marginTop="@dimen/spacing_16"
+                android:visibility="gone">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="@dimen/spacing_16">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/analysis_invoke_result_title"
-                        android:textAppearance="?attr/textAppearanceTitleMedium"
-                        android:textStyle="bold" />
+                        android:textAppearance="@style/TextAppearance.App.Title.Bold" />
 
                     <TextView
                         android:id="@+id/tv_result"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
+                        android:layout_marginTop="@dimen/spacing_12"
                         android:textAppearance="?attr/textAppearanceBodyMedium" />
 
                     <TextView
                         android:id="@+id/tv_result_type"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
+                        android:layout_marginTop="@dimen/spacing_8"
                         android:textAppearance="?attr/textAppearanceBodySmall" />
 
                     <TextView
                         android:id="@+id/tv_result_hash"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
+                        android:layout_marginTop="@dimen/spacing_4"
                         android:textAppearance="?attr/textAppearanceBodySmall"
-                        android:textColor="@android:color/darker_gray" />
+                        android:textColor="?attr/colorOnSurfaceVariant" />
 
                 </LinearLayout>
 
-            </androidx.cardview.widget.CardView>
+            </com.google.android.material.card.MaterialCardView>
 
             <ProgressBar
                 android:id="@+id/progress_bar"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="@dimen/spacing_16"
                 android:visibility="gone" />
 
         </LinearLayout>

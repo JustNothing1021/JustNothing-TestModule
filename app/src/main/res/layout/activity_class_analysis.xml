@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- 设计系统 token：间距 @dimen/spacing_*、文字 @style/TextAppearance.App.*、卡片 @style/Widget.App.Card。 -->
 <androidx.coordinatorlayout.widget.CoordinatorLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -34,7 +35,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:padding="@dimen/spacing_16">
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
@@ -56,23 +57,22 @@
                     android:id="@+id/btn_query"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="@dimen/spacing_8"
                     android:text="@string/analysis_query_class" />
 
                 <LinearLayout
                     android:id="@+id/layout_result"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
+                    android:layout_marginTop="@dimen/spacing_16"
                     android:orientation="vertical"
                     android:visibility="gone">
 
-                    <androidx.cardview.widget.CardView
+                    <com.google.android.material.card.MaterialCardView
                         android:id="@+id/card_class_info"
+                        style="@style/Widget.App.Card"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        app:cardCornerRadius="12dp"
-                        app:cardElevation="2dp"
                         android:foreground="?attr/selectableItemBackground"
                         android:clickable="true"
                         android:focusable="true">
@@ -81,7 +81,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:padding="16dp">
+                            android:padding="@dimen/spacing_16">
 
                             <LinearLayout
                                 android:layout_width="match_parent"
@@ -94,20 +94,19 @@
                                     android:layout_height="wrap_content"
                                     android:layout_weight="1"
                                     android:text="@string/analysis_class_info"
-                                    android:textAppearance="?attr/textAppearanceTitleMedium"
-                                    android:textStyle="bold" />
+                                    android:textAppearance="@style/TextAppearance.App.Title" />
 
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="@string/analysis_click_to_view_hierarchy"
                                     android:textAppearance="?attr/textAppearanceLabelSmall"
-                                    android:textColor="@android:color/darker_gray" />
+                                    android:textColor="?attr/colorOnSurfaceVariant" />
 
                                 <ImageView
                                     android:layout_width="20dp"
                                     android:layout_height="20dp"
-                                    android:layout_marginStart="4dp"
+                                    android:layout_marginStart="@dimen/spacing_4"
                                     android:src="@drawable/ic_graph"
                                     android:contentDescription="@string/analysis_class_hierarchy" />
 
@@ -116,26 +115,25 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="12dp"
+                                android:layout_marginTop="@dimen/spacing_12"
                                 android:text="@string/analysis_class_name"
                                 android:textAppearance="?attr/textAppearanceLabelSmall"
-                                android:textColor="@android:color/darker_gray" />
+                                android:textColor="?attr/colorOnSurfaceVariant" />
 
                             <TextView
                                 android:id="@+id/tv_class_name"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:textAppearance="?attr/textAppearanceBodyLarge"
-                                android:textStyle="bold"
+                                android:textAppearance="@style/TextAppearance.App.Title"
                                 android:textColor="@color/blue" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="12dp"
+                                android:layout_marginTop="@dimen/spacing_12"
                                 android:text="@string/analysis_access_modifiers"
                                 android:textAppearance="?attr/textAppearanceLabelSmall"
-                                android:textColor="@android:color/darker_gray" />
+                                android:textColor="?attr/colorOnSurfaceVariant" />
 
                             <TextView
                                 android:id="@+id/tv_modifiers"
@@ -146,10 +144,10 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="12dp"
+                                android:layout_marginTop="@dimen/spacing_12"
                                 android:text="@string/analysis_super_class"
                                 android:textAppearance="?attr/textAppearanceLabelSmall"
-                                android:textColor="@android:color/darker_gray" />
+                                android:textColor="?attr/colorOnSurfaceVariant" />
 
                             <TextView
                                 android:id="@+id/tv_super_class"
@@ -160,10 +158,10 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="12dp"
+                                android:layout_marginTop="@dimen/spacing_12"
                                 android:text="@string/analysis_implemented_interfaces"
                                 android:textAppearance="?attr/textAppearanceLabelSmall"
-                                android:textColor="@android:color/darker_gray" />
+                                android:textColor="?attr/colorOnSurfaceVariant" />
 
                             <TextView
                                 android:id="@+id/tv_interfaces"
@@ -173,15 +171,15 @@
 
                         </LinearLayout>
 
-                    </androidx.cardview.widget.CardView>
+                    </com.google.android.material.card.MaterialCardView>
 
                     <LinearLayout
                         android:id="@+id/header_constructors"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
+                        android:layout_marginTop="@dimen/spacing_16"
                         android:orientation="horizontal"
-                        android:padding="12dp"
+                        android:padding="@dimen/spacing_12"
                         android:gravity="center_vertical"
                         android:background="?attr/selectableItemBackground"
                         android:clickable="true"
@@ -193,8 +191,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="@string/analysis_constructors_label"
-                            android:textAppearance="?attr/textAppearanceTitleMedium"
-                            android:textStyle="bold" />
+                            android:textAppearance="@style/TextAppearance.App.Title" />
 
                         <ImageView
                             android:id="@+id/iv_constructors_expand"
@@ -216,9 +213,9 @@
                         android:id="@+id/header_methods"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
+                        android:layout_marginTop="@dimen/spacing_8"
                         android:orientation="horizontal"
-                        android:padding="12dp"
+                        android:padding="@dimen/spacing_12"
                         android:gravity="center_vertical"
                         android:background="?attr/selectableItemBackground"
                         android:clickable="true"
@@ -230,8 +227,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="@string/analysis_methods"
-                            android:textAppearance="?attr/textAppearanceTitleMedium"
-                            android:textStyle="bold" />
+                            android:textAppearance="@style/TextAppearance.App.Title" />
 
                         <ImageView
                             android:id="@+id/iv_methods_expand"
@@ -253,9 +249,9 @@
                         android:id="@+id/header_fields"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
+                        android:layout_marginTop="@dimen/spacing_8"
                         android:orientation="horizontal"
-                        android:padding="12dp"
+                        android:padding="@dimen/spacing_12"
                         android:gravity="center_vertical"
                         android:background="?attr/selectableItemBackground"
                         android:clickable="true"
@@ -267,8 +263,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="@string/analysis_fields_label"
-                            android:textAppearance="?attr/textAppearanceTitleMedium"
-                            android:textStyle="bold" />
+                            android:textAppearance="@style/TextAppearance.App.Title" />
 
                         <ImageView
                             android:id="@+id/iv_fields_expand"
@@ -308,7 +303,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="@dimen/spacing_16"
                 android:text="@string/analysis_loading"
                 android:textAppearance="?attr/textAppearanceBodyMedium" />
 

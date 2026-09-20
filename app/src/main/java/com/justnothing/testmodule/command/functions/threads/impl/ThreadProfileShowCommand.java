@@ -3,12 +3,13 @@ package com.justnothing.testmodule.command.functions.threads.impl;
 import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
 import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.functions.threads.ThreadsTexts;
 import com.justnothing.testmodule.command.functions.threads.util.ProfileManager;
 import com.justnothing.testmodule.command.functions.threads.request.ThreadProfileShowRequest;
 import com.justnothing.testmodule.command.functions.threads.response.ThreadProfileShowResult;
 
 @SubCommandInfo(
-    description = "显示性能分析结果",
+    description = ThreadsTexts.SUB_THREADS_PROFILE_SHOW_DESC,
     usage = "threads profile show",
     examples = {"threads profile show"}
 )

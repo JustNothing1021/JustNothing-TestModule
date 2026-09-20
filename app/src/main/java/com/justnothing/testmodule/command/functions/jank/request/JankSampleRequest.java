@@ -3,6 +3,7 @@ package com.justnothing.testmodule.command.functions.jank.request;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.functions.jank.response.JankResult;
+import com.justnothing.testmodule.command.functions.jank.JankTexts;
 
 /**
  * {@code jank sample} 的参数。
@@ -16,7 +17,7 @@ public class JankSampleRequest extends CommandRequest<JankResult> {
         position = 1,
         required = false,
         defaultValue = "20",
-        description = "采样多少秒"
+        description = JankTexts.PARAM_JANK_SAMPLE_DURATION_DESC
     )
     private int duration = 20;
 
@@ -25,7 +26,7 @@ public class JankSampleRequest extends CommandRequest<JankResult> {
         aliases = {"-i", "--interval"},
         required = false,
         defaultValue = "1000",
-        description = "采样间隔（毫秒）；低于 500ms 时采集开销会明显干扰结果"
+        description = JankTexts.PARAM_JANK_SAMPLE_INTERVAL_DESC
     )
     private int interval = 1000;
 
@@ -34,7 +35,7 @@ public class JankSampleRequest extends CommandRequest<JankResult> {
         aliases = {"-n", "--top"},
         required = false,
         defaultValue = "5",
-        description = "CPU TOP 榜单长度"
+        description = JankTexts.PARAM_JANK_SAMPLE_TOP_DESC
     )
     private int top = 5;
 

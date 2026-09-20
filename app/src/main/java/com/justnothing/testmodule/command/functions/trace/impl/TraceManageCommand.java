@@ -7,9 +7,10 @@ import com.justnothing.testmodule.command.functions.trace.request.TraceAddReques
 import com.justnothing.testmodule.command.functions.trace.request.TraceStopRequest;
 import com.justnothing.testmodule.command.functions.trace.request.TraceClearRequest;
 import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.functions.trace.TraceTexts;
 
 @SubCommandInfo(
-    description = "Trace 管理操作 - 添加/停止/清除",
+    description = TraceTexts.SUB_TRACE_MANAGE_DESC,
     examples = {
         "trace add <class> <method> [sig]     添加跟踪任务",
         "trace stop <id>                    停止指定任务",

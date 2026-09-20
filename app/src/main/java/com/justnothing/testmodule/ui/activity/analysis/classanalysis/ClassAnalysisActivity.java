@@ -4,21 +4,18 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
-import android.widget.Button;
-import android.widget.ProgressBar;
-import android.widget.TextView;
+import android.widget.ImageView;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.material.textfield.TextInputEditText;
 import com.justnothing.testmodule.R;
 import com.justnothing.testmodule.command.functions.classcmd.model.ClassInfo;
 import com.justnothing.testmodule.command.functions.classcmd.model.FieldInfo;
 import com.justnothing.testmodule.command.functions.classcmd.model.MethodInfo;
+import com.justnothing.testmodule.databinding.ActivityClassAnalysisBinding;
+import com.justnothing.testmodule.ui.activity.BaseActivity;
 import com.justnothing.testmodule.ui.adapter.analysis.ConstructorAdapter;
 import com.justnothing.testmodule.ui.adapter.analysis.FieldAdapter;
 import com.justnothing.testmodule.ui.adapter.analysis.MethodAdapter;
@@ -42,29 +39,11 @@ import java.util.Set;
  * </ul>
  * </p>
  */
-public class ClassAnalysisActivity extends AppCompatActivity {
+public class ClassAnalysisActivity extends BaseActivity {
     
+    private ActivityClassAnalysisBinding binding;
     private ClassQueryViewModel viewModel;
     private ClassInfo currentClassInfo;
-    
-    private TextInputEditText etClassName;
-    private Button btnQuery;
-    private View layoutResult;
-    private View layoutLoading;
-    private View layoutEmpty;
-    
-    private TextView tvClassName;
-    private TextView tvModifiers;
-    private TextView tvSuperClass;
-    private TextView tvInterfaces;
-    private View cardClassInfo;
-    
-    private View headerConstructors;
-    private View headerMethods;
-    private View headerFields;
-    private RecyclerView rvConstructors;
-    private RecyclerView rvMethods;
-    private RecyclerView rvFields;
     
     private boolean constructorsExpanded = false;
     private boolean methodsExpanded = false;
@@ -73,7 +52,8 @@ public class ClassAnalysisActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_class_analysis);
+        binding = ActivityClassAnalysisBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
         
         initViews();
         initViewModel();
@@ -81,30 +61,9 @@ public class ClassAnalysisActivity extends AppCompatActivity {
     }
     
     private void initViews() {
-        etClassName = findViewById(R.id.et_class_name);
-        btnQuery = findViewById(R.id.btn_query);
-        ProgressBar progressBar = findViewById(R.id.progress_bar);
-        layoutResult = findViewById(R.id.layout_result);
-        layoutLoading = findViewById(R.id.layout_loading);
-        layoutEmpty = findViewById(R.id.layout_empty);
-        
-        tvClassName = findViewById(R.id.tv_class_name);
-        tvModifiers = findViewById(R.id.tv_modifiers);
-        tvSuperClass = findViewById(R.id.tv_super_class);
-        tvInterfaces = findViewById(R.id.tv_interfaces);
-        cardClassInfo = findViewById(R.id.card_class_info);
-        
-        headerConstructors = findViewById(R.id.header_constructors);
-        headerMethods = findViewById(R.id.header_methods);
-        headerFields = findViewById(R.id.header_fields);
-        
-        rvConstructors = findViewById(R.id.rv_constructors);
-        rvMethods = findViewById(R.id.rv_methods);
-        rvFields = findViewById(R.id.rv_fields);
-        
-        rvConstructors.setLayoutManager(new LinearLayoutManager(this));
-        rvMethods.setLayoutManager(new LinearLayoutManager(this));
-        rvFields.setLayoutManager(new LinearLayoutManager(this));
+        binding.rvConstructors.setLayoutManager(new LinearLayoutManager(this));
+        binding.rvMethods.setLayoutManager(new LinearLayoutManager(this));
+        binding.rvFields.setLayoutManager(new LinearLayoutManager(this));
         
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
@@ -117,47 +76,47 @@ public class ClassAnalysisActivity extends AppCompatActivity {
         
         viewModel.isLoading().observe(this, isLoading -> {
             if (isLoading) {
-                layoutLoading.setVisibility(View.VISIBLE);
-                layoutResult.setVisibility(View.GONE);
-                layoutEmpty.setVisibility(View.GONE);
+                binding.layoutLoading.setVisibility(View.VISIBLE);
+                binding.layoutResult.setVisibility(View.GONE);
+                binding.layoutEmpty.setVisibility(View.GONE);
             }
-            btnQuery.setEnabled(!isLoading);
+            binding.btnQuery.setEnabled(!isLoading);
         });
         
         viewModel.getClassInfo().observe(this, this::displayClassInfo);
         
         viewModel.getError().observe(this, error -> {
             if (error != null && !error.isEmpty()) {
-                layoutLoading.setVisibility(View.GONE);
-                layoutResult.setVisibility(View.GONE);
-                layoutEmpty.setVisibility(View.VISIBLE);
-                ((TextView) layoutEmpty.findViewById(R.id.tv_error_message)).setText(error);
+                binding.layoutLoading.setVisibility(View.GONE);
+                binding.layoutResult.setVisibility(View.GONE);
+                binding.layoutEmpty.setVisibility(View.VISIBLE);
+                binding.tvErrorMessage.setText(error);
             }
         });
     }
     
     private void setupListeners() {
-        btnQuery.setOnClickListener(v -> {
-            String className = etClassName.getText() != null ? etClassName.getText().toString().trim() : "";
+        binding.btnQuery.setOnClickListener(v -> {
+            String className = binding.etClassName.getText() != null ? binding.etClassName.getText().toString().trim() : "";
             if (!className.isEmpty()) {
                 viewModel.queryClassInfo(className);
             }
         });
         
-        etClassName.setOnEditorActionListener((v, actionId, event) -> {
-            btnQuery.performClick();
+        binding.etClassName.setOnEditorActionListener((v, actionId, event) -> {
+            binding.btnQuery.performClick();
             return true;
         });
         
-        cardClassInfo.setOnClickListener(v -> {
+        binding.cardClassInfo.setOnClickListener(v -> {
             if (currentClassInfo != null) {
                 openClassGraph();
             }
         });
         
-        headerConstructors.setOnClickListener(v -> toggleConstructors());
-        headerMethods.setOnClickListener(v -> toggleMethods());
-        headerFields.setOnClickListener(v -> toggleFields());
+        binding.headerConstructors.setOnClickListener(v -> toggleConstructors());
+        binding.headerMethods.setOnClickListener(v -> toggleMethods());
+        binding.headerFields.setOnClickListener(v -> toggleFields());
     }
     
     private void displayClassInfo(ClassInfo info) {
@@ -165,17 +124,17 @@ public class ClassAnalysisActivity extends AppCompatActivity {
         
         currentClassInfo = info;
         
-        layoutLoading.setVisibility(View.GONE);
-        layoutEmpty.setVisibility(View.GONE);
-        layoutResult.setVisibility(View.VISIBLE);
+        binding.layoutLoading.setVisibility(View.GONE);
+        binding.layoutEmpty.setVisibility(View.GONE);
+        binding.layoutResult.setVisibility(View.VISIBLE);
         
-        tvClassName.setText(info.getName());
-        tvModifiers.setText(info.getModifiersString());
-        tvSuperClass.setText(info.getSuperClass() != null ? info.getSuperClass() : getString(R.string.none));
-        tvInterfaces.setText(info.getInterfaces().isEmpty() ? getString(R.string.none) : TextUtils.join(", ", info.getInterfaces()));
+        binding.tvClassName.setText(info.getName());
+        binding.tvModifiers.setText(info.getModifiersString());
+        binding.tvSuperClass.setText(info.getSuperClass() != null ? info.getSuperClass() : getString(R.string.none));
+        binding.tvInterfaces.setText(info.getInterfaces().isEmpty() ? getString(R.string.none) : TextUtils.join(", ", info.getInterfaces()));
         
         List<MethodInfo> constructors = info.getConstructors();
-        ((TextView) findViewById(R.id.tv_constructors_title)).setText(
+        binding.tvConstructorsTitle.setText(
             getString(R.string.analysis_constructors_format, constructors.size()));
         
         List<MethodInfo> methods = sortMethodsByName(info.getMethods());
@@ -183,31 +142,31 @@ public class ClassAnalysisActivity extends AppCompatActivity {
         for (MethodInfo m : methods) {
             uniqueNames.add(m.getName());
         }
-        ((TextView) findViewById(R.id.tv_methods_title)).setText(
+        binding.tvMethodsTitle.setText(
             getString(R.string.analysis_methods_and_count_format, uniqueNames.size(), methods.size()));
         
         List<FieldInfo> fields = info.getFields();
-        ((TextView) findViewById(R.id.tv_fields_title)).setText(
+        binding.tvFieldsTitle.setText(
             getString(R.string.analysis_fields_format, fields.size()));
         
         ConstructorAdapter constructorAdapter = new ConstructorAdapter(constructors);
         constructorAdapter.setOnItemClickListener(this::openConstructorDetail);
-        rvConstructors.setAdapter(constructorAdapter);
+        binding.rvConstructors.setAdapter(constructorAdapter);
         
         MethodAdapter methodAdapter = new MethodAdapter(methods, info.getName());
         methodAdapter.setOnItemClickListener(this::openMethodDetail);
-        rvMethods.setAdapter(methodAdapter);
+        binding.rvMethods.setAdapter(methodAdapter);
         
         FieldAdapter fieldAdapter = new FieldAdapter(fields, info.getName());
         fieldAdapter.setOnItemClickListener(this::openFieldDetail);
-        rvFields.setAdapter(fieldAdapter);
+        binding.rvFields.setAdapter(fieldAdapter);
         
         constructorsExpanded = false;
         methodsExpanded = false;
         fieldsExpanded = false;
-        rvConstructors.setVisibility(View.GONE);
-        rvMethods.setVisibility(View.GONE);
-        rvFields.setVisibility(View.GONE);
+        binding.rvConstructors.setVisibility(View.GONE);
+        binding.rvMethods.setVisibility(View.GONE);
+        binding.rvFields.setVisibility(View.GONE);
     }
     
     private void openClassGraph() {
@@ -309,30 +268,30 @@ public class ClassAnalysisActivity extends AppCompatActivity {
     
     private void toggleConstructors() {
         constructorsExpanded = !constructorsExpanded;
-        rvConstructors.setVisibility(constructorsExpanded ? View.VISIBLE : View.GONE);
-        updateExpandIcon(headerConstructors, constructorsExpanded);
+        binding.rvConstructors.setVisibility(constructorsExpanded ? View.VISIBLE : View.GONE);
+        updateExpandIcon(binding.headerConstructors, constructorsExpanded);
     }
     
     private void toggleMethods() {
         methodsExpanded = !methodsExpanded;
-        rvMethods.setVisibility(methodsExpanded ? View.VISIBLE : View.GONE);
-        updateExpandIcon(headerMethods, methodsExpanded);
+        binding.rvMethods.setVisibility(methodsExpanded ? View.VISIBLE : View.GONE);
+        updateExpandIcon(binding.headerMethods, methodsExpanded);
     }
     
     private void toggleFields() {
         fieldsExpanded = !fieldsExpanded;
-        rvFields.setVisibility(fieldsExpanded ? View.VISIBLE : View.GONE);
-        updateExpandIcon(headerFields, fieldsExpanded);
+        binding.rvFields.setVisibility(fieldsExpanded ? View.VISIBLE : View.GONE);
+        updateExpandIcon(binding.headerFields, fieldsExpanded);
     }
     
     private void updateExpandIcon(View header, boolean expanded) {
-        android.widget.ImageView icon = null;
-        if (header == headerConstructors) {
-            icon = findViewById(R.id.iv_constructors_expand);
-        } else if (header == headerMethods) {
-            icon = findViewById(R.id.iv_methods_expand);
-        } else if (header == headerFields) {
-            icon = findViewById(R.id.iv_fields_expand);
+        ImageView icon = null;
+        if (header == binding.headerConstructors) {
+            icon = binding.ivConstructorsExpand;
+        } else if (header == binding.headerMethods) {
+            icon = binding.ivMethodsExpand;
+        } else if (header == binding.headerFields) {
+            icon = binding.ivFieldsExpand;
         }
         if (icon != null) {
             icon.setRotation(expanded ? 180 : 0);

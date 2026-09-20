@@ -3,6 +3,7 @@ package com.justnothing.testmodule.command.functions.breakpoint.impl;
 import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.functions.breakpoint.BreakpointTexts;
 import com.justnothing.testmodule.command.functions.breakpoint.request.BreakpointAddRequest;
 import com.justnothing.testmodule.command.functions.breakpoint.request.BreakpointEnableRequest;
 import com.justnothing.testmodule.command.functions.breakpoint.request.BreakpointDisableRequest;
@@ -12,7 +13,7 @@ import com.justnothing.testmodule.command.functions.breakpoint.response.Breakpoi
 import com.justnothing.testmodule.command.framework.output.Colors;
 
 @SubCommandInfo(
-    description = "断点管理命令（添加、启用、禁用、移除、清除）",
+    description = BreakpointTexts.SUB_BREAKPOINT_MANAGE_DESC,
     usage = "breakpoint <add|enable|disable|remove|clear> [args...]",
     examples = {
         "breakpoint add com.example.MyClass myMethod",

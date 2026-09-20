@@ -3,37 +3,25 @@ package com.justnothing.testmodule.ui.activity.analysis.hook;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.EditText;
-import android.widget.ImageButton;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 
-import com.google.android.material.checkbox.MaterialCheckBox;
-import com.google.android.material.textfield.TextInputEditText;
-import com.google.android.material.textfield.TextInputLayout;
 import com.justnothing.testmodule.R;
+import com.justnothing.testmodule.databinding.ActivityHookEditorBinding;
+import com.justnothing.testmodule.databinding.ItemHookParamInputBinding;
+import com.justnothing.testmodule.ui.activity.BaseActivity;
 import com.justnothing.testmodule.ui.viewmodel.analysis.HookAnalysisViewModel;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public class HookEditorActivity extends AppCompatActivity {
+public class HookEditorActivity extends BaseActivity {
 
-    private TextInputEditText etClassName, etMethodName;
-    private TextInputEditText etBeforeCode, etAfterCode, etReplaceCode;
-    private TextInputLayout layoutBeforeCode, layoutAfterCode, layoutReplaceCode;
-    private MaterialCheckBox cbBefore, cbAfter, cbReplace;
+    private ActivityHookEditorBinding binding;
 
-    private LinearLayout layoutParams;
-    private TextView tvNoParams;
-    private View btnAddParam;
-    private ImageView ivSignatureExpand;
     private boolean signatureExpanded = false;
 
     private List<ParamHolder> paramHolders = new ArrayList<>();
@@ -43,7 +31,8 @@ public class HookEditorActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_hook_editor);
+        binding = ActivityHookEditorBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
 
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
@@ -54,133 +43,106 @@ public class HookEditorActivity extends AppCompatActivity {
 
         viewModel.getError().observe(this, error -> {
             if (error != null && !error.isEmpty()) {
-                Toast.makeText(this, error, Toast.LENGTH_LONG).show();
+                showToast(error, Toast.LENGTH_LONG);
             }
         });
 
         viewModel.getActionResult().observe(this, result -> {
             if (result != null) {
                 if (result.isSuccessAction()) {
-                    Toast.makeText(this, R.string.analysis_hook_add_success, Toast.LENGTH_SHORT).show();
+                    showToast(R.string.analysis_hook_add_success);
                     finish();
                 } else {
-                    String msg = result.getMessage() != null ? result.getMessage() : "添加失败";
-                    Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
+                    String msg = result.getMessage() != null ? result.getMessage() : getString(R.string.analysis_hook_add_failed);
+                    showToast(msg, Toast.LENGTH_LONG);
                 }
             }
         });
     }
 
     private void initViews() {
-        etClassName = findViewById(R.id.et_class_name);
-        etMethodName = findViewById(R.id.et_method_name);
+        binding.layoutSignatureHeader.setOnClickListener(v -> toggleSignaturePanel());
 
-        cbBefore = findViewById(R.id.cb_before);
-        cbAfter = findViewById(R.id.cb_after);
-        cbReplace = findViewById(R.id.cb_replace);
+        binding.btnAddParam.setOnClickListener(v -> addParamInput());
 
-        layoutBeforeCode = findViewById(R.id.layout_before_code);
-        layoutAfterCode = findViewById(R.id.layout_after_code);
-        layoutReplaceCode = findViewById(R.id.layout_replace_code);
+        binding.cbBefore.setOnCheckedChangeListener((buttonView, isChecked) ->
+                binding.layoutBeforeCode.setVisibility(isChecked ? View.VISIBLE : View.GONE));
+        binding.cbAfter.setOnCheckedChangeListener((buttonView, isChecked) ->
+                binding.layoutAfterCode.setVisibility(isChecked ? View.VISIBLE : View.GONE));
+        binding.cbReplace.setOnCheckedChangeListener((buttonView, isChecked) ->
+                binding.layoutReplaceCode.setVisibility(isChecked ? View.VISIBLE : View.GONE));
 
-        etBeforeCode = findViewById(R.id.et_before_code);
-        etAfterCode = findViewById(R.id.et_after_code);
-        etReplaceCode = findViewById(R.id.et_replace_code);
-
-        layoutParams = findViewById(R.id.layout_params);
-        tvNoParams = findViewById(R.id.tv_no_params);
-        btnAddParam = findViewById(R.id.btn_add_param);
-        ivSignatureExpand = findViewById(R.id.iv_signature_expand);
-
-        findViewById(R.id.layout_signature_header).setOnClickListener(v -> toggleSignaturePanel());
-
-        btnAddParam.setOnClickListener(v -> addParamInput());
-
-        cbBefore.setOnCheckedChangeListener((buttonView, isChecked) ->
-                layoutBeforeCode.setVisibility(isChecked ? View.VISIBLE : View.GONE));
-        cbAfter.setOnCheckedChangeListener((buttonView, isChecked) ->
-                layoutAfterCode.setVisibility(isChecked ? View.VISIBLE : View.GONE));
-        cbReplace.setOnCheckedChangeListener((buttonView, isChecked) ->
-                layoutReplaceCode.setVisibility(isChecked ? View.VISIBLE : View.GONE));
-
-        findViewById(R.id.btn_submit).setOnClickListener(v -> submitHook());
+        binding.btnSubmit.setOnClickListener(v -> submitHook());
     }
 
     private void toggleSignaturePanel() {
         signatureExpanded = !signatureExpanded;
-        layoutParams.setVisibility(signatureExpanded ? View.VISIBLE : View.GONE);
-        btnAddParam.setVisibility(signatureExpanded ? View.VISIBLE : View.GONE);
-        ivSignatureExpand.setRotation(signatureExpanded ? 0 : 180);
+        binding.layoutParams.setVisibility(signatureExpanded ? View.VISIBLE : View.GONE);
+        binding.btnAddParam.setVisibility(signatureExpanded ? View.VISIBLE : View.GONE);
+        binding.ivSignatureExpand.setRotation(signatureExpanded ? 0 : 180);
     }
 
     private void addParamInput() {
         LayoutInflater inflater = LayoutInflater.from(this);
-        View paramView = inflater.inflate(R.layout.item_hook_param_input, layoutParams, false);
-
-        TextView tvLabel = paramView.findViewById(R.id.tv_param_label);
-        TextInputLayout tilType = paramView.findViewById(R.id.til_type);
-        EditText etType = paramView.findViewById(R.id.et_param_type);
-        ImageButton btnRemove = paramView.findViewById(R.id.btn_remove_param);
+        ItemHookParamInputBinding paramBinding = ItemHookParamInputBinding.inflate(inflater, binding.layoutParams, false);
 
         int index = paramHolders.size();
-        tvLabel.setText(getString(R.string.analysis_param_label_format, index, getString(R.string.analyze_invoke_free_mode_param)));
-        tilType.setVisibility(View.VISIBLE);
-        btnRemove.setVisibility(View.VISIBLE);
+        paramBinding.tvParamLabel.setText(getString(R.string.analysis_param_label_format, index, getString(R.string.analyze_invoke_free_mode_param)));
+        paramBinding.tilType.setVisibility(View.VISIBLE);
+        paramBinding.btnRemoveParam.setVisibility(View.VISIBLE);
 
         ParamHolder holder = new ParamHolder();
-        holder.rootView = paramView;
-        holder.etType = etType;
-        holder.btnRemove = btnRemove;
+        holder.binding = paramBinding;
 
-        btnRemove.setOnClickListener(v -> {
-            layoutParams.removeView(holder.rootView);
+        paramBinding.btnRemoveParam.setOnClickListener(v -> {
+            binding.layoutParams.removeView(holder.binding.getRoot());
             paramHolders.remove(holder);
             updateParamLabels();
         });
 
         paramHolders.add(holder);
-        layoutParams.addView(paramView, layoutParams.getChildCount() - 1);
+        binding.layoutParams.addView(paramBinding.getRoot(), binding.layoutParams.getChildCount() - 1);
 
-        tvNoParams.setVisibility(View.GONE);
+        binding.tvNoParams.setVisibility(View.GONE);
     }
 
     private void updateParamLabels() {
         for (int i = 0; i < paramHolders.size(); i++) {
             ParamHolder holder = paramHolders.get(i);
-            TextView tvLabel = holder.rootView.findViewById(R.id.tv_param_label);
+            TextView tvLabel = holder.binding.tvParamLabel;
             tvLabel.setText(getString(R.string.analysis_param_label_format, i, getString(R.string.analyze_invoke_free_mode_param)));
         }
 
         if (paramHolders.isEmpty()) {
-            tvNoParams.setVisibility(View.VISIBLE);
+            binding.tvNoParams.setVisibility(View.VISIBLE);
         }
     }
 
     private void submitHook() {
-        String className = Objects.requireNonNull(etClassName.getText()).toString().trim();
-        String methodName = Objects.requireNonNull(etMethodName.getText()).toString().trim();
+        String className = Objects.requireNonNull(binding.etClassName.getText()).toString().trim();
+        String methodName = Objects.requireNonNull(binding.etMethodName.getText()).toString().trim();
 
         if (className.isEmpty()) {
-            etClassName.setError("请输入类名");
+            binding.etClassName.setError(getString(R.string.analysis_hook_add_class_name_required));
             return;
         }
         if (methodName.isEmpty()) {
-            etMethodName.setError("请输入方法名");
+            binding.etMethodName.setError(getString(R.string.analysis_hook_add_method_name_required));
             return;
         }
 
-        boolean hasBefore = cbBefore.isChecked();
-        boolean hasAfter = cbAfter.isChecked();
-        boolean hasReplace = cbReplace.isChecked();
+        boolean hasBefore = binding.cbBefore.isChecked();
+        boolean hasAfter = binding.cbAfter.isChecked();
+        boolean hasReplace = binding.cbReplace.isChecked();
 
         if (!hasBefore && !hasAfter && !hasReplace) {
-            Toast.makeText(this, R.string.analysis_hook_add_need_one_phase, Toast.LENGTH_SHORT).show();
+            showToast(R.string.analysis_hook_add_need_one_phase);
             return;
         }
 
         StringBuilder signatureBuilder = new StringBuilder();
         for (int i = 0; i < paramHolders.size(); i++) {
-            String type = paramHolders.get(i).etType.getText().toString().trim();
+            String type = paramHolders.get(i).binding.etParamType.getText().toString().trim();
             if (!type.isEmpty()) {
                 if (signatureBuilder.length() > 0) signatureBuilder.append(", ");
                 signatureBuilder.append(type);
@@ -188,9 +150,9 @@ public class HookEditorActivity extends AppCompatActivity {
         }
         String signature = signatureBuilder.length() > 0 ? signatureBuilder.toString() : null;
 
-        String beforeCode = hasBefore ? Objects.requireNonNull(etBeforeCode.getText()).toString().trim() : null;
-        String afterCode = hasAfter ? Objects.requireNonNull(etAfterCode.getText()).toString().trim() : null;
-        String replaceCode = hasReplace ? Objects.requireNonNull(etReplaceCode.getText()).toString().trim() : null;
+        String beforeCode = hasBefore ? Objects.requireNonNull(binding.etBeforeCode.getText()).toString().trim() : null;
+        String afterCode = hasAfter ? Objects.requireNonNull(binding.etAfterCode.getText()).toString().trim() : null;
+        String replaceCode = hasReplace ? Objects.requireNonNull(binding.etReplaceCode.getText()).toString().trim() : null;
 
         viewModel.addHook(className, methodName, signature,
                 beforeCode, afterCode, replaceCode,
@@ -204,8 +166,6 @@ public class HookEditorActivity extends AppCompatActivity {
     }
 
     private static class ParamHolder {
-        View rootView;
-        EditText etType;
-        ImageButton btnRemove;
+        ItemHookParamInputBinding binding;
     }
 }

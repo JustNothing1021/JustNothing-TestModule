@@ -20,7 +20,7 @@ import com.justnothing.testmodule.command.functions.watch.impl.WatchOutputComman
 
 @Cmd(
     name = "watch",
-    description = "监控字段或方法的变化, 非阻塞执行.",
+    description = WatchTexts.CMD_WATCH_DESC,
     version = CMD_WATCH_VER
 )
 @CmdRoutes({
@@ -28,31 +28,31 @@ import com.justnothing.testmodule.command.functions.watch.impl.WatchOutputComman
         path = "add",
         request = WatchAddRequest.class,
         handler = WatchAddCommand.class,
-        description = "添加字段或方法监控任务"
+        description = WatchTexts.ROUTE_WATCH_ADD_DESC
     ),
     @CmdRoutes.Route(
         path = "list",
         request = WatchListRequest.class,
         handler = WatchListCommand.class,
-        description = "列出所有监控任务"
+        description = WatchTexts.ROUTE_WATCH_LIST_DESC
     ),
     @CmdRoutes.Route(
         path = "stop",
         request = WatchStopRequest.class,
         handler = WatchStopCommand.class,
-        description = "停止指定的监控任务"
+        description = WatchTexts.ROUTE_WATCH_STOP_DESC
     ),
     @CmdRoutes.Route(
         path = "clear",
         request = WatchClearRequest.class,
         handler = WatchClearCommand.class,
-        description = "清除所有监控任务"
+        description = WatchTexts.ROUTE_WATCH_CLEAR_DESC
     ),
     @CmdRoutes.Route(
         path = "output",
         request = WatchOutputRequest.class,
         handler = WatchOutputCommand.class,
-        description = "获取监控任务的输出"
+        description = WatchTexts.ROUTE_WATCH_OUTPUT_DESC
     )
 })
 public class WatchMain extends MainCommand<WatchCommandResult> {

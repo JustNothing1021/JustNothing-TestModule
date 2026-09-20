@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.classcmd.impl;
 
 import com.justnothing.testmodule.command.framework.error.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.functions.classcmd.ClassTexts;
 import com.justnothing.testmodule.command.functions.classcmd.model.ClassCommandContext;
 import com.justnothing.testmodule.command.functions.classcmd.request.AnalyzeClassRequest;
 import com.justnothing.testmodule.command.functions.classcmd.model.ClassInfo;
@@ -27,26 +28,13 @@ import java.util.Map;
 import java.util.Set;
 
 @SubCommandInfo(
-    description = "深度分析类的结构, 生成详细的字段和方法报告, 比如继承和实现性之类的",
+    description = ClassTexts.SUB_CLASS_ANALYZE_DESC,
     usage = "class analyze [options] <class_name>",
     examples = {
         "class analyze java.lang.String",
         "class analyze --fields-only java.util.HashMap"
     },
-    optionsDesc = """
-            选项:
-                -v, --verbose        显示详细信息
-                -f, --fields         只显示字段
-                -m, --methods        只显示方法
-                -c, --constructors   显示构造函数
-                -i, --interfaces     显示实现的接口
-                -s, --super          显示父类信息
-                --modifiers          显示修饰符信息
-                --hierarchy          显示继承层次
-                --stats              显示统计信息
-                --raw                原始输出 (JSON格式)
-                -a, --all            显示所有信息 (默认)
-            """
+    optionsDesc = ClassTexts.SUB_CLASS_ANALYZE_OPTIONS
 )
 public class ClassAnalyzeCommand extends AbstractClassCommand<AnalyzeClassRequest, AnalyzeReportResult> {
 

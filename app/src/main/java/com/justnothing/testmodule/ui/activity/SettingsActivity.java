@@ -1,88 +1,61 @@
 package com.justnothing.testmodule.ui.activity;
 
 import android.os.Bundle;
-import android.widget.Button;
 import android.widget.FrameLayout;
-import android.widget.RadioButton;
-import android.widget.RadioGroup;
 import android.widget.SeekBar;
-import android.widget.TextView;
-
-import androidx.appcompat.app.AppCompatActivity;
 
 import com.justnothing.testmodule.R;
-import com.justnothing.testmodule.utils.logging.Logger;
+import com.justnothing.testmodule.databinding.ActivitySettingsBinding;
 import com.justnothing.testmodule.utils.ui.ThemeSettings;
 import com.justnothing.testmodule.utils.ui.UISettings;
 
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class SettingsActivity extends AppCompatActivity {
+public class SettingsActivity extends BaseActivity {
 
-    private final Logger logger = Logger.getLoggerForName("SettingsActivity");
+    private ActivitySettingsBinding binding;
     private UISettings uiSettings;
     private ThemeSettings themeSettings;
-    private SeekBar scaleSeekBar;
-    private TextView scaleValueText;
-    private TextView defaultLabel;
-    private Button btnApply;
-    private Button btnReset;
-    private RadioGroup themeRadioGroup;
-    private RadioButton radioThemeLight;
-    private RadioButton radioThemeDark;
-    private RadioButton radioThemeSystem;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_settings);
+        binding = ActivitySettingsBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
 
         uiSettings = UISettings.getInstance(this);
         themeSettings = ThemeSettings.getInstance(this);
         logger.info("设置界面启动");
 
-        setupViews();
         loadCurrentSettings();
         setupListeners();
-    }
-
-    private void setupViews() {
-        scaleSeekBar = findViewById(R.id.seekbar_ui_scale);
-        scaleValueText = findViewById(R.id.text_scale_value);
-        defaultLabel = findViewById(R.id.text_default_label);
-        btnApply = findViewById(R.id.btn_apply_scale);
-        btnReset = findViewById(R.id.btn_reset_scale);
-        themeRadioGroup = findViewById(R.id.radiogroup_theme);
-        radioThemeLight = findViewById(R.id.radio_theme_light);
-        radioThemeDark = findViewById(R.id.radio_theme_dark);
-        radioThemeSystem = findViewById(R.id.radio_theme_system);
     }
 
     private void loadCurrentSettings() {
         float currentScale = uiSettings.getUIScale();
         int progress = (int) ((currentScale - uiSettings.getMinScale()) / 
                              (uiSettings.getMaxScale() - uiSettings.getMinScale()) * 100);
-        scaleSeekBar.setProgress(progress);
+        binding.seekbarUiScale.setProgress(progress);
         updateScaleText(currentScale);
         updateDefaultLabelPosition();
         
         int currentThemeMode = themeSettings.getThemeMode();
         switch (currentThemeMode) {
             case ThemeSettings.MODE_LIGHT:
-                radioThemeLight.setChecked(true);
+                binding.radioThemeLight.setChecked(true);
                 break;
             case ThemeSettings.MODE_DARK:
-                radioThemeDark.setChecked(true);
+                binding.radioThemeDark.setChecked(true);
                 break;
             case ThemeSettings.MODE_AUTO:
-                radioThemeSystem.setChecked(true);
+                binding.radioThemeSystem.setChecked(true);
                 break;
         }
     }
 
     private void setupListeners() {
-        scaleSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+        binding.seekbarUiScale.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 float scale = uiSettings.getMinScale() + 
@@ -99,7 +72,7 @@ public class SettingsActivity extends AppCompatActivity {
             }
         });
 
-        themeRadioGroup.setOnCheckedChangeListener((group, checkedId) -> {
+        binding.radiogroupTheme.setOnCheckedChangeListener((group, checkedId) -> {
             int newThemeMode;
             if (checkedId == R.id.radio_theme_light) {
                 newThemeMode = ThemeSettings.MODE_LIGHT;
@@ -114,8 +87,8 @@ public class SettingsActivity extends AppCompatActivity {
             recreate();
         });
 
-        btnApply.setOnClickListener(v -> {
-            int progress = scaleSeekBar.getProgress();
+        binding.btnApplyScale.setOnClickListener(v -> {
+            int progress = binding.seekbarUiScale.getProgress();
             float scale = uiSettings.getMinScale() + 
                          (progress / 100.0f) * (uiSettings.getMaxScale() - uiSettings.getMinScale());
             uiSettings.setUIScale(scale);
@@ -124,7 +97,7 @@ public class SettingsActivity extends AppCompatActivity {
             finish();
         });
 
-        btnReset.setOnClickListener(v -> {
+        binding.btnResetScale.setOnClickListener(v -> {
             uiSettings.resetToDefault();
             themeSettings.resetToDefault();
             loadCurrentSettings();
@@ -145,22 +118,22 @@ public class SettingsActivity extends AppCompatActivity {
         float defaultPosition = (defaultScale - minScale) / (maxScale - minScale);
         
         // 获取 SeekBar 的宽度，而不是屏幕宽度
-        int seekBarWidth = scaleSeekBar.getWidth();
+        int seekBarWidth = binding.seekbarUiScale.getWidth();
         
         // 如果 SeekBar 还没有测量完成，延迟计算
         if (seekBarWidth <= 0) {
-            scaleSeekBar.post(this::updateDefaultLabelPosition);
+            binding.seekbarUiScale.post(this::updateDefaultLabelPosition);
             return;
         }
         
-        AtomicInteger labelWidth = new AtomicInteger(defaultLabel.getWidth());
+        AtomicInteger labelWidth = new AtomicInteger(binding.textDefaultLabel.getWidth());
         
         // 计算 SeekBar 的可用宽度（减去左右边距）
-        int availableWidth = seekBarWidth - scaleSeekBar.getPaddingLeft() - scaleSeekBar.getPaddingRight();
+        int availableWidth = seekBarWidth - binding.seekbarUiScale.getPaddingLeft() - binding.seekbarUiScale.getPaddingRight();
         
         // 计算默认标识的位置（考虑 SeekBar 的 padding）
         // 注意：这里不需要乘以100，因为 defaultPosition 已经是0-1的比例
-        AtomicInteger margin = new AtomicInteger((int) (availableWidth * defaultPosition) + scaleSeekBar.getPaddingLeft());
+        AtomicInteger margin = new AtomicInteger((int) (availableWidth * defaultPosition) + binding.seekbarUiScale.getPaddingLeft());
         
         // 调试信息
         logger.info("默认比例: " + defaultScale + ", 位置比例: " + defaultPosition + 
@@ -168,16 +141,16 @@ public class SettingsActivity extends AppCompatActivity {
                    ", 左边距: " + margin);
         
         if (labelWidth.get() > 0) {
-            FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) defaultLabel.getLayoutParams();
+            FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) binding.textDefaultLabel.getLayoutParams();
             params.leftMargin = margin.get() - labelWidth.get() / 2;
-            defaultLabel.setLayoutParams(params);
+            binding.textDefaultLabel.setLayoutParams(params);
         } else {
-            defaultLabel.post(() -> {
-                labelWidth.set(defaultLabel.getWidth());
-                margin.set((int) (availableWidth * defaultPosition) + scaleSeekBar.getPaddingLeft());
-                FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) defaultLabel.getLayoutParams();
+            binding.textDefaultLabel.post(() -> {
+                labelWidth.set(binding.textDefaultLabel.getWidth());
+                margin.set((int) (availableWidth * defaultPosition) + binding.seekbarUiScale.getPaddingLeft());
+                FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) binding.textDefaultLabel.getLayoutParams();
                 params.leftMargin = margin.get() - labelWidth.get() / 2;
-                defaultLabel.setLayoutParams(params);
+                binding.textDefaultLabel.setLayoutParams(params);
                 
                 logger.info("延迟计算 - 标签宽度: " + labelWidth.get() + ", 最终左边距: " + params.leftMargin);
             });
@@ -185,6 +158,6 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private void updateScaleText(float scale) {
-        scaleValueText.setText(String.format(Locale.getDefault(), "%.1fx", scale));
+        binding.textScaleValue.setText(String.format(Locale.getDefault(), "%.1fx", scale));
     }
 }

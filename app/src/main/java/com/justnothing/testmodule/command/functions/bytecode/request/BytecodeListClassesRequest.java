@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.bytecode.request;
 
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.functions.bytecode.BytecodeTexts;
 import com.justnothing.testmodule.command.functions.bytecode.response.BytecodeResult;
 
 public class BytecodeListClassesRequest extends CommandRequest<BytecodeResult> {
@@ -10,7 +11,7 @@ public class BytecodeListClassesRequest extends CommandRequest<BytecodeResult> {
         name = "source",
         aliases = {"-s", "--source"},
         required = false,
-        description = "指定来源文件（apk/jar/dex/vdex/odex）；不填则列出本进程所有代码来源"
+        description = BytecodeTexts.PARAM_BYTECODE_LIST_CLASSES_SOURCE_DESC
     )
     private String source;
 
@@ -19,7 +20,7 @@ public class BytecodeListClassesRequest extends CommandRequest<BytecodeResult> {
         aliases = {"-l", "--limit"},
         required = false,
         defaultValue = "200",
-        description = "最多列出多少个类名"
+        description = BytecodeTexts.PARAM_BYTECODE_LIST_CLASSES_LIMIT_DESC
     )
     private int limit = 200;
 

@@ -1,6 +1,7 @@
 package com.justnothing.testmodule.command.functions.performance.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.functions.performance.PerformanceTexts;
 import com.justnothing.testmodule.command.functions.performance.response.SystraceResult;
 
 public class SystraceStartRequest extends PerformanceRequest<SystraceResult> {
@@ -9,7 +10,7 @@ public class SystraceStartRequest extends PerformanceRequest<SystraceResult> {
         name = "duration",
         position = 1,
         required = false,
-        description = "持续时间(ms)"
+        description = PerformanceTexts.PARAM_PERFORMANCE_SYSTRACE_START_DURATION_DESC
     )
     private Integer duration;
 
@@ -18,7 +19,7 @@ public class SystraceStartRequest extends PerformanceRequest<SystraceResult> {
         position = 2,
         required = false,
         varArgs = true,
-        description = "跟踪类别"
+        description = PerformanceTexts.PARAM_PERFORMANCE_SYSTRACE_START_CATEGORIES_DESC
     )
     private String categories;
 

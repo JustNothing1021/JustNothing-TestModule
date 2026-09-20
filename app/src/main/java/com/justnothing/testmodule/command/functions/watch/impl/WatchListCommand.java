@@ -6,9 +6,10 @@ import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.functions.watch.util.WatchManager;
 import com.justnothing.testmodule.command.functions.watch.request.WatchListRequest;
 import com.justnothing.testmodule.command.functions.watch.response.WatchListResult;
+import com.justnothing.testmodule.command.functions.watch.WatchTexts;
 
 @SubCommandInfo(
-    description = "列出所有监控任务",
+    description = WatchTexts.SUB_WATCH_LIST_DESC,
     usage = "watch list",
     examples = {"watch list"}
 )

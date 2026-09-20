@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.network.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
+import com.justnothing.testmodule.command.functions.network.NetworkTexts;
 import com.justnothing.testmodule.command.framework.model.CommandResult;
 
 public class NetworkListRequest extends CommandRequest<CommandResult> {
@@ -9,21 +10,21 @@ public class NetworkListRequest extends CommandRequest<CommandResult> {
     @CmdParam(
         name = "--method",
         required = false,
-        description = "按请求方法过滤 (GET/POST/...)"
+        description = NetworkTexts.PARAM_NETWORK_LIST_METHOD_DESC
     )
     private String method;
 
     @CmdParam(
         name = "--host",
         required = false,
-        description = "按主机过滤"
+        description = NetworkTexts.PARAM_NETWORK_LIST_HOST_DESC
     )
     private String host;
 
     @CmdParam(
         name = "--status",
         required = false,
-        description = "按状态码过滤 (200, 404, 5xx)"
+        description = NetworkTexts.PARAM_NETWORK_LIST_STATUS_DESC
     )
     private String statusFilter;
 
@@ -31,7 +32,7 @@ public class NetworkListRequest extends CommandRequest<CommandResult> {
         name = "--limit",
         required = false,
         defaultValue = "20",
-        description = "限制显示数量"
+        description = NetworkTexts.PARAM_NETWORK_LIST_LIMIT_DESC
     )
     private int limit = 20;
 

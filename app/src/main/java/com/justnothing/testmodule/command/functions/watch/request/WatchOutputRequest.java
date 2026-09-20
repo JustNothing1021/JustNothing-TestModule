@@ -3,12 +3,13 @@ package com.justnothing.testmodule.command.functions.watch.request;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.functions.watch.response.WatchOutputResult;
+import com.justnothing.testmodule.command.functions.watch.WatchTexts;
 
 public class WatchOutputRequest extends CommandRequest<WatchOutputResult> {
 
     @CmdParam(
         name = "target",
-        description = "目标 (ID或all)",
+        description = WatchTexts.PARAM_WATCH_OUTPUT_TARGET_DESC,
         required = false,
         position = 1
     )
@@ -16,7 +17,7 @@ public class WatchOutputRequest extends CommandRequest<WatchOutputResult> {
 
     @CmdParam(
         name = "limit",
-        description = "输出行数",
+        description = WatchTexts.PARAM_WATCH_OUTPUT_LIMIT_DESC,
         required = false,
         defaultValue = "20",
         position = 2

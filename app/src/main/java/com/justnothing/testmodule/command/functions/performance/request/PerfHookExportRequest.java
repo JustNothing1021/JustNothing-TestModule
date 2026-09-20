@@ -1,6 +1,7 @@
 package com.justnothing.testmodule.command.functions.performance.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.functions.performance.PerformanceTexts;
 import com.justnothing.testmodule.command.functions.performance.response.PerfHookResult;
 
 public class PerfHookExportRequest extends PerformanceRequest<PerfHookResult> {
@@ -9,7 +10,7 @@ public class PerfHookExportRequest extends PerformanceRequest<PerfHookResult> {
         name = "id",
         position = 1,
         required = true,
-        description = "任务 ID"
+        description = PerformanceTexts.PARAM_PERFORMANCE_HOOK_EXPORT_ID_DESC
     )
     private int taskId;
 
@@ -17,7 +18,7 @@ public class PerfHookExportRequest extends PerformanceRequest<PerfHookResult> {
         name = "filePath",
         position = 2,
         required = true,
-        description = "导出文件路径"
+        description = PerformanceTexts.PARAM_PERFORMANCE_HOOK_EXPORT_FILEPATH_DESC
     )
     private String filePath;
 

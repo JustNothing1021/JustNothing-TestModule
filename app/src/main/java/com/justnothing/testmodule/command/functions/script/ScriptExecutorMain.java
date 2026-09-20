@@ -16,25 +16,25 @@ import com.justnothing.testmodule.command.functions.script.response.ScriptResult
 
 @Cmd(
     name = "script",
-    description = "JustNothing 脚本解释器 - 执行/管理 Java 脚本"
+    description = ScriptTexts.CMD_SCRIPT_DESC
 )
 @CmdRoutes({
-    @CmdRoutes.Route(path = "create", request = ScriptCreateRequest.class, handler = ScriptCrudCommand.class, description = "创建新脚本"),
-    @CmdRoutes.Route(path = "list", request = ScriptListRequest.class, handler = ScriptManageCommand.class, description = "列出所有脚本"),
-    @CmdRoutes.Route(path = "vars", request = ScriptVarsRequest.class, handler = ScriptManageCommand.class, description = "列出脚本执行器变量"),
-    @CmdRoutes.Route(path = "show", request = ScriptShowRequest.class, handler = ScriptCrudCommand.class, description = "显示脚本内容"),
-    @CmdRoutes.Route(path = "delete", request = ScriptDeleteRequest.class, handler = ScriptCrudCommand.class, description = "删除脚本"),
-    @CmdRoutes.Route(path = "run", request = ScriptRunRequest.class, handler = ScriptExecCommand.class, description = "执行脚本"),
-    @CmdRoutes.Route(path = "import", request = ScriptImportRequest.class, handler = ScriptExecCommand.class, description = "导入脚本文件"),
-    @CmdRoutes.Route(path = "export", request = ScriptExportRequest.class, handler = ScriptExecCommand.class, description = "导出脚本文件"),
-    @CmdRoutes.Route(path = "manage", request = ScriptManageRequest.class, handler = ScriptManageCommand.class, description = "交互式脚本管理器"),
-    @CmdRoutes.Route(path = "interactive", request = ScriptInteractiveRequest.class, handler = ScriptExecCommand.class, description = "启动交互REPL执行器"),
-    @CmdRoutes.Route(path = "permission/grant", request = ScriptPermGrantRequest.class, handler = ScriptPermissionCommand.class, description = "授予权限"),
-    @CmdRoutes.Route(path = "permission/deny", request = ScriptPermDenyRequest.class, handler = ScriptPermissionCommand.class, description = "拒绝权限"),
-    @CmdRoutes.Route(path = "permission/preset", request = ScriptPermPresetRequest.class, handler = ScriptPermissionCommand.class, description = "应用权限预设"),
-    @CmdRoutes.Route(path = "permission/reset", request = ScriptPermResetRequest.class, handler = ScriptPermissionCommand.class, description = "重置权限配置"),
-    @CmdRoutes.Route(path = "permission/list", request = ScriptPermListRequest.class, handler = ScriptPermissionCommand.class, description = "列出所有权限类型"),
-    @CmdRoutes.Route(path = "permission/show-config", request = ScriptPermShowConfigRequest.class, handler = ScriptPermissionCommand.class, description = "显示当前权限配置"),
+    @CmdRoutes.Route(path = "create", request = ScriptCreateRequest.class, handler = ScriptCrudCommand.class, description = ScriptTexts.ROUTE_SCRIPT_CREATE_DESC),
+    @CmdRoutes.Route(path = "list", request = ScriptListRequest.class, handler = ScriptManageCommand.class, description = ScriptTexts.ROUTE_SCRIPT_LIST_DESC),
+    @CmdRoutes.Route(path = "vars", request = ScriptVarsRequest.class, handler = ScriptManageCommand.class, description = ScriptTexts.ROUTE_SCRIPT_VARS_DESC),
+    @CmdRoutes.Route(path = "show", request = ScriptShowRequest.class, handler = ScriptCrudCommand.class, description = ScriptTexts.ROUTE_SCRIPT_SHOW_DESC),
+    @CmdRoutes.Route(path = "delete", request = ScriptDeleteRequest.class, handler = ScriptCrudCommand.class, description = ScriptTexts.ROUTE_SCRIPT_DELETE_DESC),
+    @CmdRoutes.Route(path = "run", request = ScriptRunRequest.class, handler = ScriptExecCommand.class, description = ScriptTexts.ROUTE_SCRIPT_RUN_DESC),
+    @CmdRoutes.Route(path = "import", request = ScriptImportRequest.class, handler = ScriptExecCommand.class, description = ScriptTexts.ROUTE_SCRIPT_IMPORT_DESC),
+    @CmdRoutes.Route(path = "export", request = ScriptExportRequest.class, handler = ScriptExecCommand.class, description = ScriptTexts.ROUTE_SCRIPT_EXPORT_DESC),
+    @CmdRoutes.Route(path = "manage", request = ScriptManageRequest.class, handler = ScriptManageCommand.class, description = ScriptTexts.ROUTE_SCRIPT_MANAGE_DESC),
+    @CmdRoutes.Route(path = "interactive", request = ScriptInteractiveRequest.class, handler = ScriptExecCommand.class, description = ScriptTexts.ROUTE_SCRIPT_INTERACTIVE_DESC),
+    @CmdRoutes.Route(path = "permission/grant", request = ScriptPermGrantRequest.class, handler = ScriptPermissionCommand.class, description = ScriptTexts.ROUTE_SCRIPT_PERMISSION_GRANT_DESC),
+    @CmdRoutes.Route(path = "permission/deny", request = ScriptPermDenyRequest.class, handler = ScriptPermissionCommand.class, description = ScriptTexts.ROUTE_SCRIPT_PERMISSION_DENY_DESC),
+    @CmdRoutes.Route(path = "permission/preset", request = ScriptPermPresetRequest.class, handler = ScriptPermissionCommand.class, description = ScriptTexts.ROUTE_SCRIPT_PERMISSION_PRESET_DESC),
+    @CmdRoutes.Route(path = "permission/reset", request = ScriptPermResetRequest.class, handler = ScriptPermissionCommand.class, description = ScriptTexts.ROUTE_SCRIPT_PERMISSION_RESET_DESC),
+    @CmdRoutes.Route(path = "permission/list", request = ScriptPermListRequest.class, handler = ScriptPermissionCommand.class, description = ScriptTexts.ROUTE_SCRIPT_PERMISSION_LIST_DESC),
+    @CmdRoutes.Route(path = "permission/show-config", request = ScriptPermShowConfigRequest.class, handler = ScriptPermissionCommand.class, description = ScriptTexts.ROUTE_SCRIPT_PERMISSION_SHOW_CONFIG_DESC),
 })
 public class ScriptExecutorMain extends MainCommand<ScriptResult> {
 

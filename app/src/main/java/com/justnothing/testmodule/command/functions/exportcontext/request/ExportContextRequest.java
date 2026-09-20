@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.exportcontext.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
+import com.justnothing.testmodule.command.functions.exportcontext.ExportContextTexts;
 import com.justnothing.testmodule.command.functions.exportcontext.response.ExportContextResult;
 
 // key 必须等于服务端路由的完整路径。export-context 路由的 path 为空，
@@ -12,7 +13,7 @@ public class ExportContextRequest extends CommandRequest<ExportContextResult> {
         name = "prettyPrinting",
         aliases = {"-p", "--pretty-printing"},
         required = false,
-        description = "以表格格式输出 (默认为JSON原始数据)"
+        description = ExportContextTexts.PARAM_EXPORT_CONTEXT_PRETTY_PRINTING_DESC
     )
     private Boolean prettyPrinting = false;
 

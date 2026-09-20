@@ -3,6 +3,8 @@ package com.justnothing.testmodule.command.framework.model;
 import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
 import com.justnothing.testmodule.command.framework.error.IllegalCommandLineArgumentException;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
+import com.justnothing.testmodule.command.framework.i18n.CliTexts;
 import com.justnothing.testmodule.command.framework.utils.CommandExceptionHandler;
 
 public abstract class AbstractCommand<Req extends CommandRequest<?>, Res extends CommandResult> implements Command<Res> {
@@ -112,45 +114,48 @@ public abstract class AbstractCommand<Req extends CommandRequest<?>, Res extends
         if (info != null) {
             return generateHelpFromAnnotation(info);
         }
-        return "用法: " + commandName + " <args>\n" +
-               "输入 " + commandName + " --help 查看详细帮助";
+        return CliMessages.HELP_FALLBACK_USAGE.format(commandName, commandName);
     }
 
 
     public static String generateHelpFromAnnotation(SubCommandInfo info) {
         StringBuilder help = new StringBuilder();
-        
-        if (!info.usage().isEmpty()) {
-            help.append("用法: ").append(info.usage()).append("\n");
-        }
-        
-        if (!info.description().isEmpty()) {
-            help.append("\n\n").append(info.description());
+
+        // usage 多数是纯命令语法，resolve 通常原样返回；含中文时才需要拆成 id
+        String usage = CliTexts.resolve(info.usage());
+        if (!usage.isEmpty()) {
+            help.append(CliMessages.HELP_USAGE_INLINE.text()).append(usage).append("\n");
         }
 
-        
-        if (!info.optionsDesc().isEmpty()) {
+        String description = CliTexts.resolve(info.description());
+        if (!description.isEmpty()) {
+            help.append("\n\n").append(description);
+        }
+
+
+        String optionsDesc = CliTexts.resolve(info.optionsDesc());
+        if (!optionsDesc.isEmpty()) {
             if (help.length() > 0) {
                 help.append("\n\n");
             }
-            help.append(info.optionsDesc());
+            help.append(optionsDesc);
         }
 
 
         if (info.examples().length > 0) {
-            help.append("\n\n示例:");
+            help.append(CliMessages.HELP_INDENTED_EXAMPLES.text());
             for (String ex : info.examples()) {
                 help.append("\n  ").append(ex);
             }
         }
-        
+
         if (info.seeAlso().length > 0) {
-            help.append("\n\n相关命令:");
+            help.append(CliMessages.HELP_INDENTED_SEE_ALSO.text());
             for (String see : info.seeAlso()) {
                 help.append("\n  ").append(see);
             }
         }
-        
+
         return help.toString();
     }
 }

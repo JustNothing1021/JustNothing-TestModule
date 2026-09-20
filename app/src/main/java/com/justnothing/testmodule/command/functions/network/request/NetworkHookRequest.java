@@ -1,12 +1,13 @@
 package com.justnothing.testmodule.command.functions.network.request;
 
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
+import com.justnothing.testmodule.command.functions.network.NetworkTexts;
 import com.justnothing.testmodule.command.functions.network.response.NetworkResult;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 
 public class NetworkHookRequest extends CommandRequest<NetworkResult> {
 
-    @CmdParam(name = "subCommand", required = false, description = "子命令 (add/remove/list/clear)")
+    @CmdParam(name = "subCommand", required = false, description = NetworkTexts.PARAM_NETWORK_HOOK_SUBCOMMAND_DESC)
     private String subCommand;
 
     public String getSubCommand() { return subCommand; }

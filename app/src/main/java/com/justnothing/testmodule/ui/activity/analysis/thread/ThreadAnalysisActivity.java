@@ -4,27 +4,31 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Environment;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.graphics.Color;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import com.google.android.material.switchmaterial.SwitchMaterial;
-
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.ViewModelProvider;
 
-import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.color.MaterialColors;
 import com.justnothing.testmodule.R;
 import com.justnothing.testmodule.command.functions.threads.response.ThreadDeadlockResult;
 import com.justnothing.testmodule.command.functions.threads.response.ThreadDetail;
+import com.justnothing.testmodule.constants.FileDirectory;
+import com.justnothing.testmodule.databinding.ActivityThreadAnalysisBinding;
+import com.justnothing.testmodule.databinding.ItemThreadBinding;
+import com.justnothing.testmodule.databinding.ItemThreadGroupHeaderBinding;
+import com.justnothing.testmodule.ui.activity.BaseActivity;
 import com.justnothing.testmodule.ui.viewmodel.analysis.ThreadAnalysisViewModel;
 import com.justnothing.testmodule.utils.io.IOManager;
 
@@ -39,7 +43,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-public class ThreadAnalysisActivity extends AppCompatActivity {
+public class ThreadAnalysisActivity extends BaseActivity {
 
     private static final String[] STATE_ORDER = {
             "RUNNABLE", "BLOCKED", "WAITING", "TIMED_WAITING", "TERMINATED", "NEW"
@@ -50,13 +54,7 @@ public class ThreadAnalysisActivity extends AppCompatActivity {
     private static final int SORT_ID = 2;
 
     private ThreadAnalysisViewModel viewModel;
-
-    private SwitchMaterial switchAutoRefresh;
-    private TextView tvLastUpdateTime, tvTotalCount;
-    private TextInputEditText etSearch;
-    private LinearLayout layoutThreadGroups;
-    private TextView tvDeadlockResult, tvDeadlockDetail;
-    private View scrollDeadlockDetail;
+    private ActivityThreadAnalysisBinding binding;
 
     private String currentSearchText = "";
     private List<ThreadSnapshot.ThreadItem> allThreads = new ArrayList<>();
@@ -70,29 +68,19 @@ public class ThreadAnalysisActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_thread_analysis);
+        binding = ActivityThreadAnalysisBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
 
         initViews();
         initViewModel();
     }
 
     private void initViews() {
-        switchAutoRefresh = findViewById(R.id.switch_auto_refresh);
-        tvLastUpdateTime = findViewById(R.id.tv_last_update_time);
-        ((TextView) findViewById(R.id.tv_last_update_label)).setText(R.string.analysis_thread_last_update);
+        binding.tvLastUpdateLabel.setText(R.string.analysis_thread_last_update);
 
-        tvTotalCount = findViewById(R.id.tv_total_count);
+        binding.switchAutoRefresh.setOnCheckedChangeListener((buttonView, isChecked) -> viewModel.setAutoRefresh(isChecked));
 
-        etSearch = findViewById(R.id.et_search);
-        layoutThreadGroups = findViewById(R.id.layout_thread_groups);
-
-        tvDeadlockResult = findViewById(R.id.tv_deadlock_result);
-        tvDeadlockDetail = findViewById(R.id.tv_deadlock_detail);
-        scrollDeadlockDetail = findViewById(R.id.scroll_deadlock_detail);
-
-        switchAutoRefresh.setOnCheckedChangeListener((buttonView, isChecked) -> viewModel.setAutoRefresh(isChecked));
-
-        etSearch.addTextChangedListener(new TextWatcher() {
+        binding.etSearch.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
                 currentSearchText = s.toString().trim();
@@ -101,18 +89,18 @@ public class ThreadAnalysisActivity extends AppCompatActivity {
             @Override public void afterTextChanged(Editable s) {}
         });
 
-        findViewById(R.id.btn_refresh).setOnClickListener(v -> viewModel.queryThreadInfo(true));
-        findViewById(R.id.btn_export).setOnClickListener(v -> exportDump());
-        findViewById(R.id.btn_deadlock_detect).setOnClickListener(v -> showDeadlockConfirmDialog());
-        findViewById(R.id.btn_sort).setOnClickListener(v -> showSortDialog());
+        binding.btnRefresh.setOnClickListener(v -> viewModel.queryThreadInfo(true));
+        binding.btnExport.setOnClickListener(v -> exportDump());
+        binding.btnDeadlockDetect.setOnClickListener(v -> showDeadlockConfirmDialog());
+        binding.btnSort.setOnClickListener(v -> showSortDialog());
     }
 
     private void initViewModel() {
         viewModel = new ViewModelProvider(this).get(ThreadAnalysisViewModel.class);
 
-        switchAutoRefresh.setOnCheckedChangeListener(null);
-        switchAutoRefresh.setChecked(viewModel.isAutoRefresh().getValue() != null && viewModel.isAutoRefresh().getValue());
-        switchAutoRefresh.setOnCheckedChangeListener((buttonView, isChecked) -> viewModel.setAutoRefresh(isChecked));
+        binding.switchAutoRefresh.setOnCheckedChangeListener(null);
+        binding.switchAutoRefresh.setChecked(viewModel.isAutoRefresh().getValue() != null && viewModel.isAutoRefresh().getValue());
+        binding.switchAutoRefresh.setOnCheckedChangeListener((buttonView, isChecked) -> viewModel.setAutoRefresh(isChecked));
 
         viewModel.getThreadData().observe(this, snapshot -> {
             if (snapshot == null) return;
@@ -122,7 +110,7 @@ public class ThreadAnalysisActivity extends AppCompatActivity {
 
 
         viewModel.getLastUpdateTime().observe(this, time -> {
-            if (time != null) tvLastUpdateTime.setText(time);
+            if (time != null) binding.tvLastUpdateTime.setText(time);
         });
 
 
@@ -134,7 +122,7 @@ public class ThreadAnalysisActivity extends AppCompatActivity {
     }
 
     private void displayThreadSnapshot(ThreadSnapshot snapshot) {
-        tvTotalCount.setText(getString(R.string.analysis_thread_total_format, snapshot.totalCount()));
+        binding.tvTotalCount.setText(getString(R.string.analysis_thread_total_format, snapshot.totalCount()));
 
         allThreads = new ArrayList<>(snapshot.threads());
         groupExpandedMap.clear();
@@ -170,7 +158,7 @@ public class ThreadAnalysisActivity extends AppCompatActivity {
     }
 
     private void rebuildGroupList() {
-        layoutThreadGroups.removeAllViews();
+        binding.layoutThreadGroups.removeAllViews();
 
         List<ThreadSnapshot.ThreadItem> filtered = getFilteredThreads();
 
@@ -178,10 +166,10 @@ public class ThreadAnalysisActivity extends AppCompatActivity {
             TextView emptyTv = new TextView(this);
             emptyTv.setText(currentSearchText.isEmpty() ? getString(R.string.analysis_thread_empty) : getString(R.string.analysis_thread_search_empty));
             emptyTv.setTextAppearance(android.R.style.TextAppearance_Medium);
-            emptyTv.setTextColor(ContextCompat.getColor(this, android.R.color.darker_gray));
-            emptyTv.setGravity(android.view.Gravity.CENTER);
+            emptyTv.setTextColor(MaterialColors.getColor(emptyTv, com.google.android.material.R.attr.colorOnSurfaceVariant));
+            emptyTv.setGravity(Gravity.CENTER);
             emptyTv.setPadding(0, dpToPx(32), 0, dpToPx(32));
-            layoutThreadGroups.addView(emptyTv);
+            binding.layoutThreadGroups.addView(emptyTv);
             return;
         }
 
@@ -217,14 +205,16 @@ public class ThreadAnalysisActivity extends AppCompatActivity {
         return "OTHER";
     }
 
-    private int getStateColorRes(String state) {
-        if (state == null) return android.R.color.darker_gray;
+    private int getStateColor(String state) {
+        if (state == null) return MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant,
+                ContextCompat.getColor(this, R.color.gray));
         return switch (state) {
-            case "RUNNABLE" -> R.color.light_green;
-            case "BLOCKED" -> R.color.red;
-            case "WAITING" -> R.color.yellow;
-            case "TIMED_WAITING" -> R.color.magenta;
-            default -> android.R.color.darker_gray;
+            case "RUNNABLE" -> ContextCompat.getColor(this, R.color.light_green);
+            case "BLOCKED" -> ContextCompat.getColor(this, R.color.red);
+            case "WAITING" -> ContextCompat.getColor(this, R.color.yellow);
+            case "TIMED_WAITING" -> ContextCompat.getColor(this, R.color.magenta);
+            default -> MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant,
+                    ContextCompat.getColor(this, R.color.gray));
         };
     }
 
@@ -266,22 +256,20 @@ public class ThreadAnalysisActivity extends AppCompatActivity {
 
     private void buildGroupSection(String stateLabel, List<ThreadSnapshot.ThreadItem> threads, boolean expanded) {
         LayoutInflater inflater = LayoutInflater.from(this);
-        int colorRes = getStateColorRes(stateLabel);
-        int color = ContextCompat.getColor(this, colorRes);
+        int color = getStateColor(stateLabel);
 
-        LinearLayout headerLayout = (LinearLayout) inflater.inflate(
-                R.layout.item_thread_group_header, layoutThreadGroups, false);
+        ItemThreadGroupHeaderBinding headerBinding = ItemThreadGroupHeaderBinding.inflate(
+                inflater, binding.layoutThreadGroups, false);
+        LinearLayout headerLayout = headerBinding.getRoot();
 
-        View leftBar = headerLayout.findViewById(R.id.view_header_left_bar);
-        leftBar.setBackgroundColor(color);
+        headerBinding.viewHeaderLeftBar.setBackgroundColor(color);
 
-        ImageView ivExpand = headerLayout.findViewById(R.id.iv_group_expand);
+        ImageView ivExpand = headerBinding.ivGroupExpand;
         ivExpand.setImageResource(expanded ? R.drawable.ic_expand_more : R.drawable.ic_expand_more);
         ivExpand.setRotation(expanded ? 180f : 0f);
 
-        TextView tvTitle = headerLayout.findViewById(R.id.tv_group_title);
-        tvTitle.setText(getString(R.string.analysis_thread_group_format, stateLabel, threads.size()));
-        tvTitle.setTextColor(color);
+        headerBinding.tvGroupTitle.setText(getString(R.string.analysis_thread_group_format, stateLabel, threads.size()));
+        headerBinding.tvGroupTitle.setTextColor(color);
 
         LinearLayout contentLayout = new LinearLayout(this);
         contentLayout.setOrientation(LinearLayout.VERTICAL);
@@ -289,12 +277,11 @@ public class ThreadAnalysisActivity extends AppCompatActivity {
 
         for (int i = 0; i < threads.size(); i++) {
             ThreadSnapshot.ThreadItem item = threads.get(i);
-            View threadView = inflater.inflate(R.layout.item_thread, contentLayout, false);
+            ItemThreadBinding threadBinding = ItemThreadBinding.inflate(inflater, contentLayout, false);
 
-            View indicator = threadView.findViewById(R.id.view_state_indicator);
-            indicator.setBackgroundColor(ContextCompat.getColor(this, getStateColorRes(item.state())));
+            threadBinding.viewStateIndicator.setBackgroundColor(getStateColor(item.state()));
 
-            TextView nameTv = threadView.findViewById(R.id.tv_thread_name);
+            TextView nameTv = threadBinding.tvThreadName;
             nameTv.setText(item.name());
             nameTv.setTextColor(ContextCompat.getColor(this,
                     "BLOCKED".equals(item.state()) ? R.color.red :
@@ -302,10 +289,12 @@ public class ThreadAnalysisActivity extends AppCompatActivity {
                     "WAITING".equals(item.state()) ? R.color.yellow :
                     "TIMED_WAITING".equals(item.state()) ? R.color.magenta : R.color.cyan));
 
-            TextView infoTv = threadView.findViewById(R.id.tv_thread_info);
+            TextView infoTv = threadBinding.tvThreadInfo;
             String infoText = item.daemon() ? "D," + item.priority() : String.valueOf(item.priority());
             infoTv.setText(infoText);
             infoTv.setTextColor(getPriorityColor(item.priority(), item.state()));
+
+            View threadView = threadBinding.getRoot();
 
             final ThreadSnapshot.ThreadItem capturedItem = item;
             threadView.setOnClickListener(v -> {
@@ -322,8 +311,7 @@ public class ThreadAnalysisActivity extends AppCompatActivity {
                 ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
                 if (clipboard != null) {
                     clipboard.setPrimaryClip(ClipData.newPlainText("thread_info", text));
-                    android.widget.Toast.makeText(this, R.string.analysis_thread_copy_success,
-                            android.widget.Toast.LENGTH_SHORT).show();
+                    showToast(R.string.analysis_thread_copy_success);
                 }
                 return true;
             });
@@ -332,7 +320,7 @@ public class ThreadAnalysisActivity extends AppCompatActivity {
 
             if (i < threads.size() - 1) {
                 View divider = new View(this);
-                divider.setBackgroundColor(0x0AFFFFFF);
+                divider.setBackgroundColor(MaterialColors.getColor(divider, com.google.android.material.R.attr.colorOutlineVariant));
                 LinearLayout.LayoutParams divParams = new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT, 1);
                 divider.setLayoutParams(divParams);
@@ -347,23 +335,23 @@ public class ThreadAnalysisActivity extends AppCompatActivity {
             groupExpandedMap.put(stateLabel, !isExpanded);
         });
 
-        layoutThreadGroups.addView(headerLayout);
-        layoutThreadGroups.addView(contentLayout);
+        binding.layoutThreadGroups.addView(headerLayout);
+        binding.layoutThreadGroups.addView(contentLayout);
     }
 
     private void displayDeadlockResult(ThreadDeadlockResult result) {
-        tvDeadlockResult.setVisibility(View.VISIBLE);
-        scrollDeadlockDetail.setVisibility(View.VISIBLE);
+        binding.tvDeadlockResult.setVisibility(View.VISIBLE);
+        binding.scrollDeadlockDetail.setVisibility(View.VISIBLE);
 
         String statusText;
         if (result.isHasDeadlock()) {
             statusText = getString(R.string.analysis_thread_deadlock_found, result.getBlockedThreadCount());
-            tvDeadlockResult.setTextColor(ContextCompat.getColor(this, R.color.red));
+            binding.tvDeadlockResult.setTextColor(ContextCompat.getColor(this, R.color.red));
         } else {
             statusText = getString(R.string.analysis_thread_deadlock_none);
-            tvDeadlockResult.setTextColor(ContextCompat.getColor(this, R.color.light_green));
+            binding.tvDeadlockResult.setTextColor(ContextCompat.getColor(this, R.color.light_green));
         }
-        tvDeadlockResult.setText(statusText);
+        binding.tvDeadlockResult.setText(statusText);
 
         if (result.getBlockedThreads() != null && !result.getBlockedThreads().isEmpty()) {
             StringBuilder sb = new StringBuilder();
@@ -381,10 +369,10 @@ public class ThreadAnalysisActivity extends AppCompatActivity {
                 }
                 sb.append("\n");
             }
-            tvDeadlockDetail.setText(sb.toString());
+            binding.tvDeadlockDetail.setText(sb.toString());
         } else {
-            tvDeadlockDetail.setText("");
-            scrollDeadlockDetail.setVisibility(View.GONE);
+            binding.tvDeadlockDetail.setText("");
+            binding.scrollDeadlockDetail.setVisibility(View.GONE);
         }
     }
 
@@ -439,8 +427,8 @@ public class ThreadAnalysisActivity extends AppCompatActivity {
             String timestamp = sdf.format(new Date());
 
             File exportDir = new File(
-                    android.os.Environment.getExternalStorageDirectory(),
-                    com.justnothing.testmodule.constants.FileDirectory.EXPORT_DIR_NAME + "/thread_dumps");
+                    Environment.getExternalStorageDirectory(),
+                    FileDirectory.EXPORT_DIR_NAME + "/thread_dumps");
             IOManager.createDirectory(exportDir.getAbsolutePath());
 
             File file = new File(exportDir, "thread_dump_" + timestamp + ".txt");
@@ -487,7 +475,7 @@ public class ThreadAnalysisActivity extends AppCompatActivity {
                     .show();
 
         } catch (Exception e) {
-            android.widget.Toast.makeText(this, getString(R.string.analysis_thread_error_export_failed, e.getMessage()), android.widget.Toast.LENGTH_SHORT).show();
+            showToast(getString(R.string.analysis_thread_error_export_failed, e.getMessage()));
         }
     }
 

@@ -1,13 +1,14 @@
 package com.justnothing.testmodule.command.functions.classcmd.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.functions.classcmd.ClassTexts;
 import com.justnothing.testmodule.command.functions.classcmd.response.ClassInfoResult;
 
 public class ClassInfoRequest extends ClassCommandRequest<ClassInfoResult> {
 
     @CmdParam(
         name = "class",
-        description = "类名",
+        description = ClassTexts.PARAM_CLASS_INFO_CLASS_DESC,
         position = 1,
         required = true,
         serializedName = "className"
@@ -16,7 +17,7 @@ public class ClassInfoRequest extends ClassCommandRequest<ClassInfoResult> {
 
     @CmdParam(
         name = "--verbose",
-        description = "显示详细信息",
+        description = ClassTexts.PARAM_CLASS_INFO_VERBOSE_DESC,
         aliases = {"-v"},
         required = false,
         serializedName = "verbose"
@@ -25,7 +26,7 @@ public class ClassInfoRequest extends ClassCommandRequest<ClassInfoResult> {
 
     @CmdParam(
         name = "--interfaces",
-        description = "显示实现的接口",
+        description = ClassTexts.PARAM_CLASS_INFO_INTERFACES_DESC,
         aliases = {"-i"},
         required = false,
         serializedName = "showInterfaces"
@@ -34,7 +35,7 @@ public class ClassInfoRequest extends ClassCommandRequest<ClassInfoResult> {
 
     @CmdParam(
         name = "--constructors",
-        description = "显示构造函数",
+        description = ClassTexts.PARAM_CLASS_INFO_CONSTRUCTORS_DESC,
         aliases = {"-c"},
         required = false,
         serializedName = "showConstructors"
@@ -43,7 +44,7 @@ public class ClassInfoRequest extends ClassCommandRequest<ClassInfoResult> {
 
     @CmdParam(
         name = "--super",
-        description = "显示父类信息",
+        description = ClassTexts.PARAM_CLASS_INFO_SUPER_DESC,
         aliases = {"-s"},
         required = false,
         serializedName = "showSuper"
@@ -52,7 +53,7 @@ public class ClassInfoRequest extends ClassCommandRequest<ClassInfoResult> {
 
     @CmdParam(
         name = "--modifiers",
-        description = "显示修饰符信息",
+        description = ClassTexts.PARAM_CLASS_INFO_MODIFIERS_DESC,
         aliases = {"-m"},
         required = false,
         serializedName = "showModifiers"
@@ -61,7 +62,7 @@ public class ClassInfoRequest extends ClassCommandRequest<ClassInfoResult> {
 
     @CmdParam(
         name = "--all",
-        description = "显示所有信息 (默认)",
+        description = ClassTexts.PARAM_CLASS_INFO_ALL_DESC,
         aliases = {"-a"},
         required = false,
         serializedName = "showAll"

@@ -3,6 +3,7 @@ package com.justnothing.testmodule.command.functions.bsh.request;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.functions.bsh.response.BeanShellResult;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.functions.bsh.BshTexts;
 
 public class BshScriptImportRequest extends CommandRequest<BeanShellResult> {
 
@@ -10,7 +11,7 @@ public class BshScriptImportRequest extends CommandRequest<BeanShellResult> {
         name = "filePath",
         position = 1,
         required = true,
-        description = "导入文件路径"
+        description = BshTexts.PARAM_BSH_SCRIPT_IMPORT_FILEPATH_DESC
     )
     private String filePath;
 

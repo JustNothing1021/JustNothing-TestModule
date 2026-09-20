@@ -15,7 +15,7 @@
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            app:title="查询信息"
+            app:title="@string/analysis_query_info"
             app:navigationIcon="?attr/homeAsUpIndicator" />
 
     </com.google.android.material.appbar.AppBarLayout>
@@ -34,12 +34,12 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:padding="@dimen/spacing_16">
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="输入类名"
+                    android:hint="@string/analysis_class_name_input_hint"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
                     <com.google.android.material.textfield.TextInputEditText
@@ -56,59 +56,56 @@
                     android:id="@+id/btn_query"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="查询" />
+                    android:layout_marginTop="@dimen/spacing_8"
+                    android:text="@string/analysis_query_class" />
 
                 <LinearLayout
                     android:id="@+id/layout_result"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
+                    android:layout_marginTop="@dimen/spacing_16"
                     android:orientation="vertical"
                     android:visibility="gone">
 
-                    <androidx.cardview.widget.CardView
+                    <com.google.android.material.card.MaterialCardView
+                        style="@style/Widget.App.Card"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        app:cardCornerRadius="12dp"
-                        app:cardElevation="2dp">
+                        android:layout_height="wrap_content">
 
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:padding="16dp">
+                            android:padding="@dimen/spacing_16">
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="类信息"
-                                android:textAppearance="?attr/textAppearanceTitleMedium"
-                                android:textStyle="bold" />
+                                android:text="@string/analysis_class_info"
+                                android:textAppearance="@style/TextAppearance.App.Title.Bold" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="12dp"
-                                android:text="类名"
+                                android:layout_marginTop="@dimen/spacing_12"
+                                android:text="@string/analysis_class_name"
                                 android:textAppearance="?attr/textAppearanceLabelSmall"
-                                android:textColor="@android:color/darker_gray" />
+                                android:textColor="?attr/colorOnSurfaceVariant" />
 
                             <TextView
                                 android:id="@+id/tv_class_name"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:textAppearance="?attr/textAppearanceBodyLarge"
-                                android:textStyle="bold"
+                                android:textAppearance="@style/TextAppearance.App.Title.Bold"
                                 android:textColor="@color/blue" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="12dp"
-                                android:text="访问修饰符"
+                                android:layout_marginTop="@dimen/spacing_12"
+                                android:text="@string/analysis_access_modifiers"
                                 android:textAppearance="?attr/textAppearanceLabelSmall"
-                                android:textColor="@android:color/darker_gray" />
+                                android:textColor="?attr/colorOnSurfaceVariant" />
 
                             <TextView
                                 android:id="@+id/tv_modifiers"
@@ -119,10 +116,10 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="12dp"
-                                android:text="父类"
+                                android:layout_marginTop="@dimen/spacing_12"
+                                android:text="@string/analysis_super_class"
                                 android:textAppearance="?attr/textAppearanceLabelSmall"
-                                android:textColor="@android:color/darker_gray" />
+                                android:textColor="?attr/colorOnSurfaceVariant" />
 
                             <TextView
                                 android:id="@+id/tv_super_class"
@@ -133,10 +130,10 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="12dp"
-                                android:text="实现接口"
+                                android:layout_marginTop="@dimen/spacing_12"
+                                android:text="@string/analysis_implemented_interfaces"
                                 android:textAppearance="?attr/textAppearanceLabelSmall"
-                                android:textColor="@android:color/darker_gray" />
+                                android:textColor="?attr/colorOnSurfaceVariant" />
 
                             <TextView
                                 android:id="@+id/tv_interfaces"
@@ -146,15 +143,15 @@
 
                         </LinearLayout>
 
-                    </androidx.cardview.widget.CardView>
+                    </com.google.android.material.card.MaterialCardView>
 
                     <LinearLayout
                         android:id="@+id/header_constructors"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
+                        android:layout_marginTop="@dimen/spacing_16"
                         android:orientation="horizontal"
-                        android:padding="12dp"
+                        android:padding="@dimen/spacing_12"
                         android:gravity="center_vertical"
                         android:background="?attr/selectableItemBackground"
                         android:clickable="true"
@@ -165,16 +162,15 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="构造函数"
-                            android:textAppearance="?attr/textAppearanceTitleMedium"
-                            android:textStyle="bold" />
+                            android:text="@string/analysis_constructors_label"
+                            android:textAppearance="@style/TextAppearance.App.Title.Bold" />
 
                         <ImageView
                             android:id="@+id/iv_constructors_expand"
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             android:src="@drawable/ic_expand_more"
-                            android:contentDescription="展开/收起" />
+                            android:contentDescription="@string/analysis_expand_collapse" />
 
                     </LinearLayout>
 
@@ -189,9 +185,9 @@
                         android:id="@+id/header_methods"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
+                        android:layout_marginTop="@dimen/spacing_8"
                         android:orientation="horizontal"
-                        android:padding="12dp"
+                        android:padding="@dimen/spacing_12"
                         android:gravity="center_vertical"
                         android:background="?attr/selectableItemBackground"
                         android:clickable="true"
@@ -202,16 +198,15 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="方法"
-                            android:textAppearance="?attr/textAppearanceTitleMedium"
-                            android:textStyle="bold" />
+                            android:text="@string/analysis_methods"
+                            android:textAppearance="@style/TextAppearance.App.Title.Bold" />
 
                         <ImageView
                             android:id="@+id/iv_methods_expand"
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             android:src="@drawable/ic_expand_more"
-                            android:contentDescription="展开/收起" />
+                            android:contentDescription="@string/analysis_expand_collapse" />
 
                     </LinearLayout>
 
@@ -226,9 +221,9 @@
                         android:id="@+id/header_fields"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
+                        android:layout_marginTop="@dimen/spacing_8"
                         android:orientation="horizontal"
-                        android:padding="12dp"
+                        android:padding="@dimen/spacing_12"
                         android:gravity="center_vertical"
                         android:background="?attr/selectableItemBackground"
                         android:clickable="true"
@@ -239,16 +234,15 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="字段"
-                            android:textAppearance="?attr/textAppearanceTitleMedium"
-                            android:textStyle="bold" />
+                            android:text="@string/analysis_fields_label"
+                            android:textAppearance="@style/TextAppearance.App.Title.Bold" />
 
                         <ImageView
                             android:id="@+id/iv_fields_expand"
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             android:src="@drawable/ic_expand_more"
-                            android:contentDescription="展开/收起" />
+                            android:contentDescription="@string/analysis_expand_collapse" />
 
                     </LinearLayout>
 
@@ -281,8 +275,8 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="加载中..."
+                android:layout_marginTop="@dimen/spacing_16"
+                android:text="@string/class_query_loading"
                 android:textAppearance="?attr/textAppearanceBodyMedium" />
 
         </LinearLayout>
@@ -299,7 +293,7 @@
                 android:id="@+id/tv_error_message"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="查询失败"
+                android:text="@string/analysis_class_query_failed"
                 android:textAppearance="?attr/textAppearanceBodyMedium"
                 android:textColor="@color/red" />
 

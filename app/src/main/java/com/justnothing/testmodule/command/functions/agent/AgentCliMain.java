@@ -28,68 +28,68 @@ import com.justnothing.testmodule.command.functions.agent.request.AgentRunReques
 
 @Cmd(
     name = "agent",
-    description = "跨应用 InspectionAgent IPC 桥接命令"
+    description = AgentTexts.CMD_AGENT_DESC
 )
 @CmdRoutes({
     @CmdRoutes.Route(
         path = "sp-list",
         request = AgentSpListRequest.class,
         handler = AgentSpListCommand.class,
-        description = "列出目标应用的 SharedPreferences 文件"
+        description = AgentTexts.ROUTE_AGENT_SP_LIST_DESC
     ),
     @CmdRoutes.Route(
         path = "sp-read",
         request = AgentSpReadRequest.class,
         handler = AgentSpReadCommand.class,
-        description = "读取目标应用的 SharedPreferences"
+        description = AgentTexts.ROUTE_AGENT_SP_READ_DESC
     ),
     @CmdRoutes.Route(
         path = "sp-write",
         request = AgentSpWriteRequest.class,
         handler = AgentSpWriteCommand.class,
-        description = "写入目标应用的 SharedPreferences"
+        description = AgentTexts.ROUTE_AGENT_SP_WRITE_DESC
     ),
     @CmdRoutes.Route(
         path = "db-list",
         request = AgentDbListRequest.class,
         handler = AgentDbListCommand.class,
-        description = "列出目标应用的数据库文件"
+        description = AgentTexts.ROUTE_AGENT_DB_LIST_DESC
     ),
     @CmdRoutes.Route(
         path = "db-query",
         request = AgentDbQueryRequest.class,
         handler = AgentDbQueryCommand.class,
-        description = "查询目标应用的 SQLite 数据库"
+        description = AgentTexts.ROUTE_AGENT_DB_QUERY_DESC
     ),
     @CmdRoutes.Route(
         path = "db-tables",
         request = AgentDbTablesRequest.class,
         handler = AgentDbTablesCommand.class,
-        description = "列出目标应用数据库的所有表"
+        description = AgentTexts.ROUTE_AGENT_DB_TABLES_DESC
     ),
     @CmdRoutes.Route(
         path = "list",
         request = AgentListRequest.class,
         handler = AgentListCommand.class,
-        description = "列出所有在线的 InspectionAgent（自动清理死文件）"
+        description = AgentTexts.ROUTE_AGENT_LIST_DESC
     ),
     @CmdRoutes.Route(
         path = "start",
         request = AgentStartRequest.class,
         handler = AgentStartCommand.class,
-        description = "请求启动目标应用的 InspectionAgent"
+        description = AgentTexts.ROUTE_AGENT_START_DESC
     ),
     @CmdRoutes.Route(
         path = "stop",
         request = AgentStopRequest.class,
         handler = AgentStopCommand.class,
-        description = "停止目标应用的 InspectionAgent（关闭 ServerSocket + 清理文件）"
+        description = AgentTexts.ROUTE_AGENT_STOP_DESC
     ),
     @CmdRoutes.Route(
         path = "run",
         request = AgentRunRequest.class,
         handler = AgentRunCommand.class,
-        description = "在目标应用上代理执行任意主服务命令"
+        description = AgentTexts.ROUTE_AGENT_RUN_DESC
     )
 })
 public class AgentCliMain extends MainCommand<CommandResult> {

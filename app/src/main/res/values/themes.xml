@@ -1,9 +1,182 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
     <style name="Base.Theme.JustNothing" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+        <!--
+          这里刻意什么都不设。
+
+          Theme.Material3.DayNight 已经自带一整套「颜色角色」：colorPrimary / colorSurface /
+          colorOnSurface / colorOnSurfaceVariant / colorOutline / colorError …… 它们在深色
+          模式下会自动换一组值。界面里要用颜色就去引用这些角色，不要引用具体色值 ——
+          这是「切深色模式不用改一行布局代码」的唯一前提。
+
+          想换品牌色的话，在这里加两行就够了：
+              <item name="colorPrimary">@color/brand_primary</item>
+              <item name="colorOnPrimary">@color/brand_on_primary</item>
+        -->
     </style>
 
     <style name="Theme.JustNothing" parent="Base.Theme.JustNothing" />
+
+    <!--
+      ============================ 组件层 ============================
+
+      界面里只用下面这几个样式，不要在布局里逐个控件写颜色和尺寸。
+      好处不是「现在少写几行」，而是「以后想统一改风格时只要改这里」。
+    -->
+
+    <style name="Widget.App.Button" parent="Widget.Material3.Button">
+        <!-- 按钮默认上下各带 6dp 的隐形 inset，并排等宽时会看起来没对齐 -->
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+    </style>
+
+    <style name="Widget.App.Button.Tonal" parent="Widget.Material3.Button.TonalButton">
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+    </style>
+
+    <style name="Widget.App.Button.Outlined" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+    </style>
+
+    <style name="Widget.App.Button.Text" parent="Widget.Material3.Button.TextButton">
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+    </style>
+
+    <!--
+      功能入口按钮（主界面那 11 个）。底色由每个按钮自己的 android:backgroundTint="@color/entry_*" 给，
+      这个样式只负责一件事：把文字钉成白色。
+
+      为什么要钉：M3 填充按钮的默认文字色是 ?attr/colorOnPrimary，
+      浅色下是白色（正好），但深色下会变成深紫 #381E72 —— 压在深色底上直接看不见。
+      主题角色在这里帮不上忙，因为「onPrimary」描述的是「主题主色上的字」，
+      和这些身份色没关系。
+
+      代价：钉成固定白会失去按钮的 disabled 状态色。这几个是导航入口、不会被禁用，所以无所谓。
+    -->
+    <style name="Widget.App.Button.Entry" parent="Widget.Material3.Button">
+        <item name="android:textColor">@color/white</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+    </style>
+
+    <!--
+      小尺寸按钮：给「一行并排塞三个」的紧凑按钮行用。
+      两个关键点：
+        1. textSize 调小。字号是尺寸变体的一部分，但不能用 android:textAppearance 来改 ——
+           那会连带把文字颜色也改成样式里的颜色，按钮就变成灰字了。
+        2. minWidth 归零。M3 按钮默认 minWidth 是 88dp，三个并排就是 264dp，在小屏上必然溢出。
+    -->
+    <style name="Widget.App.Button.Small" parent="Widget.Material3.Button">
+        <item name="android:textSize">12sp</item>
+        <item name="android:minWidth">0dp</item>
+        <item name="android:minHeight">32dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+    </style>
+
+    <style name="Widget.App.Card" parent="Widget.Material3.CardView.Filled">
+        <item name="cardCornerRadius">@dimen/card_corner_radius</item>
+    </style>
+
+    <!--
+      ============================ 文本 ============================
+
+      字号阶梯。这一套不是照抄 M3，而是把项目里实际在用的字号收敛出来的。
+
+        28sp bold   Display      启动页 / hero 大字
+        24sp bold   Headline     页面标题、区块标题
+        18sp bold   Section      小节标题
+        16sp medium Title        列表项、卡片标题
+        16sp        Body         正文
+        14sp        Caption      描述、说明
+        12sp        Label        标签、图表轴、时间戳
+
+      为什么没有 android:textSize 的 @dimen：一个 dimen 只能装一个数，而「一个文字角色」
+      是字号 + 字重 + 行高 + 颜色一组。用 TextAppearance 才能只改一处、全局生效。
+
+      布局里不要再出现 android:textSize / android:textStyle / android:textColor，
+      统一改成 android:textAppearance="@style/TextAppearance.App.Xxx"。
+    -->
+
+    <!-- 启动页 / hero 大字（原 28sp 与 32sp 合并） -->
+    <style name="TextAppearance.App.Display" parent="TextAppearance.Material3.HeadlineMedium">
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <!-- 页面标题、区块标题（原 26sp 与 24sp 合并） -->
+    <style name="TextAppearance.App.Headline" parent="TextAppearance.Material3.HeadlineSmall">
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <!-- 小节标题 -->
+    <style name="TextAppearance.App.Section" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:textSize">18sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <!-- 列表项 / 卡片标题 -->
+    <style name="TextAppearance.App.Title" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <!-- 正文 -->
+    <style name="TextAppearance.App.Body" parent="TextAppearance.Material3.BodyLarge">
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <!-- 次要正文（原来是 #666666 那一批）。继承 Body，只换颜色 -->
+    <style name="TextAppearance.App.Body.Secondary" parent="TextAppearance.App.Body">
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
+    </style>
+
+    <!-- 描述、说明（列表项标题下面那行小字） -->
+    <style name="TextAppearance.App.Caption" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
+    </style>
+
+    <!-- 标签、元信息、图表轴（原 10sp / 13sp / 15sp 并入这里） -->
+    <style name="TextAppearance.App.Label" parent="TextAppearance.Material3.BodySmall">
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
+    </style>
+
+    <!--
+      加粗变体。字重（textStyle）本身也是「文字角色」的一部分，所以同样收在样式表里 ——
+      布局里只选角色，不再出现 android:textStyle。
+      这三档是把改造前散在 73 处的「?attr/textAppearanceXxx + android:textStyle="bold"」收拢出来的。
+
+      注意这组不能继承 App.Title / App.Caption / App.Label：
+      那些基础角色的颜色是 colorOnSurfaceVariant（次要色），而这批加粗文字要的是
+      colorOnSurface（正文色）。继承过去会变成一片灰字。
+    -->
+
+    <!-- 16sp 加粗｜卡片标题、区块标题（原 TitleMedium + bold 26 处、BodyLarge + bold 6 处） -->
+    <style name="TextAppearance.App.Title.Bold" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <!--
+      14sp 加粗｜列表项 / 分组标题、强调值（原 TitleSmall + bold 19 处、BodyMedium + bold 16 处）。
+      这两批同属 14sp、行高 20sp，只差 letterSpacing 0.01（14sp 下约 0.14sp，肉眼不可见），
+      所以合成一档，按占多数的 TitleSmall 取 parent。
+    -->
+    <style name="TextAppearance.App.Caption.Bold" parent="TextAppearance.Material3.TitleSmall">
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <!--
+      11sp 加粗｜徽标、全大写小标签（原 LabelSmall + bold，4 处）。
+      它比 App.Label（12sp）小 1sp —— 这是原设计里就有的差异，为了让改造后观感一字不变，照原样保留。
+    -->
+    <style name="TextAppearance.App.Label.Bold" parent="TextAppearance.Material3.LabelSmall">
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
 </resources>

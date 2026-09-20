@@ -1,3 +1,24 @@
 <resources>
     <dimen name="fab_margin">16dp</dimen>
+
+    <!--
+      间距刻度（4dp 网格）。布局里的 margin / padding 都从这里取，不要写 dp 字面量。
+
+      名字里带数字，是为了让调用处不用查表：看到 @dimen/spacing_12 就知道是 12dp。
+      想加一档就直接加，不会把命名体系搞乱。
+
+      这七档不是拍脑袋定的，是统计了现有 503 处间距后收敛出来的：
+      4 / 8 / 12 / 16 覆盖了 84%，24 以上是段落级留白。
+      现有代码里那些 2 / 6 / 10 / 14dp 属于手动微调的产物，分别贴到 4 / 8 / 12 / 16。
+    -->
+    <dimen name="spacing_4">4dp</dimen>
+    <dimen name="spacing_8">8dp</dimen>
+    <dimen name="spacing_12">12dp</dimen>
+    <dimen name="spacing_16">16dp</dimen>
+    <dimen name="spacing_24">24dp</dimen>
+    <dimen name="spacing_32">32dp</dimen>
+    <dimen name="spacing_48">48dp</dimen>
+
+    <!-- 组件尺寸 -->
+    <dimen name="card_corner_radius">12dp</dimen>
 </resources>

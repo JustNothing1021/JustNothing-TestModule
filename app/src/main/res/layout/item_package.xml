@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:padding="12dp"
+    android:padding="@dimen/spacing_12"
     android:background="?attr/selectableItemBackground"
     android:focusable="true">
 
@@ -24,6 +24,6 @@
         android:src="@android:drawable/ic_menu_save"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="@string/general_copy"
-        android:padding="4dp" />
+        android:padding="@dimen/spacing_4" />
 
 </LinearLayout>

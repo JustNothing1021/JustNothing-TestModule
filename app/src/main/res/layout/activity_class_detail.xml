@@ -28,7 +28,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:padding="@dimen/spacing_16">
 
             <ProgressBar
                 android:id="@+id/progress_bar"
@@ -48,11 +48,10 @@
 
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/card_class_info"
+                style="@style/Widget.App.Card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp"
+                android:layout_marginBottom="@dimen/spacing_16"
                 android:clickable="true"
                 android:focusable="true"
                 android:foreground="?attr/selectableItemBackground">
@@ -61,7 +60,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="@dimen/spacing_16">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -73,16 +72,15 @@
                             android:id="@+id/tv_class_type"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:textAppearance="?attr/textAppearanceLabelSmall"
+                            android:textAppearance="@style/TextAppearance.App.Label.Bold"
                             android:textColor="@color/blue"
-                            android:textAllCaps="true"
-                            android:textStyle="bold" />
+                            android:textAllCaps="true" />
 
                         <TextView
                             android:id="@+id/tv_modifiers"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
+                            android:layout_marginStart="@dimen/spacing_8"
                             android:textAppearance="?attr/textAppearanceLabelSmall"
                             android:textColor="@color/green" />
 
@@ -92,15 +90,14 @@
                         android:id="@+id/tv_class_name"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:textAppearance="?attr/textAppearanceTitleMedium"
-                        android:textStyle="bold" />
+                        android:layout_marginTop="@dimen/spacing_8"
+                        android:textAppearance="@style/TextAppearance.App.Title.Bold" />
 
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
-                        android:layout_marginTop="12dp"
-                        android:layout_marginBottom="12dp"
+                        android:layout_marginTop="@dimen/spacing_12"
+                        android:layout_marginBottom="@dimen/spacing_12"
                         android:background="?android:attr/listDivider" />
 
                     <TextView
@@ -108,29 +105,29 @@
                         android:layout_height="wrap_content"
                         android:text="@string/analysis_super_class"
                         android:textAppearance="?attr/textAppearanceLabelSmall"
-                        android:textColor="@android:color/darker_gray" />
+                        android:textColor="?attr/colorOnSurfaceVariant" />
 
                     <TextView
                         android:id="@+id/tv_super_class"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
+                        android:layout_marginTop="@dimen/spacing_4"
                         android:textAppearance="?attr/textAppearanceBodyMedium" />
 
                     <TextView
                         android:id="@+id/label_interfaces"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
+                        android:layout_marginTop="@dimen/spacing_12"
                         android:text="@string/analysis_implemented_interfaces"
                         android:textAppearance="?attr/textAppearanceLabelSmall"
-                        android:textColor="@android:color/darker_gray" />
+                        android:textColor="?attr/colorOnSurfaceVariant" />
 
                     <TextView
                         android:id="@+id/tv_interfaces"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
+                        android:layout_marginTop="@dimen/spacing_4"
                         android:textAppearance="?attr/textAppearanceBodyMedium" />
 
                 </LinearLayout>
@@ -142,39 +139,37 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/analysis_constructors_label"
-                android:textAppearance="?attr/textAppearanceTitleSmall"
-                android:textStyle="bold"
-                android:layout_marginBottom="8dp" />
+                android:textAppearance="@style/TextAppearance.App.Caption.Bold"
+                android:layout_marginBottom="@dimen/spacing_8" />
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rv_constructors"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:nestedScrollingEnabled="false"
-                android:layout_marginBottom="16dp" />
+                android:layout_marginBottom="@dimen/spacing_16" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:layout_marginBottom="8dp">
+                android:layout_marginBottom="@dimen/spacing_8">
 
                 <TextView
                     android:id="@+id/label_methods"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/analysis_methods"
-                    android:textAppearance="?attr/textAppearanceTitleSmall"
-                    android:textStyle="bold" />
+                    android:textAppearance="@style/TextAppearance.App.Caption.Bold" />
 
                 <TextView
                     android:id="@+id/tv_method_count"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
+                    android:layout_marginStart="@dimen/spacing_8"
                     android:textAppearance="?attr/textAppearanceLabelSmall"
-                    android:textColor="@android:color/darker_gray" />
+                    android:textColor="?attr/colorOnSurfaceVariant" />
 
             </LinearLayout>
 
@@ -183,16 +178,15 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:nestedScrollingEnabled="false"
-                android:layout_marginBottom="16dp" />
+                android:layout_marginBottom="@dimen/spacing_16" />
 
             <TextView
                 android:id="@+id/label_fields"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/analysis_fields_label"
-                android:textAppearance="?attr/textAppearanceTitleSmall"
-                android:textStyle="bold"
-                android:layout_marginBottom="8dp" />
+                android:textAppearance="@style/TextAppearance.App.Caption.Bold"
+                android:layout_marginBottom="@dimen/spacing_8" />
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rv_fields"

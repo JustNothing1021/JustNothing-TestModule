@@ -21,56 +21,56 @@ import com.justnothing.testmodule.command.functions.hook.impl.HookQueryCommand;
 
 @Cmd(
     name = "hook",
-    description = "动态Hook注入器, 通过脚本实现Hook功能"
+    description = HookTexts.CMD_HOOK_DESC
 )
 @CmdRoutes({
     @CmdRoutes.Route(
         path = "add",
         request = HookAddRequest.class,
         handler = HookManageCommand.class,
-        description = "添加Hook"
+        description = HookTexts.ROUTE_HOOK_ADD_DESC
     ),
     @CmdRoutes.Route(
         path = "remove",
         request = HookRemoveRequest.class,
         handler = HookManageCommand.class,
-        description = "移除指定Hook"
+        description = HookTexts.ROUTE_HOOK_REMOVE_DESC
     ),
     @CmdRoutes.Route(
         path = "list",
         request = HookListRequest.class,
         handler = HookQueryCommand.class,
-        description = "列出所有Hook"
+        description = HookTexts.ROUTE_HOOK_LIST_DESC
     ),
     @CmdRoutes.Route(
         path = "info",
         request = HookInfoRequest.class,
         handler = HookQueryCommand.class,
-        description = "显示Hook详细信息"
+        description = HookTexts.ROUTE_HOOK_INFO_DESC
     ),
     @CmdRoutes.Route(
         path = "output",
         request = HookOutputRequest.class,
         handler = HookQueryCommand.class,
-        description = "获取Hook输出"
+        description = HookTexts.ROUTE_HOOK_OUTPUT_DESC
     ),
     @CmdRoutes.Route(
         path = "enable",
         request = HookEnableRequest.class,
         handler = HookManageCommand.class,
-        description = "启用Hook"
+        description = HookTexts.ROUTE_HOOK_ENABLE_DESC
     ),
     @CmdRoutes.Route(
         path = "disable",
         request = HookDisableRequest.class,
         handler = HookManageCommand.class,
-        description = "禁用Hook"
+        description = HookTexts.ROUTE_HOOK_DISABLE_DESC
     ),
     @CmdRoutes.Route(
         path = "clear",
         request = HookClearRequest.class,
         handler = HookManageCommand.class,
-        description = "清除所有Hook"
+        description = HookTexts.ROUTE_HOOK_CLEAR_DESC
     )
 })
 public class HookMain extends MainCommand<HookListResult> {

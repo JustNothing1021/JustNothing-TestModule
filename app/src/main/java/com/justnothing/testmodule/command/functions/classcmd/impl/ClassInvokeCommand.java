@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.classcmd.impl;
 
 import com.justnothing.testmodule.command.framework.error.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.functions.classcmd.ClassTexts;
 import com.justnothing.testmodule.command.functions.classcmd.model.ClassCommandContext;
 import com.justnothing.testmodule.command.functions.classcmd.request.InvokeMethodRequest;
 import com.justnothing.testmodule.command.functions.classcmd.response.InvokeMethodResult;
@@ -22,7 +23,7 @@ import java.util.List;
 import java.util.Map;
 
 @SubCommandInfo(
-    description = "调用类的静态方法或创建实例后调用实例方法",
+    description = ClassTexts.SUB_CLASS_INVOKE_DESC,
     usage = "class invoke [options] <class_name> <method_name> [args...]",
     examples = {
         "class invoke java.lang.Integer parseInt \"123\"",
@@ -32,28 +33,7 @@ import java.util.Map;
         "class invoke android.app.ActivityThread currentActivityThread",
         "class invoke com.example.MyClass myMethod \"text\" 123 true"
     },
-    optionsDesc = """
-            参数支持表达式语法，可以直接写值或使用类型提示。
-
-            参数格式:
-                - 直接表达式: 123, "hello", true, null
-                - 带类型提示: int:123, String:"hello", boolean:true
-
-            表达式支持:
-                - 字面量: 123, 3.14, "text", true, null
-                - 算术运算: 1 + 2, 10 * 5
-                - 字符串拼接: "Hello " + "World"
-                - 方法调用: Math.abs(-5)
-                - 字段访问: SomeClass.FIELD
-                - 对象创建: new ArrayList()
-                - 三元运算: x > 0 ? x : -x
-
-            选项:
-                --super       查找父类方法
-                --interfaces  查找接口方法
-                -s            调用静态方法
-                -f, --free    自由模式（跳过类型推断）
-            """
+    optionsDesc = ClassTexts.SUB_CLASS_INVOKE_OPTIONS
 )
 public class ClassInvokeCommand extends AbstractClassCommand<InvokeMethodRequest, InvokeMethodResult> {
 

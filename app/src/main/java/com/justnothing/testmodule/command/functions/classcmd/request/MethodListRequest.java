@@ -1,13 +1,14 @@
 package com.justnothing.testmodule.command.functions.classcmd.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.functions.classcmd.ClassTexts;
 import com.justnothing.testmodule.command.functions.classcmd.response.MethodListResult;
 
 public class MethodListRequest extends ClassCommandRequest<MethodListResult> {
 
     @CmdParam(
         name = "class",
-        description = "类名",
+        description = ClassTexts.PARAM_CLASS_LIST_CLASS_DESC,
         position = 1,
         required = true,
         serializedName = "className"
@@ -16,7 +17,7 @@ public class MethodListRequest extends ClassCommandRequest<MethodListResult> {
 
     @CmdParam(
         name = "--verbose",
-        description = "显示详细信息（参数、异常等）",
+        description = ClassTexts.PARAM_CLASS_LIST_VERBOSE_DESC,
         aliases = {"-v"},
         serializedName = "verbose"
     )

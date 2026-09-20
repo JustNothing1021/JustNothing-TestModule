@@ -7,6 +7,7 @@ import com.justnothing.testmodule.command.functions.jank.model.ProcChurn;
 import com.justnothing.testmodule.command.functions.jank.request.JankSampleRequest;
 import com.justnothing.testmodule.command.functions.jank.response.JankResult;
 import com.justnothing.testmodule.command.functions.jank.util.JankSampler;
+import com.justnothing.testmodule.command.functions.jank.JankTexts;
 import com.justnothing.richconsole.console.Console;
 import com.justnothing.richconsole.live.Live;
 
@@ -30,11 +31,9 @@ import java.util.Map;
  * 所以第一帧只当基线，从第二帧起全部用"这一帧减上一帧"。</p>
  */
 @SubCommandInfo(
-    description = "采样一段时间，实时显示 CPU/内存/队列/进程变动等卡顿指标",
-    usage = "jank sample [秒数] [-i 间隔毫秒] [-n TOP 行数]",
-    optionsDesc = "  秒数        采样时长，默认 20 秒（位置参数，可省略）\n"
-            + "  -i, --interval  采样间隔，默认 1000ms；低于 500ms 时采集本身会明显干扰结果\n"
-            + "  -n, --top       CPU TOP 榜单长度，默认 5",
+    description = JankTexts.SUB_JANK_SAMPLE_DESC,
+    usage = JankTexts.SUB_JANK_SAMPLE_USAGE,
+    optionsDesc = JankTexts.SUB_JANK_SAMPLE_OPTIONS,
     examples = {
         "jank sample",
         "jank sample 30",

@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.didyouknow.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
+import com.justnothing.testmodule.command.functions.didyouknow.DidYouKnowTexts;
 import com.justnothing.testmodule.command.functions.didyouknow.response.DidYouKnowResult;
 
 public class DidYouKnowRequest extends CommandRequest<DidYouKnowResult> {
@@ -9,7 +10,7 @@ public class DidYouKnowRequest extends CommandRequest<DidYouKnowResult> {
     @CmdParam(
         name = "--id",
         aliases = {"-i"},
-        description = "显示指定序号的提示",
+        description = DidYouKnowTexts.PARAM_DID_YOU_KNOW_ID_DESC,
         serializedName = "tipIndex"
     )
     private Integer tipIndex;
@@ -17,7 +18,7 @@ public class DidYouKnowRequest extends CommandRequest<DidYouKnowResult> {
     @CmdParam(
         name = "--list",
         aliases = {"-l"},
-        description = "列出所有提示（带编号）",
+        description = DidYouKnowTexts.PARAM_DID_YOU_KNOW_LIST_DESC,
         serializedName = "showList"
     )
     private boolean showList = false;
@@ -25,7 +26,7 @@ public class DidYouKnowRequest extends CommandRequest<DidYouKnowResult> {
     @CmdParam(
         name = "--count",
         aliases = {"-c"},
-        description = "显示提示统计信息",
+        description = DidYouKnowTexts.PARAM_DID_YOU_KNOW_COUNT_DESC,
         serializedName = "showCount"
     )
     private boolean showCount = false;
@@ -33,21 +34,21 @@ public class DidYouKnowRequest extends CommandRequest<DidYouKnowResult> {
     @CmdParam(
         name = "--search",
         aliases = {"-s"},
-        description = "搜索包含关键词的提示",
+        description = DidYouKnowTexts.PARAM_DID_YOU_KNOW_SEARCH_DESC,
         serializedName = "searchKeyword"
     )
     private String searchKeyword;
 
     @CmdParam(
         name = "--special",
-        description = "显示今日特殊提示（生日/节日等）",
+        description = DidYouKnowTexts.PARAM_DID_YOU_KNOW_SPECIAL_DESC,
         serializedName = "showSpecial"
     )
     private boolean showSpecial = false;
 
     @CmdParam(
         name = "--special-list",
-        description = "列出所有特殊提示（节日/生日等）",
+        description = DidYouKnowTexts.PARAM_DID_YOU_KNOW_SPECIAL_LIST_DESC,
         serializedName = "showSpecialList"
     )
     private boolean showSpecialList = false;
@@ -55,7 +56,7 @@ public class DidYouKnowRequest extends CommandRequest<DidYouKnowResult> {
     @CmdParam(
         name = "--help",
         aliases = {"-h"},
-        description = "显示帮助信息",
+        description = DidYouKnowTexts.PARAM_DID_YOU_KNOW_HELP_DESC,
         serializedName = "showHelp"
     )
     private boolean showHelp = false;

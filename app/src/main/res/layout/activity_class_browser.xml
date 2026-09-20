@@ -16,7 +16,7 @@
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            app:title="类浏览器" />
+            app:title="@string/analysis_class_browser_title" />
 
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -29,20 +29,20 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:padding="@dimen/spacing_16">
 
             <TextView
                 android:id="@+id/tv_server_status"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="检查服务端状态..."
+                android:text="@string/class_browser_server_status_checking"
                 android:textAppearance="?attr/textAppearanceBodySmall" />
 
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:hint="输入类名"
+                android:layout_marginTop="@dimen/spacing_8"
+                android:hint="@string/analysis_class_name_input_hint"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
                 <com.google.android.material.textfield.TextInputEditText
@@ -58,49 +58,50 @@
                 android:id="@+id/btn_query"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="查询" />
+                android:layout_marginTop="@dimen/spacing_8"
+                android:text="@string/analysis_query_class" />
 
             <ProgressBar
                 android:id="@+id/progress_bar"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="@dimen/spacing_16"
                 android:visibility="gone" />
 
-            <androidx.cardview.widget.CardView
+            <com.google.android.material.card.MaterialCardView
                 android:id="@+id/card_class_info"
+                style="@style/Widget.App.Card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="@dimen/spacing_16"
                 android:visibility="gone">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="@dimen/spacing_16">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="类信息"
+                        android:text="@string/analysis_class_info"
                         android:textAppearance="?attr/textAppearanceTitleMedium" />
 
                     <TextView
                         android:id="@+id/tv_class_name"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
+                        android:layout_marginTop="@dimen/spacing_8"
                         android:textAppearance="?attr/textAppearanceBodyLarge" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="父类:"
-                        android:textStyle="bold" />
+                        android:layout_marginTop="@dimen/spacing_8"
+                        android:text="@string/class_browser_super_class_label"
+                        android:textAppearance="@style/TextAppearance.App.Title" />
 
                     <TextView
                         android:id="@+id/tv_super_class"
@@ -110,9 +111,9 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="接口:"
-                        android:textStyle="bold" />
+                        android:layout_marginTop="@dimen/spacing_8"
+                        android:text="@string/class_browser_interfaces_label"
+                        android:textAppearance="@style/TextAppearance.App.Title" />
 
                     <TextView
                         android:id="@+id/tv_interfaces"
@@ -122,9 +123,9 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="修饰符:"
-                        android:textStyle="bold" />
+                        android:layout_marginTop="@dimen/spacing_8"
+                        android:text="@string/class_browser_modifiers_label"
+                        android:textAppearance="@style/TextAppearance.App.Title" />
 
                     <TextView
                         android:id="@+id/tv_modifiers"
@@ -133,34 +134,34 @@
 
                 </LinearLayout>
 
-            </androidx.cardview.widget.CardView>
+            </com.google.android.material.card.MaterialCardView>
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="方法列表"
+                android:layout_marginTop="@dimen/spacing_16"
+                android:text="@string/class_browser_methods_list"
                 android:textAppearance="?attr/textAppearanceTitleMedium" />
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rv_methods"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="@dimen/spacing_8"
                 android:nestedScrollingEnabled="false" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="字段列表"
+                android:layout_marginTop="@dimen/spacing_16"
+                android:text="@string/class_browser_fields_list"
                 android:textAppearance="?attr/textAppearanceTitleMedium" />
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rv_fields"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="@dimen/spacing_8"
                 android:nestedScrollingEnabled="false" />
 
         </LinearLayout>

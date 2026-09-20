@@ -4,23 +4,24 @@ import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.functions.agent.AgentTexts;
 import com.justnothing.testmodule.command.functions.agent.response.SpWriteResult;
 
 public class AgentSpWriteRequest extends CommandRequest<SpWriteResult> {
     @Expose @SerializedName("packageName")
-    @CmdParam(name = "pkg", position = 1, description = "目标应用包名")
+    @CmdParam(name = "pkg", position = 1, description = AgentTexts.PARAM_AGENT_SP_WRITE_PKG_DESC)
     private String packageName;
     @Expose @SerializedName("spName")
-    @CmdParam(name = "name", position = 2, description = "SharedPreferences 名称")
+    @CmdParam(name = "name", position = 2, description = AgentTexts.PARAM_AGENT_SP_WRITE_NAME_DESC)
     private String spName;
     @Expose @SerializedName("key")
-    @CmdParam(name = "key", position = 3, description = "键名")
+    @CmdParam(name = "key", position = 3, description = AgentTexts.PARAM_AGENT_SP_WRITE_KEY_DESC)
     private String key;
     @Expose @SerializedName("value")
-    @CmdParam(name = "value", position = 4, description = "值")
+    @CmdParam(name = "value", position = 4, description = AgentTexts.PARAM_AGENT_SP_WRITE_VALUE_DESC)
     private String value;
     @Expose @SerializedName("valueType")
-    @CmdParam(name = "type", position = 5, required = false, description = "值类型（可选）")
+    @CmdParam(name = "type", position = 5, required = false, description = AgentTexts.PARAM_AGENT_SP_WRITE_TYPE_DESC)
     private int valueType;
 
     public AgentSpWriteRequest() {}

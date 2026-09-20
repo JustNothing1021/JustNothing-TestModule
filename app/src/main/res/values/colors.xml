@@ -1,4 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  这里的值是「浅色模式」的颜色。深色模式的覆盖值在 res/values-night/colors.xml。
+
+  这里的颜色分两类，用法完全不同：
+
+  1) 语义色的落点（green / red / blue …）
+     布局里**不要**引用，改用 ?attr/colorXxx 主题角色。主题角色是「槽位」——
+     正文、辅助文字、容器、分隔线……一共十几个，它表达的是「这块内容扮演什么角色」，
+     所以换风格只要改主题。Java 里需要动态取色时才用 getColor(R.color.xxx)。
+
+  2) 身份色（entry_*）
+     布局里**可以也应该**直接引用。它表达的是「这个和那个不一样」——
+     主界面 11 个功能入口就是 11 个身份，而主题槽位里装不下 11 个身份。
+     前提是必须做成资源、并在 values-night 里配好深色版本。
+     直接在布局里写 #FF9800 才是错的：那样只有一套值，深色下没法换。
+
+  真正想换配色的时候，只改这个文件和 values-night/colors.xml；
+  再往上想整体改风格，改 themes.xml 里的 Widget.App.* / TextAppearance.App.*。
+-->
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
@@ -22,4 +41,23 @@
     <color name="grey_100">#F5F5F5</color>
     <color name="grey_800">#424242</color>
     <color name="grey_900">#212121</color>
+
+    <!--
+      主界面 11 个功能入口的身份色。浅色沿用改造前的原值（Material 调色板的 500 号色），
+      深色版本在 values-night/colors.xml。
+
+      这批按钮是「深底 + 白字」，所以深色版本必须挑同一色相里足够暗的那一档，
+      否则白字压上去会糊。改这几个值时记得顺手算一下白字的对比度。
+    -->
+    <color name="entry_indigo">#3F51B5</color>
+    <color name="entry_green">#4CAF50</color>
+    <color name="entry_blue">#2196F3</color>
+    <color name="entry_orange">#FF9800</color>
+    <color name="entry_purple">#9C27B0</color>
+    <color name="entry_pink">#E91E63</color>
+    <color name="entry_cyan">#00BCD4</color>
+    <color name="entry_deep_orange">#FF5722</color>
+    <color name="entry_blue_grey">#607D8B</color>
+    <color name="entry_deep_purple">#673AB7</color>
+    <color name="entry_brown">#795548</color>
 </resources>

@@ -37,8 +37,13 @@ public class ExportContextQueryViewModel extends BaseViewModel<ExportContextRequ
             ExportContextResult result = execute(new ExportContextRequest());
             if (result != null && result.isSuccess() && result.getFields() != null) {
                 List<ContextFieldInfo> data = result.getFields();
-                Collections.sort(data, Comparator.comparing(ContextFieldInfo::getCategory)
-                        .thenComparing(ContextFieldInfo::getLabel));
+                // 后端允许字段不带分类/标签（category、label 都可能是 null）。
+                // 直接 comparing(getCategory) 会在 null 上调 compareTo 抛 NPE —— 而且这是在
+                // 线程池里，异常一抛整个进程一起没。nullsLast 把没有分类的排到最后，
+                // 顺序上也是「有分类的按字典序、没分类的垫底」，比崩掉合理。
+                Collections.sort(data, Comparator
+                        .comparing(ContextFieldInfo::getCategory, Comparator.nullsLast(Comparator.<String>naturalOrder()))
+                        .thenComparing(ContextFieldInfo::getLabel, Comparator.nullsLast(Comparator.<String>naturalOrder())));
 
                 List<String> cats = new ArrayList<>();
                 for (ContextFieldInfo field : data) {

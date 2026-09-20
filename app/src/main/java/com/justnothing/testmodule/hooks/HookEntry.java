@@ -298,6 +298,13 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
             int successCount = 0;
             int failCount = 0;
 
+            // 真正的 hook 是在 setupHooks() 里由 hookImplements() 登记进列表的。
+            // handleLoadPackage 那一路有这一步，initZygote 原来漏了 —— 于是下面的
+            // installHooks 遍历的是一个空列表：一个 hook 都没装，却因为「零失败」而返回成功。
+            for (ZygoteHook hook : zygoteHooks) {
+                hook.setupHooks();
+            }
+
             for (ZygoteHook hook : zygoteHooks) {
                 String hookName = hook.getHookName();
                 if (!hook.isHookEnabled()) {

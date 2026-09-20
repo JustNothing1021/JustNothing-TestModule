@@ -34,7 +34,9 @@ public abstract class ZygoteHook extends XposedBasicHook<IXposedHookZygoteInit.S
                     warn("未找到类" + className);
                     return false;
                 }
-                Method method = HookMethodFinder.find(className, methodName);
+                // 必须把 signature 一起传进去：不传等于去找「同名且无参」的方法，
+                // 凡是有参数的 hook 都会在这里被判成「未找到方法」而静默失败。
+                Method method = HookMethodFinder.find(className, methodName, signature);
                 if (method == null) {
                     warn("未找到类方法" + className + "." + methodName);
                     return false;

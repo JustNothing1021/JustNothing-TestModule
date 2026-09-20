@@ -695,9 +695,38 @@ public final class DataBridge {
         }
     }
 
+    /**
+     * 按约定拼出脚本文件：名字不带后缀就补上 {@code .java}。
+     * <p>
+     * 已经带后缀的名字也接受 —— {@code script list} 显示的就是带后缀的全名，用户会直接
+     * 复制过来用。
+     * </p>
+     */
     public static File getScriptFile(String scriptName) {
-        File scriptsDir = DataBridge.getScriptsDirectory();
-        return new File(scriptsDir, scriptName + FileDirectory.SCRIPT_SUFFIX);
+        return new File(getScriptsDirectory(), withScriptSuffix(scriptName));
+    }
+
+    /**
+     * 找用户指定的脚本文件：名字带不带 {@code .java} 后缀都认。
+     * <p>
+     * 目录里真实存在的那个优先（所以老设备上遗留的无后缀脚本依然能读到，用户改过的
+     * 那份也不会被顶掉）；两个都不存在时返回按约定拼出来的那个，方便调用方报出正确的路径。
+     * </p>
+     */
+    public static File resolveScriptFile(String scriptName) {
+        File scriptsDir = getScriptsDirectory();
+        File direct = new File(scriptsDir, scriptName);
+        if (direct.exists() || scriptName.endsWith(FileDirectory.SCRIPT_SUFFIX)) {
+            return direct;
+        }
+        return new File(scriptsDir, withScriptSuffix(scriptName));
+    }
+
+    private static String withScriptSuffix(String scriptName) {
+        if (scriptName.endsWith(FileDirectory.SCRIPT_SUFFIX)) {
+            return scriptName;
+        }
+        return scriptName + FileDirectory.SCRIPT_SUFFIX;
     }
 
 }

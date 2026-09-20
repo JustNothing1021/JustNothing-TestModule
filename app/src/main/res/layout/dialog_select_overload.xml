@@ -5,21 +5,20 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="@dimen/spacing_16">
 
     <TextView
         android:id="@+id/tv_title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/analysis_method_select_overload"
-        android:textAppearance="?attr/textAppearanceTitleMedium"
-        android:textStyle="bold" />
+        android:textAppearance="@style/TextAppearance.App.Title.Bold" />
 
     <androidx.core.widget.NestedScrollView
         android:id="@+id/nested_scroll"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="@dimen/spacing_12"
         android:maxHeight="300dp"
         android:fillViewport="true">
 

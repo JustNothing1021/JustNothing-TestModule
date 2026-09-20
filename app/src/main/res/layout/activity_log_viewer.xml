@@ -1,4 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  日志查看。
+
+  上面两条横条（搜索栏、级别过滤栏）原来写死了 @android:color/darker_gray 和 #E0E0E0 两种浅灰。
+  写死的问题不是「不够好看」，而是**和深浅模式脱钩**：App 切到深色后页面背景变深，
+  这两条浅灰就成了一块贴在黑底上的亮条。
+
+  现在改用 M3 的「面的层级」角色。同一个名字在深浅两套里是不同亮度，
+  而且亮度顺序正好相反 —— 这正是它们能通用的原因：
+                  浅色        深色
+    colorSurface          #FEF7FF     #141218     ← 页面底
+    colorSurfaceContainer #F3EDF7     #211F26
+    ...ContainerHigh      #ECE6F0     #2B2930     ← 横条
+    ...ContainerHighest   #E6E0E9     #36343B
+  规律：浅色下「层级越高越暗」，深色下「层级越高越亮」，两边都是「越来越突出」。
+
+  搜索框用 colorSurface（比横条再退一层），所以它永远在横条上「凹」着。
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -8,72 +26,72 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="8dp"
-        android:background="@android:color/darker_gray">
+        android:padding="@dimen/spacing_8"
+        android:background="?attr/colorSurfaceContainerHigh">
 
         <EditText
             android:id="@+id/edit_search"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:background="@android:color/white"
+            android:background="?attr/colorSurface"
             android:hint="@string/log_viewer_search_hint"
             android:inputType="text"
             android:maxLines="1"
-            android:padding="8dp" />
+            android:padding="@dimen/spacing_8" />
 
         <Button
             android:id="@+id/btn_clear"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
+            android:layout_marginStart="@dimen/spacing_8"
             android:text="@string/general_clear" />
     </LinearLayout>
 
     <HorizontalScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#E0E0E0">
+        android:background="?attr/colorSurfaceContainerHigh">
 
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:padding="8dp">
+            android:padding="@dimen/spacing_8">
 
             <Button
                 android:id="@+id/btn_all"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="4dp"
+                android:layout_marginEnd="@dimen/spacing_4"
                 android:text="@string/general_all" />
 
             <Button
                 android:id="@+id/btn_debug"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="4dp"
+                android:layout_marginEnd="@dimen/spacing_4"
                 android:text="@string/loglevel_debug" />
 
             <Button
                 android:id="@+id/btn_info"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="4dp"
+                android:layout_marginEnd="@dimen/spacing_4"
                 android:text="@string/loglevel_info" />
 
             <Button
                 android:id="@+id/btn_warn"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="4dp"
+                android:layout_marginEnd="@dimen/spacing_4"
                 android:text="@string/loglevel_warn" />
 
             <Button
                 android:id="@+id/btn_error"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="4dp"
+                android:layout_marginEnd="@dimen/spacing_4"
                 android:text="@string/loglevel_error" />
 
             <Button
@@ -86,7 +104,7 @@
                 android:id="@+id/btn_load_more"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
+                android:layout_marginStart="@dimen/spacing_8"
                 android:text="@string/log_viewer_load_more" />
         </LinearLayout>
     </HorizontalScrollView>

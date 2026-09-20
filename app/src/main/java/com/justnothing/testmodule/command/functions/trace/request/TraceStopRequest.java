@@ -3,6 +3,7 @@ package com.justnothing.testmodule.command.functions.trace.request;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.functions.trace.response.TraceResult;
+import com.justnothing.testmodule.command.functions.trace.TraceTexts;
 
 public class TraceStopRequest extends CommandRequest<TraceResult> {
 
@@ -10,7 +11,7 @@ public class TraceStopRequest extends CommandRequest<TraceResult> {
         name = "id",
         position = 1,
         required = true,
-        description = "跟踪任务 ID",
+        description = TraceTexts.PARAM_TRACE_STOP_ID_DESC,
         serializedName = "traceId"
     )
     private int traceId;

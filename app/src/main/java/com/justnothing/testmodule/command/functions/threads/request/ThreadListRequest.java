@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.threads.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
+import com.justnothing.testmodule.command.functions.threads.ThreadsTexts;
 import com.justnothing.testmodule.command.functions.threads.response.ThreadListResult;
 
 public class ThreadListRequest extends CommandRequest<ThreadListResult> {
@@ -13,7 +14,7 @@ public class ThreadListRequest extends CommandRequest<ThreadListResult> {
 
     @CmdParam(
         name = "--id",
-        description = "只显示指定ID的线程",
+        description = ThreadsTexts.PARAM_THREADS_LIST_ID_DESC,
         required = false,
         position = 1,
         serializedName = "threadId"
@@ -22,7 +23,7 @@ public class ThreadListRequest extends CommandRequest<ThreadListResult> {
 
     @CmdParam(
         name = "--name",
-        description = "只显示指定名称的线程",
+        description = ThreadsTexts.PARAM_THREADS_LIST_NAME_DESC,
         required = false,
         position = 2,
         serializedName = "threadName"
@@ -31,7 +32,7 @@ public class ThreadListRequest extends CommandRequest<ThreadListResult> {
 
     @CmdParam(
         name = "--state",
-        description = "只显示指定状态的线程",
+        description = ThreadsTexts.PARAM_THREADS_LIST_STATE_DESC,
         required = false,
         allowedValues = {"NEW", "RUNNABLE", "BLOCKED", "WAITING", "TIMED_WAITING", "TERMINATED"},
         serializedName = "threadState"
@@ -40,7 +41,7 @@ public class ThreadListRequest extends CommandRequest<ThreadListResult> {
 
     @CmdParam(
         name = "--filter-id",
-        description = "按线程ID过滤",
+        description = ThreadsTexts.PARAM_THREADS_LIST_FILTER_ID_DESC,
         required = false,
         serializedName = "filterId"
     )
@@ -48,7 +49,7 @@ public class ThreadListRequest extends CommandRequest<ThreadListResult> {
 
     @CmdParam(
         name = "--filter-name",
-        description = "按线程名称过滤",
+        description = ThreadsTexts.PARAM_THREADS_LIST_FILTER_NAME_DESC,
         required = false,
         serializedName = "filterName"
     )
@@ -56,7 +57,7 @@ public class ThreadListRequest extends CommandRequest<ThreadListResult> {
 
     @CmdParam(
         name = "--filter-state",
-        description = "按线程状态过滤",
+        description = ThreadsTexts.PARAM_THREADS_LIST_FILTER_STATE_DESC,
         required = false,
         serializedName = "filterState"
     )
@@ -64,7 +65,7 @@ public class ThreadListRequest extends CommandRequest<ThreadListResult> {
 
     @CmdParam(
         name = "--detail-level",
-        description = "明细级别: basic=不含堆栈, full=含堆栈",
+        description = ThreadsTexts.PARAM_THREADS_LIST_DETAIL_LEVEL_DESC,
         required = false,
         defaultValue = LEVEL_FULL,
         allowedValues = {LEVEL_BASIC, LEVEL_FULL},

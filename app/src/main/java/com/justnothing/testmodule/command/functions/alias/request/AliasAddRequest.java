@@ -2,13 +2,14 @@ package com.justnothing.testmodule.command.functions.alias.request;
 
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.functions.alias.AliasTexts;
 import com.justnothing.testmodule.command.functions.alias.response.AliasResult;
 
 public class AliasAddRequest extends CommandRequest<AliasResult> {
 
     @CmdParam(
         name = "name",
-        description = "简短的替代名称（建议 2-6 个字符）",
+        description = AliasTexts.PARAM_ALIAS_ADD_NAME_DESC,
         required = true,
         position = 1
     )
@@ -16,7 +17,7 @@ public class AliasAddRequest extends CommandRequest<AliasResult> {
 
     @CmdParam(
         name = "command",
-        description = "完整的原始命令（支持多词命令）",
+        description = AliasTexts.PARAM_ALIAS_ADD_COMMAND_DESC,
         varArgs = true,
         position = 2
     )

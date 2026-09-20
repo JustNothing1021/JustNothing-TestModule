@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.classcmd.request;
 
 import com.justnothing.testmodule.command.framework.error.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.functions.classcmd.ClassTexts;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.model.CustomCommandLineParser;
 import com.justnothing.testmodule.command.framework.utils.CmdParamProcessor;
@@ -15,7 +16,7 @@ public class InvokeMethodRequest extends ClassCommandRequest<InvokeMethodResult>
 
     @CmdParam(
         name = "class",
-        description = "类名",
+        description = ClassTexts.PARAM_CLASS_INVOKE_CLASS_DESC,
         position = 1,
         required = true,
         serializedName = "className"
@@ -24,7 +25,7 @@ public class InvokeMethodRequest extends ClassCommandRequest<InvokeMethodResult>
 
     @CmdParam(
         name = "method",
-        description = "方法名",
+        description = ClassTexts.PARAM_CLASS_INVOKE_METHOD_DESC,
         position = 2,
         required = true,
         serializedName = "methodName"
@@ -41,7 +42,7 @@ public class InvokeMethodRequest extends ClassCommandRequest<InvokeMethodResult>
 
     @CmdParam(
         name = "--static",
-        description = "静态方法",
+        description = ClassTexts.PARAM_CLASS_INVOKE_STATIC_DESC,
         aliases = {"-s"},
         serializedName = "static"
     )
@@ -49,7 +50,7 @@ public class InvokeMethodRequest extends ClassCommandRequest<InvokeMethodResult>
 
     @CmdParam(
         name = "--free",
-        description = "自由模式",
+        description = ClassTexts.PARAM_CLASS_INVOKE_FREE_DESC,
         aliases = {"-f"},
         serializedName = "freeMode"
     )
@@ -57,21 +58,21 @@ public class InvokeMethodRequest extends ClassCommandRequest<InvokeMethodResult>
 
     @CmdParam(
         name = "--super",
-        description = "访问父类成员",
+        description = ClassTexts.PARAM_CLASS_INVOKE_SUPER_DESC,
         serializedName = "accessSuper"
     )
     private boolean accessSuper = false;
 
     @CmdParam(
         name = "--interfaces",
-        description = "访问接口成员",
+        description = ClassTexts.PARAM_CLASS_INVOKE_INTERFACES_DESC,
         serializedName = "accessInterfaces"
     )
     private boolean accessInterfaces = false;
 
     @CmdParam(
         name = "--instance",
-        description = "实例表达式（用于非静态方法的实例）",
+        description = ClassTexts.PARAM_CLASS_INVOKE_INSTANCE_DESC,
         aliases = {"-i"},
         serializedName = "targetInstance"
     )

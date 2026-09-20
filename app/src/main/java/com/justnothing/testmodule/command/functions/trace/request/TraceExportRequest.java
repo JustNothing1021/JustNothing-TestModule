@@ -3,6 +3,7 @@ package com.justnothing.testmodule.command.functions.trace.request;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.functions.trace.response.TraceResult;
+import com.justnothing.testmodule.command.functions.trace.TraceTexts;
 
 public class TraceExportRequest extends CommandRequest<TraceResult> {
 
@@ -10,7 +11,7 @@ public class TraceExportRequest extends CommandRequest<TraceResult> {
         name = "id",
         position = 1,
         required = true,
-        description = "跟踪任务 ID",
+        description = TraceTexts.PARAM_TRACE_EXPORT_ID_DESC,
         serializedName = "traceId"
     )
     private int traceId;
@@ -19,7 +20,7 @@ public class TraceExportRequest extends CommandRequest<TraceResult> {
         name = "filePath",
         position = 2,
         required = true,
-        description = "导出文件路径",
+        description = TraceTexts.PARAM_TRACE_EXPORT_FILEPATH_DESC,
         serializedName = "filePath"
     )
     private String filePath;

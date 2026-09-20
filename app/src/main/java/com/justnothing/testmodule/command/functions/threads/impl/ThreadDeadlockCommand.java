@@ -3,6 +3,7 @@ package com.justnothing.testmodule.command.functions.threads.impl;
 import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
 import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.functions.threads.ThreadsTexts;
 import com.justnothing.testmodule.command.functions.threads.request.ThreadDeadlockRequest;
 import com.justnothing.testmodule.command.functions.threads.response.ThreadDeadlockResult;
 import com.justnothing.testmodule.command.functions.threads.response.ThreadDetail;
@@ -15,7 +16,7 @@ import java.util.Locale;
 import java.util.Map;
 
 @SubCommandInfo(
-    description = "检测Java应用程序中的死锁",
+    description = ThreadsTexts.SUB_THREADS_DEADLOCK_DESC,
     usage = "threads deadlock",
     examples = {"threads deadlock"}
 )

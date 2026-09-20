@@ -23,32 +23,32 @@ import java.util.Map;
 @Cmd(
     version = CommandServer.CMD_ALIAS_VER,
     name = "alias",
-    description = "管理命令别名，用于简化常用命令"
+    description = AliasTexts.CMD_ALIAS_DESC
 )
 @CmdRoutes({
     @CmdRoutes.Route(
         path = "add",
         request = AliasAddRequest.class,
         handler = AliasAddCommand.class,
-        description = "添加新的命令别名"
+        description = AliasTexts.ROUTE_ALIAS_ADD_DESC
     ),
     @CmdRoutes.Route(
         path = "list",
         request = AliasListRequest.class,
         handler = AliasListCommand.class,
-        description = "列出所有已定义的别名"
+        description = AliasTexts.ROUTE_ALIAS_LIST_DESC
     ),
     @CmdRoutes.Route(
         path = "remove",
         request = AliasRemoveRequest.class,
         handler = AliasRemoveCommand.class,
-        description = "删除指定的别名"
+        description = AliasTexts.ROUTE_ALIAS_REMOVE_DESC
     ),
     @CmdRoutes.Route(
         path = "clear",
         request = AliasClearRequest.class,
         handler = AliasClearCommand.class,
-        description = "清空所有别名"
+        description = AliasTexts.ROUTE_ALIAS_CLEAR_DESC
     )
 })
 public class AliasMain extends MainCommand<AliasResult> {

@@ -3,25 +3,22 @@ package com.justnothing.testmodule.ui.activity.analysis.classanalysis;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ImageButton;
-import android.widget.ProgressBar;
-import android.widget.TextView;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 
-import com.google.android.material.switchmaterial.SwitchMaterial;
-import com.google.android.material.textfield.TextInputLayout;
 import com.justnothing.testmodule.R;
+import com.justnothing.testmodule.databinding.ActivityMethodDetailBinding;
+import com.justnothing.testmodule.databinding.ItemParamInputBinding;
+import com.justnothing.testmodule.ui.activity.BaseActivity;
 import com.justnothing.testmodule.ui.viewmodel.analysis.MethodDetailViewModel;
 import com.justnothing.testmodule.utils.format.DescriptorColorizer;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class MethodDetailActivity extends AppCompatActivity {
+public class MethodDetailActivity extends BaseActivity {
     
     public static final String EXTRA_CLASS_NAME = "className";
     public static final String EXTRA_METHOD_NAME = "methodName";
@@ -35,26 +32,7 @@ public class MethodDetailActivity extends AppCompatActivity {
     
     private MethodDetailViewModel viewModel;
     
-    private TextView tvClassName;
-    private TextView tvMethodName;
-    private TextView tvModifiers;
-    private TextView tvReturnType;
-    private TextView tvSignature;
-    private TextView tvDeclaringClass;
-    private View cardInstance;
-    private EditText etTargetInstance;
-    private ViewGroup layoutParams;
-    private TextView tvNoParams;
-    private SwitchMaterial switchFreeMode;
-    private ImageButton btnAddParam;
-    private View cardResult;
-    private TextView tvResult;
-    private TextView tvResultType;
-    private TextView tvResultHash;
-    private ProgressBar progressBar;
-    private TextView tvInstanceAfterLabel;
-    private TextView tvInstanceAfter;
-    private TextView tvInstanceHash;
+    private ActivityMethodDetailBinding binding;
     
     private String className;
     private String methodName;
@@ -65,7 +43,7 @@ public class MethodDetailActivity extends AppCompatActivity {
     private List<ParamInputHolder> paramInputs;
     
     static class ParamInputHolder {
-        View rootView;
+        ItemParamInputBinding binding;
         EditText etType;
         EditText etValue;
         ImageButton btnRemove;
@@ -74,7 +52,8 @@ public class MethodDetailActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_method_detail);
+        binding = ActivityMethodDetailBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
         
         className = getIntent().getStringExtra(EXTRA_CLASS_NAME);
         methodName = getIntent().getStringExtra(EXTRA_METHOD_NAME);
@@ -95,27 +74,6 @@ public class MethodDetailActivity extends AppCompatActivity {
     }
     
     private void initViews() {
-        tvClassName = findViewById(R.id.tv_class_name);
-        tvMethodName = findViewById(R.id.tv_method_name);
-        tvModifiers = findViewById(R.id.tv_modifiers);
-        tvReturnType = findViewById(R.id.tv_return_type);
-        tvSignature = findViewById(R.id.tv_signature);
-        tvDeclaringClass = findViewById(R.id.tv_declaring_class);
-        cardInstance = findViewById(R.id.card_instance);
-        etTargetInstance = findViewById(R.id.et_target_instance);
-        layoutParams = findViewById(R.id.layout_params);
-        tvNoParams = findViewById(R.id.tv_no_params);
-        switchFreeMode = findViewById(R.id.switch_free_mode);
-        btnAddParam = findViewById(R.id.btn_add_param);
-        cardResult = findViewById(R.id.card_result);
-        tvResult = findViewById(R.id.tv_result);
-        tvResultType = findViewById(R.id.tv_result_type);
-        tvResultHash = findViewById(R.id.tv_result_hash);
-        progressBar = findViewById(R.id.progress_bar);
-        tvInstanceAfterLabel = findViewById(R.id.tv_instance_after_label);
-        tvInstanceAfter = findViewById(R.id.tv_instance_after);
-        tvInstanceHash = findViewById(R.id.tv_instance_hash);
-        
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
             getSupportActionBar().setTitle(R.string.analysis_method_invoke);
@@ -126,69 +84,69 @@ public class MethodDetailActivity extends AppCompatActivity {
         viewModel = new ViewModelProvider(this).get(MethodDetailViewModel.class);
         
         viewModel.isLoading().observe(this, isLoading -> {
-            progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
-            findViewById(R.id.btn_invoke).setEnabled(!isLoading);
+            binding.progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
+            binding.btnInvoke.setEnabled(!isLoading);
         });
         
         viewModel.getResult().observe(this, result -> {
             if (result != null) {
-                cardResult.setVisibility(View.VISIBLE);
-                tvResult.setText(result.getResultString() != null ? result.getResultString() : "null");
-                tvResult.setTextColor(getColor(R.color.green));
-                tvResultType.setText(getString(R.string.analysis_invoke_result_type_label,
+                binding.cardResult.setVisibility(View.VISIBLE);
+                binding.tvResult.setText(result.getResultString() != null ? result.getResultString() : "null");
+                binding.tvResult.setTextColor(getColor(R.color.green));
+                binding.tvResultType.setText(getString(R.string.analysis_invoke_result_type_label,
                     (result.getResultTypeName() != null ? result.getResultTypeName() : "unknown")));
-                tvResultHash.setText(getString(R.string.analysis_invoke_result_hash_label, result.getResultHash()));
+                binding.tvResultHash.setText(getString(R.string.analysis_invoke_result_hash_label, result.getResultHash()));
                 
                 String instanceAfter = result.getInstanceAfterInvocation();
                 if (instanceAfter != null && !instanceAfter.isEmpty()) {
-                    tvInstanceAfterLabel.setVisibility(View.VISIBLE);
-                    tvInstanceAfter.setVisibility(View.VISIBLE);
-                    tvInstanceAfter.setText(instanceAfter);
-                    tvInstanceAfter.setTextColor(getColor(R.color.blue));
-                    tvInstanceHash.setVisibility(View.VISIBLE);
-                    tvInstanceHash.setText(getString(R.string.analysis_invoke_result_hash_label, result.getInstanceHash()));
+                    binding.tvInstanceAfterLabel.setVisibility(View.VISIBLE);
+                    binding.tvInstanceAfter.setVisibility(View.VISIBLE);
+                    binding.tvInstanceAfter.setText(instanceAfter);
+                    binding.tvInstanceAfter.setTextColor(getColor(R.color.blue));
+                    binding.tvInstanceHash.setVisibility(View.VISIBLE);
+                    binding.tvInstanceHash.setText(getString(R.string.analysis_invoke_result_hash_label, result.getInstanceHash()));
                 } else {
-                    tvInstanceAfterLabel.setVisibility(View.GONE);
-                    tvInstanceAfter.setVisibility(View.GONE);
-                    tvInstanceHash.setVisibility(View.GONE);
+                    binding.tvInstanceAfterLabel.setVisibility(View.GONE);
+                    binding.tvInstanceAfter.setVisibility(View.GONE);
+                    binding.tvInstanceHash.setVisibility(View.GONE);
                 }
             }
         });
         
         viewModel.getError().observe(this, error -> {
             if (error != null && !error.isEmpty()) {
-                cardResult.setVisibility(View.VISIBLE);
-                tvResult.setText(error);
-                tvResult.setTextColor(getColor(R.color.red));
-                tvResultType.setText("");
-                tvResultHash.setText("");
-                tvInstanceAfterLabel.setVisibility(View.GONE);
-                tvInstanceAfter.setVisibility(View.GONE);
-                tvInstanceHash.setVisibility(View.GONE);
+                binding.cardResult.setVisibility(View.VISIBLE);
+                binding.tvResult.setText(error);
+                binding.tvResult.setTextColor(getColor(R.color.red));
+                binding.tvResultType.setText("");
+                binding.tvResultHash.setText("");
+                binding.tvInstanceAfterLabel.setVisibility(View.GONE);
+                binding.tvInstanceAfter.setVisibility(View.GONE);
+                binding.tvInstanceHash.setVisibility(View.GONE);
             }
         });
     }
     
     private void setupListeners() {
-        findViewById(R.id.btn_invoke).setOnClickListener(v -> invokeMethod());
+        binding.btnInvoke.setOnClickListener(v -> invokeMethod());
         
-        switchFreeMode.setOnCheckedChangeListener((buttonView, isChecked) -> updateParamInputsForMode(isChecked));
+        binding.switchFreeMode.setOnCheckedChangeListener((buttonView, isChecked) -> updateParamInputsForMode(isChecked));
         
-        btnAddParam.setOnClickListener(v -> addFreeParamInput());
+        binding.btnAddParam.setOnClickListener(v -> addFreeParamInput());
     }
     
     private void displayInfo() {
-        tvClassName.setText(className);
-        tvMethodName.setText(methodName);
+        binding.tvClassName.setText(className);
+        binding.tvMethodName.setText(methodName);
         
         String modifiers = getIntent().getStringExtra(EXTRA_MODIFIERS);
         if (modifiers != null && !modifiers.isEmpty()) {
-            tvModifiers.setText(modifiers);
+            binding.tvModifiers.setText(modifiers);
         } else {
-            tvModifiers.setVisibility(View.GONE);
+            binding.tvModifiers.setVisibility(View.GONE);
         }
         
-        tvReturnType.setText(getString(R.string.analysis_method_return_type_label, DescriptorColorizer.formatTypeName(returnType)));
+        binding.tvReturnType.setText(getString(R.string.analysis_method_return_type_label, DescriptorColorizer.formatTypeName(returnType)));
         
         StringBuilder signatureBuilder = new StringBuilder();
         if (genericParamTypes.isEmpty()) {
@@ -199,42 +157,42 @@ public class MethodDetailActivity extends AppCompatActivity {
                 signatureBuilder.append(DescriptorColorizer.formatTypeName(genericParamTypes.get(i)));
             }
         }
-        tvSignature.setText(signatureBuilder.toString());
+        binding.tvSignature.setText(signatureBuilder.toString());
         
         String declaringClass = getIntent().getStringExtra(EXTRA_DECLARING_CLASS);
         boolean declaringClassIsInterface = getIntent().getBooleanExtra(EXTRA_DECLARING_CLASS_IS_INTERFACE, false);
         if (declaringClass != null && !declaringClass.equals(className)) {
-            tvDeclaringClass.setVisibility(View.VISIBLE);
+            binding.tvDeclaringClass.setVisibility(View.VISIBLE);
             if (declaringClassIsInterface) {
-                tvDeclaringClass.setText(getString(R.string.analysis_implements, DescriptorColorizer.formatTypeName(declaringClass)));
+                binding.tvDeclaringClass.setText(getString(R.string.analysis_implements, DescriptorColorizer.formatTypeName(declaringClass)));
             } else {
-                tvDeclaringClass.setText(getString(R.string.analysis_extends, DescriptorColorizer.formatTypeName(declaringClass)));
+                binding.tvDeclaringClass.setText(getString(R.string.analysis_extends, DescriptorColorizer.formatTypeName(declaringClass)));
             }
         } else {
-            tvDeclaringClass.setVisibility(View.GONE);
+            binding.tvDeclaringClass.setVisibility(View.GONE);
         }
         
         if (!isStatic) {
-            cardInstance.setVisibility(View.VISIBLE);
+            binding.cardInstance.setVisibility(View.VISIBLE);
         } else {
-            cardInstance.setVisibility(View.GONE);
+            binding.cardInstance.setVisibility(View.GONE);
         }
         
         createParamInputs(false);
     }
     
     private void createParamInputs(boolean freeMode) {
-        layoutParams.removeAllViews();
+        binding.layoutParams.removeAllViews();
         paramInputs = new ArrayList<>();
         
         if (!freeMode && genericParamTypes.isEmpty()) {
-            tvNoParams.setVisibility(View.VISIBLE);
-            btnAddParam.setVisibility(View.GONE);
+            binding.tvNoParams.setVisibility(View.VISIBLE);
+            binding.btnAddParam.setVisibility(View.GONE);
             return;
         }
         
-        tvNoParams.setVisibility(View.GONE);
-        btnAddParam.setVisibility(freeMode ? View.VISIBLE : View.GONE);
+        binding.tvNoParams.setVisibility(View.GONE);
+        binding.btnAddParam.setVisibility(freeMode ? View.VISIBLE : View.GONE);
         
         LayoutInflater inflater = LayoutInflater.from(this);
         
@@ -250,26 +208,21 @@ public class MethodDetailActivity extends AppCompatActivity {
     }
     
     private void addFixedParamInput(LayoutInflater inflater, int index) {
-        View paramView = inflater.inflate(R.layout.item_param_input, layoutParams, false);
-        
-        TextView tvLabel = paramView.findViewById(R.id.tv_param_label);
-        TextInputLayout tilType = paramView.findViewById(R.id.til_type);
-        EditText etValue = paramView.findViewById(R.id.et_param_value);
-        ImageButton btnRemove = paramView.findViewById(R.id.btn_remove_param);
+        ItemParamInputBinding paramBinding = ItemParamInputBinding.inflate(inflater, binding.layoutParams, false);
         
         String paramType = DescriptorColorizer.formatTypeName(genericParamTypes.get(index));
-        tvLabel.setText(getString(R.string.analysis_param_label_format, index, paramType));
-        tilType.setVisibility(View.GONE);
-        btnRemove.setVisibility(View.GONE);
+        paramBinding.tvParamLabel.setText(getString(R.string.analysis_param_label_format, index, paramType));
+        paramBinding.tilType.setVisibility(View.GONE);
+        paramBinding.btnRemoveParam.setVisibility(View.GONE);
         
         ParamInputHolder holder = new ParamInputHolder();
-        holder.rootView = paramView;
+        holder.binding = paramBinding;
         holder.etType = null;
-        holder.etValue = etValue;
-        holder.btnRemove = btnRemove;
+        holder.etValue = paramBinding.etParamValue;
+        holder.btnRemove = paramBinding.btnRemoveParam;
         paramInputs.add(holder);
         
-        layoutParams.addView(paramView);
+        binding.layoutParams.addView(paramBinding.getRoot());
     }
     
     private void addFreeParamInput() {
@@ -278,39 +231,32 @@ public class MethodDetailActivity extends AppCompatActivity {
     }
     
     private void addFreeParamInputInternal(LayoutInflater inflater, int index) {
-        View paramView = inflater.inflate(R.layout.item_param_input, layoutParams, false);
+        ItemParamInputBinding paramBinding = ItemParamInputBinding.inflate(inflater, binding.layoutParams, false);
         
-        TextView tvLabel = paramView.findViewById(R.id.tv_param_label);
-        TextInputLayout tilType = paramView.findViewById(R.id.til_type);
-        EditText etType = paramView.findViewById(R.id.et_param_type);
-        EditText etValue = paramView.findViewById(R.id.et_param_value);
-        ImageButton btnRemove = paramView.findViewById(R.id.btn_remove_param);
-        
-        tvLabel.setText(getString(R.string.analysis_param_label_format, index, getString(R.string.analyze_invoke_free_mode_param)));
-        tilType.setVisibility(View.VISIBLE);
-        btnRemove.setVisibility(View.VISIBLE);
+        paramBinding.tvParamLabel.setText(getString(R.string.analysis_param_label_format, index, getString(R.string.analyze_invoke_free_mode_param)));
+        paramBinding.tilType.setVisibility(View.VISIBLE);
+        paramBinding.btnRemoveParam.setVisibility(View.VISIBLE);
         
         ParamInputHolder holder = new ParamInputHolder();
-        holder.rootView = paramView;
-        holder.etType = etType;
-        holder.etValue = etValue;
-        holder.btnRemove = btnRemove;
+        holder.binding = paramBinding;
+        holder.etType = paramBinding.etParamType;
+        holder.etValue = paramBinding.etParamValue;
+        holder.btnRemove = paramBinding.btnRemoveParam;
         
-        btnRemove.setOnClickListener(v -> {
-            layoutParams.removeView(holder.rootView);
+        paramBinding.btnRemoveParam.setOnClickListener(v -> {
+            binding.layoutParams.removeView(holder.binding.getRoot());
             paramInputs.remove(holder);
             updateParamLabels();
         });
         
         paramInputs.add(holder);
-        layoutParams.addView(paramView);
+        binding.layoutParams.addView(paramBinding.getRoot());
     }
     
     private void updateParamLabels() {
         for (int i = 0; i < paramInputs.size(); i++) {
             ParamInputHolder holder = paramInputs.get(i);
-            TextView tvLabel = holder.rootView.findViewById(R.id.tv_param_label);
-            tvLabel.setText(getString(R.string.analysis_param_label_format, i, getString(R.string.analyze_invoke_free_mode_param)));
+            holder.binding.tvParamLabel.setText(getString(R.string.analysis_param_label_format, i, getString(R.string.analyze_invoke_free_mode_param)));
         }
     }
     
@@ -319,16 +265,16 @@ public class MethodDetailActivity extends AppCompatActivity {
     }
     
     private void invokeMethod() {
-        boolean freeMode = switchFreeMode.isChecked();
+        boolean freeMode = binding.switchFreeMode.isChecked();
         String targetInstance = null;
         
         if (!isStatic) {
-            targetInstance = etTargetInstance.getText() != null ? 
-                etTargetInstance.getText().toString().trim() : "";
+            targetInstance = binding.etTargetInstance.getText() != null ? 
+                binding.etTargetInstance.getText().toString().trim() : "";
             if (targetInstance.isEmpty()) {
-                cardResult.setVisibility(View.VISIBLE);
-                tvResult.setText(getString(R.string.analysis_instance_method_requires_target));
-                tvResult.setTextColor(getColor(R.color.red));
+                binding.cardResult.setVisibility(View.VISIBLE);
+                binding.tvResult.setText(getString(R.string.analysis_instance_method_requires_target));
+                binding.tvResult.setTextColor(getColor(R.color.red));
                 return;
             }
         }
@@ -346,7 +292,7 @@ public class MethodDetailActivity extends AppCompatActivity {
             }
         }
         
-        tvResult.setTextColor(getColor(R.color.green));
+        binding.tvResult.setTextColor(getColor(R.color.green));
         viewModel.invokeMethod(className, methodName, signature, targetInstance, 
                               params, paramTypes, freeMode, isStatic);
     }

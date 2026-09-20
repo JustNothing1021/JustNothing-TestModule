@@ -1,29 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- 间距 / 字号统一走设计系统 token（见 dimens.xml、themes.xml） -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="12dp"
-    android:background="#F5F5F5"
-    android:layout_marginBottom="8dp">
+    android:padding="@dimen/spacing_12"
+    android:layout_marginBottom="@dimen/spacing_8">
 
     <TextView
         android:id="@+id/text_file_name"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="文件名: -"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="4dp"/>
+        android:layout_marginBottom="@dimen/spacing_4"
+        android:text="@string/exported_file_name_placeholder"
+        android:textAppearance="@style/TextAppearance.App.Title" />
 
     <TextView
         android:id="@+id/text_file_path"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="路径: -"
-        android:textSize="12sp"
-        android:textColor="#666666"
-        android:layout_marginBottom="4dp"/>
+        android:layout_marginBottom="@dimen/spacing_4"
+        android:text="@string/exported_file_directory_placeholder"
+        android:textAppearance="@style/TextAppearance.App.Label" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -35,16 +33,17 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="大小: -"
-            android:textSize="14sp"/>
+            android:text="@string/exported_file_size_placeholder"
+            android:textAppearance="@style/TextAppearance.App.Caption" />
 
+        <!-- 紧凑按钮的字号和内边距交给样式，不要在按钮上写 textSize / padding -->
         <Button
             android:id="@+id/btn_delete_file"
+            style="@style/Widget.App.Button.Small"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:padding="8dp"
-            android:text="@string/general_delete"
-            android:textSize="12sp" />
+            android:text="@string/general_delete" />
+
     </LinearLayout>
 
 </LinearLayout>

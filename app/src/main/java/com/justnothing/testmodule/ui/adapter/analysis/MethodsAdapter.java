@@ -1,15 +1,13 @@
 package com.justnothing.testmodule.ui.adapter.analysis;
 
 import android.view.LayoutInflater;
-import android.view.View;
 import android.view.ViewGroup;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.justnothing.testmodule.R;
 import com.justnothing.testmodule.command.functions.classcmd.model.MethodInfo;
+import com.justnothing.testmodule.databinding.ItemMethodBinding;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,9 +28,9 @@ public class MethodsAdapter extends RecyclerView.Adapter<MethodsAdapter.ViewHold
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext())
-            .inflate(R.layout.item_method, parent, false);
-        return new ViewHolder(view);
+        ItemMethodBinding binding = ItemMethodBinding.inflate(
+            LayoutInflater.from(parent.getContext()), parent, false);
+        return new ViewHolder(binding);
     }
     
     @Override
@@ -47,23 +45,17 @@ public class MethodsAdapter extends RecyclerView.Adapter<MethodsAdapter.ViewHold
     }
     
     public static class ViewHolder extends RecyclerView.ViewHolder {
-        private final TextView tvMethodName;
-        private final TextView tvReturnType;
-        private final TextView tvParameters;
-        private final TextView tvModifiers;
+        private final ItemMethodBinding binding;
         
-        public ViewHolder(@NonNull View itemView) {
-            super(itemView);
-            tvMethodName = itemView.findViewById(R.id.tv_method_name);
-            tvReturnType = itemView.findViewById(R.id.tv_return_type);
-            tvParameters = itemView.findViewById(R.id.tv_parameters);
-            tvModifiers = itemView.findViewById(R.id.tv_modifiers);
+        public ViewHolder(@NonNull ItemMethodBinding binding) {
+            super(binding.getRoot());
+            this.binding = binding;
         }
         
         public void bind(MethodInfo method) {
-            tvMethodName.setText(method.getName());
-            tvReturnType.setText(method.getReturnType());
-            tvModifiers.setText(method.getModifiersString());
+            binding.tvMethodName.setText(method.getName());
+            binding.tvReturnType.setText(method.getReturnType());
+            binding.tvModifiers.setText(method.getModifiersString());
             
             StringBuilder params = new StringBuilder();
             List<String> paramTypes = method.getParameterTypes();
@@ -76,7 +68,7 @@ public class MethodsAdapter extends RecyclerView.Adapter<MethodsAdapter.ViewHold
                     params.append(paramNames.get(i));
                 }
             }
-            tvParameters.setText(params.toString());
+            binding.tvParameters.setText(params.toString());
         }
     }
 }

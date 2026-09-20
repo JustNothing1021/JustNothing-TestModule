@@ -40,24 +40,23 @@ public class HookManageCommand extends AbstractHookCommand<CommandRequest<?>, Ho
     public HookListResult handleRemove(HookRemoveRequest request) throws Exception {
         logger.info("移除Hook: %s", request.getHookId());
 
-        try {
-            HookManager.removeHook(request.getHookId(), context);
-            outln("移除Hook成功", Colors.GREEN);
-            
-            HookListResult r = okListResult("remove");
-            r.setMessage("Hook已移除: " + request.getHookId());
-            return r;
-        } catch (Exception e) {
-            throw new IllegalArgumentException("未找到Hook (ID: " + request.getHookId() + ")");
+        // 找不到就是失败，不能再无条件地报「移除成功」
+        if (!HookManager.removeHook(request.getHookId(), context)) {
+            return createErrorResult("未找到Hook (ID: " + request.getHookId() + ")");
         }
+
+        HookListResult r = okListResult("remove");
+        r.setMessage("Hook已移除: " + request.getHookId());
+        return r;
     }
 
     public HookListResult handleEnable(HookEnableRequest request) throws Exception {
         logger.info("启用Hook: %s", request.getHookId());
 
-        HookManager.enableHook(request.getHookId(), context);
-        outln("启用Hook成功", Colors.GREEN);
-        
+        if (!HookManager.enableHook(request.getHookId(), context)) {
+            return createErrorResult("未找到Hook (ID: " + request.getHookId() + ")");
+        }
+
         HookListResult r = okListResult("enable");
         r.setMessage("Hook已启用: " + request.getHookId());
         return r;
@@ -66,9 +65,10 @@ public class HookManageCommand extends AbstractHookCommand<CommandRequest<?>, Ho
     public HookListResult handleDisable(HookDisableRequest request) throws Exception {
         logger.info("禁用Hook: %s", request.getHookId());
 
-        HookManager.disableHook(request.getHookId(), context);
-        outln("禁用Hook成功", Colors.GREEN);
-        
+        if (!HookManager.disableHook(request.getHookId(), context)) {
+            return createErrorResult("未找到Hook (ID: " + request.getHookId() + ")");
+        }
+
         HookListResult r = okListResult("disable");
         r.setMessage("Hook已禁用: " + request.getHookId());
         return r;

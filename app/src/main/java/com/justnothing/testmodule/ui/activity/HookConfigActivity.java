@@ -2,23 +2,19 @@ package com.justnothing.testmodule.ui.activity;
 
 import android.annotation.SuppressLint;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Switch;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.justnothing.testmodule.R;
 import com.justnothing.testmodule.constants.HookConfig;
+import com.justnothing.testmodule.databinding.ActivityHookConfigBinding;
+import com.justnothing.testmodule.databinding.ItemHookConfigBinding;
 import com.justnothing.testmodule.utils.data.DataBridge;
-import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.hooks.conf.ClientHookConfig;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
@@ -32,10 +28,10 @@ import java.util.Map;
 
 
 
-@SuppressLint({"UseSwitchCompatOrMaterialCode", "NotifyDataSetChanged"})  // 懒
-public class HookConfigActivity extends AppCompatActivity {
+@SuppressLint("NotifyDataSetChanged")
+public class HookConfigActivity extends BaseActivity {
 
-    private static final Logger logger = Logger.getLoggerForName("HookConfigActivity");
+    private ActivityHookConfigBinding binding;
 
     private HookAdapter adapter;
     private List<HookItem> hookItems;
@@ -43,29 +39,29 @@ public class HookConfigActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_hook_config);
+        binding = ActivityHookConfigBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
         hookItems = new ArrayList<>();
         initViews();
         loadHooks();
     }
 
     private void initViews() {
-        RecyclerView recyclerView = findViewById(R.id.hook_list);
+        RecyclerView recyclerView = binding.hookList;
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         adapter = new HookAdapter();
         recyclerView.setAdapter(adapter);
 
-        findViewById(R.id.btn_refresh).setOnClickListener(v -> loadHooks());
-        findViewById(R.id.btn_enable_all).setOnClickListener(v -> enableAll(true));
-        findViewById(R.id.btn_disable_all).setOnClickListener(v -> enableAll(false));
+        binding.btnRefresh.setOnClickListener(v -> loadHooks());
+        binding.btnEnableAll.setOnClickListener(v -> enableAll(true));
+        binding.btnDisableAll.setOnClickListener(v -> enableAll(false));
     }
 
     private void updateEmptyHint() {
-        TextView emptyHint = findViewById(R.id.text_empty_hint);
         if (hookItems == null || hookItems.isEmpty()) {
-            emptyHint.setVisibility(View.VISIBLE);
+            binding.textEmptyHint.setVisibility(View.VISIBLE);
         } else {
-            emptyHint.setVisibility(View.GONE);
+            binding.textEmptyHint.setVisibility(View.GONE);
         }
     }
 
@@ -93,11 +89,11 @@ public class HookConfigActivity extends AppCompatActivity {
                             logger.warn("无法获取" + name + "的客户端Hook状态, 将会同步服务端");
                             ClientHookConfig.setHookEnabled(name, serverEnabled);
                             enableDisplay = serverEnabled;
-                            description += "(未设置激活状态, 同步了服务端的状态)";
+                            description += getString(R.string.hook_config_state_uninitialized_hint);
                         } else {
                             enableDisplay = clientEnabled;
                             if (clientEnabled != serverEnabled)
-                                description += "(服务端状态不同, 重启后更新)";
+                                description += getString(R.string.hook_config_state_mismatch_hint);
                         }
                         loadedItems.add(new HookItem(name, displayName, description, enableDisplay));
                     }
@@ -129,7 +125,7 @@ public class HookConfigActivity extends AppCompatActivity {
         logger.info((enabled ? "启用" : "禁用") + "所有Hook");
         
         // 延迟重新加载Hook列表，显示服务端状态差异
-        new android.os.Handler(Looper.getMainLooper()).postDelayed(this::loadHooks, 300);
+        mainHandler.postDelayed(this::loadHooks, 300);
     }
 
     private static class HookItem {
@@ -150,9 +146,9 @@ public class HookConfigActivity extends AppCompatActivity {
         @NonNull
         @Override
         public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            View view = LayoutInflater.from(parent.getContext())
-                    .inflate(R.layout.item_hook_config, parent, false);
-            return new ViewHolder(view);
+            ItemHookConfigBinding itemBinding = ItemHookConfigBinding.inflate(
+                    LayoutInflater.from(parent.getContext()), parent, false);
+            return new ViewHolder(itemBinding);
         }
 
         @Override
@@ -167,29 +163,24 @@ public class HookConfigActivity extends AppCompatActivity {
         }
 
         public class ViewHolder extends RecyclerView.ViewHolder {
-            TextView textName;
-            TextView textDescription;
-            Switch switchEnabled;
+            private final ItemHookConfigBinding binding;
 
-            ViewHolder(View itemView) {
-                super(itemView);
-                textName = itemView.findViewById(R.id.text_hook_name);
-                textDescription = itemView.findViewById(R.id.text_hook_description);
-                switchEnabled = itemView.findViewById(R.id.switch_hook_enabled);
+            ViewHolder(ItemHookConfigBinding binding) {
+                super(binding.getRoot());
+                this.binding = binding;
             }
 
             void bind(HookItem item) {
-                textName.setText(item.displayName);
-                textDescription.setText(item.description);
-                switchEnabled.setOnCheckedChangeListener(null);
-                switchEnabled.setChecked(item.enabled);
-                switchEnabled.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                binding.textHookName.setText(item.displayName);
+                binding.textHookDescription.setText(item.description);
+                binding.switchHookEnabled.setOnCheckedChangeListener(null);
+                binding.switchHookEnabled.setChecked(item.enabled);
+                binding.switchHookEnabled.setOnCheckedChangeListener((buttonView, isChecked) -> {
                     if (item.enabled == isChecked) return;
                     item.enabled = isChecked;
                     ClientHookConfig.setHookEnabled(item.name, isChecked);
                     logger.info(item.name + "的状态更改为" + (isChecked ? "启用" : "禁用"));
-                    new Handler(Looper.getMainLooper()) // 防止循环
-                            .postDelayed(HookConfigActivity.this::loadHooks, 300);
+                    mainHandler.postDelayed(HookConfigActivity.this::loadHooks, 300); // 防止循环
                 });
             }
         }

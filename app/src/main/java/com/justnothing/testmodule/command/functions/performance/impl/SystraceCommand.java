@@ -9,13 +9,14 @@ import com.justnothing.testmodule.command.functions.performance.systrace.Systrac
 import com.justnothing.testmodule.command.functions.performance.systrace.SystraceParser;
 import com.justnothing.testmodule.command.functions.performance.systrace.SystraceRunner;
 import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.functions.performance.PerformanceTexts;
 
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.Map;
 
 @SubCommandInfo(
-    description = "系统级 Systrace 性能追踪，捕获系统-wide 性能数据",
+    description = PerformanceTexts.SUB_PERFORMANCE_SYSTRACE_DESC,
     usage = "performance systrace <action> [args...]",
     examples = {
         "performance systrace start 10 gfx view am",
@@ -23,12 +24,7 @@ import java.util.Map;
         "performance systrace report 1",
         "performance systrace export 1 /sdcard/systrace.html"
     },
-    optionsDesc = """
-        Actions:
-            start [duration] [categories...]     开始 Systrace (默认10秒)
-            stop <id>                             停止追踪
-            report [id]                           查看报告 (默认最新)
-            export <id> <path>                    导出 HTML 报告"""
+    optionsDesc = PerformanceTexts.SUB_PERFORMANCE_SYSTRACE_OPTIONS
 )
 public class SystraceCommand extends AbstractPerfCommand<PerformanceRequest<?>, SystraceResult> {
 

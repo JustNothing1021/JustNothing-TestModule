@@ -3,6 +3,7 @@ package com.justnothing.testmodule.command.functions.trace.request;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.functions.trace.response.TraceResult;
+import com.justnothing.testmodule.command.functions.trace.TraceTexts;
 
 public class TraceAddRequest extends CommandRequest<TraceResult> {
 
@@ -10,7 +11,7 @@ public class TraceAddRequest extends CommandRequest<TraceResult> {
         name = "className",
         position = 1,
         required = true,
-        description = "目标类名",
+        description = TraceTexts.PARAM_TRACE_ADD_CLASSNAME_DESC,
         serializedName = "className"
     )
     private String className;
@@ -19,7 +20,7 @@ public class TraceAddRequest extends CommandRequest<TraceResult> {
         name = "methodName",
         position = 2,
         required = true,
-        description = "目标方法名",
+        description = TraceTexts.PARAM_TRACE_ADD_METHODNAME_DESC,
         serializedName = "methodName"
     )
     private String methodName;
@@ -28,7 +29,7 @@ public class TraceAddRequest extends CommandRequest<TraceResult> {
         name = "--sig",
         aliases = {"--signature"},
         required = false,
-        description = "方法签名"
+        description = TraceTexts.PARAM_TRACE_ADD_SIG_DESC
     )
     private String signature;
 

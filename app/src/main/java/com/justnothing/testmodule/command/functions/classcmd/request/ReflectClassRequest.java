@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.classcmd.request;
 
 import com.justnothing.testmodule.command.framework.error.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.functions.classcmd.ClassTexts;
 import com.justnothing.testmodule.command.framework.model.CustomCommandLineParser;
 import com.justnothing.testmodule.command.functions.classcmd.response.ReflectOperationResult;
 
@@ -13,7 +14,7 @@ public class ReflectClassRequest extends ClassCommandRequest<ReflectOperationRes
 
     @CmdParam(
         name = "class",
-        description = "类名",
+        description = ClassTexts.PARAM_CLASS_REFLECT_CLASS_DESC,
         position = 1,
         required = true,
         serializedName = "className"
@@ -22,7 +23,7 @@ public class ReflectClassRequest extends ClassCommandRequest<ReflectOperationRes
 
     @CmdParam(
         name = "operation",
-        description = "操作类型",
+        description = ClassTexts.PARAM_CLASS_REFLECT_OPERATION_DESC,
         position = 2,
         required = true,
         serializedName = "operationType"
@@ -31,7 +32,7 @@ public class ReflectClassRequest extends ClassCommandRequest<ReflectOperationRes
 
     @CmdParam(
         name = "member",
-        description = "成员名称",
+        description = ClassTexts.PARAM_CLASS_REFLECT_MEMBER_DESC,
         position = 3,
         required = true,
         serializedName = "memberName"
@@ -40,7 +41,7 @@ public class ReflectClassRequest extends ClassCommandRequest<ReflectOperationRes
 
     @CmdParam(
         name = "--super",
-        description = "访问父类成员",
+        description = ClassTexts.PARAM_CLASS_REFLECT_SUPER_DESC,
         aliases = {"-s"},
         serializedName = "accessSuper"
     )
@@ -48,7 +49,7 @@ public class ReflectClassRequest extends ClassCommandRequest<ReflectOperationRes
 
     @CmdParam(
         name = "--interfaces",
-        description = "访问接口成员",
+        description = ClassTexts.PARAM_CLASS_REFLECT_INTERFACES_DESC,
         aliases = {"-i"},
         serializedName = "accessInterfaces"
     )
@@ -56,7 +57,7 @@ public class ReflectClassRequest extends ClassCommandRequest<ReflectOperationRes
 
     @CmdParam(
         name = "--raw",
-        description = "原始输出格式",
+        description = ClassTexts.PARAM_CLASS_REFLECT_RAW_DESC,
         aliases = {"-r"},
         serializedName = "rawOutput"
     )

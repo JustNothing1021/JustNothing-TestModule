@@ -1,13 +1,14 @@
 package com.justnothing.testmodule.command.functions.classcmd.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.functions.classcmd.ClassTexts;
 import com.justnothing.testmodule.command.functions.classcmd.response.ClassGraphResult;
 
 public class ClassGraphRequest extends ClassCommandRequest<ClassGraphResult> {
 
     @CmdParam(
         name = "class",
-        description = "类名",
+        description = ClassTexts.PARAM_CLASS_GRAPH_CLASS_DESC,
         position = 1,
         required = true,
         serializedName = "className"
@@ -16,7 +17,7 @@ public class ClassGraphRequest extends ClassCommandRequest<ClassGraphResult> {
 
     @CmdParam(
         name = "--no-subclasses",
-        description = "隐藏子类",
+        description = ClassTexts.PARAM_CLASS_GRAPH_NO_SUBCLASSES_DESC,
         aliases = {"--hide-subclasses"},
         serializedName = "showSubclasses",
         isNegated = true
@@ -25,7 +26,7 @@ public class ClassGraphRequest extends ClassCommandRequest<ClassGraphResult> {
 
     @CmdParam(
         name = "--no-interfaces",
-        description = "隐藏接口",
+        description = ClassTexts.PARAM_CLASS_GRAPH_NO_INTERFACES_DESC,
         aliases = {"--hide-interfaces"},
         serializedName = "showInterfaces"
     )
@@ -33,14 +34,14 @@ public class ClassGraphRequest extends ClassCommandRequest<ClassGraphResult> {
 
     @CmdParam(
         name = "--compact",
-        description = "紧凑模式",
+        description = ClassTexts.PARAM_CLASS_GRAPH_COMPACT_DESC,
         serializedName = "compactMode"
     )
     private boolean compactMode = false;
 
     @CmdParam(
         name = "--depth",
-        description = "最大深度 (支持: --depth=10 或 --depth 10)",
+        description = ClassTexts.PARAM_CLASS_GRAPH_DEPTH_DESC,
         serializedName = "maxDepth"
     )
     private int maxDepth = 10;

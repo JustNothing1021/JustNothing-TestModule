@@ -8,6 +8,7 @@ import com.justnothing.testmodule.command.functions.performance.response.PerfTra
 import com.justnothing.testmodule.command.functions.performance.trace.TraceData;
 import com.justnothing.testmodule.command.functions.performance.trace.Tracer;
 import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.functions.performance.PerformanceTexts;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -19,7 +20,7 @@ import java.util.Locale;
 import java.util.Map;
 
 @SubCommandInfo(
-    description = "方法调用链追踪，记录完整的方法进入/退出链路",
+    description = PerformanceTexts.SUB_PERFORMANCE_TRACE_DESC,
     usage = "performance trace <action> [args...]",
     examples = {
         "performance trace start",
@@ -27,12 +28,7 @@ import java.util.Map;
         "performance trace report 1",
         "performance trace export 1 /sdcard/trace.json"
     },
-    optionsDesc = """
-        Actions:
-            start                              开始 Trace 追踪
-            stop <id>                           停止追踪
-            report [id]                         查看报告 (默认最新)
-            export <id> <path>                  导出数据"""
+    optionsDesc = PerformanceTexts.SUB_PERFORMANCE_TRACE_OPTIONS
 )
 public class TraceCommand extends AbstractPerfCommand<PerformanceRequest<?>, PerfTraceResult> {
 

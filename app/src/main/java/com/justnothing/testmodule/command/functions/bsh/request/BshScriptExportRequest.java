@@ -3,6 +3,7 @@ package com.justnothing.testmodule.command.functions.bsh.request;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.functions.bsh.response.BeanShellResult;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.functions.bsh.BshTexts;
 
 public class BshScriptExportRequest extends CommandRequest<BeanShellResult> {
 
@@ -10,7 +11,7 @@ public class BshScriptExportRequest extends CommandRequest<BeanShellResult> {
         name = "name",
         position = 1,
         required = true,
-        description = "脚本名称"
+        description = BshTexts.PARAM_BSH_SCRIPT_EXPORT_NAME_DESC
     )
     private String name;
 
@@ -18,7 +19,7 @@ public class BshScriptExportRequest extends CommandRequest<BeanShellResult> {
         name = "exportPath",
         position = 2,
         required = true,
-        description = "导出路径"
+        description = BshTexts.PARAM_BSH_SCRIPT_EXPORT_EXPORTPATH_DESC
     )
     private String exportPath;
 

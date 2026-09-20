@@ -3,47 +3,45 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="12dp"
-    android:background="#FFFFFF"
-    android:layout_margin="4dp">
+    android:padding="@dimen/spacing_12"
+    android:layout_margin="@dimen/spacing_4">
 
     <TextView
         android:id="@+id/text_stat_name"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:textColor="#333333" />
+        android:textAppearance="@style/TextAppearance.App.Title"
+        android:textColor="?attr/colorOnSurface" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginTop="4dp">
+        android:layout_marginTop="@dimen/spacing_4">
 
         <TextView
             android:id="@+id/text_call_count"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:textSize="14sp"
-            android:textColor="#666666" />
+            android:textAppearance="@style/TextAppearance.App.Caption"
+            android:textColor="?attr/colorOnSurfaceVariant" />
 
         <TextView
             android:id="@+id/text_avg_time"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:textSize="14sp"
-            android:textColor="#666666" />
+            android:textAppearance="@style/TextAppearance.App.Caption"
+            android:textColor="?attr/colorOnSurfaceVariant" />
     </LinearLayout>
 
     <TextView
         android:id="@+id/text_total_time"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:textSize="14sp"
-        android:textColor="#666666" />
+        android:layout_marginTop="@dimen/spacing_4"
+        android:textAppearance="@style/TextAppearance.App.Caption"
+        android:textColor="?attr/colorOnSurfaceVariant" />
 
 </LinearLayout>

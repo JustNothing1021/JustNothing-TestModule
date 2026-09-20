@@ -568,4 +568,44 @@
     <string name="analysis_alias_clear_message">Are you sure you want to clear all custom aliases? (Default aliases will be preserved)</string>
     <string name="analysis_execution_failed_format">Execution failed: %s</string>
     <string name="error_server_returned_void">Server returned void</string>
+    <string name="general_fatal_error">Fatal Error</string>
+    <string name="general_error_title">Error</string>
+    <string name="http_config_data_label">Data</string>
+    <string name="http_config_no_save_permission">No permission to save files</string>
+    <string name="http_config_file_saved_to">File saved to %1$s</string>
+    <string name="http_config_save_failed_format">Save failed: %1$s. Check the log for details.</string>
+    <string name="hook_config_state_uninitialized_hint">(activation state not set; synced from the server)</string>
+    <string name="hook_config_state_mismatch_hint">(server state differs; updating after restart)</string>
+    <string name="analysis_hook_add_failed">Failed to add the hook</string>
+    <string name="analysis_hook_add_class_name_required">Please enter a class name</string>
+    <string name="analysis_hook_add_method_name_required">Please enter a method name</string>
+    <string name="analysis_response_parse_failed">Failed to parse the response</string>
+    <string name="analysis_unregistered_route_error_format">No route is registered for this request, so the result type cannot be inferred: %1$s</string>
+
+    <!-- 布局硬编码文案抽取（class_browser / class_query / placeholder / script_import / exported_file / hook_detail / hook_param） -->
+    <string name="analysis_class_name_input_hint">Enter class name</string>
+    <string name="class_browser_server_status_checking">Checking server status...</string>
+    <string name="class_browser_super_class_label">Super Class:</string>
+    <string name="class_browser_interfaces_label">Interfaces:</string>
+    <string name="class_browser_modifiers_label">Modifiers:</string>
+    <string name="class_browser_methods_list">Method List</string>
+    <string name="class_browser_fields_list">Field List</string>
+    <string name="class_query_loading">Loading...</string>
+    <string name="placeholder_feature_in_development">Coming soon...</string>
+    <string name="placeholder_stay_tuned">Stay tuned</string>
+    <string name="script_import_paste_json_hint">Paste the script data in JSON format</string>
+    <string name="script_import_json_example_hint">[{\"name\":\"Script name\",\"description\":\"Description\",\"commands\":\"Command 1\nCommand 2\",\"category\":\"Category\"}]</string>
+    <string name="hook_param_type_hint">Parameter type (e.g. java.lang.String)</string>
+    <string name="hook_detail_no_stats">No statistics available</string>
+
+    <!-- 下列为列表项的占位初值（运行时会被代码替换成带参数的格式串） -->
+    <string name="exported_file_name_placeholder">Filename: -</string>
+    <string name="exported_file_directory_placeholder">Path: -</string>
+    <string name="exported_file_size_placeholder">Size: -</string>
+    <string name="hook_detail_hook_name_placeholder">Hook Name: -</string>
+    <string name="hook_detail_hook_type_placeholder">Type: -</string>
+    <string name="hook_detail_initialized_placeholder">Initialization Status: -</string>
+    <string name="hook_detail_hook_count_placeholder">Hook Count: -</string>
+    <string name="analysis_class_browser_title">Class Browser</string>
+    <string name="script_create_directory_failed_format">Failed to create directory: %1$s</string>
 </resources>

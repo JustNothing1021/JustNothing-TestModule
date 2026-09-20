@@ -3,12 +3,13 @@ package com.justnothing.testmodule.command.functions.watch.request;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.functions.watch.response.WatchAddResult;
+import com.justnothing.testmodule.command.functions.watch.WatchTexts;
 
 public class WatchAddRequest extends CommandRequest<WatchAddResult> {
 
     @CmdParam(
         name = "targetType",
-        description = "监控类型 (field/method)",
+        description = WatchTexts.PARAM_WATCH_ADD_TARGETTYPE_DESC,
         required = true,
         position = 1,
         allowedValues = {"field", "method"}
@@ -17,7 +18,7 @@ public class WatchAddRequest extends CommandRequest<WatchAddResult> {
 
     @CmdParam(
         name = "className",
-        description = "类名",
+        description = WatchTexts.PARAM_WATCH_ADD_CLASSNAME_DESC,
         required = true,
         position = 2
     )
@@ -25,7 +26,7 @@ public class WatchAddRequest extends CommandRequest<WatchAddResult> {
 
     @CmdParam(
         name = "memberName",
-        description = "成员名（字段名或方法名）",
+        description = WatchTexts.PARAM_WATCH_ADD_MEMBERNAME_DESC,
         required = true,
         position = 3
     )
@@ -33,7 +34,7 @@ public class WatchAddRequest extends CommandRequest<WatchAddResult> {
 
     @CmdParam(
         name = "signature",
-        description = "方法签名（仅method类型有效）",
+        description = WatchTexts.PARAM_WATCH_ADD_SIGNATURE_DESC,
         required = false,
         aliases = {"sig"}
     )
@@ -41,7 +42,7 @@ public class WatchAddRequest extends CommandRequest<WatchAddResult> {
 
     @CmdParam(
         name = "interval",
-        description = "检查间隔(ms)，默认1000",
+        description = WatchTexts.PARAM_WATCH_ADD_INTERVAL_DESC,
         required = false,
         defaultValue = "1000",
         position = 4

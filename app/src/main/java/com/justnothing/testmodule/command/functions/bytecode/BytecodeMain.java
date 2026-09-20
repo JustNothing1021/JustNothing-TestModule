@@ -24,7 +24,7 @@ import com.justnothing.testmodule.command.functions.bytecode.response.BytecodeRe
 
 @Cmd(
     name = "bytecode",
-    description = "查看和分析Java字节码",
+    description = BytecodeTexts.CMD_BYTECODE_DESC,
     version = CMD_BYTECODE_VER
 )
 @CmdRoutes({
@@ -32,73 +32,73 @@ import com.justnothing.testmodule.command.functions.bytecode.response.BytecodeRe
         path = "info",
         request = BytecodeInfoRequest.class,
         handler = BytecodeQueryCommand.class,
-        description = "查看类的元数据（反射）"
+        description = BytecodeTexts.ROUTE_BYTECODE_INFO_DESC
     ),
     @CmdRoutes.Route(
         path = "method",
         request = BytecodeMethodRequest.class,
         handler = BytecodeQueryCommand.class,
-        description = "查看指定方法的元数据（方法体需导出 dex 后反编译）"
+        description = BytecodeTexts.ROUTE_BYTECODE_METHOD_DESC
     ),
     @CmdRoutes.Route(
         path = "dump",
         request = BytecodeDumpRequest.class,
         handler = BytecodeManageCommand.class,
-        description = "导出某个类所在的 dex（-d 顺带用 dexdump 反汇编）"
+        description = BytecodeTexts.ROUTE_BYTECODE_DUMP_DESC
     ),
     @CmdRoutes.Route(
         path = "locate",
         request = BytecodeLocateRequest.class,
         handler = BytecodeManageCommand.class,
-        description = "查找类在哪个文件里（只定位，不提取）"
+        description = BytecodeTexts.ROUTE_BYTECODE_LOCATE_DESC
     ),
     @CmdRoutes.Route(
         path = "analyze",
         request = BytecodeAnalyzeRequest.class,
         handler = BytecodeQueryCommand.class,
-        description = "分析类所在 dex 的结构"
+        description = BytecodeTexts.ROUTE_BYTECODE_ANALYZE_DESC
     ),
     @CmdRoutes.Route(
         path = "disasm",
         request = BytecodeDisasmRequest.class,
         handler = BytecodeQueryCommand.class,
-        description = "反汇编成 dalvik 指令（设备自带 dexdump，可选方法名 / -o 存文件）"
+        description = BytecodeTexts.ROUTE_BYTECODE_DISASM_DESC
     ),
     @CmdRoutes.Route(
         path = "constants",
         request = BytecodeConstantsRequest.class,
         handler = BytecodeQueryCommand.class,
-        description = "查看静态常量字段"
+        description = BytecodeTexts.ROUTE_BYTECODE_CONSTANTS_DESC
     ),
     @CmdRoutes.Route(
         path = "verify",
         request = BytecodeVerifyRequest.class,
         handler = BytecodeQueryCommand.class,
-        description = "校验类所在 dex 的完整性"
+        description = BytecodeTexts.ROUTE_BYTECODE_VERIFY_DESC
     ),
     @CmdRoutes.Route(
         path = "source",
         request = BytecodeSourceRequest.class,
         handler = BytecodeQueryCommand.class,
-        description = "在设备上把类反编译成 Java 源码（dex2jar + CFR，按类处理，省内存）"
+        description = BytecodeTexts.ROUTE_BYTECODE_SOURCE_DESC
     ),
     @CmdRoutes.Route(
         path = "batch_export",
         request = BytecodeBatchExportRequest.class,
         handler = BytecodeManageCommand.class,
-        description = "批量导出 dex"
+        description = BytecodeTexts.ROUTE_BYTECODE_BATCH_EXPORT_DESC
     ),
     @CmdRoutes.Route(
         path = "list_classes",
         request = BytecodeListClassesRequest.class,
         handler = BytecodeManageCommand.class,
-        description = "列出代码来源里的类名"
+        description = BytecodeTexts.ROUTE_BYTECODE_LIST_CLASSES_DESC
     ),
     @CmdRoutes.Route(
         path = "find",
         request = BytecodeFindRequest.class,
         handler = BytecodeManageCommand.class,
-        description = "按关键词模糊搜索类名（不区分大小写，跨所有代码来源）"
+        description = BytecodeTexts.ROUTE_BYTECODE_FIND_DESC
     )
 })
 public class BytecodeMain extends MainCommand<BytecodeResult> {

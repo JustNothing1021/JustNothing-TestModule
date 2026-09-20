@@ -1,6 +1,7 @@
 package com.justnothing.testmodule.command.functions.script.impl;
 
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.functions.script.ScriptTexts;
 import com.justnothing.testmodule.command.functions.script.response.ScriptResult;
 import com.justnothing.testmodule.command.functions.script.request.ScriptBaseRequest;
 import com.justnothing.testmodule.command.functions.script.request.ScriptPermDenyRequest;
@@ -14,7 +15,7 @@ import com.justnothing.engine.security.PermissionType;
 import com.justnothing.engine.security.SandboxConfig;
 
 @SubCommandInfo(
-    description = "管理脚本执行权限配置, 支持授权/拒绝/预设/重置/列表/查看",
+    description = ScriptTexts.SUB_SCRIPT_PERMISSION_DESC,
     usage = "script permission <grant|deny|preset|reset|list|show-config> [args]",
     examples = {
         "script permission list",
@@ -24,15 +25,7 @@ import com.justnothing.engine.security.SandboxConfig;
         "script permission preset sandbox",
         "script permission reset"
     },
-    optionsDesc = """
-            子命令:
-              grant <PERM1,PERM2,...>  - 授予指定权限
-              deny <PERM1,PERM2,...>   - 拒绝指定权限
-              preset <name>            - 应用预设配置
-              reset                    - 重置为默认(无限制)
-              list                     - 列出所有可用权限和预设
-              show-config              - 显示当前权限配置状态
-            """
+    optionsDesc = ScriptTexts.SUB_SCRIPT_PERMISSION_OPTIONS
 )
 public class ScriptPermissionCommand extends AbstractScriptCommand<ScriptBaseRequest<?>, ScriptResult> {
 

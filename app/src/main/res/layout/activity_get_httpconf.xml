@@ -1,4 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  这个文件是 Android Studio 的空白 Activity 模板留下的，里面的控件 id（button2 / textView /
+  imageButton）和那几处大数值 margin（42 / 41 / 84 / 110 / 128dp）都是模板的产物 ——
+  它们不是「间距」，是靠 margin 硬顶位置的 hack。
+
+  本次只做了 token 化（间距 / 字号 / 按钮样式 / backgroundTint），**没有动结构**：
+  大数值 margin 一律原样保留，硬改会挪动控件位置。这个界面整体需要重做一遍约束，
+  那属于下一轮的结构改造。
+-->
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -7,17 +16,14 @@
 
     <Button
         android:id="@+id/button2"
+        style="@style/Widget.App.Button.Small"
         android:layout_width="123dp"
         android:layout_height="51dp"
         android:layout_marginStart="42dp"
         android:layout_marginTop="128dp"
         android:layout_marginEnd="41dp"
-        android:layout_marginBottom="16dp"
-        android:paddingLeft="12dp"
-        android:paddingTop="4dp"
-        android:paddingRight="12dp"
+        android:layout_marginBottom="@dimen/spacing_16"
         android:text="@string/http_config_get_content"
-        android:textSize="12sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.496"
@@ -29,11 +35,11 @@
         android:id="@+id/textView"
         android:layout_width="113dp"
         android:layout_height="38dp"
-        android:layout_marginStart="4dp"
-        android:layout_marginTop="16dp"
+        android:layout_marginStart="@dimen/spacing_4"
+        android:layout_marginTop="@dimen/spacing_16"
         android:layout_marginEnd="84dp"
         android:text="@string/http_config_content_label"
-        android:textSize="16sp"
+        android:textAppearance="@style/TextAppearance.App.Body"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.075"
         app:layout_constraintStart_toStartOf="parent"
@@ -43,9 +49,9 @@
         android:id="@+id/scrollView2"
         android:layout_width="285dp"
         android:layout_height="225dp"
-        android:layout_marginStart="18dp"
-        android:layout_marginTop="14dp"
-        android:layout_marginEnd="17dp"
+        android:layout_marginStart="@dimen/spacing_16"
+        android:layout_marginTop="@dimen/spacing_16"
+        android:layout_marginEnd="@dimen/spacing_16"
         app:layout_constraintBottom_toTopOf="@+id/button2"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -72,14 +78,27 @@
         </LinearLayout>
     </ScrollView>
 
+    <!--
+      保存按钮。这里有个坑，值得记一下：
+
+      <ImageButton> 在 AppCompat 主题下的默认样式是
+          <item name="android:background">@drawable/abc_btn_default_mtrl_shape</item>
+      也就是「一个实心圆角矩形」。原来这里写 backgroundTint="#FFFFFF" 把它涂成白底 ——
+      浅色下白底不显眼，所以一直没人发现；一旦把 tint 去掉，它就露出主题默认的底色，
+      变成一个颜色不对的矩形。
+
+      修法不是换颜色，而是不要那层底：图标按钮本来就该是「透明底 + 涟漪反馈」。
+      selectableItemBackgroundBorderless 就是标准做法 —— 静止时无底色，按下时出涟漪，
+      涟漪颜色跟主题走。
+    -->
     <ImageButton
         android:id="@+id/imageButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="110dp"
-        android:layout_marginTop="16dp"
-        android:layout_marginEnd="28dp"
-        android:backgroundTint="#FFFFFF"
+        android:layout_marginTop="@dimen/spacing_16"
+        android:layout_marginEnd="@dimen/spacing_32"
+        android:background="?attr/selectableItemBackgroundBorderless"
         app:layout_constraintBottom_toTopOf="@+id/scrollView2"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.0"

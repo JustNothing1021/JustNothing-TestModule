@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.classcmd.impl;
 
 import com.justnothing.testmodule.command.framework.error.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.functions.classcmd.ClassTexts;
 import com.justnothing.testmodule.command.functions.classcmd.model.ClassCommandContext;
 import com.justnothing.testmodule.command.functions.classcmd.request.MethodListRequest;
 import com.justnothing.testmodule.command.functions.classcmd.response.MethodListResult;
@@ -16,16 +17,13 @@ import java.util.Arrays;
 import java.util.Comparator;
 
 @SubCommandInfo(
-    description = "列出一个类的所有方法，支持按修饰符、返回类型等筛选",
+    description = ClassTexts.SUB_CLASS_LIST_DESC,
     usage = "class list [options] <class_name>",
     examples = {
         "class list java.lang.String",
         "class list -v java.util.ArrayList",
     },
-    optionsDesc = """
-            选项:
-              -v, --verbose       显示详细信息（参数、异常等）
-            """
+    optionsDesc = ClassTexts.SUB_CLASS_LIST_OPTIONS
 )
 public class ClassListCommand extends AbstractClassCommand<MethodListRequest, MethodListResult> {
 

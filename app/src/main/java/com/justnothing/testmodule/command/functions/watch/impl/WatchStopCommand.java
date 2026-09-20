@@ -6,9 +6,10 @@ import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.functions.watch.util.WatchManager;
 import com.justnothing.testmodule.command.functions.watch.request.WatchStopRequest;
 import com.justnothing.testmodule.command.functions.watch.response.WatchStopResult;
+import com.justnothing.testmodule.command.functions.watch.WatchTexts;
 
 @SubCommandInfo(
-    description = "停止指定的监控任务",
+    description = WatchTexts.SUB_WATCH_STOP_DESC,
     usage = "watch stop <id>",
     examples = {"watch stop 1"}
 )

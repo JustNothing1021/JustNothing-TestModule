@@ -7,6 +7,7 @@ import android.os.Parcel;
 import androidx.annotation.NonNull;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.constants.FileDirectory;
 import com.justnothing.testmodule.service.handler.CommandHandler;
 import com.justnothing.testmodule.service.handler.ServerPortManager;
 import com.justnothing.testmodule.service.handler.SocketClientHandler;
@@ -289,10 +290,16 @@ public class ShellService extends Binder {
                 }
                 
                 String fileName = entryName.substring("assets/codebase/".length());
-                File targetFile = new File(scriptsDir, fileName);
+                // 脚本相关的命令统一按「名字 + .java」去脚本目录里找文件，所以落盘时就得
+                // 补上后缀，否则这些示例脚本（hook add ... codebase <名字>）谁都读不到。
+                // 本身带扩展名的（目录里那两个同步脚本）保持原样。
+                String targetName = fileName.indexOf('.') < 0
+                        ? fileName + FileDirectory.SCRIPT_SUFFIX
+                        : fileName;
+                File targetFile = new File(scriptsDir, targetName);
                 
                 if (targetFile.exists()) {
-                    logger.debug("文件已存在，跳过复制: " + fileName);
+                    logger.debug("文件已存在，跳过复制: " + targetName);
                     skipCount++;
                     continue;
                 }
@@ -301,10 +308,10 @@ public class ShellService extends Binder {
                     byte[] content = readAllBytesCompat(inputStream);
                     IOManager.writeFile(targetFile.getAbsolutePath(), content);
                     
-                    logger.debug("成功复制Hook示例文件: " + fileName);
+                    logger.debug("成功复制Hook示例文件: " + targetName);
                     successCount++;
                 } catch (Exception e) {
-                    logger.error("复制Hook示例文件失败: " + fileName, e);
+                    logger.error("复制Hook示例文件失败: " + targetName, e);
                     failCount++;
                 }
             }

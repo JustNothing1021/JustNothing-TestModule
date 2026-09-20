@@ -3,6 +3,7 @@ package com.justnothing.testmodule.command.functions.classcmd.impl;
 
 import com.justnothing.testmodule.command.framework.error.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.functions.classcmd.ClassTexts;
 import com.justnothing.testmodule.command.functions.classcmd.model.ClassCommandContext;
 import com.justnothing.testmodule.command.functions.classcmd.model.ClassInfo;
 import com.justnothing.testmodule.command.functions.classcmd.model.FieldInfo;
@@ -22,22 +23,14 @@ import java.util.List;
 
 
 @SubCommandInfo(
-    description = "查看类的详细信息, 包括字段, 方法, 构造函数, 接口等.",
+    description = ClassTexts.SUB_CLASS_INFO_DESC,
     usage = "class info [options] <class_name>",
     examples = {
         "class info java.lang.String",
         "class info -v java.lang.Object",
         "class info --interfaces java.util.ArrayList"
     },
-    optionsDesc = """
-            选项:
-              -v, --verbose       显示详细信息
-              -i, --interfaces    显示实现的接口
-              -c, --constructors  显示构造函数
-              -s, --super         显示父类信息
-              -m, --modifiers     显示修饰符信息
-              -a, --all           显示所有信息 (默认)
-            """
+    optionsDesc = ClassTexts.SUB_CLASS_INFO_OPTIONS
 )
 public class ClassInfoCommand extends AbstractClassCommand<ClassInfoRequest, ClassInfoResult> {
 

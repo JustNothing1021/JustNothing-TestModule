@@ -64,7 +64,8 @@ public abstract class BaseViewModel<RequestType extends CommandRequest<?>, Resul
         Class<? extends CommandResult> resultType =
                 CommandRouter.getInstance().getResultTypeFor(requestType);
         if (resultType == null) {
-            String msg = "请求未注册路由，无法推导结果类型: " + request.getClass().getSimpleName();
+            String msg = getApplication().getString(R.string.analysis_unregistered_route_error_format,
+                    request.getClass().getSimpleName());
             logger.error(msg);
             error.postValue(msg);
             return null;
@@ -81,7 +82,8 @@ public abstract class BaseViewModel<RequestType extends CommandRequest<?>, Resul
             String jsonResponse = client.executeCommandRequest(GsonFactory.getInstance().toJson(request));
             Result parsedResult = GsonFactory.getInstance().fromJson(jsonResponse, resultClass);
             if (parsedResult == null) {
-                String errorMsg = getApplication().getString(R.string.analysis_execution_failed_format, "响应解析失败");
+                String errorMsg = getApplication().getString(R.string.analysis_execution_failed_format,
+                        getApplication().getString(R.string.analysis_response_parse_failed));
                 logger.error(errorMsg);
                 error.postValue(errorMsg);
                 return null;

@@ -9,21 +9,15 @@ import com.justnothing.testmodule.command.functions.alias.util.AliasManager;
 import com.justnothing.testmodule.utils.data.DataDirectoryManager;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.functions.alias.AliasTexts;
 
 import java.io.File;
 
 @SubCommandInfo(
-    description = "清空所有已定义的命令别名",
+    description = AliasTexts.SUB_ALIAS_CLEAR_DESC,
     usage = "alias clear",
     examples = {"alias clear"},
-    optionsDesc = """
-            清除所有已保存的别名，恢复到初始状态。
-            
-            警告: 此操作不可撤销！
-            
-            示例:
-              alias clear                   # 清空所有别名
-            """
+    optionsDesc = AliasTexts.SUB_ALIAS_CLEAR_OPTIONS
 )
 public class AliasClearCommand extends AbstractCommand<AliasClearRequest, AliasResult> {
 

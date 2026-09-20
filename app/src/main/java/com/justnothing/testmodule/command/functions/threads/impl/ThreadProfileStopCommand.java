@@ -3,12 +3,13 @@ package com.justnothing.testmodule.command.functions.threads.impl;
 import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
 import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.functions.threads.ThreadsTexts;
 import com.justnothing.testmodule.command.functions.threads.util.ProfileManager;
 import com.justnothing.testmodule.command.functions.threads.request.ThreadProfileStopRequest;
 import com.justnothing.testmodule.command.functions.threads.response.ThreadProfileStopResult;
 
 @SubCommandInfo(
-    description = "停止当前的性能分析",
+    description = ThreadsTexts.SUB_THREADS_PROFILE_STOP_DESC,
     usage = "threads profile stop",
     examples = {"threads profile stop"}
 )

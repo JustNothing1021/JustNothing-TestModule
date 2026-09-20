@@ -3,8 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F5F5F5"
-    android:padding="16dp">
+    android:padding="@dimen/spacing_16">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -15,21 +14,19 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="18dp"
-            android:layout_marginBottom="12dp"
+            android:layout_marginTop="@dimen/spacing_16"
+            android:layout_marginBottom="@dimen/spacing_12"
             android:text="@string/did_you_know_title"
-            android:textColor="#333333"
-            android:textSize="28sp"
-            android:textStyle="bold" />
+            android:textColor="?attr/colorOnSurface"
+            android:textAppearance="@style/TextAppearance.App.Display" />
 
 
-        <androidx.cardview.widget.CardView
+        <com.google.android.material.card.MaterialCardView
             android:id="@+id/tip_card"
+            style="@style/Widget.App.Card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="4dp"
+            android:layout_marginBottom="@dimen/spacing_16"
             app:cardUseCompatPadding="true">
 
             <LinearLayout
@@ -40,7 +37,7 @@
                 android:focusable="true"
                 android:foreground="?android:attr/selectableItemBackground"
                 android:orientation="vertical"
-                android:padding="24dp">
+                android:padding="@dimen/spacing_24">
 
                 <TextView
                     android:id="@+id/tip_content"
@@ -51,35 +48,34 @@
                     android:lineSpacingExtra="4dp"
                     android:longClickable="false"
                     android:text="@string/did_you_know_click_hint"
-                    android:textColor="#333333"
-                    android:textSize="16sp" />
+                    android:textColor="?attr/colorOnSurface"
+                    android:textAppearance="@style/TextAppearance.App.Body" />
 
                 <TextView
                     android:id="@+id/tip_author"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
+                    android:layout_marginTop="@dimen/spacing_16"
                     android:clickable="false"
                     android:focusable="false"
                     android:longClickable="false"
                     android:text="@string/general_empty"
                     android:textAlignment="textEnd"
-                    android:textColor="#666666"
-                    android:textSize="14sp"
-                    android:textStyle="italic" />
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:textAppearance="@style/TextAppearance.App.Caption" />
 
             </LinearLayout>
 
-        </androidx.cardview.widget.CardView>
+        </com.google.android.material.card.MaterialCardView>
 
         <TextView
             android:id="@+id/tip_counter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
+            android:layout_marginBottom="@dimen/spacing_16"
             android:text="@string/did_you_know_unknown_index"
-            android:textColor="#666666"
-            android:textSize="14sp" />
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textAppearance="@style/TextAppearance.App.Caption" />
 
 
     </LinearLayout>

@@ -3,15 +3,15 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="@dimen/spacing_16">
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="粘贴JSON格式的脚本数据"
-        android:textSize="14sp"
-        android:textColor="#666666"
-        android:paddingBottom="8dp" />
+        android:text="@string/script_import_paste_json_hint"
+        android:textAppearance="@style/TextAppearance.App.Caption"
+        android:textColor="?attr/colorOnSurfaceVariant"
+        android:paddingBottom="@dimen/spacing_8" />
 
     <EditText
         android:id="@+id/edit_import_content"
@@ -20,6 +20,6 @@
         android:gravity="top|start"
         android:minHeight="200dp"
         android:inputType="textMultiLine"
-        android:hint='[{"name":"脚本名","description":"描述","commands":"命令1\n命令2","category":"分类"}]' />
+        android:hint="@string/script_import_json_example_hint" />
 
 </LinearLayout>

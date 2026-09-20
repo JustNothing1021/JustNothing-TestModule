@@ -1,13 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+    style="@style/Widget.App.Card"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginHorizontal="4dp"
-    android:layout_marginVertical="2dp"
-    app:cardCornerRadius="6dp"
-    app:cardElevation="1dp"
+    android:layout_marginHorizontal="@dimen/spacing_4"
+    android:layout_marginVertical="@dimen/spacing_4"
     android:foreground="?attr/selectableItemBackground"
     android:clickable="true"
     android:focusable="true">
@@ -17,14 +15,14 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:padding="10dp">
+        android:padding="@dimen/spacing_12">
 
         <View
             android:id="@+id/view_status_indicator"
             android:layout_width="4dp"
             android:layout_height="24dp"
             android:background="@color/cyan"
-            android:layout_marginEnd="10dp" />
+            android:layout_marginEnd="@dimen/spacing_12" />
 
         <LinearLayout
             android:layout_width="0dp"
@@ -45,9 +43,9 @@
                 android:id="@+id/tv_hook_meta"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
+                android:layout_marginTop="@dimen/spacing_4"
                 android:textAppearance="?attr/textAppearanceLabelSmall"
-                android:textColor="@android:color/darker_gray" />
+                android:textColor="?attr/colorOnSurfaceVariant" />
 
         </LinearLayout>
 
@@ -56,9 +54,9 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAppearance="?attr/textAppearanceLabelSmall"
-            android:textColor="@android:color/darker_gray"
-            android:paddingStart="8dp"
-            android:paddingEnd="4dp" />
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:paddingStart="@dimen/spacing_8"
+            android:paddingEnd="@dimen/spacing_4" />
 
     </LinearLayout>
 

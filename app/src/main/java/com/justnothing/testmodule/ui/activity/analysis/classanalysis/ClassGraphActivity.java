@@ -5,40 +5,43 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ProgressBar;
-import android.widget.TextView;
+import android.view.ViewTreeObserver;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AlertDialog;
+import androidx.core.widget.NestedScrollView;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.color.MaterialColors;
 import com.justnothing.testmodule.R;
 import com.justnothing.testmodule.command.functions.classcmd.response.ClassHierarchyResult;
+import com.justnothing.testmodule.databinding.ActivityClassGraphBinding;
+import com.justnothing.testmodule.databinding.DialogSelectOverloadBinding;
+import com.justnothing.testmodule.databinding.ItemHierarchyBinding;
+import com.justnothing.testmodule.databinding.ItemInterfaceSelectBinding;
+import com.justnothing.testmodule.ui.activity.BaseActivity;
 import com.justnothing.testmodule.ui.viewmodel.analysis.ClassGraphViewModel;
 import com.justnothing.testmodule.utils.format.DescriptorColorizer;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class ClassGraphActivity extends AppCompatActivity {
+public class ClassGraphActivity extends BaseActivity {
     
     public static final String EXTRA_CLASS_NAME = "className";
     
     private String className;
-    private RecyclerView rvHierarchy;
-    private ProgressBar progressBar;
-    private TextView tvError;
-    private android.widget.HorizontalScrollView horizontalScrollView;
+    private ActivityClassGraphBinding binding;
     
     private ClassGraphViewModel viewModel;
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_class_graph);
+        binding = ActivityClassGraphBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
         
         className = getIntent().getStringExtra(EXTRA_CLASS_NAME);
         
@@ -53,21 +56,16 @@ public class ClassGraphActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (horizontalScrollView != null) {
-            horizontalScrollView.post(() -> horizontalScrollView.scrollTo(0, 0));
+        if (binding.horizontalScroll != null) {
+            binding.horizontalScroll.post(() -> binding.horizontalScroll.scrollTo(0, 0));
         }
-        if (rvHierarchy != null) {
-            rvHierarchy.post(() -> rvHierarchy.scrollToPosition(0));
+        if (binding.rvHierarchy != null) {
+            binding.rvHierarchy.post(() -> binding.rvHierarchy.scrollToPosition(0));
         }
     }
     
     private void initViews() {
-        rvHierarchy = findViewById(R.id.rv_hierarchy);
-        progressBar = findViewById(R.id.progress_bar);
-        tvError = findViewById(R.id.tv_error);
-        horizontalScrollView = findViewById(android.R.id.content).findViewById(R.id.horizontal_scroll);
-        
-        rvHierarchy.setLayoutManager(new LinearLayoutManager(this));
+        binding.rvHierarchy.setLayoutManager(new LinearLayoutManager(this));
         
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
@@ -79,24 +77,24 @@ public class ClassGraphActivity extends AppCompatActivity {
         viewModel = new ViewModelProvider(this).get(ClassGraphViewModel.class);
         
         viewModel.isLoading().observe(this, isLoading -> {
-            progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
-            rvHierarchy.setVisibility(isLoading ? View.GONE : View.VISIBLE);
+            binding.progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
+            binding.rvHierarchy.setVisibility(isLoading ? View.GONE : View.VISIBLE);
         });
         
         viewModel.getHierarchyResult().observe(this, result -> {
             if (result != null && result.getClassChain() != null) {
-                tvError.setVisibility(View.GONE);
-                rvHierarchy.setVisibility(View.VISIBLE);
+                binding.tvError.setVisibility(View.GONE);
+                binding.rvHierarchy.setVisibility(View.VISIBLE);
                 List<HierarchyItem> items = buildHierarchyItems(result);
-                rvHierarchy.setAdapter(new HierarchyAdapter(items));
+                binding.rvHierarchy.setAdapter(new HierarchyAdapter(items));
             }
         });
         
         viewModel.getError().observe(this, error -> {
             if (error != null && !error.isEmpty()) {
-                tvError.setVisibility(View.VISIBLE);
-                tvError.setText(error);
-                rvHierarchy.setVisibility(View.GONE);
+                binding.tvError.setVisibility(View.VISIBLE);
+                binding.tvError.setText(error);
+                binding.rvHierarchy.setVisibility(View.GONE);
             }
         });
     }
@@ -229,9 +227,9 @@ public class ClassGraphActivity extends AppCompatActivity {
         @NonNull
         @Override
         public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-            View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_hierarchy, parent, false);
-            return new ViewHolder(view);
+            ItemHierarchyBinding itemBinding = ItemHierarchyBinding.inflate(
+                LayoutInflater.from(parent.getContext()), parent, false);
+            return new ViewHolder(itemBinding);
         }
         
         @Override
@@ -246,76 +244,60 @@ public class ClassGraphActivity extends AppCompatActivity {
         }
         
         class ViewHolder extends RecyclerView.ViewHolder {
-            private final MaterialCardView cardClass;
-            private final TextView tvClassName;
-            private final TextView tvClassType;
-            private final TextView tvRelation;
-            private final View viewConnectorBottom;
-            private final View layoutInterfaces;
-            private final View viewInterfaceLine;
-            private final MaterialCardView cardInterface;
-            private final TextView tvInterfaceName;
+            private final ItemHierarchyBinding binding;
             
-            ViewHolder(View itemView) {
-                super(itemView);
-                cardClass = itemView.findViewById(R.id.card_class);
-                tvClassName = itemView.findViewById(R.id.tv_class_name);
-                tvClassType = itemView.findViewById(R.id.tv_class_type);
-                tvRelation = itemView.findViewById(R.id.tv_relation);
-                viewConnectorBottom = itemView.findViewById(R.id.view_connector_bottom);
-                layoutInterfaces = itemView.findViewById(R.id.layout_interfaces);
-                viewInterfaceLine = itemView.findViewById(R.id.view_interface_line);
-                cardInterface = itemView.findViewById(R.id.card_interface);
-                tvInterfaceName = itemView.findViewById(R.id.tv_interface_name);
+            ViewHolder(ItemHierarchyBinding binding) {
+                super(binding.getRoot());
+                this.binding = binding;
             }
             
             void bind(HierarchyItem item, boolean isLast) {
-                tvClassName.setText(item.displayName);
-                tvClassType.setText(item.classType);
-                tvRelation.setText(item.relation);
+                binding.tvClassName.setText(item.displayName);
+                binding.tvClassType.setText(item.classType);
+                binding.tvRelation.setText(item.relation);
                 
                 int cardColor;
                 
                 switch (item.type) {
                     case CURRENT_CLASS:
                         cardColor = getColor(R.color.blue);
-                        cardClass.setStrokeColor(getColor(R.color.blue));
-                        cardClass.setStrokeWidth(2);
-                        cardClass.setCardBackgroundColor(getColor(android.R.color.white));
-                        tvClassType.setTextColor(getColor(R.color.blue));
-                        tvRelation.setTextColor(getColor(android.R.color.darker_gray));
+                        binding.cardClass.setStrokeColor(getColor(R.color.blue));
+                        binding.cardClass.setStrokeWidth(2);
+                        binding.cardClass.setCardBackgroundColor(MaterialColors.getColor(binding.cardClass, com.google.android.material.R.attr.colorSurface));
+                        binding.tvClassType.setTextColor(getColor(R.color.blue));
+                        binding.tvRelation.setTextColor(MaterialColors.getColor(binding.cardClass, com.google.android.material.R.attr.colorOnSurfaceVariant));
                         break;
                     case PARENT_CLASS:
                         cardColor = getColor(R.color.green);
-                        cardClass.setStrokeWidth(0);
-                        cardClass.setCardBackgroundColor(getColor(android.R.color.white));
-                        tvClassType.setTextColor(getColor(R.color.green));
-                        tvRelation.setTextColor(getColor(android.R.color.darker_gray));
+                        binding.cardClass.setStrokeWidth(0);
+                        binding.cardClass.setCardBackgroundColor(MaterialColors.getColor(binding.cardClass, com.google.android.material.R.attr.colorSurface));
+                        binding.tvClassType.setTextColor(getColor(R.color.green));
+                        binding.tvRelation.setTextColor(MaterialColors.getColor(binding.cardClass, com.google.android.material.R.attr.colorOnSurfaceVariant));
                         break;
                     case INTERFACE:
                     default:
                         cardColor = getColor(R.color.orange);
-                        cardClass.setStrokeWidth(0);
-                        cardClass.setCardBackgroundColor(getColor(android.R.color.white));
-                        tvClassType.setTextColor(getColor(R.color.orange));
-                        tvRelation.setTextColor(getColor(android.R.color.darker_gray));
+                        binding.cardClass.setStrokeWidth(0);
+                        binding.cardClass.setCardBackgroundColor(MaterialColors.getColor(binding.cardClass, com.google.android.material.R.attr.colorSurface));
+                        binding.tvClassType.setTextColor(getColor(R.color.orange));
+                        binding.tvRelation.setTextColor(MaterialColors.getColor(binding.cardClass, com.google.android.material.R.attr.colorOnSurfaceVariant));
                         break;
                 }
                 
-                tvClassName.setTextColor(cardColor);
+                binding.tvClassName.setTextColor(cardColor);
                 
-                viewConnectorBottom.setVisibility(item.showConnectorBelow ? View.VISIBLE : View.GONE);
-                viewConnectorBottom.setBackgroundColor(cardColor);
+                binding.viewConnectorBottom.setVisibility(item.showConnectorBelow ? View.VISIBLE : View.GONE);
+                binding.viewConnectorBottom.setBackgroundColor(cardColor);
                 
-                cardClass.setOnClickListener(v -> openClassDetail(item.fullClassName));
+                binding.cardClass.setOnClickListener(v -> openClassDetail(item.fullClassName));
                 
                 if (item.interfaces != null && !item.interfaces.isEmpty()) {
-                    layoutInterfaces.setVisibility(View.VISIBLE);
-                    viewInterfaceLine.setBackgroundColor(getColor(R.color.orange));
+                    binding.layoutInterfaces.setVisibility(View.VISIBLE);
+                    binding.viewInterfaceLine.setBackgroundColor(getColor(R.color.orange));
                     
                     if (item.interfaces.size() == 1) {
-                        tvInterfaceName.setText(item.interfaces.get(0).displayName);
-                        cardInterface.setOnClickListener(v -> 
+                        binding.tvInterfaceName.setText(item.interfaces.get(0).displayName);
+                        binding.cardInterface.setOnClickListener(v -> 
                             openClassDetail(item.interfaces.get(0).fullName));
                     } else {
                         StringBuilder sb = new StringBuilder();
@@ -323,35 +305,33 @@ public class ClassGraphActivity extends AppCompatActivity {
                             if (i > 0) sb.append("\n");
                             sb.append(item.interfaces.get(i).displayName);
                         }
-                        tvInterfaceName.setText(sb.toString());
+                        binding.tvInterfaceName.setText(sb.toString());
                         
                         final List<InterfaceInfo> interfaceList = item.interfaces;
-                        cardInterface.setOnClickListener(v -> showInterfaceSelector(interfaceList));
+                        binding.cardInterface.setOnClickListener(v -> showInterfaceSelector(interfaceList));
                     }
                 } else {
-                    layoutInterfaces.setVisibility(View.GONE);
+                    binding.layoutInterfaces.setVisibility(View.GONE);
                 }
             }
         }
     }
     
     private void showInterfaceSelector(List<InterfaceInfo> interfaces) {
-        android.view.View dialogView = LayoutInflater.from(this)
-            .inflate(R.layout.dialog_select_overload, null);
+        DialogSelectOverloadBinding dialogBinding = DialogSelectOverloadBinding.inflate(
+            LayoutInflater.from(this));
         
-        TextView tvTitle = dialogView.findViewById(R.id.tv_title);
-        tvTitle.setText(R.string.analysis_implemented_interface);
+        dialogBinding.tvTitle.setText(R.string.analysis_implemented_interface);
         
-        androidx.core.widget.NestedScrollView scrollView = dialogView.findViewById(R.id.nested_scroll);
+        NestedScrollView scrollView = dialogBinding.nestedScroll;
         
-        RecyclerView rvInterfaces = dialogView.findViewById(R.id.rv_overloads);
-        rvInterfaces.setLayoutManager(new LinearLayoutManager(this));
+        dialogBinding.rvOverloads.setLayoutManager(new LinearLayoutManager(this));
         
         InterfaceSelectAdapter adapter = new InterfaceSelectAdapter(interfaces);
-        rvInterfaces.setAdapter(adapter);
+        dialogBinding.rvOverloads.setAdapter(adapter);
         
-        androidx.appcompat.app.AlertDialog dialog = new androidx.appcompat.app.AlertDialog.Builder(this)
-            .setView(dialogView)
+        AlertDialog dialog = new AlertDialog.Builder(this)
+            .setView(dialogBinding.getRoot())
             .create();
         
         adapter.setOnItemClickListener((position, info) -> {
@@ -362,7 +342,7 @@ public class ClassGraphActivity extends AppCompatActivity {
         dialog.show();
         
         if (scrollView != null) {
-            scrollView.getViewTreeObserver().addOnGlobalLayoutListener(new android.view.ViewTreeObserver.OnGlobalLayoutListener() {
+            scrollView.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
                 @Override
                 public void onGlobalLayout() {
                     scrollView.getViewTreeObserver().removeOnGlobalLayoutListener(this);
@@ -391,16 +371,16 @@ public class ClassGraphActivity extends AppCompatActivity {
         
         @Override
         public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-            View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_interface_select, parent, false);
-            return new ViewHolder(view);
+            ItemInterfaceSelectBinding itemBinding = ItemInterfaceSelectBinding.inflate(
+                LayoutInflater.from(parent.getContext()), parent, false);
+            return new ViewHolder(itemBinding);
         }
         
         @Override
         public void onBindViewHolder(ViewHolder holder, int position) {
             InterfaceInfo info = interfaces.get(position);
-            holder.tvIndex.setText(String.format(getString(R.string.index_format), position + 1));
-            holder.tvName.setText(info.displayName);
+            holder.binding.tvIndex.setText(String.format(getString(R.string.index_format), position + 1));
+            holder.binding.tvName.setText(info.displayName);
             
             holder.itemView.setOnClickListener(v -> {
                 if (listener != null) {
@@ -415,13 +395,11 @@ public class ClassGraphActivity extends AppCompatActivity {
         }
         
         static class ViewHolder extends RecyclerView.ViewHolder {
-            TextView tvIndex;
-            TextView tvName;
+            private final ItemInterfaceSelectBinding binding;
             
-            ViewHolder(View itemView) {
-                super(itemView);
-                tvIndex = itemView.findViewById(R.id.tv_index);
-                tvName = itemView.findViewById(R.id.tv_name);
+            ViewHolder(ItemInterfaceSelectBinding binding) {
+                super(binding.getRoot());
+                this.binding = binding;
             }
         }
     }

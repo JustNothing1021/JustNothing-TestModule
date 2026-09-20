@@ -3,19 +3,16 @@ package com.justnothing.testmodule.ui.activity.analysis.classanalysis;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.ProgressBar;
-import android.widget.TextView;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.material.card.MaterialCardView;
 import com.justnothing.testmodule.R;
 import com.justnothing.testmodule.command.functions.classcmd.model.ClassInfo;
 import com.justnothing.testmodule.command.functions.classcmd.model.MethodInfo;
 import com.justnothing.testmodule.command.functions.classcmd.model.FieldInfo;
+import com.justnothing.testmodule.databinding.ActivityClassDetailBinding;
+import com.justnothing.testmodule.ui.activity.BaseActivity;
 import com.justnothing.testmodule.ui.adapter.analysis.ConstructorAdapter;
 import com.justnothing.testmodule.ui.adapter.analysis.FieldAdapter;
 import com.justnothing.testmodule.ui.adapter.analysis.MethodAdapter;
@@ -26,31 +23,20 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 
-public class ClassDetailActivity extends AppCompatActivity {
+public class ClassDetailActivity extends BaseActivity {
     
     public static final String EXTRA_CLASS_NAME = "className";
     
+    private ActivityClassDetailBinding binding;
     private ClassQueryViewModel viewModel;
-    
-    private MaterialCardView cardClassInfo;
-    private TextView tvClassName;
-    private TextView tvClassType;
-    private TextView tvModifiers;
-    private TextView tvSuperClass;
-    private TextView tvInterfaces;
-    private RecyclerView rvConstructors;
-    private RecyclerView rvMethods;
-    private RecyclerView rvFields;
-    private ProgressBar progressBar;
-    private TextView tvError;
-    private androidx.core.widget.NestedScrollView nestedScrollView;
     
     private String currentClassName;
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_class_detail);
+        binding = ActivityClassDetailBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
         
         currentClassName = getIntent().getStringExtra(EXTRA_CLASS_NAME);
         
@@ -65,28 +51,15 @@ public class ClassDetailActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (nestedScrollView != null) {
-            nestedScrollView.post(() -> nestedScrollView.scrollTo(0, 0));
+        if (binding.nestedScroll != null) {
+            binding.nestedScroll.post(() -> binding.nestedScroll.scrollTo(0, 0));
         }
     }
     
     private void initViews() {
-        cardClassInfo = findViewById(R.id.card_class_info);
-        tvClassName = findViewById(R.id.tv_class_name);
-        tvClassType = findViewById(R.id.tv_class_type);
-        tvModifiers = findViewById(R.id.tv_modifiers);
-        tvSuperClass = findViewById(R.id.tv_super_class);
-        tvInterfaces = findViewById(R.id.tv_interfaces);
-        rvConstructors = findViewById(R.id.rv_constructors);
-        rvMethods = findViewById(R.id.rv_methods);
-        rvFields = findViewById(R.id.rv_fields);
-        progressBar = findViewById(R.id.progress_bar);
-        tvError = findViewById(R.id.tv_error);
-        nestedScrollView = findViewById(R.id.nested_scroll);
-        
-        rvConstructors.setLayoutManager(new LinearLayoutManager(this));
-        rvMethods.setLayoutManager(new LinearLayoutManager(this));
-        rvFields.setLayoutManager(new LinearLayoutManager(this));
+        binding.rvConstructors.setLayoutManager(new LinearLayoutManager(this));
+        binding.rvMethods.setLayoutManager(new LinearLayoutManager(this));
+        binding.rvFields.setLayoutManager(new LinearLayoutManager(this));
         
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
@@ -98,17 +71,17 @@ public class ClassDetailActivity extends AppCompatActivity {
         viewModel = new ViewModelProvider(this).get(ClassQueryViewModel.class);
         
         viewModel.isLoading().observe(this, isLoading -> {
-            progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
-            cardClassInfo.setVisibility(isLoading ? View.GONE : View.VISIBLE);
+            binding.progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
+            binding.cardClassInfo.setVisibility(isLoading ? View.GONE : View.VISIBLE);
         });
         
         viewModel.getClassInfo().observe(this, this::displayClassInfo);
         
         viewModel.getError().observe(this, error -> {
             if (error != null && !error.isEmpty()) {
-                tvError.setVisibility(View.VISIBLE);
-                tvError.setText(error);
-                cardClassInfo.setVisibility(View.GONE);
+                binding.tvError.setVisibility(View.VISIBLE);
+                binding.tvError.setText(error);
+                binding.cardClassInfo.setVisibility(View.GONE);
             }
         });
     }
@@ -116,50 +89,50 @@ public class ClassDetailActivity extends AppCompatActivity {
     private void displayClassInfo(ClassInfo info) {
         if (info == null) return;
         
-        tvError.setVisibility(View.GONE);
-        cardClassInfo.setVisibility(View.VISIBLE);
+        binding.tvError.setVisibility(View.GONE);
+        binding.cardClassInfo.setVisibility(View.VISIBLE);
         
-        tvClassName.setText(info.getName());
+        binding.tvClassName.setText(info.getName());
         
         String classTypeStr = getClassTypeString(info);
-        tvClassType.setText(classTypeStr);
+        binding.tvClassType.setText(classTypeStr);
         
         String modifiers = info.getModifiersString();
         if (modifiers != null && !modifiers.isEmpty()) {
-            tvModifiers.setText(modifiers);
-            tvModifiers.setVisibility(View.VISIBLE);
+            binding.tvModifiers.setText(modifiers);
+            binding.tvModifiers.setVisibility(View.VISIBLE);
         } else {
-            tvModifiers.setText(getString(R.string.analysis_no_modifiers));
-            tvModifiers.setVisibility(View.VISIBLE);
+            binding.tvModifiers.setText(getString(R.string.analysis_no_modifiers));
+            binding.tvModifiers.setVisibility(View.VISIBLE);
         }
         
         String superClass = info.getSuperClass();
         if (superClass != null && !superClass.isEmpty()) {
-            tvSuperClass.setText(superClass);
+            binding.tvSuperClass.setText(superClass);
         } else {
-            tvSuperClass.setText(getString(R.string.analysis_no_super_class));
+            binding.tvSuperClass.setText(getString(R.string.analysis_no_super_class));
         }
         
         List<String> interfaces = info.getInterfaces();
         if (interfaces != null && !interfaces.isEmpty()) {
-            tvInterfaces.setText(String.join(", ", interfaces));
-            tvInterfaces.setVisibility(View.VISIBLE);
+            binding.tvInterfaces.setText(String.join(", ", interfaces));
+            binding.tvInterfaces.setVisibility(View.VISIBLE);
         } else {
-            tvInterfaces.setText(getString(R.string.none));
-            tvInterfaces.setVisibility(View.VISIBLE);
+            binding.tvInterfaces.setText(getString(R.string.none));
+            binding.tvInterfaces.setVisibility(View.VISIBLE);
         }
-        findViewById(R.id.label_interfaces).setVisibility(View.VISIBLE);
+        binding.labelInterfaces.setVisibility(View.VISIBLE);
         
         List<MethodInfo> constructors = info.getConstructors();
         if (constructors != null && !constructors.isEmpty()) {
             ConstructorAdapter constructorAdapter = new ConstructorAdapter(constructors);
             constructorAdapter.setOnItemClickListener((position, constructor) -> openConstructorDetail(constructor));
-            rvConstructors.setAdapter(constructorAdapter);
-            findViewById(R.id.label_constructors).setVisibility(View.VISIBLE);
-            rvConstructors.setVisibility(View.VISIBLE);
+            binding.rvConstructors.setAdapter(constructorAdapter);
+            binding.labelConstructors.setVisibility(View.VISIBLE);
+            binding.rvConstructors.setVisibility(View.VISIBLE);
         } else {
-            findViewById(R.id.label_constructors).setVisibility(View.GONE);
-            rvConstructors.setVisibility(View.GONE);
+            binding.labelConstructors.setVisibility(View.GONE);
+            binding.rvConstructors.setVisibility(View.GONE);
         }
         
         List<MethodInfo> methods = info.getMethods();
@@ -169,33 +142,32 @@ public class ClassDetailActivity extends AppCompatActivity {
                 uniqueNames.add(method.getName());
             }
             
-            TextView tvMethodCount = findViewById(R.id.tv_method_count);
-            tvMethodCount.setText(getString(R.string.analysis_methods_count_format, uniqueNames.size(), methods.size()));
+            binding.tvMethodCount.setText(getString(R.string.analysis_methods_count_format, uniqueNames.size(), methods.size()));
             
             MethodAdapter methodAdapter = new MethodAdapter(methods, info.getName());
             methodAdapter.setOnItemClickListener(method -> openMethodDetail(method, info.getName()));
-            rvMethods.setAdapter(methodAdapter);
-            findViewById(R.id.label_methods).setVisibility(View.VISIBLE);
-            rvMethods.setVisibility(View.VISIBLE);
+            binding.rvMethods.setAdapter(methodAdapter);
+            binding.labelMethods.setVisibility(View.VISIBLE);
+            binding.rvMethods.setVisibility(View.VISIBLE);
         } else {
-            findViewById(R.id.label_methods).setVisibility(View.GONE);
-            rvMethods.setVisibility(View.GONE);
+            binding.labelMethods.setVisibility(View.GONE);
+            binding.rvMethods.setVisibility(View.GONE);
         }
         
         List<FieldInfo> fields = info.getFields();
         if (fields != null && !fields.isEmpty()) {
             FieldAdapter fieldAdapter = new FieldAdapter(fields, info.getName());
             fieldAdapter.setOnItemClickListener(field -> openFieldDetail(field, info.getName()));
-            rvFields.setAdapter(fieldAdapter);
-            findViewById(R.id.label_fields).setVisibility(View.VISIBLE);
-            rvFields.setVisibility(View.VISIBLE);
+            binding.rvFields.setAdapter(fieldAdapter);
+            binding.labelFields.setVisibility(View.VISIBLE);
+            binding.rvFields.setVisibility(View.VISIBLE);
         } else {
-            findViewById(R.id.label_fields).setVisibility(View.GONE);
-            rvFields.setVisibility(View.GONE);
+            binding.labelFields.setVisibility(View.GONE);
+            binding.rvFields.setVisibility(View.GONE);
         }
         
-        if (nestedScrollView != null) {
-            nestedScrollView.post(() -> nestedScrollView.scrollTo(0, 0));
+        if (binding.nestedScroll != null) {
+            binding.nestedScroll.post(() -> binding.nestedScroll.scrollTo(0, 0));
         }
     }
     

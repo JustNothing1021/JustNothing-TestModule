@@ -3,6 +3,7 @@ package com.justnothing.testmodule.command.functions.threads.impl;
 import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
 import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.functions.threads.ThreadsTexts;
 import com.justnothing.testmodule.command.functions.threads.request.ThreadListRequest;
 import com.justnothing.testmodule.command.functions.threads.response.ThreadDetail;
 import com.justnothing.testmodule.command.functions.threads.response.ThreadListResult;
@@ -12,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 @SubCommandInfo(
-    description = "列出所有线程及其状态",
+    description = ThreadsTexts.SUB_THREADS_LIST_DESC,
     usage = "threads list [options]",
     examples = {
         "threads list",

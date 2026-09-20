@@ -1,13 +1,14 @@
 package com.justnothing.testmodule.command.functions.classcmd.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.functions.classcmd.ClassTexts;
 import com.justnothing.testmodule.command.functions.classcmd.response.AnalyzeReportResult;
 
 public class AnalyzeClassRequest extends ClassCommandRequest<AnalyzeReportResult> {
 
     @CmdParam(
         name = "class",
-        description = "类名",
+        description = ClassTexts.PARAM_CLASS_ANALYZE_CLASS_DESC,
         position = 1,
         required = true,
         serializedName = "className"
@@ -16,7 +17,7 @@ public class AnalyzeClassRequest extends ClassCommandRequest<AnalyzeReportResult
 
     @CmdParam(
         name = "--fields",
-        description = "显示字段",
+        description = ClassTexts.PARAM_CLASS_ANALYZE_FIELDS_DESC,
         aliases = {"-f"},
         serializedName = "showFields"
     )
@@ -24,7 +25,7 @@ public class AnalyzeClassRequest extends ClassCommandRequest<AnalyzeReportResult
 
     @CmdParam(
         name = "--methods",
-        description = "显示方法",
+        description = ClassTexts.PARAM_CLASS_ANALYZE_METHODS_DESC,
         aliases = {"-m"},
         serializedName = "showMethods"
     )
@@ -32,7 +33,7 @@ public class AnalyzeClassRequest extends ClassCommandRequest<AnalyzeReportResult
 
     @CmdParam(
         name = "--constructors",
-        description = "显示构造函数",
+        description = ClassTexts.PARAM_CLASS_ANALYZE_CONSTRUCTORS_DESC,
         aliases = {"-c"},
         serializedName = "showConstructors"
     )
@@ -40,7 +41,7 @@ public class AnalyzeClassRequest extends ClassCommandRequest<AnalyzeReportResult
 
     @CmdParam(
         name = "--interfaces",
-        description = "显示实现的接口",
+        description = ClassTexts.PARAM_CLASS_ANALYZE_INTERFACES_DESC,
         aliases = {"-i"},
         serializedName = "showInterfaces"
     )
@@ -48,7 +49,7 @@ public class AnalyzeClassRequest extends ClassCommandRequest<AnalyzeReportResult
 
     @CmdParam(
         name = "--super",
-        description = "显示父类信息",
+        description = ClassTexts.PARAM_CLASS_ANALYZE_SUPER_DESC,
         aliases = {"-s"},
         serializedName = "showSuper"
     )
@@ -56,14 +57,14 @@ public class AnalyzeClassRequest extends ClassCommandRequest<AnalyzeReportResult
 
     @CmdParam(
         name = "--modifiers",
-        description = "显示修饰符信息",
+        description = ClassTexts.PARAM_CLASS_ANALYZE_MODIFIERS_DESC,
         serializedName = "showModifiers"
     )
     private boolean showModifiers = true;
 
     @CmdParam(
         name = "--all",
-        description = "显示所有信息 (默认)",
+        description = ClassTexts.PARAM_CLASS_ANALYZE_ALL_DESC,
         aliases = {"-a"},
         serializedName = "showAll"
     )
@@ -71,7 +72,7 @@ public class AnalyzeClassRequest extends ClassCommandRequest<AnalyzeReportResult
 
     @CmdParam(
         name = "--verbose",
-        description = "显示详细信息",
+        description = ClassTexts.PARAM_CLASS_ANALYZE_VERBOSE_DESC,
         aliases = {"-v"},
         serializedName = "verbose"
     )
@@ -79,21 +80,21 @@ public class AnalyzeClassRequest extends ClassCommandRequest<AnalyzeReportResult
 
     @CmdParam(
         name = "--hierarchy",
-        description = "显示继承层次",
+        description = ClassTexts.PARAM_CLASS_ANALYZE_HIERARCHY_DESC,
         serializedName = "showHierarchy"
     )
     private boolean showHierarchy = true;
 
     @CmdParam(
         name = "--stats",
-        description = "显示统计信息",
+        description = ClassTexts.PARAM_CLASS_ANALYZE_STATS_DESC,
         serializedName = "showStats"
     )
     private boolean showStats = true;
 
     @CmdParam(
         name = "--raw",
-        description = "原始输出格式",
+        description = ClassTexts.PARAM_CLASS_ANALYZE_RAW_DESC,
         serializedName = "rawOutput"
     )
     private boolean rawOutput = false;

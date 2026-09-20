@@ -1,14 +1,15 @@
 package com.justnothing.testmodule.command.functions.script.request;
 
+import com.justnothing.testmodule.command.functions.script.ScriptTexts;
 import com.justnothing.testmodule.command.functions.script.response.ScriptResult;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 
 public class ScriptExportRequest extends ScriptBaseRequest<ScriptResult> {
 
-    @CmdParam(name = "name", position = 1, required = true, description = "脚本名称")
+    @CmdParam(name = "name", position = 1, required = true, description = ScriptTexts.PARAM_SCRIPT_EXPORT_NAME_DESC)
     private String name;
 
-    @CmdParam(name = "filePath", position = 2, required = true, description = "导出路径")
+    @CmdParam(name = "filePath", position = 2, required = true, description = ScriptTexts.PARAM_SCRIPT_EXPORT_FILEPATH_DESC)
     private String filePath;
 
     public ScriptExportRequest() {

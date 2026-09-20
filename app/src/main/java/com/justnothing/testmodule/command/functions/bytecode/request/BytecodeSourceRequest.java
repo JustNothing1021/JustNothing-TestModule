@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.bytecode.request;
 
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.functions.bytecode.BytecodeTexts;
 import com.justnothing.testmodule.command.functions.bytecode.response.BytecodeResult;
 
 public class BytecodeSourceRequest extends CommandRequest<BytecodeResult> {
@@ -10,7 +11,7 @@ public class BytecodeSourceRequest extends CommandRequest<BytecodeResult> {
         name = "className",
         position = 1,
         required = true,
-        description = "类名"
+        description = BytecodeTexts.PARAM_BYTECODE_SOURCE_CLASSNAME_DESC
     )
     private String className;
 
@@ -18,7 +19,7 @@ public class BytecodeSourceRequest extends CommandRequest<BytecodeResult> {
         name = "outputPath",
         aliases = {"-o", "--output"},
         required = false,
-        description = "把反编译结果另存到该文件或目录（不填则只打印）"
+        description = BytecodeTexts.PARAM_BYTECODE_SOURCE_OUTPUTPATH_DESC
     )
     private String outputPath;
 
@@ -26,7 +27,7 @@ public class BytecodeSourceRequest extends CommandRequest<BytecodeResult> {
         name = "highlight",
         aliases = {"--highlight"},
         required = false,
-        description = "强制语法高亮（忽略规模上限；大段代码在手表上会卡顿）"
+        description = BytecodeTexts.PARAM_BYTECODE_SOURCE_HIGHLIGHT_DESC
     )
     private boolean highlight;
 

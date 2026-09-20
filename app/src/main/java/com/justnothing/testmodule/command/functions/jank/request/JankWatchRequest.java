@@ -3,6 +3,7 @@ package com.justnothing.testmodule.command.functions.jank.request;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.functions.jank.response.JankResult;
+import com.justnothing.testmodule.command.functions.jank.JankTexts;
 
 /**
  * {@code jank watch} 的参数：只有一个轮询间隔。
@@ -17,7 +18,7 @@ public class JankWatchRequest extends CommandRequest<JankResult> {
         aliases = {"-i", "--interval"},
         required = false,
         defaultValue = "1000",
-        description = "轮询间隔（毫秒）；每轮只做一次 readdir，压到 100ms 也不会明显干扰系统"
+        description = JankTexts.PARAM_JANK_WATCH_INTERVAL_DESC
     )
     private int interval = 1000;
 

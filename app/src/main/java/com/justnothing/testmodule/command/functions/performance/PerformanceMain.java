@@ -29,49 +29,49 @@ import java.util.Map;
 @Cmd(
     version = CommandServer.CMD_PERFORMANCE_VER,
     name = "performance",
-    description = "性能分析命令, 支持多种分析方式（采样, 多线程, 分层, Trace, Systrace, Hook)"
+    description = PerformanceTexts.CMD_PERFORMANCE_DESC
 )
 @CmdRoutes({
     // Sample (4 routes) → SampleCommand
-    @CmdRoutes.Route(path = "sample/start", request = SampleStartRequest.class, handler = SampleCommand.class, description = "开始单线程采样"),
-    @CmdRoutes.Route(path = "sample/stop", request = SampleStopRequest.class, handler = SampleCommand.class, description = "停止单线程采样"),
-    @CmdRoutes.Route(path = "sample/report", request = SampleReportRequest.class, handler = SampleCommand.class, description = "查看采样报告"),
-    @CmdRoutes.Route(path = "sample/export", request = SampleExportRequest.class, handler = SampleCommand.class, description = "导出采样数据"),
+    @CmdRoutes.Route(path = "sample/start", request = SampleStartRequest.class, handler = SampleCommand.class, description = PerformanceTexts.ROUTE_PERFORMANCE_SAMPLE_START_DESC),
+    @CmdRoutes.Route(path = "sample/stop", request = SampleStopRequest.class, handler = SampleCommand.class, description = PerformanceTexts.ROUTE_PERFORMANCE_SAMPLE_STOP_DESC),
+    @CmdRoutes.Route(path = "sample/report", request = SampleReportRequest.class, handler = SampleCommand.class, description = PerformanceTexts.ROUTE_PERFORMANCE_SAMPLE_REPORT_DESC),
+    @CmdRoutes.Route(path = "sample/export", request = SampleExportRequest.class, handler = SampleCommand.class, description = PerformanceTexts.ROUTE_PERFORMANCE_SAMPLE_EXPORT_DESC),
 
     // MultiThread (4 routes) → MultiThreadCommand
-    @CmdRoutes.Route(path = "multithread/start", request = MultiThreadStartRequest.class, handler = MultiThreadCommand.class, description = "开始多线程采样"),
-    @CmdRoutes.Route(path = "multithread/stop", request = MultiThreadStopRequest.class, handler = MultiThreadCommand.class, description = "停止多线程采样"),
-    @CmdRoutes.Route(path = "multithread/report", request = MultiThreadReportRequest.class, handler = MultiThreadCommand.class, description = "查看多线程采样报告"),
-    @CmdRoutes.Route(path = "multithread/export", request = MultiThreadExportRequest.class, handler = MultiThreadCommand.class, description = "导出多线程采样数据"),
+    @CmdRoutes.Route(path = "multithread/start", request = MultiThreadStartRequest.class, handler = MultiThreadCommand.class, description = PerformanceTexts.ROUTE_PERFORMANCE_MULTITHREAD_START_DESC),
+    @CmdRoutes.Route(path = "multithread/stop", request = MultiThreadStopRequest.class, handler = MultiThreadCommand.class, description = PerformanceTexts.ROUTE_PERFORMANCE_MULTITHREAD_STOP_DESC),
+    @CmdRoutes.Route(path = "multithread/report", request = MultiThreadReportRequest.class, handler = MultiThreadCommand.class, description = PerformanceTexts.ROUTE_PERFORMANCE_MULTITHREAD_REPORT_DESC),
+    @CmdRoutes.Route(path = "multithread/export", request = MultiThreadExportRequest.class, handler = MultiThreadCommand.class, description = PerformanceTexts.ROUTE_PERFORMANCE_MULTITHREAD_EXPORT_DESC),
 
     // Hierarchical (4 routes) → HierarchicalCommand
-    @CmdRoutes.Route(path = "hierarchical/start", request = HierarchicalStartRequest.class, handler = HierarchicalCommand.class, description = "开始分层采样"),
-    @CmdRoutes.Route(path = "hierarchical/stop", request = HierarchicalStopRequest.class, handler = HierarchicalCommand.class, description = "停止分层采样"),
-    @CmdRoutes.Route(path = "hierarchical/report", request = HierarchicalReportRequest.class, handler = HierarchicalCommand.class, description = "查看分层采样报告"),
-    @CmdRoutes.Route(path = "hierarchical/export", request = HierarchicalExportRequest.class, handler = HierarchicalCommand.class, description = "导出分层数据"),
+    @CmdRoutes.Route(path = "hierarchical/start", request = HierarchicalStartRequest.class, handler = HierarchicalCommand.class, description = PerformanceTexts.ROUTE_PERFORMANCE_HIERARCHICAL_START_DESC),
+    @CmdRoutes.Route(path = "hierarchical/stop", request = HierarchicalStopRequest.class, handler = HierarchicalCommand.class, description = PerformanceTexts.ROUTE_PERFORMANCE_HIERARCHICAL_STOP_DESC),
+    @CmdRoutes.Route(path = "hierarchical/report", request = HierarchicalReportRequest.class, handler = HierarchicalCommand.class, description = PerformanceTexts.ROUTE_PERFORMANCE_HIERARCHICAL_REPORT_DESC),
+    @CmdRoutes.Route(path = "hierarchical/export", request = HierarchicalExportRequest.class, handler = HierarchicalCommand.class, description = PerformanceTexts.ROUTE_PERFORMANCE_HIERARCHICAL_EXPORT_DESC),
 
 
     // Trace (4 routes) → TraceCommand
-    @CmdRoutes.Route(path = "trace/start", request = TraceStartRequest.class, handler = TraceCommand.class, description = "开始 Trace"),
-    @CmdRoutes.Route(path = "trace/stop", request = TraceStopRequest.class, handler = TraceCommand.class, description = "停止 Trace"),
-    @CmdRoutes.Route(path = "trace/report", request = TraceReportRequest.class, handler = TraceCommand.class, description = "查看 Trace 报告"),
-    @CmdRoutes.Route(path = "trace/export", request = TraceExportRequest.class, handler = TraceCommand.class, description = "导出 Trace 数据"),
+    @CmdRoutes.Route(path = "trace/start", request = TraceStartRequest.class, handler = TraceCommand.class, description = PerformanceTexts.ROUTE_PERFORMANCE_TRACE_START_DESC),
+    @CmdRoutes.Route(path = "trace/stop", request = TraceStopRequest.class, handler = TraceCommand.class, description = PerformanceTexts.ROUTE_PERFORMANCE_TRACE_STOP_DESC),
+    @CmdRoutes.Route(path = "trace/report", request = TraceReportRequest.class, handler = TraceCommand.class, description = PerformanceTexts.ROUTE_PERFORMANCE_TRACE_REPORT_DESC),
+    @CmdRoutes.Route(path = "trace/export", request = TraceExportRequest.class, handler = TraceCommand.class, description = PerformanceTexts.ROUTE_PERFORMANCE_TRACE_EXPORT_DESC),
 
     // Systrace (4 routes) → SystraceCommand
-    @CmdRoutes.Route(path = "systrace/start", request = SystraceStartRequest.class, handler = SystraceCommand.class, description = "开始 Systrace"),
-    @CmdRoutes.Route(path = "systrace/stop", request = SystraceStopRequest.class, handler = SystraceCommand.class, description = "停止 Systrace"),
-    @CmdRoutes.Route(path = "systrace/report", request = SystraceReportRequest.class, handler = SystraceCommand.class, description = "查看 Systrace 报告"),
-    @CmdRoutes.Route(path = "systrace/export", request = SystraceExportRequest.class, handler = SystraceCommand.class, description = "导出 Systrace 数据"),
+    @CmdRoutes.Route(path = "systrace/start", request = SystraceStartRequest.class, handler = SystraceCommand.class, description = PerformanceTexts.ROUTE_PERFORMANCE_SYSTRACE_START_DESC),
+    @CmdRoutes.Route(path = "systrace/stop", request = SystraceStopRequest.class, handler = SystraceCommand.class, description = PerformanceTexts.ROUTE_PERFORMANCE_SYSTRACE_STOP_DESC),
+    @CmdRoutes.Route(path = "systrace/report", request = SystraceReportRequest.class, handler = SystraceCommand.class, description = PerformanceTexts.ROUTE_PERFORMANCE_SYSTRACE_REPORT_DESC),
+    @CmdRoutes.Route(path = "systrace/export", request = SystraceExportRequest.class, handler = SystraceCommand.class, description = PerformanceTexts.ROUTE_PERFORMANCE_SYSTRACE_EXPORT_DESC),
 
     // Hook (4 routes) → HookCommand
-    @CmdRoutes.Route(path = "hook/start", request = PerfHookStartRequest.class, handler = HookCommand.class, description = "添加性能 Hook"),
-    @CmdRoutes.Route(path = "hook/stop", request = PerfHookStopRequest.class, handler = HookCommand.class, description = "停止 Hook"),
-    @CmdRoutes.Route(path = "hook/report", request = PerfHookReportRequest.class, handler = HookCommand.class, description = "查看 Hook 报告"),
-    @CmdRoutes.Route(path = "hook/export", request = PerfHookExportRequest.class, handler = HookCommand.class, description = "导出 Hook 数据"),
+    @CmdRoutes.Route(path = "hook/start", request = PerfHookStartRequest.class, handler = HookCommand.class, description = PerformanceTexts.ROUTE_PERFORMANCE_HOOK_START_DESC),
+    @CmdRoutes.Route(path = "hook/stop", request = PerfHookStopRequest.class, handler = HookCommand.class, description = PerformanceTexts.ROUTE_PERFORMANCE_HOOK_STOP_DESC),
+    @CmdRoutes.Route(path = "hook/report", request = PerfHookReportRequest.class, handler = HookCommand.class, description = PerformanceTexts.ROUTE_PERFORMANCE_HOOK_REPORT_DESC),
+    @CmdRoutes.Route(path = "hook/export", request = PerfHookExportRequest.class, handler = HookCommand.class, description = PerformanceTexts.ROUTE_PERFORMANCE_HOOK_EXPORT_DESC),
 
     // Utility (2 routes) → handled by PerformanceMain itself
-    @CmdRoutes.Route(path = "list", request = PerfListRequest.class, handler = PerformanceMain.class, description = "列出所有任务"),
-    @CmdRoutes.Route(path = "clear", request = PerfClearRequest.class, handler = PerformanceMain.class, description = "清除所有任务")
+    @CmdRoutes.Route(path = "list", request = PerfListRequest.class, handler = PerformanceMain.class, description = PerformanceTexts.ROUTE_PERFORMANCE_LIST_DESC),
+    @CmdRoutes.Route(path = "clear", request = PerfClearRequest.class, handler = PerformanceMain.class, description = PerformanceTexts.ROUTE_PERFORMANCE_CLEAR_DESC)
 })
 public class PerformanceMain extends MainCommand<PerformanceResult> {
 

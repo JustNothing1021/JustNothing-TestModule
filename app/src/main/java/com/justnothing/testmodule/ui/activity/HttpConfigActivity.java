@@ -7,8 +7,6 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.os.Bundle;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.content.ContentResolver;
 import android.database.Cursor;
 import android.net.Uri;
@@ -18,10 +16,8 @@ import android.text.TextUtils;
 import com.justnothing.testmodule.R;
 import com.justnothing.testmodule.databinding.ActivityGetHttpconfBinding;
 import com.justnothing.testmodule.utils.data.BootMonitor;
-import com.justnothing.testmodule.utils.logging.Logger;
 
 import android.util.Log;
-import android.widget.Toast;
 
 import java.io.File;
 import java.io.IOException;
@@ -33,10 +29,8 @@ import com.justnothing.testmodule.constants.FileDirectory;
 import com.justnothing.testmodule.utils.io.IOManager;
 
 
-public class HttpConfigActivity extends AppCompatActivity {
+public class HttpConfigActivity extends BaseActivity {
 
-
-    private static final Logger logger = Logger.getLoggerForName("HttpConfigActivity");
 
     public static HttpConfigActivity instance;
 
@@ -111,7 +105,7 @@ public class HttpConfigActivity extends AppCompatActivity {
                     );
 
                     binding.textView5.setText(
-                        "数据\n\n\n" +
+                        getString(R.string.http_config_data_label) + "\n\n\n" +
                         "tag\n" +
                         tag + "\n\n" +
                         "grey\n" +
@@ -152,17 +146,13 @@ public class HttpConfigActivity extends AppCompatActivity {
         }
     }
 
-    private void showToast(String message) {
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
-    }
-
     public void saveContent() {
         if (!BootMonitor.PermissionUtils.checkStoragePermission(this))
             BootMonitor.PermissionUtils.requestPermission(this);
         String text = (String) binding.textView5.getText();
         if (!BootMonitor.PermissionUtils.checkStoragePermission(this)) {
             logger.warn("保存文件时没有权限");
-            showToast("没有保存文件的权限");
+            showToast(getString(R.string.http_config_no_save_permission));
             return;
         }
 
@@ -174,10 +164,10 @@ public class HttpConfigActivity extends AppCompatActivity {
         try {
             IOManager.writeFile(text, fileDir);
             logger.info("内容保存成功");
-            showToast("文件保存到" + fileDir);
+            showToast(getString(R.string.http_config_file_saved_to, fileDir));
         } catch (IOException e) {
             logger.warn("内容保存失败", e);
-            showToast("保存失败: " + e + "，请查看日志");
+            showToast(getString(R.string.http_config_save_failed_format, e));
         }
     }
 

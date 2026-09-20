@@ -1,101 +1,106 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- 间距 / 字号统一走设计系统 token（见 dimens.xml、themes.xml） -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="@dimen/spacing_16">
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/data_export_title"
-        android:textSize="24sp"
-        android:textStyle="bold"
+        android:layout_marginBottom="@dimen/spacing_16"
         android:gravity="center"
-        android:layout_marginBottom="16dp"/>
+        android:text="@string/data_export_title"
+        android:textAppearance="@style/TextAppearance.App.Headline" />
 
     <TextView
         android:id="@+id/text_file_count"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
+        android:layout_marginBottom="@dimen/spacing_16"
         android:text="@string/exported_file_count_zero"
-        android:textSize="16sp" />
+        android:textAppearance="@style/TextAppearance.App.Body" />
 
+    <!--
+      两行各三个并排按钮。这里用的是 Widget.App.Button.Small 尺寸变体：
+      字号调小、minWidth 归零，否则 M3 按钮默认 88dp 的 minWidth 会让三个按钮撑爆一行。
+      注意按钮不要用 android:textAppearance 改字号 —— 那会连着把文字颜色也改掉，变成灰字按钮。
+    -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="39dp"
-        android:layout_marginBottom="8dp"
+        android:layout_marginBottom="@dimen/spacing_8"
         android:orientation="horizontal">
 
         <Button
             android:id="@+id/btn_export_all"
+            style="@style/Widget.App.Button.Small"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_marginEnd="4dp"
+            android:layout_marginEnd="@dimen/spacing_4"
             android:layout_weight="1"
-            android:text="@string/export_all"
-            android:textSize="10sp" />
+            android:text="@string/export_all" />
 
         <Button
             android:id="@+id/btn_export_config"
+            style="@style/Widget.App.Button.Small"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="4dp"
-            android:layout_marginEnd="4dp"
+            android:layout_marginStart="@dimen/spacing_4"
+            android:layout_marginEnd="@dimen/spacing_4"
             android:layout_weight="1"
-            android:text="@string/export_config"
-            android:textSize="10sp" />
+            android:text="@string/export_config" />
 
         <Button
             android:id="@+id/btn_export_status"
+            style="@style/Widget.App.Button.Small"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="4dp"
+            android:layout_marginStart="@dimen/spacing_4"
             android:layout_weight="1"
-            android:text="@string/export_status"
-            android:textSize="10sp" />
+            android:text="@string/export_status" />
     </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="38dp"
-        android:layout_marginBottom="16dp"
+        android:layout_marginBottom="@dimen/spacing_16"
         android:orientation="horizontal">
 
         <Button
             android:id="@+id/btn_export_performance"
+            style="@style/Widget.App.Button.Small"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="4dp"
+            android:layout_marginEnd="@dimen/spacing_4"
             android:layout_weight="1"
-            android:text="@string/export_performance"
-            android:textSize="10sp" />
+            android:text="@string/export_performance" />
 
         <Button
             android:id="@+id/btn_refresh"
+            style="@style/Widget.App.Button.Small"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_marginStart="4dp"
-            android:layout_marginEnd="4dp"
+            android:layout_marginStart="@dimen/spacing_4"
+            android:layout_marginEnd="@dimen/spacing_4"
             android:layout_weight="1"
-            android:text="@string/refresh"
-            android:textSize="10sp" />
+            android:text="@string/refresh" />
 
         <Button
             android:id="@+id/btn_clear_all"
+            style="@style/Widget.App.Button.Small"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="4dp"
+            android:layout_marginStart="@dimen/spacing_4"
             android:layout_weight="1"
-            android:text="@string/clear_all"
-            android:textSize="10sp" />
+            android:text="@string/clear_all" />
     </LinearLayout>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recycler_exported_files"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"/>
+        android:layout_weight="1" />
 
 </LinearLayout>

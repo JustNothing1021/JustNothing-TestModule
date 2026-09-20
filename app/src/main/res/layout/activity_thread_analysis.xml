@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- 设计系统 token：间距 @dimen/spacing_*、文字 @style/TextAppearance.App.*、卡片 @style/Widget.App.Card。 -->
 <androidx.coordinatorlayout.widget.CoordinatorLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -28,7 +29,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:padding="@dimen/spacing_16">
 
             <!-- 状态栏 -->
             <LinearLayout
@@ -36,7 +37,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:paddingBottom="8dp">
+                android:paddingBottom="@dimen/spacing_8">
 
                 <TextView
                     android:id="@+id/tv_last_update_label"
@@ -45,14 +46,14 @@
                     android:layout_weight="1"
                     android:text="@string/analysis_thread_last_update"
                     android:textAppearance="?attr/textAppearanceLabelSmall"
-                    android:textColor="@android:color/darker_gray" />
+                    android:textColor="?attr/colorOnSurfaceVariant" />
 
                 <TextView
                     android:id="@+id/tv_last_update_time"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textAppearance="?attr/textAppearanceLabelSmall"
-                    android:textColor="@android:color/darker_gray" />
+                    android:textColor="?attr/colorOnSurfaceVariant" />
 
                 <View
                     android:layout_width="16dp"
@@ -68,33 +69,30 @@
 
             <!-- 线程概览卡片（精简版，无Chip） -->
             <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.App.Card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp">
+                android:layout_marginBottom="@dimen/spacing_12">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="@dimen/spacing_16">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/analysis_thread_overview"
-                        android:textAppearance="?attr/textAppearanceTitleSmall"
-                        android:textStyle="bold"
+                        android:textAppearance="@style/TextAppearance.App.Title"
                         android:textColor="@color/cyan" />
 
                     <TextView
                         android:id="@+id/tv_total_count"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
-                        android:textAppearance="?attr/textAppearanceHeadlineSmall"
-                        android:textStyle="bold"
+                        android:layout_marginTop="@dimen/spacing_12"
+                        android:textAppearance="@style/TextAppearance.App.Headline"
                         android:textColor="@color/yellow" />
 
                 </LinearLayout>
@@ -106,7 +104,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:layout_marginBottom="12dp">
+                android:layout_marginBottom="@dimen/spacing_12">
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="0dp"
@@ -130,7 +128,7 @@
                     android:id="@+id/btn_sort"
                     android:layout_width="44dp"
                     android:layout_height="44dp"
-                    android:layout_marginStart="8dp"
+                    android:layout_marginStart="@dimen/spacing_8"
                     android:insetLeft="0dp"
                     android:insetTop="0dp"
                     android:insetRight="0dp"
@@ -150,31 +148,29 @@
 
             <!-- 死锁检测 -->
             <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.App.Card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp">
+                android:layout_marginBottom="@dimen/spacing_12">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="@dimen/spacing_16">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/analysis_thread_deadlock_detect"
-                        android:textAppearance="?attr/textAppearanceTitleSmall"
-                        android:textStyle="bold"
+                        android:textAppearance="@style/TextAppearance.App.Title"
                         android:textColor="@color/red" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_deadlock_detect"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
+                        android:layout_marginTop="@dimen/spacing_12"
                         android:text="@string/analysis_thread_btn_detect"
                         app:icon="@android:drawable/ic_dialog_alert"
                         style="@style/Widget.Material3.Button.OutlinedButton" />
@@ -183,7 +179,7 @@
                         android:id="@+id/tv_deadlock_result"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
+                        android:layout_marginTop="@dimen/spacing_12"
                         android:textAppearance="?attr/textAppearanceBodyMedium"
                         android:visibility="gone" />
 
@@ -191,7 +187,7 @@
                         android:id="@+id/scroll_deadlock_detail"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
+                        android:layout_marginTop="@dimen/spacing_8"
                         android:maxHeight="200dp"
                         android:visibility="gone">
 
@@ -210,25 +206,24 @@
 
             <!-- 快捷操作 -->
             <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.App.Card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp">
+                android:layout_marginBottom="@dimen/spacing_12">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:gravity="center"
-                    android:padding="12dp">
+                    android:padding="@dimen/spacing_12">
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_refresh"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:layout_marginEnd="8dp"
+                        android:layout_marginEnd="@dimen/spacing_8"
                         android:text="@string/analysis_thread_btn_refresh"
                         app:icon="@android:drawable/ic_menu_rotate"
                         style="@style/Widget.Material3.Button.OutlinedButton" />

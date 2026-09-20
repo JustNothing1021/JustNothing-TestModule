@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="@dimen/spacing_16">
 
     <EditText
         android:id="@+id/edit_script_name"
@@ -16,7 +16,7 @@
         android:id="@+id/edit_script_description"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="@dimen/spacing_8"
         android:hint="@string/script_description"
         android:maxLines="2" />
 
@@ -24,7 +24,7 @@
         android:id="@+id/edit_script_category"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="@dimen/spacing_8"
         android:hint="@string/script_category"
         android:maxLines="1" />
 
@@ -32,7 +32,7 @@
         android:id="@+id/edit_script_commands"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="@dimen/spacing_8"
         android:gravity="top|start"
         android:hint="@string/script_command_with_hint"
         android:inputType="textMultiLine"

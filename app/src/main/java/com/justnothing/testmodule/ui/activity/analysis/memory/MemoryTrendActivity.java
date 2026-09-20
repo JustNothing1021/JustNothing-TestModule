@@ -3,19 +3,18 @@ package com.justnothing.testmodule.ui.activity.analysis.memory;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.ProgressBar;
-import android.widget.TextView;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
-import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.components.XAxis;
 import com.github.mikephil.charting.components.YAxis;
 import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
+import com.github.mikephil.charting.formatter.ValueFormatter;
 import com.justnothing.testmodule.R;
+import com.justnothing.testmodule.databinding.ActivityMemoryTrendBinding;
+import com.justnothing.testmodule.ui.activity.BaseActivity;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -23,11 +22,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-public class MemoryTrendActivity extends AppCompatActivity {
+public class MemoryTrendActivity extends BaseActivity {
 
-    private LineChart chart;
-    private TextView tvTitle, tvEmptyHint;
-    private ProgressBar progressBar;
+    private ActivityMemoryTrendBinding binding;
 
     private String trendType;
     private List<MemorySnapshot> snapshots;
@@ -35,7 +32,8 @@ public class MemoryTrendActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_memory_trend);
+        binding = ActivityMemoryTrendBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
 
         trendType = getIntent().getStringExtra(MemoryAnalysisActivity.EXTRA_TREND_TYPE);
         if (trendType == null) {
@@ -53,11 +51,6 @@ public class MemoryTrendActivity extends AppCompatActivity {
     }
 
     private void initViews() {
-        chart = findViewById(R.id.line_chart);
-        tvTitle = findViewById(R.id.tv_trend_title);
-        tvEmptyHint = findViewById(R.id.tv_empty_hint);
-        progressBar = findViewById(R.id.progress_bar);
-
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
@@ -68,22 +61,22 @@ public class MemoryTrendActivity extends AppCompatActivity {
                 default -> getString(R.string.analysis_memory_trend_title);
             };
             getSupportActionBar().setTitle(title);
-            tvTitle.setText(title);
+            binding.tvTrendTitle.setText(title);
         }
     }
 
     private void displayData() {
-        progressBar.setVisibility(View.GONE);
+        binding.progressBar.setVisibility(View.GONE);
 
         if (snapshots.isEmpty()) {
-            tvEmptyHint.setVisibility(View.VISIBLE);
-            tvEmptyHint.setText(R.string.analysis_memory_trend_empty);
-            chart.setVisibility(View.GONE);
+            binding.tvEmptyHint.setVisibility(View.VISIBLE);
+            binding.tvEmptyHint.setText(R.string.analysis_memory_trend_empty);
+            binding.lineChart.setVisibility(View.GONE);
             return;
         }
 
-        tvEmptyHint.setVisibility(View.GONE);
-        chart.setVisibility(View.VISIBLE);
+        binding.tvEmptyHint.setVisibility(View.GONE);
+        binding.lineChart.setVisibility(View.VISIBLE);
         setupChart(snapshots);
     }
 
@@ -127,12 +120,12 @@ public class MemoryTrendActivity extends AppCompatActivity {
         dataSet.setMode(LineDataSet.Mode.CUBIC_BEZIER);
         dataSet.setCubicIntensity(0.2f);
 
-        XAxis xAxis = chart.getXAxis();
+        XAxis xAxis = binding.lineChart.getXAxis();
         xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
         xAxis.setGranularity(1f);
         xAxis.setTextColor(Color.GRAY);
         xAxis.setTextSize(10f);
-        xAxis.setValueFormatter(new com.github.mikephil.charting.formatter.ValueFormatter() {
+        xAxis.setValueFormatter(new ValueFormatter() {
             @Override
             public String getFormattedValue(float value) {
                 int index = (int) value;
@@ -144,23 +137,23 @@ public class MemoryTrendActivity extends AppCompatActivity {
         });
         xAxis.setLabelCount(Math.min(snapshots.size(), 12), false);
 
-        YAxis leftAxis = chart.getAxisLeft();
+        YAxis leftAxis = binding.lineChart.getAxisLeft();
         leftAxis.setTextColor(Color.GRAY);
         leftAxis.setTextSize(10f);
         leftAxis.setAxisMinimum(0);
         leftAxis.setAxisMaximum(100);
         leftAxis.setGranularity(5f);
 
-        YAxis rightAxis = chart.getAxisRight();
+        YAxis rightAxis = binding.lineChart.getAxisRight();
         rightAxis.setEnabled(false);
 
-        chart.getDescription().setEnabled(false);
-        chart.getLegend().setTextColor(Color.GRAY);
-        chart.getLegend().setTextSize(11f);
+        binding.lineChart.getDescription().setEnabled(false);
+        binding.lineChart.getLegend().setTextColor(Color.GRAY);
+        binding.lineChart.getLegend().setTextSize(11f);
 
         LineData lineData = new LineData(dataSet);
-        chart.setData(lineData);
-        chart.invalidate();
+        binding.lineChart.setData(lineData);
+        binding.lineChart.invalidate();
 
         if (!entries.isEmpty()) {
             float lastValue = entries.get(entries.size() - 1).getY();
@@ -172,7 +165,7 @@ public class MemoryTrendActivity extends AppCompatActivity {
         String statusText = getString(R.string.analysis_memory_trend_current,
                 (double) currentValue,
                 getUsageLabel(currentValue));
-        tvTitle.setText(statusText);
+        binding.tvTrendTitle.setText(statusText);
     }
 
     private String getUsageLabel(float percent) {

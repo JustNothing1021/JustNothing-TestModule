@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.bytecode.request;
 
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.functions.bytecode.BytecodeTexts;
 import com.justnothing.testmodule.command.functions.bytecode.response.BytecodeResult;
 
 public class BytecodeDisasmRequest extends CommandRequest<BytecodeResult> {
@@ -10,7 +11,7 @@ public class BytecodeDisasmRequest extends CommandRequest<BytecodeResult> {
         name = "className",
         position = 1,
         required = true,
-        description = "类名"
+        description = BytecodeTexts.PARAM_BYTECODE_DISASM_CLASSNAME_DESC
     )
     private String className;
 
@@ -18,7 +19,7 @@ public class BytecodeDisasmRequest extends CommandRequest<BytecodeResult> {
         name = "methodName",
         position = 2,
         required = false,
-        description = "只看这一个方法（不填则输出该类的全部方法）"
+        description = BytecodeTexts.PARAM_BYTECODE_DISASM_METHODNAME_DESC
     )
     private String methodName;
 
@@ -26,7 +27,7 @@ public class BytecodeDisasmRequest extends CommandRequest<BytecodeResult> {
         name = "outputPath",
         aliases = {"-o", "--output"},
         required = false,
-        description = "把指令写入文件（不填则直接显示，最多 150 行）"
+        description = BytecodeTexts.PARAM_BYTECODE_DISASM_OUTPUTPATH_DESC
     )
     private String outputPath;
 

@@ -8,6 +8,7 @@ import com.justnothing.testmodule.command.functions.performance.response.Hierarc
 import com.justnothing.testmodule.command.functions.performance.sampler.HierarchicalSampleData;
 import com.justnothing.testmodule.command.functions.performance.sampler.HierarchicalSampler;
 import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.functions.performance.PerformanceTexts;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -18,7 +19,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @SubCommandInfo(
-    description = "分层采样分析，按调用层次展示方法耗时分布",
+    description = PerformanceTexts.SUB_PERFORMANCE_HIERARCHICAL_DESC,
     usage = "performance hierarchical <action> [args...]",
     examples = {
         "performance hierarchical start 1000",
@@ -26,12 +27,7 @@ import java.util.stream.Collectors;
         "performance hierarchical report 1",
         "performance hierarchical export 1 /sdcard/hier.json"
     },
-    optionsDesc = """
-        Actions:
-            start [rate] [--exclude pattern]   开始分层采样
-            stop <id>                          停止采样
-            report [id]                        查看报告 (默认最新)
-            export <id> <path>                 导出数据"""
+    optionsDesc = PerformanceTexts.SUB_PERFORMANCE_HIERARCHICAL_OPTIONS
 )
 public class HierarchicalCommand extends AbstractPerfCommand<PerformanceRequest<?>, HierarchicalResult> {
 

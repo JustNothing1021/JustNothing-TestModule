@@ -8,6 +8,7 @@ import com.justnothing.testmodule.command.functions.jank.model.ProcessEntry;
 import com.justnothing.testmodule.command.functions.jank.request.JankWatchRequest;
 import com.justnothing.testmodule.command.functions.jank.response.JankResult;
 import com.justnothing.testmodule.command.functions.jank.util.ProcReader;
+import com.justnothing.testmodule.command.functions.jank.JankTexts;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -37,10 +38,9 @@ import java.util.Set;
  * <p>客户端断开（Ctrl-C 或关掉会话）后下一轮就会退出 —— 不然它会永远挂在那里扫 {@code /proc}。</p>
  */
 @SubCommandInfo(
-    description = "监视所有进程的出现与消失（差分流，参照 Android Studio 的 process-tracker）",
-    usage = "jank watch [-i 间隔毫秒]",
-    optionsDesc = "  -i, --interval  轮询间隔，默认 1000ms\n"
-            + "  结束            在客户端按 Ctrl-C（或断开连接），下一轮自动退出",
+    description = JankTexts.SUB_JANK_WATCH_DESC,
+    usage = JankTexts.SUB_JANK_WATCH_USAGE,
+    optionsDesc = JankTexts.SUB_JANK_WATCH_OPTIONS,
     examples = {
         "jank watch",
         "jank watch -i 200",

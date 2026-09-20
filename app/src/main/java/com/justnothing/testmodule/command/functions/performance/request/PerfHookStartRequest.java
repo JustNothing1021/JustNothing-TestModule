@@ -1,6 +1,7 @@
 package com.justnothing.testmodule.command.functions.performance.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.functions.performance.PerformanceTexts;
 import com.justnothing.testmodule.command.functions.performance.response.PerfHookResult;
 
 public class PerfHookStartRequest extends PerformanceRequest<PerfHookResult> {
@@ -9,7 +10,7 @@ public class PerfHookStartRequest extends PerformanceRequest<PerfHookResult> {
         name = "className",
         position = 1,
         required = true,
-        description = "目标类名"
+        description = PerformanceTexts.PARAM_PERFORMANCE_HOOK_START_CLASSNAME_DESC
     )
     private String className;
 
@@ -17,7 +18,7 @@ public class PerfHookStartRequest extends PerformanceRequest<PerfHookResult> {
         name = "methodName",
         position = 2,
         required = false,
-        description = "方法名"
+        description = PerformanceTexts.PARAM_PERFORMANCE_HOOK_START_METHODNAME_DESC
     )
     private String methodName;
 
@@ -26,7 +27,7 @@ public class PerfHookStartRequest extends PerformanceRequest<PerfHookResult> {
         position = 3,
         required = false,
         varArgs = true,
-        description = "方法签名"
+        description = PerformanceTexts.PARAM_PERFORMANCE_HOOK_START_SIGNATURE_DESC
     )
     private String signature;
 

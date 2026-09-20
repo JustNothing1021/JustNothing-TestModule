@@ -1,12 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.cardview.widget.CardView
+<com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+    style="@style/Widget.App.Card"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="8dp"
-    app:cardCornerRadius="8dp"
-    app:cardElevation="2dp"
+    android:layout_marginBottom="@dimen/spacing_8"
     android:foreground="?attr/selectableItemBackground"
     android:clickable="true"
     android:focusable="true">
@@ -15,7 +13,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="12dp">
+        android:padding="@dimen/spacing_12">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -27,16 +25,15 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/analysis_alias_name_label"
-                android:textStyle="bold"
-                android:layout_marginEnd="8dp" />
+                android:textAppearance="@style/TextAppearance.App.Title"
+                android:layout_marginEnd="@dimen/spacing_8" />
 
             <TextView
                 android:id="@+id/tv_alias_name"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:textAppearance="?attr/textAppearanceBodyMedium"
-                android:textStyle="bold" />
+                android:textAppearance="@style/TextAppearance.App.Caption.Bold" />
 
         </LinearLayout>
 
@@ -45,13 +42,13 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginTop="4dp">
+            android:layout_marginTop="@dimen/spacing_4">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/analysis_alias_command_label"
-                android:layout_marginEnd="8dp" />
+                android:layout_marginEnd="@dimen/spacing_8" />
 
             <TextView
                 android:id="@+id/tv_alias_command"
@@ -64,4 +61,4 @@
 
     </LinearLayout>
 
-</androidx.cardview.widget.CardView>
+</com.google.android.material.card.MaterialCardView>

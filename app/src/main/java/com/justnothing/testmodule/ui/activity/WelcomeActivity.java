@@ -2,102 +2,87 @@ package com.justnothing.testmodule.ui.activity;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import com.justnothing.testmodule.R;
 import com.justnothing.testmodule.constants.FileDirectory;
+import com.justnothing.testmodule.databinding.ActivityWelcomeBinding;
 import com.justnothing.testmodule.utils.data.BootMonitor;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.tips.TipSystem;
 import com.justnothing.testmodule.utils.tips.TipCallback;
 import com.justnothing.testmodule.utils.ui.UISettings;
 
-public class WelcomeActivity extends AppCompatActivity {
+public class WelcomeActivity extends BaseActivity {
 
-    private static final Logger logger = Logger.getLoggerForName("WelcomeActivity");
+    private ActivityWelcomeBinding binding;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_welcome);
+        binding = ActivityWelcomeBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
 
         UISettings uiSettings = UISettings.getInstance(this);
         uiSettings.applyUIScale(this);
 
-        TextView tvVersion = findViewById(R.id.tv_version);
-        tvVersion.setText(getString(R.string.version_format, FileDirectory.APPLICATION_VERSION));
+        binding.tvVersion.setText(getString(R.string.version_format, FileDirectory.APPLICATION_VERSION));
         
-        TextView tvSubtitle = findViewById(R.id.tv_subtitle);
-        setupTipSystem(tvSubtitle);
+        setupTipSystem(binding.tvSubtitle);
 
-        Button btnSystemAnalysis = findViewById(R.id.btn_system_analysis);
-        Button btnGetHttpConf = findViewById(R.id.btn_get_httpconf);
-        Button btnHookConfig = findViewById(R.id.btn_hook_config);
-        Button btnLogViewer = findViewById(R.id.btn_log_viewer);
-        Button btnScriptManager = findViewById(R.id.btn_script_manager);
-        Button btnModuleStatus = findViewById(R.id.btn_module_status);
-        Button btnPerformance = findViewById(R.id.btn_performance);
-        Button btnDataExport = findViewById(R.id.btn_data_export);
-        Button btnSettings = findViewById(R.id.btn_settings);
-        Button btnDidYouKnow = findViewById(R.id.btn_did_you_know);
-        Button btnAbout = findViewById(R.id.btn_about);
-
-        btnSystemAnalysis.setOnClickListener(v -> {
+        binding.btnSystemAnalysis.setOnClickListener(v -> {
             Intent intent = new Intent(this, SystemAnalysisActivity.class);
             startActivity(intent);
         });
 
-        btnGetHttpConf.setOnClickListener(v -> {
+        binding.btnGetHttpconf.setOnClickListener(v -> {
             Intent intent = new Intent(this, HttpConfigActivity.class);
             startActivity(intent);
         });
 
-        btnHookConfig.setOnClickListener(v -> {
+        binding.btnHookConfig.setOnClickListener(v -> {
             Intent intent = new Intent(this, HookConfigActivity.class);
             startActivity(intent);
         });
 
-        btnLogViewer.setOnClickListener(v -> {
+        binding.btnLogViewer.setOnClickListener(v -> {
             Intent intent = new Intent(this, LogViewerActivity.class);
             startActivity(intent);
         });
 
-        btnScriptManager.setOnClickListener(v -> {
+        binding.btnScriptManager.setOnClickListener(v -> {
             Intent intent = new Intent(this, ScriptManagerActivity.class);
             startActivity(intent);
         });
 
-        btnModuleStatus.setOnClickListener(v -> {
+        binding.btnModuleStatus.setOnClickListener(v -> {
             Intent intent = new Intent(this, ModuleStatusActivity.class);
             startActivity(intent);
         });
 
-        btnPerformance.setOnClickListener(v -> {
+        binding.btnPerformance.setOnClickListener(v -> {
             Intent intent = new Intent(this, PerformanceActivity.class);
             startActivity(intent);
         });
 
-        btnDataExport.setOnClickListener(v -> {
+        binding.btnDataExport.setOnClickListener(v -> {
             Intent intent = new Intent(this, DataExportActivity.class);
             startActivity(intent);
         });
 
-        btnSettings.setOnClickListener(v -> {
+        binding.btnSettings.setOnClickListener(v -> {
             Intent intent = new Intent(this, SettingsActivity.class);
             startActivity(intent);
         });
 
-        btnDidYouKnow.setOnClickListener(v -> {
+        binding.btnDidYouKnow.setOnClickListener(v -> {
             Intent intent = new Intent(this, DidYouKnowActivity.class);
             startActivity(intent);
         });
 
-        btnAbout.setOnClickListener(v -> {
+        binding.btnAbout.setOnClickListener(v -> {
             Intent intent = new Intent(this, AboutActivity.class);
             startActivity(intent);
         });
@@ -108,8 +93,7 @@ public class WelcomeActivity extends AppCompatActivity {
             BootMonitor.PermissionUtils.requestPermission(this);
 
         if (!BootMonitor.PermissionUtils.checkStoragePermission(this)) {
-            Toast.makeText(getApplicationContext(),
-                    getString(R.string.no_file_permission_warn), Toast.LENGTH_LONG).show();
+            showToast(getString(R.string.no_file_permission_warn), Toast.LENGTH_LONG);
         }
 
     }

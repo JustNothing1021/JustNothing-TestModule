@@ -3,49 +3,47 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="12dp"
-    android:background="#F5F5F5"
-    android:layout_marginBottom="8dp">
+    android:padding="@dimen/spacing_12"
+    android:layout_marginBottom="@dimen/spacing_8">
 
     <TextView
         android:id="@+id/text_hook_name"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Hook名称: -"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="4dp"/>
+        android:text="@string/hook_detail_hook_name_placeholder"
+        android:textAppearance="@style/TextAppearance.App.Title"
+        android:layout_marginBottom="@dimen/spacing_4"/>
 
     <TextView
         android:id="@+id/text_hook_type"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="类型: -"
-        android:textSize="14sp"
-        android:layout_marginBottom="4dp"/>
+        android:text="@string/hook_detail_hook_type_placeholder"
+        android:textAppearance="@style/TextAppearance.App.Caption"
+        android:layout_marginBottom="@dimen/spacing_4"/>
 
     <TextView
         android:id="@+id/text_hook_initialized"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="初始化状态: -"
-        android:textSize="14sp"
-        android:layout_marginBottom="4dp"/>
+        android:text="@string/hook_detail_initialized_placeholder"
+        android:textAppearance="@style/TextAppearance.App.Caption"
+        android:layout_marginBottom="@dimen/spacing_4"/>
 
     <TextView
         android:id="@+id/text_hook_count"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Hook数量: -"
-        android:textSize="14sp"
-        android:layout_marginBottom="4dp"/>
+        android:text="@string/hook_detail_hook_count_placeholder"
+        android:textAppearance="@style/TextAppearance.App.Caption"
+        android:layout_marginBottom="@dimen/spacing_4"/>
 
     <TextView
         android:id="@+id/text_hook_stats"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="无统计信息"
-        android:textSize="12sp"
-        android:textColor="#666666"/>
+        android:text="@string/hook_detail_no_stats"
+        android:textAppearance="@style/TextAppearance.App.Label"
+        android:textColor="?attr/colorOnSurfaceVariant"/>
 
 </LinearLayout>

@@ -10,24 +10,18 @@ import com.justnothing.testmodule.command.functions.alias.util.AliasManager;
 import com.justnothing.testmodule.utils.data.DataDirectoryManager;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.functions.alias.AliasTexts;
 
 import java.io.File;
 
 @SubCommandInfo(
-    description = "删除指定的命令别名",
-    usage = "alias remove <别名>",
+    description = AliasTexts.SUB_ALIAS_REMOVE_DESC,
+    usage = AliasTexts.SUB_ALIAS_REMOVE_USAGE,
     examples = {
         "alias remove bi",
         "alias rm bi"
     },
-    optionsDesc = """
-            参数:
-              <别名>   要删除的别名名称
-            
-            示例:
-              alias remove bi     # 删除 bi 别名
-              alias rm ls        # 删除 ls 别名
-            """
+    optionsDesc = AliasTexts.SUB_ALIAS_REMOVE_OPTIONS
 )
 public class AliasRemoveCommand extends AbstractCommand<AliasRemoveRequest, AliasResult> {
 

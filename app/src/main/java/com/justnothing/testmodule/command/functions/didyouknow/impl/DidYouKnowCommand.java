@@ -8,13 +8,14 @@ import com.justnothing.testmodule.command.functions.didyouknow.CliTips;
 import com.justnothing.testmodule.command.functions.didyouknow.request.DidYouKnowRequest;
 import com.justnothing.testmodule.command.functions.didyouknow.response.DidYouKnowResult;
 import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.functions.didyouknow.DidYouKnowTexts;
 import com.justnothing.testmodule.utils.format.TerminalFormatter;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @SubCommandInfo(
-    description = "显示\"你知道吗\"冷知识提示",
+    description = DidYouKnowTexts.SUB_DID_YOU_KNOW_DESC,
     usage = "did-you-know [options]",
     examples = {
         "did-you-know",              // 随机一条（蓝色）
@@ -25,16 +26,7 @@ import java.util.List;
         "did-you-know --special",    // 今日特殊提示
         "did-you-know --special-list" // 所有特殊提示
     },
-    optionsDesc = """
-            选项:
-              -i, --id <N>       显示第 N 条提示
-              -l, --list         列出所有提示（带编号）
-              -c, --count        显示统计信息
-              -s, --search <K>   搜索包含关键词的提示
-                  --special      显示今日特殊提示（生日/节日）
-                  --special-list 列出所有特殊提示
-              -h, --help         显示帮助信息
-            """
+    optionsDesc = DidYouKnowTexts.SUB_DID_YOU_KNOW_OPTIONS
 )
 public class DidYouKnowCommand extends AbstractCommand<DidYouKnowRequest, DidYouKnowResult> {
 

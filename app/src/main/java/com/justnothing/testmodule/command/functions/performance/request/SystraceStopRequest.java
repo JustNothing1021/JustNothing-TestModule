@@ -1,6 +1,7 @@
 package com.justnothing.testmodule.command.functions.performance.request;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.functions.performance.PerformanceTexts;
 import com.justnothing.testmodule.command.functions.performance.response.SystraceResult;
 
 public class SystraceStopRequest extends PerformanceRequest<SystraceResult> {
@@ -9,7 +10,7 @@ public class SystraceStopRequest extends PerformanceRequest<SystraceResult> {
         name = "id",
         position = 1,
         required = true,
-        description = "任务 ID"
+        description = PerformanceTexts.PARAM_PERFORMANCE_SYSTRACE_STOP_ID_DESC
     )
     private int taskId;
 

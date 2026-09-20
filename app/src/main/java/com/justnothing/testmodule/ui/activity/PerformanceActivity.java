@@ -2,60 +2,51 @@ package com.justnothing.testmodule.ui.activity;
 
 import android.annotation.SuppressLint;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.view.LayoutInflater;
-import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.justnothing.testmodule.R;
-import com.justnothing.testmodule.utils.logging.Logger;
+import com.justnothing.testmodule.databinding.ActivityPerformanceBinding;
+import com.justnothing.testmodule.databinding.ItemPerformanceStatBinding;
 import com.justnothing.testmodule.utils.data.PerformanceMonitor;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-public class PerformanceActivity extends AppCompatActivity {
-    private static final Logger logger = Logger.getLoggerForName("PerformanceActivity");
+public class PerformanceActivity extends BaseActivity {
+    private ActivityPerformanceBinding binding;
     private PerformanceMonitor monitor;
     private StatsAdapter adapter;
     private List<PerformanceMonitor.HookStats> statsList;
-    private Handler handler;
     private Runnable updateRunnable;
     private static final int REFRESH_INTERVAL = 3000;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_performance);
+        binding = ActivityPerformanceBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
 
         monitor = new PerformanceMonitor();
-        handler = new Handler(Looper.getMainLooper());
 
         statsList = new ArrayList<>();
         adapter = new StatsAdapter();
 
-        RecyclerView recyclerView = findViewById(R.id.stats_list);
+        RecyclerView recyclerView = binding.statsList;
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setAdapter(adapter);
 
-        Button btnRefresh = findViewById(R.id.btn_refresh);
-        Button btnClear = findViewById(R.id.btn_clear);
-
-        btnRefresh.setOnClickListener(v -> {
+        binding.btnRefresh.setOnClickListener(v -> {
             refreshStats();
             logger.info("刷新性能统计");
         });
 
-        btnClear.setOnClickListener(v -> {
+        binding.btnClear.setOnClickListener(v -> {
             monitor.clearStats();
             refreshStats();
             logger.info("清除性能统计");
@@ -70,17 +61,17 @@ public class PerformanceActivity extends AppCompatActivity {
             @Override
             public void run() {
                 refreshStats();
-                handler.postDelayed(this, REFRESH_INTERVAL);
+                mainHandler.postDelayed(this, REFRESH_INTERVAL);
             }
         };
-        handler.post(updateRunnable);
+        mainHandler.post(updateRunnable);
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (handler != null && updateRunnable != null) {
-            handler.removeCallbacks(updateRunnable);
+        if (updateRunnable != null) {
+            mainHandler.removeCallbacks(updateRunnable);
         }
     }
 
@@ -96,8 +87,7 @@ public class PerformanceActivity extends AppCompatActivity {
                         getString(R.string.performance_monitor_stat_disabled)));
         String hookDesc = getString(R.string.performance_hook_count, statsList.size());
         String finalDesc = statDesc + getString(R.string.newline) + hookDesc;
-        TextView textStatus = findViewById(R.id.text_status);
-        textStatus.setText(finalDesc);
+        binding.textStatus.setText(finalDesc);
 
     }
 
@@ -105,9 +95,9 @@ public class PerformanceActivity extends AppCompatActivity {
         @NonNull
         @Override
         public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            View view = LayoutInflater.from(parent.getContext())
-                    .inflate(R.layout.item_performance_stat, parent, false);
-            return new ViewHolder(view);
+            ItemPerformanceStatBinding itemBinding = ItemPerformanceStatBinding.inflate(
+                    LayoutInflater.from(parent.getContext()), parent, false);
+            return new ViewHolder(itemBinding);
         }
 
         @Override
@@ -122,24 +112,18 @@ public class PerformanceActivity extends AppCompatActivity {
         }
 
         class ViewHolder extends RecyclerView.ViewHolder {
-            TextView textName;
-            TextView textCallCount;
-            TextView textTotalTime;
-            TextView textAvgTime;
+            private final ItemPerformanceStatBinding binding;
 
-            ViewHolder(View itemView) {
-                super(itemView);
-                textName = itemView.findViewById(R.id.text_stat_name);
-                textCallCount = itemView.findViewById(R.id.text_call_count);
-                textTotalTime = itemView.findViewById(R.id.text_total_time);
-                textAvgTime = itemView.findViewById(R.id.text_avg_time);
+            ViewHolder(ItemPerformanceStatBinding binding) {
+                super(binding.getRoot());
+                this.binding = binding;
             }
 
             void bind(PerformanceMonitor.HookStats stat) {
-                textName.setText(stat.name);
-                textCallCount.setText(getString(R.string.performance_hook_call_cnt, stat.callCount));
-                textTotalTime.setText(getString(R.string.performance_hook_total_time, stat.totalTime));
-                textAvgTime.setText(getString(R.string.performance_hook_avg_time, stat.avgTime));
+                binding.textStatName.setText(stat.name);
+                binding.textCallCount.setText(getString(R.string.performance_hook_call_cnt, stat.callCount));
+                binding.textTotalTime.setText(getString(R.string.performance_hook_total_time, stat.totalTime));
+                binding.textAvgTime.setText(getString(R.string.performance_hook_avg_time, stat.avgTime));
             }
         }
     }

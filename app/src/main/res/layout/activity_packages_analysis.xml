@@ -35,7 +35,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:padding="@dimen/spacing_16">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -48,12 +48,11 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:textAppearance="?attr/textAppearanceTitleMedium"
-                        android:textStyle="bold" />
+                        android:textAppearance="@style/TextAppearance.App.Title.Bold" />
 
                     <Button
                         android:id="@+id/btn_refresh"
-                        style="@style/Widget.Material3.Button.TextButton"
+                        style="@style/Widget.App.Button.Text"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/packages_refresh" />
@@ -63,7 +62,7 @@
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
-                    android:layout_marginTop="12dp"
+                    android:layout_marginTop="@dimen/spacing_12"
                     android:background="?android:attr/listDivider" />
 
                 <androidx.recyclerview.widget.RecyclerView
@@ -91,7 +90,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="@dimen/spacing_16"
                 android:text="@string/packages_loading"
                 android:textAppearance="?attr/textAppearanceBodyMedium" />
 
