@@ -1,0 +1,33 @@
+package com.justnothing.testmodule.command.functions.classcmd.response;
+
+public class InvokeMethodResult extends ClassCommandResult {
+
+    private String resultString;
+
+    private String resultTypeName;
+
+    private int resultHash;
+
+    private String instanceAfterInvocation;
+
+    private int instanceHash;
+
+    public InvokeMethodResult() {
+        super();
+    }
+
+    public InvokeMethodResult(String requestId) {
+        super(requestId);
+    }
+
+    public String getResultString() { return resultString; }
+    public void setResultString(String resultString) { this.resultString = resultString; }
+    public String getResultTypeName() { return resultTypeName; }
+    public void setResultTypeName(String resultTypeName) { this.resultTypeName = resultTypeName; }
+    public int getResultHash() { return resultHash; }
+    public void setResultHash(int resultHash) { this.resultHash = resultHash; }
+    public String getInstanceAfterInvocation() { return instanceAfterInvocation; }
+    public void setInstanceAfterInvocation(String instanceAfterInvocation) { this.instanceAfterInvocation = instanceAfterInvocation; }
+    public int getInstanceHash() { return instanceHash; }
+    public void setInstanceHash(int instanceHash) { this.instanceHash = instanceHash; }
+}

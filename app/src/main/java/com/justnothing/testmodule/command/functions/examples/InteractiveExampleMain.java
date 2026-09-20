@@ -1,0 +1,50 @@
+package com.justnothing.testmodule.command.functions.examples;
+
+import com.justnothing.testmodule.command.framework.model.MainCommand;
+import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.model.CommandResult;
+import com.justnothing.testmodule.command.framework.model.CommandRequest;
+import com.justnothing.testmodule.command.framework.output.ICommandOutputHandler;
+
+import com.justnothing.testmodule.command.framework.annotation.Cmd;
+
+@Cmd(name = "interactive_test", description = "交互式输入测试")
+public class InteractiveExampleMain extends MainCommand<CommandResult> {
+
+    public InteractiveExampleMain() {
+        super("InteractiveExample", CommandResult.class);
+    }
+
+    @Override
+    public String getHelpText() {
+        return """
+                语法: interactive_test
+                
+                交互式测试命令，演示如何使用交互式输入。
+                
+                示例:
+                    interactive_test
+                
+                (Submodule interactive_test)
+                """;
+    }
+
+    @Override
+    protected CommandResult executeInternal(CommandExecutor.CmdExecContext<CommandRequest<?>> context) throws Exception {
+        ICommandOutputHandler output = context.output();
+        output.println("=== 交互式示例 ===");
+        String name = context.readLine("请输入你的名字: ");
+        output.println("你好, " + name + "!");
+        String ageStr = context.readLine("请输入你的年龄: ");
+        try {
+            int age = Integer.parseInt(ageStr);
+            output.println("你的年龄是: " + age + " 岁");
+        } catch (NumberFormatException e) {
+            output.println("无效的年龄输入");
+        }
+        String password = context.readPassword("请输入密码: ");
+        output.println("密码长度: " + password.length() + " 个字符");
+        output.println("=== 交互完成 ===");
+        return createSuccessResult("交互式测试命令执行完成");
+    }
+}

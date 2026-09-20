@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:tools="http://schemas.android.com/tools"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-feature android:name="android.hardware.type.watch" />
+
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE"/>
+
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.JustNothing">
+        <activity
+            android:name=".ui.activity.WelcomeActivity"
+            android:exported="true"
+            android:theme="@style/Theme.JustNothing">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".ui.activity.HttpConfigActivity"
+            android:exported="false"
+            android:taskAffinity=""
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.activity.HookConfigActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.activity.LogViewerActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.activity.ScriptManagerActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.activity.ModuleStatusActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.activity.PerformanceActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.activity.DataExportActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.activity.SettingsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.activity.AboutActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.activity.DidYouKnowActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.activity.SystemAnalysisActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.activity.analysis.classanalysis.ClassAnalysisActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.activity.analysis.classanalysis.ClassQueryActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.activity.ClassBrowserActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.activity.analysis.classanalysis.ConstructorDetailActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.activity.analysis.classanalysis.MethodDetailActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.activity.analysis.classanalysis.FieldDetailActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.activity.analysis.classanalysis.ClassGraphActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.activity.analysis.classanalysis.ClassDetailActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.activity.analysis.classanalysis.FieldViewActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.activity.analysis.classanalysis.MethodInvokeActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.activity.analysis.memory.MemoryAnalysisActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.activity.analysis.memory.MemoryTrendActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.activity.analysis.hook.HookManagerActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.activity.analysis.hook.HookEditorActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.activity.analysis.hook.HookDetailActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.activity.analysis.thread.ThreadAnalysisActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.activity.analysis.thread.ThreadDetailActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.activity.analysis.packages.PackagesAnalysisActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.activity.analysis.exportcontext.ExportContextAnalysisActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.activity.analysis.systeminfo.SystemInfoAnalysisActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.activity.analysis.alias.AliasAnalysisActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <activity
+            android:name=".ui.activity.analysis.network.NetworkAnalysisActivity"
+            android:exported="false"
+            android:theme="@style/Theme.JustNothing" />
+        <meta-data android:name="xposedmodule" android:value="true" />
+        <meta-data android:name="xposedminversion" android:value="24" />
+        <meta-data android:name="xposeddescription"
+                android:value="@string/xposeddescription" />
+        <meta-data
+            android:name="com.google.android.wearable.standalone"
+            android:value="true" />
+        
+
+    </application>
+
+
+</manifest>

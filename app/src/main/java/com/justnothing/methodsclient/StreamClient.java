@@ -1,0 +1,304 @@
+package com.justnothing.methodsclient;
+
+import static com.justnothing.testmodule.constants.CommandClient.CLIENT_VER;
+
+import com.justnothing.methodsclient.executor.FileCommandExecutor;
+import com.justnothing.methodsclient.executor.SocketCommandExecutor;
+import com.justnothing.methodsclient.monitor.ClientPortManager;
+import com.justnothing.methodsclient.monitor.PerformanceMonitor;
+import com.justnothing.methodsclient.repl.ReplClient;
+import com.justnothing.methodsclient.test.TerminalCapabilityTest;
+import com.justnothing.testmodule.utils.logging.Logger;
+
+import java.io.OutputStream;
+import java.io.PrintStream;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
+public class StreamClient {
+
+    public static final PrintStream origOut;
+    public static final PrintStream origErr;
+
+    public static final PrintStream disabledOut = new PrintStream(new OutputStream() {
+        @Override
+        public void write(int b) { }
+    });
+
+    public static final PrintStream disabledErr = new PrintStream(new OutputStream() {
+        @Override
+        public void write(int b) { }
+    });
+
+    public static class ClientLogger extends Logger {
+        @Override
+        public String getTag() {
+            return "StreamClient";
+        }
+    }
+
+    public static final ClientLogger logger = new ClientLogger();
+
+    private final ExecutorService executor = Executors.newCachedThreadPool();
+
+    // ==================== 统一执行入口 ====================
+
+    /**
+     * 通过 Socket 执行命令，使用指定的输出格式。
+     *
+     * @param command 命令
+     * @param format  输出格式
+     * @return 执行结果
+     */
+    public SocketCommandExecutor.ExecutionResult executeCommand(String command, SocketCommandExecutor.Format format) {
+        if (!checkSocketServer()) {
+            logger.warn("Socket服务不可用");
+            return new SocketCommandExecutor.ExecutionResult(false, "", "Socket服务不可用");
+        }
+        SocketCommandExecutor executor = new SocketCommandExecutor();
+        return executor.executeWithResult(command, format);
+    }
+
+    /**
+     * 自动选择模式执行命令：先尝试 Socket（彩色交互模式），失败则回退到文件模式。
+     *
+     * @param command 命令
+     * @return true 表示执行成功
+     */
+    public boolean executeAutoCommand(String command) {
+        if (executeCommand(command, SocketCommandExecutor.Format.COLORED).success()) {
+            return true;
+        }
+        logger.warn("Socket模式失败，回退到文件模式");
+        return FileCommandExecutor.executeFile(command);
+    }
+
+    // ==================== 文件模式 ====================
+
+    public static boolean executeFileMode(String command) {
+        return FileCommandExecutor.executeFile(command);
+    }
+
+    // ==================== 静态快捷方法 ====================
+
+    public static boolean checkSocketServer() {
+        return ClientPortManager.checkSocketServer();
+    }
+
+    private static boolean tryConnect() {
+        return ClientPortManager.checkSocketServer();
+    }
+
+    @SuppressWarnings("unused")
+    public static int getSocketPort() {
+        return ClientPortManager.getSocketPort();
+    }
+
+    public static boolean updateSocketPort(int newPort) {
+        return ClientPortManager.updateSocketPort(newPort);
+    }
+
+    public static boolean requestChmod(String targetPath, String permissions, boolean recursive) {
+        return FileCommandExecutor.chmodFile(targetPath, permissions, recursive);
+    }
+
+    public static boolean writeHookData(boolean fixPermissions) {
+        return FileCommandExecutor.writeHookData(fixPermissions);
+    }
+
+    // ==================== CLI 入口 ====================
+
+    public static void executeAuto(String command) {
+        StreamClient client = new StreamClient();
+        boolean success = client.executeAutoCommand(command);
+        client.executor.shutdown();
+        try {
+            if (!client.executor.awaitTermination(5, TimeUnit.SECONDS)) {
+                client.executor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            client.executor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+        if (!success) {
+            System.exit(1);
+        }
+    }
+
+    public static String getHelpText() {
+        return String.format("""
+                JustNothing XposedModule Java Client
+                
+                用法: StreamClient [options] <command>
+                
+                通过Java访问服务端来执行methods代码。
+                
+                可选项:
+                    -s, --socket             通过Socket文本协议执行命令
+                    -i, --interactive        通过Socket二进制交互式协议执行命令
+                    -ip, --interactive-plain 通过Socket二进制交互式协议执行命令, 不带颜色
+                    -f, --file               通过文件中转命令(原始模式)
+                    -r, --repl               进入持久化交互式 REPL 模式（推荐）
+                    --update-port <port>     更新Socket服务器端口
+                    --auto                   自动选择最佳模式(默认)
+                    --check-socket           检查Socket服务器状态
+                    --quick-test             快速连接测试
+                    --perf-stats             打印性能统计信息
+                    --clear-perf-data        清除性能统计数据
+                    --terminal-test          终端能力诊断测试（客户端侧）
+                    --help                   显示此帮助信息
+                
+                示例:
+                    StreamClient "invoke java.lang.System currentTimeMillis"
+                    StreamClient -j "invoke java.lang.System currentTimeMillis"
+                    StreamClient -b "invoke java.lang.System currentTimeMillis"
+                    StreamClient --file "invoke java.lang.System currentTimeMillis"
+                    StreamClient --update-port 12345
+                    StreamClient --check-socket
+                    StreamClient --terminal-test
+                    StreamClient --terminal-test --quick
+                    StreamClient --perf-stats
+                    StreamClient --clear-perf-data
+                    StreamClient -r
+                    StreamClient --repl
+                
+                (JavaClient %s)
+                """, CLIENT_VER);
+    }
+
+    static {
+        origOut = System.out;
+        origErr = System.err;
+        System.setOut(disabledOut);
+        System.setErr(disabledErr);
+    }
+
+    /**
+     * 主方法，通过app_process执行。
+     * @param args 命令行参数
+     */
+    public static void main(String[] args) {
+        FileCommandExecutor.isInAppProcess = true;
+
+        System.setOut(origOut);
+        System.setErr(origErr);
+        if (args.length > 0 && args[0].equals("--perf-stats")) {
+            PerformanceMonitor.printStats();
+            return;
+        }
+
+        if (args.length > 0 && args[0].equals("--clear-perf-data")) {
+            PerformanceMonitor.clearStats();
+            System.err.println("性能统计数据已清除");
+            return;
+        }
+
+        if (args.length > 0 && args[0].equals("--quick-test")) {
+            boolean result = tryConnect();
+            System.exit(result ? 0 : 1);
+            return;
+        }
+
+        if (args.length > 0 && args[0].equals("--terminal-test")) {
+            boolean quick = args.length > 1 && args[1].equals("--quick");
+            new TerminalCapabilityTest(quick).run();
+            return;
+        }
+
+        if (args.length > 0 && args[0].equals("--update-port")) {
+            if (args.length < 2) {
+                System.err.println("错误: 需要提供端口号");
+                System.exit(1);
+            }
+            try {
+                int port = Integer.parseInt(args[1]);
+                boolean success = updateSocketPort(port);
+                System.exit(success ? 0 : 1);
+            } catch (NumberFormatException e) {
+                System.err.println("错误: 端口号必须是数字");
+                System.exit(1);
+            }
+            return;
+        }
+
+        if (args.length == 0) {
+            System.err.println(getHelpText());
+            return;
+        }
+
+        String firstArg = args[0];
+
+        try {
+            switch (firstArg) {
+                case "--check-socket" -> {
+                    boolean running = checkSocketServer();
+                    System.err.println("Socket模式服务器状态: " + (running ? "运行中" : "未运行"));
+                    System.exit(running ? 0 : 1);
+                }
+                case "--help" -> System.err.println(getHelpText());
+                case "--interactive", "-i" -> {
+                    if (args.length < 2) {
+                        System.err.println("错误: 需要提供命令");
+                        System.exit(1);
+                    }
+                    String command = joinArgs(args, 1);
+                    boolean success = new StreamClient()
+                            .executeCommand(command, SocketCommandExecutor.Format.COLORED).success();
+                    System.exit(success ? 0 : 1);
+                }
+                case "--interactive-plain", "-ip" -> {
+                    if (args.length < 2) {
+                        System.err.println("错误: 需要提供命令");
+                        System.exit(1);
+                    }
+                    String command = joinArgs(args, 1);
+                    boolean success = new StreamClient()
+                            .executeCommand(command, SocketCommandExecutor.Format.PLAIN).success();
+                    System.exit(success ? 0 : 1);
+                }
+                case "--auto" -> {
+                    if (args.length < 2) {
+                        System.err.println("错误: 需要提供命令");
+                        System.exit(1);
+                    }
+                    String command = joinArgs(args, 1);
+                    executeAuto(command);
+                }
+                case "--file", "-f" -> {
+                    if (args.length < 2) {
+                        System.err.println("错误: 需要提供命令");
+                        System.exit(1);
+                    }
+                    String command = joinArgs(args, 1);
+                    boolean success = executeFileMode(command);
+                    if (!success) {
+                        System.exit(1);
+                    }
+                }
+                case "--repl", "-r" -> {
+                    ReplClient repl = new ReplClient();
+                    repl.start();
+                }
+
+                default -> {
+                    String command = joinArgs(args, 0);
+                    executeAuto(command);
+                }
+            }
+        } catch (Throwable e) {
+            System.err.println("执行出现未知错误: " + e.getMessage());
+            e.printStackTrace(System.out);
+            System.exit(1);
+        }
+    }
+
+    private static String joinArgs(String[] args, int start) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = start; i < args.length; i++) {
+            if (sb.length() > 0) sb.append(" ");
+            sb.append(args[i]);
+        }
+        return sb.toString();
+    }
+}

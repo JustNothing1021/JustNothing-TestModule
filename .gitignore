@@ -1,0 +1,67 @@
+# 一些配置文件和缓存目录
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/app/build
+/engine/build
+/engine_new/build
+/engine_v2/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+/.vscode
+
+# Gradle wrapper 分发文件（太大，不需要提交）
+gradle/wrapper/dists/
+
+# 我解出来的源代码，可能传不上去（因为太多了）
+/system_source
+
+# JLine3 完整源码副本（本地修改用，不需要提交）
+/jline3-native
+
+# 本地私有的 Hook 组件包（第三方设备的专用 Hook，不进仓库）
+/app/hookpacks/
+
+# 签名文件，防止爆破掉
+testmodule-keystore.jks
+
+# VSCode 生成的bin文件
+/app/bin
+/engine/bin
+/app/src/main/assets/bin/
+/.idea/
+/engine_new/bin
+/engine_v2/bin
+
+# 我拿来研究的log
+/tmp.log
+/logs
+/report
+
+# 有的时候我会让AI写一些MD
+/*.md
+
+# 但是Readme还是要提交的
+!/README.MD
+
+# 第三方组件声明也要提交
+!/THIRD-PARTY-NOTICES.md
+
+# 还有一些神秘的日志文件
+*.log
+
+# 给AI的一些计划文件
+/plans
+
+
+

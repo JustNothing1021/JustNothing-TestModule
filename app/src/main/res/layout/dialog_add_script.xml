@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <EditText
+        android:id="@+id/edit_script_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/script_name"
+        android:maxLines="1" />
+
+    <EditText
+        android:id="@+id/edit_script_description"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:hint="@string/script_description"
+        android:maxLines="2" />
+
+    <EditText
+        android:id="@+id/edit_script_category"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:hint="@string/script_category"
+        android:maxLines="1" />
+
+    <EditText
+        android:id="@+id/edit_script_commands"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="top|start"
+        android:hint="@string/script_command_with_hint"
+        android:inputType="textMultiLine"
+        android:minHeight="120dp" />
+
+</LinearLayout>

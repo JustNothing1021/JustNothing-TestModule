@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="粘贴JSON格式的脚本数据"
+        android:textSize="14sp"
+        android:textColor="#666666"
+        android:paddingBottom="8dp" />
+
+    <EditText
+        android:id="@+id/edit_import_content"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="top|start"
+        android:minHeight="200dp"
+        android:inputType="textMultiLine"
+        android:hint='[{"name":"脚本名","description":"描述","commands":"命令1\n命令2","category":"分类"}]' />
+
+</LinearLayout>

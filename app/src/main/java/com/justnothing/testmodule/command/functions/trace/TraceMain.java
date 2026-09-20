@@ -1,0 +1,40 @@
+package com.justnothing.testmodule.command.functions.trace;
+
+import com.justnothing.testmodule.command.framework.model.MainCommand;
+import com.justnothing.testmodule.command.framework.annotation.Cmd;
+import com.justnothing.testmodule.command.framework.annotation.CmdRoutes;
+import com.justnothing.testmodule.command.framework.model.CommandRouter;
+
+import com.justnothing.testmodule.command.functions.trace.request.TraceAddRequest;
+import com.justnothing.testmodule.command.functions.trace.request.TraceListRequest;
+import com.justnothing.testmodule.command.functions.trace.request.TraceShowRequest;
+import com.justnothing.testmodule.command.functions.trace.request.TraceExportRequest;
+import com.justnothing.testmodule.command.functions.trace.request.TraceStopRequest;
+import com.justnothing.testmodule.command.functions.trace.request.TraceClearRequest;
+import com.justnothing.testmodule.command.functions.trace.impl.TraceManageCommand;
+import com.justnothing.testmodule.command.functions.trace.impl.TraceQueryCommand;
+import com.justnothing.testmodule.command.functions.trace.response.TraceResult;
+
+@Cmd(
+    name = "trace",
+    description = "跟踪方法调用链，生成调用树"
+)
+@CmdRoutes({
+        @CmdRoutes.Route(path = "add", request = TraceAddRequest.class, handler = TraceManageCommand.class, description = "添加trace任务"),
+        @CmdRoutes.Route(path = "list", request = TraceListRequest.class, handler = TraceQueryCommand.class, description = "列出所有任务"),
+        @CmdRoutes.Route(path = "show", request = TraceShowRequest.class, handler = TraceQueryCommand.class, description = "显示调用树"),
+        @CmdRoutes.Route(path = "export", request = TraceExportRequest.class, handler = TraceQueryCommand.class, description = "导出结果"),
+        @CmdRoutes.Route(path = "stop", request = TraceStopRequest.class, handler = TraceManageCommand.class, description = "停止任务"),
+        @CmdRoutes.Route(path = "clear", request = TraceClearRequest.class, handler = TraceManageCommand.class, description = "清除所有任务")
+    })
+public class TraceMain extends MainCommand<TraceResult> {
+
+    public TraceMain() {
+        super("trace", TraceResult.class);
+    }
+
+    @Override
+    public String getHelpText() {
+        return CommandRouter.getInstance().generateHelpForCommand("trace");
+    }
+}

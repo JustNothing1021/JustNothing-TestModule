@@ -1,0 +1,17 @@
+package com.justnothing.testmodule.command.framework.annotation;
+
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+public @interface Cmd {
+    String name();
+    String group() default "general";
+    String description();
+    String version() default "";
+    String helpText() default "";
+}

@@ -1,0 +1,310 @@
+plugins {
+    alias(libs.plugins.android.application)
+}
+
+
+android {
+    namespace = 'com.justnothing.testmodule'
+    compileSdk = 36
+
+    defaultConfig {
+        applicationId = "com.justnothing.testmodule"
+        minSdk = 26
+        targetSdk = 36
+        versionCode = 49
+        versionName = "0.4.9"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        ndk {
+            abiFilters = ['arm64-v8a', 'armeabi-v7a', 'x86_64', 'x86']
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled = false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            minifyEnabled = false
+        }
+
+    }
+
+    packaging {
+        resources {
+            excludes += ['META-INF/DEPENDENCIES', 'META-INF/LICENSE', 'META-INF/LICENSE.txt', 'META-INF/NOTICE', 'META-INF/NOTICE.txt']
+            // 多个 Hook 组件包会各带一份 hookpack.list，这里把它们拼起来而不是报重复
+            merges += ['hookpack.list']
+        }
+        jniLibs {
+            useLegacyPackaging = true
+            pickFirsts += ['**/*.so.*']
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        viewBinding = true
+    }
+
+    testOptions {
+        unitTests.returnDefaultValues = true
+    }
+
+    externalNativeBuild {
+        cmake {
+            path "src/main/cpp/CMakeLists.txt"
+            version = "3.22.1"
+        }
+    }
+
+    sourceSets {
+        main {
+            resources {
+                srcDirs = ['src/main/resources']
+            }
+        }
+
+        getByName("main") {
+            jniLibs.srcDirs("src/main/jniLibs")
+        }
+    }
+
+
+    buildToolsVersion = '36.1.0'
+    ndkVersion = '29.0.14206865'
+}
+
+configurations {
+    all*.exclude group: 'androidx.lifecycle', module: 'lifecycle-viewmodel-ktx'
+}
+
+dependencies {
+    implementation libs.androidx.appcompat
+    implementation libs.material.v1110
+    implementation libs.androidx.constraintlayout.v221
+    implementation libs.bsh
+    implementation libs.cfr
+    // 只用到 dex2jar 的 DexFileReader + Dex2Asm。d2j-external 是给 d2j-* 命令行工具用的
+    // （里面塞了 com.android.dex 和一份打包进去的 ASM），我们一个都不碰，留着只会让
+    // org.objectweb.asm.* 和项目自己的 libs.asm 撞成 duplicate class。
+    implementation(libs.dex2jar.translator) {
+        exclude group: 'de.femtopedia.dex2jar', module: 'd2j-external'
+    }
+    implementation libs.hutool.all
+    implementation libs.gson
+    implementation libs.androidsvg.aar
+    implementation libs.asm
+    implementation libs.r8
+    implementation libs.mpandroidchart
+    implementation libs.jline
+    implementation libs.jna
+    implementation libs.commonmark
+    implementation libs.commonmark.ext.gfm.tables
+    implementation libs.commonmark.ext.gfm.strikethrough
+    implementation files("libs/engine_new.jar")
+    implementation files("libs/NCW-Logger-1.0.3-hotfix3.jar")
+    implementation files("libs/RichConsole.jar")
+
+    // 可选的 Hook 组件包（本地私有，不进仓库）。放 app/hookpacks/*.jar，目录为空时就是空依赖。
+    // 每个 jar 里带一份 hookpack.list，一行一个 Hook 类的全限定名。
+    implementation fileTree(dir: "$projectDir/hookpacks", include: ['*.jar'])
+
+    compileOnly libs.xposed.api
+
+    testImplementation libs.junit
+    androidTestImplementation libs.androidx.junit.v130
+    androidTestImplementation libs.androidx.espresso.core.v370
+}
+
+// 给 Hook 组件包编译用的 API 包（Hook API + xposed api），只给组件包当 compileOnly，不进 APK。
+// 组件包工程里写：compileOnly files("<本仓库>/app/build/hookApi/hook-api.jar")
+// 注意：Hook 会碰 android.* 的类，所以组件包工程自己还得有 SDK 的 android.jar。
+configurations {
+    hookApiExtra {
+        canBeConsumed = false
+    }
+}
+
+dependencies {
+    hookApiExtra libs.xposed.api
+}
+
+def debugJavacClasses = provider {
+    tasks.named('compileDebugJavaWithJavac', JavaCompile).get().destinationDirectory.get().asFile
+}
+
+tasks.register('hookApiJar', Jar) {
+    group = 'build'
+    description = '打包 Hook 组件包编译所需的 hook-api.jar'
+    dependsOn 'compileDebugJavaWithJavac'
+    archiveFileName = 'hook-api.jar'
+    destinationDirectory = layout.buildDirectory.dir('hookApi')
+    // 组件包能看到的公开面。
+    from(debugJavacClasses) {
+        include 'com/justnothing/testmodule/hooks/**'
+        include 'com/justnothing/testmodule/constants/**'
+        include 'com/justnothing/testmodule/utils/**'
+        include 'com/justnothing/testmodule/service/**'
+        exclude 'com/justnothing/testmodule/hooks/HookEntry.class'
+        exclude 'com/justnothing/testmodule/hooks/HookPackLoader.class'
+    }
+    from({ configurations.hookApiExtra.collect { zipTree(it) } }) {
+        include 'de/robv/android/xposed/**'
+    }
+}
+
+
+configurations.configureEach {
+    resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+        if (details.requested.group == 'androidx.lifecycle') {
+            details.useVersion "2.7.0"
+        }
+    }
+}
+
+def debugApkDir = null
+androidComponents {
+    onVariants(selector().withBuildType('debug'), { variant ->
+        debugApkDir = variant.artifacts.get(com.android.build.api.artifact.SingleArtifact.APK.INSTANCE)
+    })
+}
+
+tasks.register('prepareMagiskFiles', Task) {
+    group = 'build'
+    description = '准备 Magisk 模块的所有文件'
+    dependsOn 'assembleDebug'
+
+    doLast {
+        def magiskDir = file('build/magisk')
+        delete magiskDir
+        magiskDir.mkdirs()
+
+        // 子目录
+        file("${magiskDir}/system/bin").mkdirs()
+        file("${magiskDir}/system/framework").mkdirs()
+        file("${magiskDir}/common/binary").mkdirs()
+        file("${magiskDir}/common").mkdirs()
+
+        file("${magiskDir}/module.prop").text = 
+            """
+            id=JustNothing-module
+            name=啥也不是的模块
+            version=${android.defaultConfig.versionName}
+            versionCode=${android.defaultConfig.versionCode}
+            author=JustNothing1021
+            description=一个用来调试安卓开发千奇百怪的诡异问题的Xposed模块/命令行工具, 这个是配套的magisk模块, 会给busybox也顺手装上
+            """
+
+        copy {
+            from file('magisk/install.sh')
+            into magiskDir
+        }
+
+        copy {
+            from fileTree(dir: 'magisk/common')
+            into file("${magiskDir}/common")
+        }
+        copy {
+            from fileTree(dir: 'magisk/system')
+            into file("${magiskDir}/system")
+        }
+
+        if (debugApkDir == null) {
+            throw new GradleException('未找到 debug APK 产物，无法生成 Magisk 模块')
+        }
+        copy {
+            from debugApkDir
+            include '*.apk'
+            into file("${magiskDir}/system/framework")
+            rename { 'methods-client.jar' }
+        }
+
+        copy {
+            from file('magisk/scripts')
+            into file("${magiskDir}/system/bin")
+        }
+
+        // Magisk 侧的文件必须是 LF 行尾。
+        fileTree(dir: magiskDir, includes: ['**/*.sh', 'system/bin/**', 'module.prop']).files.each { f ->
+            if (f.isFile()) {
+                f.setText(f.getText('UTF-8').replace('\r\n', '\n').replace('\r', '\n'), 'UTF-8')
+            }
+        }
+    }
+}
+
+
+tasks.register('createMagiskZip', Zip) {
+    group = 'build'
+    description = '创建 Magisk 模块压缩包'
+
+    dependsOn 'prepareMagiskFiles'
+
+    archiveFileName = 'magisk-module.zip'
+    destinationDirectory = file('build/outputs')
+
+    from file('build/magisk')
+}
+
+afterEvaluate {
+    tasks.named('assembleDebug') {
+        finalizedBy 'createMagiskZip'
+    }
+}
+
+
+// ── vendored: vdexExtractor（把 vdex 里的 dex 反 quicken / de-odex）────────────
+// 上游: https://github.com/anestisb/vdexExtractor  @78f283b (2020-05-13, Apache-2.0)
+// 本地改动: jni/Android.mk 去掉 -Werror —— 2020 年的 C 代码用现在的 clang 编译会冒出新 warning。
+
+def vdexExtractorProjectDir = file("$rootDir/third_party/vdexextractor")
+def vdexExtractorBuildDir = layout.buildDirectory.dir('vdexextractor')
+
+tasks.register('buildVdexExtractor', Exec) {
+    group = 'build'
+    description = '用 NDK 交叉编译 vendored 的 vdexExtractor（产出各 ABI 的可执行文件）'
+
+    def outDir = vdexExtractorBuildDir.get().asFile
+    def ndkDir = new File(android.sdkDirectory, "ndk/${android.ndkVersion}")
+
+    // NDK 缺失时只警告、不打断构建：这个特性是"可选增强"，不该让整个项目编不过
+    onlyIf {
+        if (!new File(ndkDir, 'ndk-build.cmd').isFile()) {
+            logger.warn("跳过 vdexExtractor 构建：未找到 NDK（${ndkDir}）")
+            return false
+        }
+        return true
+    }
+
+    inputs.dir(vdexExtractorProjectDir)
+    outputs.dir(new File(outDir, 'libs'))
+    workingDir vdexExtractorProjectDir
+    commandLine "${ndkDir}/ndk-build.cmd",
+            "NDK_PROJECT_PATH=${vdexExtractorProjectDir}",
+            "APP_BUILD_SCRIPT=jni/Android.mk",
+            "NDK_APPLICATION_MK=jni/Application.mk",
+            "NDK_OUT=${outDir}/obj",
+            "NDK_LIBS_OUT=${outDir}/libs"
+}
+
+// 刻意把产物落到 src/main/assets/bin/，而不是 build/ 下的生成目录。
+tasks.register('syncVdexExtractorAssets', Copy) {
+    group = 'build'
+    description = '把编译好的 vdexExtractor 放进 src/main/assets/bin/<abi>/，供运行时提取到设备执行'
+    dependsOn 'buildVdexExtractor'
+    from(vdexExtractorBuildDir.map { it.dir('libs') }) {
+        include '*/vdexExtractor'
+    }
+    into file('src/main/assets/bin')
+}
+
+tasks.matching { it.name.startsWith('merge') && it.name.endsWith('Assets') }.configureEach {
+    dependsOn 'syncVdexExtractorAssets'
+}
