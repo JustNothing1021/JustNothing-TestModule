@@ -319,7 +319,13 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
                     if (hook.shouldLoad(startupParam)) {
                         succeed = hook.installHooks(startupParam);
                     }
-                } catch (Exception e) {
+                } catch (Throwable e) {
+                    // 这里必须是 Throwable，不能是 Exception。
+                    // hook 失败最常见的原因是「这个包/进程里压根没有这个类/这个方法」，
+                    // 而 Xposed 对这两种情况抛的分别是 ClassNotFoundError 与 NoSuchMethodError ——
+                    // 它们都继承 Error，不是 Exception。接 Exception 的话会直接穿透出去，
+                    // 被本方法最外层的 catch(Throwable) 兜住，代价是：这个包后面剩下的 hook
+                    // 一个都不会再装，而且日志里只剩一条笼统的「加载hook失败」，看不出是谁缺了什么。
                     logger.error("安装Zygote Hook " + hookName + " 时发生异常: " + e.getMessage(), e);
                     succeed = false;
                 }
@@ -390,7 +396,10 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
                     if (hook.shouldLoad(param)) {
                         succeed = hook.installHooks(param);
                     }
-                } catch (Exception e) {
+                } catch (Throwable e) {
+                    // 同 initZygote：缺类/缺方法抛的是 Error，只有 catch(Throwable) 才能
+                    // 把失败关在单个 hook 里。否则一个 app 里有一个 hook 找不到目标类，
+                    // 剩下的 hook 就全都不装了 —— 表现为「更新完应用之后功能莫名其妙少了一半」。
                     logger.error("安装Package Hook " + hookName + " 时发生异常: " + e.getMessage(), e);
                     succeed = false;
                 }

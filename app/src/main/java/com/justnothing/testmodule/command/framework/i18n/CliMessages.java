@@ -13,9 +13,16 @@ import java.util.Locale;
  * 而它们恰好是保护这套框架的唯一屏障。
  *
  * <p>所以这里走项目里已有的先例（{@code utils/tips/TipSystem} + {@code ChineseTips}/{@code EnglishTips}）：
- * 纯 Java、按 {@code Locale} 切。区别只在于本类把两种语言<b>并排写在同一个枚举里</b> ——
+ * 纯 Java、按语言码切。区别只在于本类把两种语言<b>并排写在同一个枚举里</b> ——
  * Tips 那边是两个类各持一个 Map，加一条提示要改两个文件、而且某一边漏了不会报错，
  * 这里是编译期就凑齐的。</p>
+ *
+ * <h3>语言从哪来</h3>
+ * <b>由客户端声明，不由服务端猜。</b>命令是客户端发起的，但文案是服务端渲染的，而两边常常不在一个进程里：
+ * GUI 用 {@code R.string}（跟随应用语言），服务端可能跑在目标 app 的进程里，它自己的
+ * {@link Locale#getDefault()} 是那个进程的语言。所以语言随请求传过来：
+ * {@code ClientRequirements#getLanguage()} → {@code sys.hello} 握手 → 服务端每次执行前
+ * {@link #useLanguage(String)}。客户端没声明时（老客户端、agent 内部调用）才回落到本进程 Locale。
  *
  * <h3>两类文案，两种处理</h3>
  * <ol>
@@ -120,7 +127,7 @@ public enum CliMessages {
 
     /** 当前语言下的文案。 */
     public String text() {
-        return chineseLocale ? chinese : english;
+        return chinese() ? chinese : english;
     }
 
     /** 当前语言下的文案，带 {@link String#format} 参数。 */
@@ -131,22 +138,49 @@ public enum CliMessages {
     // ==================== 语言判定 ====================
 
     // 名字不能叫 chinese —— 那是每个枚举常量的实例字段名，同名字段会直接编译不过。
-    private static boolean chineseLocale = isChineseLocale(Locale.getDefault());
+    //
+    // 用 ThreadLocal 而不是 static 布尔值：这里是**服务端**，同一个进程可能同时在服务多个客户端
+    // （GUI 一个、设备终端一个、别的 app 通过 agent 再来一个），而它们的界面语言可以各不相同。
+    // 语言是「按请求」决定的，不是「按进程」决定的，所以必须按线程隔离，否则两个客户端会互相踩。
+    // 未设置时回落到本进程的 Locale.getDefault() —— 也就是引入这条通道之前的老行为。
+    private static final ThreadLocal<Boolean> chineseLocale = new ThreadLocal<>();
 
     /**
-     * 覆盖语言。不调的话就是跟随系统（{@link Locale#getDefault()}）。
-     * 给「用户想强制某个语言」和测试用。
+     * 覆盖<b>当前线程</b>的语言。
+     *
+     * <p>语言是随请求从客户端带过来的（{@code ClientRequirements#getLanguage()}，经 sys.hello 握手），
+     * 因为服务端进程的 {@link Locale#getDefault()} 未必等于客户端用户的界面语言 ——
+     * 服务端可能跑在另一个 app 进程里。服务端在每次命令执行前调用本方法，
+     * 执行结束在 {@code CommandExecutor#cleanup()} 里 {@link #clearLanguage()}。</p>
+     *
+     * @param language 语言码（如 {@code "zh"} / {@code "en"}）；null 或空串表示清除覆盖、跟随本进程 Locale
      */
-    public static void useLanguage(Locale locale) {
-        chineseLocale = isChineseLocale(locale == null ? Locale.getDefault() : locale);
+    public static void useLanguage(String language) {
+        if (language == null || language.isEmpty()) {
+            clearLanguage();
+        } else {
+            chineseLocale.set(isChinese(language));
+        }
     }
 
+    /**
+     * 清除当前线程的覆盖，恢复跟随本进程的 Locale。
+     *
+     * <p>必须在每次请求结束时调用：服务端线程来自线程池、会被复用，
+     * 残留的覆盖会把上一个客户端的语言泄漏给下一个。</p>
+     */
+    public static void clearLanguage() {
+        chineseLocale.remove();
+    }
+
+    /** 当前线程实际生效的语言：有覆盖就用覆盖，否则看本进程的 Locale。 */
     public static boolean chinese() {
-        return chineseLocale;
+        Boolean override = chineseLocale.get();
+        return override != null ? override : isChinese(Locale.getDefault().getLanguage());
     }
 
-    private static boolean isChineseLocale(Locale locale) {
+    private static boolean isChinese(String language) {
         // 只判语言码就够了：zh-CN / zh-TW / zh-Hans 的 getLanguage() 都是 "zh"。
-        return "zh".equals(locale.getLanguage());
+        return "zh".equalsIgnoreCase(language);
     }
 }

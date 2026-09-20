@@ -29,6 +29,7 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -57,7 +58,7 @@ public class SocketStreamReader {
     // ==================== 客户端能力探测 ====================
 
     /**
-     * 构建客户端能力（终端尺寸 / ANSI / 颜色系统探测）。
+     * 构建客户端能力（界面语言 / 终端尺寸 / ANSI / 颜色系统探测）。
      *
      * <p>统一 RPC 路径下，
      * 能力经 {@link ProtocolMethods#SYS_HELLO} RPC 参数发送。</p>
@@ -89,6 +90,10 @@ public class SocketStreamReader {
         } else {
             req.setColorSystem(ClientRequirements.COLOR_STANDARD);
         }
+        // 命令输出的语言由客户端这边定，服务端不自己猜：服务端可能跑在另一个 app 进程里，
+        // 它读到的 Locale 是那个进程的。GUI 情形下本进程就是 App 进程，
+        // Locale.getDefault() 已经是应用语言；终端情形下它就是设备语言。两种都对。
+        req.setLanguage(Locale.getDefault().getLanguage());
         return req;
     }
 

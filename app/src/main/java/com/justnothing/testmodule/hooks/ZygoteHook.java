@@ -154,7 +154,10 @@ public abstract class ZygoteHook extends XposedBasicHook<IXposedHookZygoteInit.S
                     failureCount++;
                     hasFailures = true;
                 }
-            } catch (Exception e) {
+            } catch (Throwable e) {
+                // 与 PackageHook 的子 hook 循环保持一致：缺类/缺方法抛的是 ClassNotFoundError /
+                // NoSuchMethodError，都是 Error。接 Exception 的话会穿透出去，导致这个 ZygoteHook
+                // 剩下的子 hook 全部不再执行。
                 error("Hook执行异常", e);
                 failureCount++;
                 hasFailures = true;

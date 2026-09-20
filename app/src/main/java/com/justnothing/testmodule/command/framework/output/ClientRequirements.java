@@ -16,6 +16,7 @@ import com.google.gson.JsonParser;
  *   <li>height - 终端高度（行数）</li>
  *   <li>supportsAnsi - 是否支持 ANSI 转义序列</li>
  *   <li>colorSystem - 颜色系统类型（0=NONE, 1=STANDARD, 2=EIGHT_BIT, 3=TRUECOLOR）</li>
+ *   <li>language - 客户端界面语言（语言码如 zh/en），服务端据此决定命令输出的语言</li>
  * </ul>
  * </p>
  *
@@ -35,6 +36,7 @@ public class ClientRequirements {
     private int height;
     private boolean supportsAnsi;
     private byte colorSystem;
+    private String language;
 
     public ClientRequirements() {
         this(false, false);
@@ -104,6 +106,26 @@ public class ClientRequirements {
         this.colorSystem = colorSystem;
     }
 
+    // ─── 界面语言 ──────────────────────────────────────────
+
+    /**
+     * 客户端界面语言（语言码，如 {@code "zh"} / {@code "en"}）。
+     *
+     * <p>为什么不让服务端自己读 {@code Locale.getDefault()}：命令是客户端发起的、
+     * 文案却是服务端渲染的，而两边常常不在一个进程里 —— GUI 的界面语言来自 Android 资源，
+     * 服务端的 Locale 则是它所在进程的。所以由客户端显式声明。</p>
+     *
+     * <p>{@code null} 表示客户端没声明（老客户端、agent 内部调用），
+     * 此时服务端回落到自己的 Locale，即引入本字段之前的行为。</p>
+     */
+    public String getLanguage() {
+        return language;
+    }
+
+    public void setLanguage(String language) {
+        this.language = language;
+    }
+
     // ─── RPC 参数序列化（sys.hello）──────────────────────────
 
     /**
@@ -120,6 +142,11 @@ public class ClientRequirements {
         params.addProperty("height", req.getHeight());
         params.addProperty("supportsAnsi", req.isSupportsAnsi());
         params.addProperty("colorSystem", req.getColorSystem());
+        // language 可以缺省（表示「没声明」）。Gson 的 addProperty(String, String) 传 null 会写成
+        // JsonNull，读回时 getAsString() 会抛；所以缺省时干脆不放这个键。
+        if (req.getLanguage() != null) {
+            params.addProperty("language", req.getLanguage());
+        }
         return params;
     }
 
@@ -137,6 +164,9 @@ public class ClientRequirements {
         if (params.has("height")) req.setHeight(params.get("height").getAsInt());
         if (params.has("supportsAnsi")) req.setSupportsAnsi(params.get("supportsAnsi").getAsBoolean());
         if (params.has("colorSystem")) req.setColorSystem(params.get("colorSystem").getAsByte());
+        if (params.has("language") && !params.get("language").isJsonNull()) {
+            req.setLanguage(params.get("language").getAsString());
+        }
         return req;
     }
 
@@ -170,6 +200,7 @@ public class ClientRequirements {
                 ", height=" + height +
                 ", supportsAnsi=" + supportsAnsi +
                 ", colorSystem=" + colorSystem +
+                ", language=" + language +
                 ']';
     }
 }

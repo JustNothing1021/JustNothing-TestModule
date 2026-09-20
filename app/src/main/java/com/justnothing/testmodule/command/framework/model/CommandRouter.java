@@ -60,7 +60,21 @@ public class CommandRouter {
         }
 
         String commandName = cmdAnnotation.name();
-        commandRegistry.put(commandName, cmdClass);
+
+        // 注册必须幂等：同一个进程里存在两条注册路径，作用域还不一样 ——
+        // 服务端 CommandExecutor 注册 CommandCatalog.ALL（含仅本地调试的 demo 命令），
+        // 客户端 CommandMetadataScanner 只注册对用户可见的那部分。谁先跑取决于加载顺序
+        // （单元测试里尤其如此），二次注册会把每条路由都塞进 duplicateRequests，
+        // 让"路由冲突"的检测满屏假阳性。同一个类注册第二次本来就是同一件事，直接跳过。
+        Class<? extends MainCommand<?>> previous = commandRegistry.putIfAbsent(commandName, cmdClass);
+        if (previous != null) {
+            if (previous != cmdClass) {
+                // 这才是真冲突：两个不同的类声明了同一个命令名，后到的被忽略。
+                logger.warn("命令名重复: " + commandName + " 已由 " + previous.getSimpleName()
+                        + " 声明, 忽略 " + cmdClass.getSimpleName());
+            }
+            return;
+        }
 
         CmdRoutes routesAnnotation = cmdClass.getAnnotation(CmdRoutes.class);
         if (routesAnnotation != null) {

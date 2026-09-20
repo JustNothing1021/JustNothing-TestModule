@@ -135,6 +135,8 @@ public class CommandExecutor {
         targetPackageThreadLocal.remove();
         classLoaderThreadLocal.remove();
         classLoaderManagerThreadLocal.remove();
+        // 线程来自线程池、会被复用：不清掉的话上一个客户端的语言会泄漏给下一个。
+        CliMessages.clearLanguage();
     }
 
 
@@ -289,6 +291,11 @@ public class CommandExecutor {
     private CommandResult buildContextAndDispatch(String cmdName, String[] args,
             CommandRequest<?> request, ICommandOutputHandler output,
             ClientRequirements requirements, CommandType executionType) throws Throwable {
+        // 文案语言在这里定，而不是让各渲染点自己读 Locale：服务端可能要服务多个客户端
+        // （GUI + 终端 + agent），它们的界面语言可以不一样，所以语言是按请求、按线程的。
+        // 语言由客户端在 sys.hello 里声明；没声明（老客户端 / agent 内部调用）才回落到本进程 Locale。
+        CliMessages.useLanguage(requirements != null ? requirements.getLanguage() : null);
+
         // 创建执行上下文
         CmdExecContext<CommandRequest<?>> context = new CmdExecContext<>(
             cmdName,

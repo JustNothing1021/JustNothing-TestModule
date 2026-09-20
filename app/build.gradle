@@ -11,8 +11,8 @@ android {
         applicationId = "com.justnothing.testmodule"
         minSdk = 26
         targetSdk = 36
-        versionCode = 49
-        versionName = "0.4.9"
+        versionCode = 50
+        versionName = "0.4.10"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
@@ -51,6 +51,7 @@ android {
 
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
 
     testOptions {
