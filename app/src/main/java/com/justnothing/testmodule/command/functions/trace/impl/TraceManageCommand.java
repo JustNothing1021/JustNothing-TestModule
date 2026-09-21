@@ -1,6 +1,8 @@
 package com.justnothing.testmodule.command.functions.trace.impl;
 
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.functions.trace.response.TraceResult;
 import com.justnothing.testmodule.command.functions.trace.request.TraceAddRequest;
@@ -29,7 +31,7 @@ public class TraceManageCommand extends AbstractTraceCommand<CommandRequest<?>, 
         if (request instanceof TraceAddRequest r) return handleAdd(r);
         if (request instanceof TraceStopRequest r) return handleStop(r);
         if (request instanceof TraceClearRequest r) return handleClear(r);
-        throw new IllegalArgumentException("不支持的请求类型: " + request.getClass().getSimpleName());
+        throw new IllegalArgumentException(TraceTexts.UNSUPPORTED_REQUEST_TYPE.format(request.getClass().getSimpleName()));
     }
 
     private TraceResult handleAdd(TraceAddRequest request) {
@@ -44,7 +46,7 @@ public class TraceManageCommand extends AbstractTraceCommand<CommandRequest<?>, 
                 request.getClassName(), request.getMethodName(),
                 request.getSignature(), context.classLoader());
 
-        outln("添加trace任务成功", Colors.GREEN);
+        outln(Text.zhEn("添加trace任务成功", "Trace task added successfully").text(), Colors.GREEN);
         out("ID: ", Colors.CYAN);
         outln(String.valueOf(id), Colors.YELLOW);
 
@@ -64,15 +66,16 @@ public class TraceManageCommand extends AbstractTraceCommand<CommandRequest<?>, 
 
         boolean success = manager.removeTask(request.getTraceId());
         if (success) {
-            outln("停止trace任务成功", Colors.GREEN);
+            outln(Text.zhEn("停止trace任务成功", "Trace task stopped successfully").text(), Colors.GREEN);
             r.setSuccess(true);
             r.setActive(false);
             r.setOutput("stopped id=" + request.getTraceId());
         } else {
-            out("错误: 未找到trace任务 (ID: ", Colors.RED);
+            out(CliMessages.ERROR_PREFIX.text()
+                    + Text.zhEn("未找到trace任务 (ID: ", "Trace task not found (ID: ").text(), Colors.RED);
             outln(String.valueOf(request.getTraceId()), Colors.YELLOW);
             r.setSuccess(false);
-            r.setOutput("未找到 ID: " + request.getTraceId());
+            r.setOutput(Text.zhEn("未找到 ID: %s", "Not found: ID %s").format(request.getTraceId()));
         }
         return r;
     }
@@ -81,7 +84,7 @@ public class TraceManageCommand extends AbstractTraceCommand<CommandRequest<?>, 
         TraceResult r = okResult("clear");
         logger.warn("清除所有 trace 任务");
         manager.clearAll();
-        outln("清除所有trace任务成功", Colors.GREEN);
+        outln(Text.zhEn("清除所有trace任务成功", "All trace tasks cleared").text(), Colors.GREEN);
         r.setActive(false);
         return r;
     }

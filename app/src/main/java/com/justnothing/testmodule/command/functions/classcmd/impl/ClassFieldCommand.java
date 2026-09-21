@@ -2,6 +2,8 @@ package com.justnothing.testmodule.command.functions.classcmd.impl;
 
 import com.justnothing.testmodule.command.framework.error.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.functions.classcmd.ClassTexts;
 import com.justnothing.testmodule.command.functions.classcmd.model.ClassCommandContext;
 import com.justnothing.testmodule.command.functions.classcmd.request.FieldRequest;
@@ -34,7 +36,9 @@ public class ClassFieldCommand extends AbstractClassCommand<FieldRequest, GetFie
         String operationMode = request.getOperationMode();
 
         if (className == null || className.isEmpty()) {
-            throw new IllegalCommandLineArgumentException("参数不足: class field <class_name> [operation] [args...]");
+            throw new IllegalCommandLineArgumentException(Text.zhEn(
+                    "参数不足: class field <class_name> [operation] [args...]",
+                    "Not enough arguments: class field <class_name> [operation] [args...]").text());
         }
 
         context.logger().debug("目标类: " + className + ", 操作模式: " + operationMode);
@@ -59,12 +63,13 @@ public class ClassFieldCommand extends AbstractClassCommand<FieldRequest, GetFie
         String fieldName = request.getGetTargetFieldName();
 
         if (fieldName == null || fieldName.isEmpty()) {
-            throw new IllegalCommandLineArgumentException("--get 操作需要提供字段名");
+            throw new IllegalCommandLineArgumentException(
+                    Text.zhEn("--get 操作需要提供字段名", "--get requires a field name").text());
         }
 
         Field field = findField(targetClass, fieldName, request);
         if (field == null) {
-            throw new IllegalCommandLineArgumentException("找不到字段: " + fieldName);
+            throw new IllegalCommandLineArgumentException(ClassTexts.ERR_FIELD_NOT_FOUND.format(fieldName));
         }
 
         field.setAccessible(true);
@@ -84,7 +89,7 @@ public class ClassFieldCommand extends AbstractClassCommand<FieldRequest, GetFie
             result.setValueHash(0);
         }
 
-        context.execContext().print("字段值: ", Colors.CYAN);
+        context.execContext().print(Text.zhEn("字段值: ", "Field value: ").text(), Colors.CYAN);
         context.execContext().println(value != null ? value.toString() : "null",
                 value != null ? Colors.LIGHT_GREEN : Colors.LIGHT_BLUE);
     }
@@ -96,12 +101,14 @@ public class ClassFieldCommand extends AbstractClassCommand<FieldRequest, GetFie
         String valueStr = request.getSetValueToSet();
 
         if (fieldName == null || fieldName.isEmpty() || valueStr == null || valueStr.isEmpty()) {
-            throw new IllegalCommandLineArgumentException("--set 操作需要 <fieldName> 和 <value> 参数");
+            throw new IllegalCommandLineArgumentException(
+                    Text.zhEn("--set 操作需要 <fieldName> 和 <value> 参数",
+                            "--set requires both <fieldName> and <value>").text());
         }
 
         Field field = findField(targetClass, fieldName, request);
         if (field == null) {
-            throw new IllegalCommandLineArgumentException("找不到字段: " + fieldName);
+            throw new IllegalCommandLineArgumentException(ClassTexts.ERR_FIELD_NOT_FOUND.format(fieldName));
         }
 
         field.setAccessible(true);
@@ -116,7 +123,7 @@ public class ClassFieldCommand extends AbstractClassCommand<FieldRequest, GetFie
         result.setValueTypeName(value != null ? value.getClass().getName() : "void/null");
         result.setValueHash(System.identityHashCode(value));
 
-        context.execContext().print("✅ 成功设置字段 [", Colors.CYAN);
+        context.execContext().print(Text.zhEn("✅ 成功设置字段 [", "✅ Field set successfully [").text(), Colors.CYAN);
         context.execContext().print(fieldName, Colors.YELLOW);
         context.execContext().print("] = ", Colors.CYAN);
         context.execContext().println(valueStr, Colors.LIGHT_GREEN);
@@ -125,10 +132,10 @@ public class ClassFieldCommand extends AbstractClassCommand<FieldRequest, GetFie
     private void handleListOperation(ClassCommandContext<FieldRequest> context, FieldRequest request,
             Class<?> targetClass, GetFieldValueResult result) throws Exception {
         Field[] fields = targetClass.getDeclaredFields();
-        context.execContext().println("=== 字段列表 ===", Colors.CYAN);
-        context.execContext().print("类: ", Colors.CYAN);
+        context.execContext().println(Text.zhEn("=== 字段列表 ===", "=== Field List ===").text(), Colors.CYAN);
+        context.execContext().print(CliMessages.LABEL_CLASS.text(), Colors.CYAN);
         context.execContext().println(targetClass.getName(), Colors.GREEN);
-        context.execContext().print("字段总数: ", Colors.CYAN);
+        context.execContext().print(ClassTexts.LABEL_FIELD_COUNT.text(), Colors.CYAN);
         context.execContext().println(String.valueOf(fields.length), Colors.YELLOW);
         context.execContext().println("");
 
@@ -136,7 +143,7 @@ public class ClassFieldCommand extends AbstractClassCommand<FieldRequest, GetFie
         result.setValueTypeName(request.getClassName());
 
         if (fields.length == 0) {
-            context.execContext().println("无字段", Colors.GRAY);
+            context.execContext().println(ClassTexts.TEXT_NO_FIELDS.text(), Colors.GRAY);
         } else {
             for (Field f : fields) {
                 context.execContext().print("  ", Colors.GRAY);
@@ -185,16 +192,17 @@ public class ClassFieldCommand extends AbstractClassCommand<FieldRequest, GetFie
 
         String instanceExpr = request.getTargetInstance();
         if (instanceExpr == null || instanceExpr.isEmpty()) {
-            throw new IllegalCommandLineArgumentException(
-                    "非静态字段需要提供目标实例 (使用 --instance/-i 参数)");
+            throw new IllegalCommandLineArgumentException(Text.zhEn(
+                    "非静态字段需要提供目标实例 (使用 --instance/-i 参数)",
+                    "An instance field needs a target instance (use --instance/-i)").text());
         }
 
-        context.execContext().print("解析目标实例表达式: ", Colors.CYAN);
+        context.execContext().print(Text.zhEn("解析目标实例表达式: ", "Evaluating the target instance: ").text(), Colors.CYAN);
         context.execContext().println(instanceExpr, Colors.YELLOW);
 
         Object instance = context.parseValue(instanceExpr, targetClass);
 
-        context.execContext().print("✅ 目标实例: ", Colors.CYAN);
+        context.execContext().print(Text.zhEn("✅ 目标实例: ", "✅ Target instance: ").text(), Colors.CYAN);
         context.execContext().println(instance != null ? instance.toString() : "null",
                 instance != null ? Colors.LIGHT_GREEN : Colors.LIGHT_BLUE);
 

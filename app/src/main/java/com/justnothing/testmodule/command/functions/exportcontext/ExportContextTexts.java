@@ -1,5 +1,7 @@
 package com.justnothing.testmodule.command.functions.exportcontext;
 
+import com.justnothing.testmodule.command.framework.i18n.Text;
+
 import java.util.Map;
 
 /**
@@ -25,6 +27,11 @@ public final class ExportContextTexts {
     // ==================== @CmdParam（参数说明）====================
     public static final String PARAM_EXPORT_CONTEXT_PRETTY_PRINTING_DESC =
         "param.export-context.prettyPrinting.desc";
+
+    // ==================== 输出文案 ====================
+    // 判据只看「在本族里出现了两次以上」；只用一次的就地写 Text.zhEn。
+    public static final Text ERR_NO_APP_CONTEXT =
+        Text.zhEn("无法获取应用上下文", "Failed to get the application context");
 
     private ExportContextTexts() {
     }

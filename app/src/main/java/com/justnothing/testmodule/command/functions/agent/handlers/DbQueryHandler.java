@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.agent.handlers;
 
 import android.content.Context;
 
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.framework.model.CommandResult;
 import com.justnothing.testmodule.command.functions.agent.response.DbQueryResult;
 
@@ -28,7 +29,7 @@ public class DbQueryHandler extends AgentCommandHandler {
 
         File dbFile = new File(context.getApplicationInfo().dataDir, "databases/" + dbName);
         if (!dbFile.exists()) {
-            throw new IllegalArgumentException("数据库不存在: " + dbFile.getPath());
+            throw new IllegalArgumentException(Text.zhEn("数据库不存在: %s", "Database not found: %s").format(dbFile.getPath()));
         }
 
         try (android.database.sqlite.SQLiteDatabase db =

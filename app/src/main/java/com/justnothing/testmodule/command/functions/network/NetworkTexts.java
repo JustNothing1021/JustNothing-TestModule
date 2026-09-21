@@ -1,5 +1,7 @@
 package com.justnothing.testmodule.command.functions.network;
 
+import com.justnothing.testmodule.command.framework.i18n.Text;
+
 import java.util.Map;
 
 /**
@@ -52,6 +54,20 @@ public final class NetworkTexts {
     public static final String PARAM_NETWORK_HOOK_SUBCOMMAND_DESC = "param.network.hook.subCommand.desc";
 
     public static final String PARAM_NETWORK_EXPORT_FILEPATH_DESC = "param.network.export.filePath.desc";
+
+    // ==================== 族内复用输出文案 ====================
+    // 中英并排的 Text 常量：只放本族内出现两次以上的输出文案。
+    // 只出现一次的在调用点就地写 Text.zhEn(...)；跨族复用的（「方法: 」那些）在 CliMessages 里。
+    public static final Text RULE_NOT_FOUND = Text.zhEn("未找到规则: %s", "Rule not found: %s");
+    public static final Text UNSUPPORTED_REQUEST_TYPE =
+            Text.zhEn("不支持的请求类型: %s", "Unsupported request type: %s");
+
+    // status 里「拦截状态」「记录状态」共用的取值。
+    public static final Text STATUS_ENABLED = Text.zhEn("开启", "Enabled");
+    public static final Text STATUS_DISABLED = Text.zhEn("关闭", "Disabled");
+
+    // 中文量词「条」在英文里没有对应词，英文侧退化成纯数字。
+    public static final Text COUNT_ITEMS = Text.zhEn("%d 条", "%d");
 
     private NetworkTexts() {
     }

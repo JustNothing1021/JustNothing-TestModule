@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.threads.impl;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.functions.threads.ThreadsTexts;
 import com.justnothing.testmodule.command.functions.threads.util.ProfileManager;
@@ -25,8 +26,9 @@ public class ThreadProfileShowCommand extends AbstractThreadsCommand<ThreadProfi
 
         String report = manager.getProfileReport();
 
-        if ("暂无性能分析数据".equals(report)) {
-            context.println("暂无分析结果，请先执行 'threads profile start'", Colors.YELLOW);
+        if (ThreadsTexts.NO_PROFILE_DATA.text().equals(report)) {
+            context.println(Text.zhEn("暂无分析结果，请先执行 'threads profile start'",
+                    "No profiling results yet; run 'threads profile start' first").text(), Colors.YELLOW);
             
             ThreadProfileShowResult result = new ThreadProfileShowResult();
             result.setProfiling(false);

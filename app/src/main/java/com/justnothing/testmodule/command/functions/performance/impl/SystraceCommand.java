@@ -9,6 +9,7 @@ import com.justnothing.testmodule.command.functions.performance.systrace.Systrac
 import com.justnothing.testmodule.command.functions.performance.systrace.SystraceParser;
 import com.justnothing.testmodule.command.functions.performance.systrace.SystraceRunner;
 import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.functions.performance.PerformanceTexts;
 
 import java.util.Arrays;
@@ -47,7 +48,7 @@ public class SystraceCommand extends AbstractPerfCommand<PerformanceRequest<?>, 
             return handleExport(exportReq);
         } else {
             logger.warn("[systrace] 未知请求类型: %s", req.getClass().getName());
-            outln("未知请求类型", Colors.RED);
+            outln(PerformanceTexts.UNKNOWN_REQUEST_TYPE.text(), Colors.RED);
             return null;
         }
     }
@@ -64,12 +65,13 @@ public class SystraceCommand extends AbstractPerfCommand<PerformanceRequest<?>, 
 
         if (duration <= 0) {
             logger.warn("[systrace/start] ❌ 持续时间无效: %d", duration);
-            outln("错误: 持续时间必须 > 0", Colors.RED);
+            outln(Text.zhEn("错误: 持续时间必须 > 0", "Error: duration must be greater than 0").text(), Colors.RED);
             return null;
         }
         if (duration > 300) {
             logger.warn("[systrace/start] 持续时间过长: %ds，可能产生大量数据", duration);
-            outln("警告: 持续时间过长，可能产生大量数据", Colors.YELLOW);
+            outln(Text.zhEn("警告: 持续时间过长，可能产生大量数据",
+                    "Warning: duration is too long; it may produce a lot of data").text(), Colors.YELLOW);
         }
 
         SystraceRunner runner = new SystraceRunner("/data/local/tmp/systrace");
@@ -83,17 +85,17 @@ public class SystraceCommand extends AbstractPerfCommand<PerformanceRequest<?>, 
         r.setTaskId(id);
         r.setStatus("running");
         r.setDuration(duration);
-        outln("Systrace 已启动", Colors.GREEN);
+        outln(Text.zhEn("Systrace 已启动", "Systrace started").text(), Colors.GREEN);
         out("ID: ", Colors.CYAN);
         outln(String.valueOf(id), Colors.YELLOW);
-        out("持续时间: ", Colors.CYAN);
+        out(PerformanceTexts.LABEL_DURATION.text(), Colors.CYAN);
         outln(duration + "s", Colors.YELLOW);
         if (categories != null && categories.length > 0) {
-            out("追踪类别: ", Colors.CYAN);
+            out(PerformanceTexts.LABEL_TRACE_CATEGORIES.text(), Colors.CYAN);
             outln(String.join(", ", categories), Colors.YELLOW);
         } else {
-            out("追踪类别: ", Colors.CYAN);
-            outln("(默认全部)", Colors.GRAY);
+            out(PerformanceTexts.LABEL_TRACE_CATEGORIES.text(), Colors.CYAN);
+            outln(Text.zhEn("(默认全部)", "(all by default)").text(), Colors.GRAY);
         }
         return r;
     }
@@ -109,13 +111,13 @@ public class SystraceCommand extends AbstractPerfCommand<PerformanceRequest<?>, 
             Map<Integer, ?> availableIds = mgr.getSystraceRunners();
             logger.warn("[systrace/stop] ❌ 运行器不存在: ID=%d, 当前运行中的IDs=%s",
                     taskId, availableIds.keySet());
-            outln("错误: Systrace运行器不存在 (ID: " + taskId + ")", Colors.RED);
+            outln(Text.zhEn("错误: Systrace运行器不存在 (ID: %d)", "Error: systrace runner not found (ID: %d)").format(taskId), Colors.RED);
             if (!availableIds.isEmpty()) {
-                outln("当前运行的Systrace IDs: " + availableIds.keySet(), Colors.GRAY);
+                outln(Text.zhEn("当前运行的Systrace IDs: %s", "Running systrace IDs: %s").format(availableIds.keySet()), Colors.GRAY);
             } else {
-                outln("提示: 没有任何正在运行的Systrace任务", Colors.GRAY);
+                outln(Text.zhEn("提示: 没有任何正在运行的Systrace任务", "Hint: no systrace task is running").text(), Colors.GRAY);
             }
-            outln("提示: 使用 'performance list' 查看当前任务", Colors.GRAY);
+            outln(PerformanceTexts.HINT_VIEW_TASKS.text(), Colors.GRAY);
             return null;
         }
 
@@ -139,25 +141,25 @@ public class SystraceCommand extends AbstractPerfCommand<PerformanceRequest<?>, 
                         taskId, f, d.threadData() != null ? d.threadData().size() : 0);
                 logger.debug("[systrace/stop] detail: file=%s, size=%s", f, d.file());
 
-                outln("Systrace 已停止，数据已解析", Colors.GREEN);
+                outln(Text.zhEn("Systrace 已停止，数据已解析", "Systrace stopped; data parsed").text(), Colors.GREEN);
                 out("ID: ", Colors.CYAN); outln(String.valueOf(taskId), Colors.YELLOW);
-                out("输出文件: ", Colors.CYAN); outln(f, Colors.YELLOW);
-                out("实际持续时间: ", Colors.CYAN);
+                out(PerformanceTexts.LABEL_OUTPUT_FILE.text(), Colors.CYAN); outln(f, Colors.YELLOW);
+                out(Text.zhEn("实际持续时间: ", "Actual duration: ").text(), Colors.CYAN);
                 outln(String.format(Locale.getDefault(), "%.2fs", actualDuration / 1000.0), Colors.YELLOW);
                 if (d.threadData() != null) {
-                    out("线程数量: ", Colors.CYAN);
+                    out(Text.zhEn("线程数量: ", "Thread count: ").text(), Colors.CYAN);
                     outln(String.valueOf(d.threadData().size()), Colors.YELLOW);
                 }
             } catch (Exception e) {
                 logger.warn("[systrace/stop] ⚠️ 停止成功但解析失败: ID=%d, file=%s, err=%s",
                         taskId, f, e.getMessage());
-                outln("已停止但解析失败: " + e.getMessage(), Colors.YELLOW);
+                outln(Text.zhEn("已停止但解析失败: %s", "Stopped, but parsing failed: %s").format(e.getMessage()), Colors.YELLOW);
                 out("ID: ", Colors.CYAN); outln(String.valueOf(taskId), Colors.YELLOW);
-                out("输出文件: ", Colors.CYAN); outln(f, Colors.GRAY);
+                out(PerformanceTexts.LABEL_OUTPUT_FILE.text(), Colors.CYAN); outln(f, Colors.GRAY);
             }
         } else {
             logger.warn("[systrace/stop] ⚠️ 无输出文件: ID=%d", taskId);
-            outln("已停止，但未生成输出文件", Colors.YELLOW);
+            outln(Text.zhEn("已停止，但未生成输出文件", "Stopped, but no output file was produced").text(), Colors.YELLOW);
             out("ID: ", Colors.CYAN); outln(String.valueOf(taskId), Colors.YELLOW);
         }
         return r;
@@ -170,7 +172,7 @@ public class SystraceCommand extends AbstractPerfCommand<PerformanceRequest<?>, 
 
         if (taskId == null) {
             logger.warn("[systrace/report] 未指定ID，尝试查找最新数据");
-            outln("未指定ID，查找最新的Systrace数据...", Colors.GRAY);
+            outln(Text.zhEn("未指定ID，查找最新的Systrace数据...", "No ID given; looking for the latest systrace data...").text(), Colors.GRAY);
         }
 
         PerfTaskManager mgr = getTaskManager();
@@ -179,13 +181,14 @@ public class SystraceCommand extends AbstractPerfCommand<PerformanceRequest<?>, 
             Integer latestId = findLatestId(mgr.getSystraceDataMap());
             if (latestId == null) {
                 logger.warn("[systrace/report] ❌ 无任何已完成数据");
-                outln("错误: 没有已完成的Systrace数据", Colors.RED);
-                outln("提示: 先用 'performance systrace start' 开始追踪，再用 'performance systrace stop <ID>' 停止", Colors.GRAY);
+                outln(Text.zhEn("错误: 没有已完成的Systrace数据", "Error: no completed systrace data").text(), Colors.RED);
+                outln(Text.zhEn("提示: 先用 'performance systrace start' 开始追踪，再用 'performance systrace stop <ID>' 停止",
+                        "Hint: run 'performance systrace start' to start tracing, then 'performance systrace stop <ID>' to stop").text(), Colors.GRAY);
                 return null;
             }
             taskId = latestId;
             logger.info("[systrace/report] 自动选择最新ID: %d", taskId);
-            out("使用最新ID: ", Colors.GRAY); outln(String.valueOf(taskId), Colors.YELLOW);
+            out(PerformanceTexts.USING_LATEST_ID.text(), Colors.GRAY); outln(String.valueOf(taskId), Colors.YELLOW);
         }
 
         SystraceData d = mgr.getSystraceData(taskId);
@@ -194,22 +197,24 @@ public class SystraceCommand extends AbstractPerfCommand<PerformanceRequest<?>, 
             Map<Integer, ?> availableIds = mgr.getSystraceDataMap();
             logger.warn("[systrace/report] ❌ 数据不存在: ID=%d, 可用IDs=%s",
                     taskId, availableIds.keySet());
-            outln("错误: Systrace数据不存在 (ID: " + taskId + ")", Colors.RED);
+            outln(PerformanceTexts.ERR_DATA_NOT_FOUND.format(taskId), Colors.RED);
             if (!availableIds.isEmpty()) {
-                outln("可用的报告ID: " + availableIds.keySet(), Colors.GRAY);
+                outln(PerformanceTexts.AVAILABLE_REPORT_IDS.format(availableIds.keySet()), Colors.GRAY);
             } else {
-                outln("提示: 没有已完成的Systrace数据。请先执行 'performance systrace stop <ID>'", Colors.GRAY);
+                outln(Text.zhEn("提示: 没有已完成的Systrace数据。请先执行 'performance systrace stop <ID>'",
+                        "Hint: there is no completed systrace data. Run 'performance systrace stop <ID>' first").text(), Colors.GRAY);
             }
-            outln("提示: 使用 'performance list' 查看当前任务", Colors.GRAY);
+            outln(PerformanceTexts.HINT_VIEW_TASKS.text(), Colors.GRAY);
             return null;
         }
 
         boolean hasData = d.threadData() != null && !d.threadData().isEmpty();
         if (!hasData) {
             logger.warn("[systrace/report] ⚠️ 数据为空: ID=%d (无线程数据)", taskId);
-            outln("警告: 报告数据为空 (ID: " + taskId + ")", Colors.YELLOW);
-            outln("该Systrace周期内没有捕获到任何trace事件", Colors.GRAY);
-            out("源文件: ", Colors.CYAN); outln(d.file(), Colors.WHITE);
+            outln(PerformanceTexts.WARN_REPORT_DATA_EMPTY.format(taskId), Colors.YELLOW);
+            outln(Text.zhEn("该Systrace周期内没有捕获到任何trace事件",
+                    "No trace events were captured during this systrace window").text(), Colors.GRAY);
+            out(PerformanceTexts.LABEL_SOURCE_FILE.text(), Colors.CYAN); outln(d.file(), Colors.WHITE);
             return null;
         }
 
@@ -224,10 +229,10 @@ public class SystraceCommand extends AbstractPerfCommand<PerformanceRequest<?>, 
         r.setReport(report);
 
         outln("", Colors.DEFAULT);
-        outln("=== Systrace 报告 ===", Colors.CYAN);
-        out("任务ID: ", Colors.CYAN); outln(String.valueOf(taskId), Colors.YELLOW);
-        out("源文件: ", Colors.CYAN); outln(d.file(), Colors.WHITE);
-        out("线程数: ", Colors.CYAN); outln(String.valueOf(d.threadData().size()), Colors.WHITE);
+        outln(Text.zhEn("=== Systrace 报告 ===", "=== Systrace report ===").text(), Colors.CYAN);
+        out(PerformanceTexts.LABEL_TASK_ID.text(), Colors.CYAN); outln(String.valueOf(taskId), Colors.YELLOW);
+        out(PerformanceTexts.LABEL_SOURCE_FILE.text(), Colors.CYAN); outln(d.file(), Colors.WHITE);
+        out(PerformanceTexts.LABEL_THREAD_COUNT.text(), Colors.CYAN); outln(String.valueOf(d.threadData().size()), Colors.WHITE);
         outln(report, Colors.WHITE);
 
         logger.debug("[systrace/report] 报告生成完毕: ID=%d, reportLen=%d", taskId, report.length());
@@ -246,11 +251,11 @@ public class SystraceCommand extends AbstractPerfCommand<PerformanceRequest<?>, 
             Map<Integer, ?> availableIds = mgr.getSystraceDataMap();
             logger.warn("[systrace/export] ❌ 数据不存在: ID=%d, 可用IDs=%s",
                     taskId, availableIds.keySet());
-            outln("错误: Systrace数据不存在 (ID: " + taskId + ")", Colors.RED);
+            outln(PerformanceTexts.ERR_DATA_NOT_FOUND.format(taskId), Colors.RED);
             if (!availableIds.isEmpty()) {
-                outln("可用的报告ID: " + availableIds.keySet(), Colors.GRAY);
+                outln(PerformanceTexts.AVAILABLE_REPORT_IDS.format(availableIds.keySet()), Colors.GRAY);
             } else {
-                outln("提示: 没有已完成的Systrace数据", Colors.GRAY);
+                outln(Text.zhEn("提示: 没有已完成的Systrace数据", "Hint: there is no completed systrace data").text(), Colors.GRAY);
             }
             return null;
         }
@@ -258,7 +263,7 @@ public class SystraceCommand extends AbstractPerfCommand<PerformanceRequest<?>, 
         String rpt = SystraceParser.generateReport(d);
         if (!writeToFile(filePath, rpt)) {
             logger.error("[systrace/export] ❌ 写入文件失败: %s", filePath);
-            outln("导出失败: 无法写入文件", Colors.RED);
+            outln(PerformanceTexts.ERR_EXPORT_WRITE_FAILED.text(), Colors.RED);
             return null;
         }
 
@@ -269,10 +274,10 @@ public class SystraceCommand extends AbstractPerfCommand<PerformanceRequest<?>, 
         r.setTaskId(taskId);
         r.setOutputFile(d.file());
         r.setExportPath(filePath);
-        outln("Systrace 报告已导出", Colors.GREEN);
-        out("路径: ", Colors.CYAN); outln(filePath, Colors.YELLOW);
-        out("任务ID: ", Colors.CYAN); outln(String.valueOf(taskId), Colors.WHITE);
-        out("线程数: ", Colors.CYAN);
+        outln(Text.zhEn("Systrace 报告已导出", "Systrace report exported").text(), Colors.GREEN);
+        out(PerformanceTexts.LABEL_PATH.text(), Colors.CYAN); outln(filePath, Colors.YELLOW);
+        out(PerformanceTexts.LABEL_TASK_ID.text(), Colors.CYAN); outln(String.valueOf(taskId), Colors.WHITE);
+        out(PerformanceTexts.LABEL_THREAD_COUNT.text(), Colors.CYAN);
         outln(d.threadData() != null ? String.valueOf(d.threadData().size()) : "N/A", Colors.WHITE);
         return r;
     }

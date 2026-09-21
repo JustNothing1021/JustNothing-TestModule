@@ -2,8 +2,10 @@ package com.justnothing.testmodule.command.functions.hook.impl;
 
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.model.CommandResult;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.functions.hook.request.*;
 import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.functions.hook.HookTexts;
 import com.justnothing.testmodule.command.functions.hook.response.HookAddResult;
 import com.justnothing.testmodule.command.functions.hook.response.HookListResult;
 import com.justnothing.testmodule.command.functions.hook.util.HookManager;
@@ -39,7 +41,8 @@ public class HookQueryCommand extends AbstractHookCommand<CommandRequest<?>, Com
 
         List<HookAddResult.HookDetailInfo> detail = HookManager.getHookInfoDetail(request.getHookId());
         if (detail == null) {
-            throw new IllegalArgumentException("未找到Hook (ID: " + request.getHookId() + ")");
+            throw new IllegalArgumentException(
+                    HookTexts.ERR_HOOK_ID_NOT_FOUND.format(request.getHookId()));
         }
         
         for (HookAddResult.HookDetailInfo info : detail) {
@@ -52,7 +55,7 @@ public class HookQueryCommand extends AbstractHookCommand<CommandRequest<?>, Com
         r.setSuccessAction(true);
         r.setHookId(request.getHookId());
         r.setDetail(detail);
-        r.setMessage("Hook信息查询成功");
+        r.setMessage(Text.zhEn("Hook信息查询成功", "Hook info retrieved").text());
         return r;
     }
 
@@ -61,7 +64,8 @@ public class HookQueryCommand extends AbstractHookCommand<CommandRequest<?>, Com
 
         List<HookAddResult.HookDetailInfo> output = HookManager.getHookOutputDetail(request.getHookId(), request.getOutputCount());
         if (output == null) {
-            throw new IllegalArgumentException("未找到Hook (ID: " + request.getHookId() + ")");
+            throw new IllegalArgumentException(
+                    HookTexts.ERR_HOOK_ID_NOT_FOUND.format(request.getHookId()));
         }
         
         for (HookAddResult.HookDetailInfo line : output) {
@@ -74,7 +78,7 @@ public class HookQueryCommand extends AbstractHookCommand<CommandRequest<?>, Com
         r.setSuccessAction(true);
         r.setHookId(request.getHookId());
         r.setDetail(output);
-        r.setMessage("获取 " + output.size() + " 条输出记录");
+        r.setMessage(Text.zhEn("获取到了 %d 条输出记录", "Fetched %d output records").format(output.size()));
         return r;
     }
 
@@ -84,6 +88,7 @@ public class HookQueryCommand extends AbstractHookCommand<CommandRequest<?>, Com
         if (request instanceof HookInfoRequest r) return handleInfo(r);
         if (request instanceof HookOutputRequest r) return handleOutput(r);
         
-        throw new IllegalArgumentException("不支持的请求类型: " + request.getClass().getSimpleName());
+        throw new IllegalArgumentException(
+                HookTexts.ERR_UNSUPPORTED_REQUEST_TYPE.format(request.getClass().getSimpleName()));
     }
 }

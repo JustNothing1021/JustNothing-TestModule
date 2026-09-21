@@ -1,6 +1,7 @@
 package com.justnothing.testmodule.command.functions.performance;
 
 import com.justnothing.testmodule.command.framework.i18n.CliTexts;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 
 import java.util.Map;
 
@@ -95,6 +96,79 @@ public final class PerformanceTexts {
     public static final String PARAM_PERFORMANCE_HOOK_REPORT_ID_DESC = "param.performance.hook.report.id.desc";
     public static final String PARAM_PERFORMANCE_HOOK_EXPORT_ID_DESC = "param.performance.hook.export.id.desc";
     public static final String PARAM_PERFORMANCE_HOOK_EXPORT_FILEPATH_DESC = "param.performance.hook.export.filePath.desc";
+
+    // ==================== 族内复用输出文案 ====================
+    // 只放本族内部出现两次以上的输出文案（中英并排的 Text 常量，就地取 .text() / .format()）。
+    // 跨族复用的标签（「类名: 」「无」「错误: 」…）在 CliMessages 里，这里不再各存一份；
+    // 只出现一次的在调用点就地写 Text.zhEn(...)。
+
+    // ---- 状态 / 通用提示 ----
+    public static final Text UNKNOWN_REQUEST_TYPE = Text.zhEn("未知请求类型", "Unknown request type");
+    public static final Text STATUS_RUNNING = Text.zhEn("运行中", "Running");
+    public static final Text STATUS_STOPPED = Text.zhEn("已停止", "Stopped");
+    public static final Text HINT_VIEW_TASKS = Text.zhEn("提示: 使用 'performance list' 查看当前任务",
+            "Hint: run 'performance list' to list the current tasks");
+    public static final Text USING_LATEST_ID = Text.zhEn("使用最新ID: ", "Using latest ID: ");
+    public static final Text NO_ID_SEARCH_LATEST_SAMPLE = Text.zhEn("未指定ID，查找最新完成的采样...",
+            "No ID given; looking for the latest completed sample...");
+
+    // ---- 参数校验 ----
+    public static final Text ERR_RATE_MUST_BE_POSITIVE = Text.zhEn("错误: 频率必须 > 0", "Error: rate must be greater than 0");
+    public static final Text WARN_RATE_TOO_HIGH = Text.zhEn("警告: 频率过高", "Warning: rate too high");
+
+    // ---- 查找 / 导出 ----
+    public static final Text SAMPLER_STOPPED = Text.zhEn("采样器已停止", "Sampler stopped");
+    public static final Text ERR_NO_COMPLETED_SAMPLE_DATA = Text.zhEn("错误: 没有已完成的采样数据",
+            "Error: no completed sample data");
+    public static final Text ERR_DATA_NOT_FOUND = Text.zhEn("错误: 数据不存在 (ID: %d)", "Error: data not found (ID: %d)");
+    public static final Text AVAILABLE_REPORT_IDS = Text.zhEn("可用的报告ID: %s", "Available report IDs: %s");
+    public static final Text AVAILABLE_IDS = Text.zhEn("可用的IDs: %s", "Available IDs: %s");
+    public static final Text WARN_REPORT_DATA_EMPTY = Text.zhEn("警告: 报告数据为空 (ID: %d)", "Warning: report data is empty (ID: %d)");
+    public static final Text NO_METHOD_CALLS_CAPTURED = Text.zhEn("该采样周期内没有捕获到任何方法调用",
+            "No method calls were captured during this sampling window");
+    public static final Text DATA_EXPORTED = Text.zhEn("数据已导出", "Data exported");
+    public static final Text ERR_EXPORT_WRITE_FAILED = Text.zhEn("导出失败: 无法写入文件", "Export failed: cannot write the file");
+
+    // ---- 报告表格标签（族内复用）----
+    // 「路径: 」「任务ID: 」这类其实跨族都在用，但 CliMessages 里还没有对应成员，
+    // 先落在本族；等提到框架层时这两条要跟着搬走（见交付报告）。
+    public static final Text LABEL_PATH = Text.zhEn("路径: ", "Path: ");
+    public static final Text LABEL_TASK_ID = Text.zhEn("任务ID: ", "Task ID: ");
+    public static final Text LABEL_RATE = Text.zhEn("频率: ", "Rate: ");
+    public static final Text LABEL_DURATION = Text.zhEn("持续时间: ", "Duration: ");
+    public static final Text LABEL_SAMPLE_RATE = Text.zhEn("采样率: ", "Sample rate: ");
+    public static final Text LABEL_TOTAL_SAMPLES = Text.zhEn("总采样数: ", "Total samples: ");
+    public static final Text LABEL_TOTAL_SAMPLE_COUNT = Text.zhEn("总采样次数: ", "Total samples: ");
+    public static final Text LABEL_TOTAL_SAMPLES_SHORT = Text.zhEn("总采样: ", "Total samples: ");
+    public static final Text LABEL_CAPTURED_METHODS = Text.zhEn("捕获方法数: ", "Methods captured: ");
+    public static final Text LABEL_METHOD_COUNT = Text.zhEn("方法数: ", "Methods: ");
+    public static final Text LABEL_DETECTED_THREADS = Text.zhEn("检测线程数: ", "Threads detected: ");
+    public static final Text LABEL_THREAD_COUNT = Text.zhEn("线程数: ", "Threads: ");
+    public static final Text LABEL_STATUS_INDENTED = Text.zhEn("    状态: ", "    Status: ");
+    public static final Text LABEL_SAMPLE_COUNT_INDENTED = Text.zhEn("    采样数量: ", "    Samples: ");
+    public static final Text HOT_METHODS_TOP = Text.zhEn("热点方法 TOP-%d:", "Hot methods TOP-%d:");
+
+    // ---- Hook 报告（族内复用）----
+    public static final Text ERR_HOOK_DATA_NOT_FOUND = Text.zhEn("错误: Hook数据不存在 (ID: %d)",
+            "Error: hook data not found (ID: %d)");
+    public static final Text AVAILABLE_HOOK_IDS = Text.zhEn("可用的Hook IDs: %s", "Available hook IDs: %s");
+    public static final Text LABEL_TARGET_CLASS = Text.zhEn("目标类: ", "Target class: ");
+    public static final Text LABEL_TARGET_METHOD = Text.zhEn("目标方法: ", "Target method: ");
+    public static final Text LABEL_CALL_COUNT = Text.zhEn("调用次数: ", "Call count: ");
+    public static final Text LABEL_TOTAL_TIME = Text.zhEn("总耗时: ", "Total time: ");
+    public static final Text LABEL_AVG_MIN_MAX = Text.zhEn("平均/最小/最大: ", "Avg/min/max: ");
+
+    // ---- Trace / Systrace（族内复用）----
+    public static final Text LABEL_TRACE_COUNT = Text.zhEn("追踪数: ", "Traces: ");
+    public static final Text LABEL_TRACE_CATEGORIES = Text.zhEn("追踪类别: ", "Categories: ");
+    public static final Text LABEL_OUTPUT_FILE = Text.zhEn("输出文件: ", "Output file: ");
+    public static final Text LABEL_SOURCE_FILE = Text.zhEn("源文件: ", "Source file: ");
+    public static final Text ERR_START_SYSTRACE_FAILED = Text.zhEn("启动 Systrace 失败: %s", "Failed to start systrace: %s");
+
+    // ---- 时长单位后缀（族内复用）----
+    // 中文侧带前导空格、英文侧同样带，保证「10.00 秒」和「10.00 s」的排版一致。
+    public static final Text UNIT_SECONDS = Text.zhEn(" 秒", " s");
+    public static final Text UNIT_MINUTES = Text.zhEn(" 分 ", " min ");
 
     private PerformanceTexts() {
     }

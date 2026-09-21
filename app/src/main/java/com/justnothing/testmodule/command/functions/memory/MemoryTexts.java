@@ -1,5 +1,7 @@
 package com.justnothing.testmodule.command.functions.memory;
 
+import com.justnothing.testmodule.command.framework.i18n.Text;
+
 import java.util.Map;
 
 /**
@@ -38,6 +40,43 @@ public final class MemoryTexts {
     public static final String PARAM_MEMORY_DUMP_THREADS_DESC = "param.memory.dump.threads.desc";
     public static final String PARAM_MEMORY_DUMP_FULL_DESC = "param.memory.dump.full.desc";
     public static final String PARAM_MEMORY_DUMP_FILE_PATH_DESC = "param.memory.dump.filePath.desc";
+
+    // ==================== 输出文案 ====================
+    // 判据只看「在本族里出现了两次以上」；只用一次的就地写 Text.zhEn。
+    // 同一批内存标签有两种形态：AbstractMemoryCommand / DumpCommand 的是「两空格缩进 + 标签」，
+    // InfoCommand 的是「无缩进 + 标签」；中文并不逐字相同，所以两套各留一份（LABEL_INDENTED_* / 其余）。
+    public static final Text LABEL_INDENTED_MAX = Text.zhEn("  最大: ", "  Max: ");
+    public static final Text LABEL_INDENTED_ALLOCATED = Text.zhEn("  已分配: ", "  Allocated: ");
+    public static final Text LABEL_INDENTED_USED = Text.zhEn("  已用: ", "  Used: ");
+    public static final Text LABEL_INDENTED_FREE = Text.zhEn("  空闲: ", "  Free: ");
+    public static final Text LABEL_INDENTED_AVAILABLE = Text.zhEn("  可用: ", "  Available: ");
+    public static final Text LABEL_INDENTED_TOTAL = Text.zhEn("  总计: ", "  Total: ");
+    public static final Text LABEL_INDENTED_LOW_MEMORY = Text.zhEn("  低内存: ", "  Low memory: ");
+
+    public static final Text LABEL_NATIVE_ALLOCATED = Text.zhEn("已分配: ", "Allocated: ");
+    public static final Text LABEL_NATIVE_USED = Text.zhEn("已用: ", "Used: ");
+    public static final Text LABEL_NATIVE_FREE = Text.zhEn("空闲: ", "Free: ");
+    public static final Text LABEL_JAVA_MAX = Text.zhEn("最大内存: ", "Max memory: ");
+    public static final Text LABEL_JAVA_ALLOCATED = Text.zhEn("已分配内存: ", "Allocated memory: ");
+    public static final Text LABEL_JAVA_USED = Text.zhEn("已用内存: ", "Used memory: ");
+    public static final Text LABEL_JAVA_FREE = Text.zhEn("空闲内存: ", "Free memory: ");
+    public static final Text LABEL_SYSTEM_MEMORY = Text.zhEn("系统内存:", "System memory:");
+    public static final Text LABEL_OS = Text.zhEn("操作系统: ", "OS: ");
+    public static final Text LABEL_OS_VERSION = Text.zhEn("系统版本: ", "OS version: ");
+    public static final Text LABEL_ARCH = Text.zhEn("架构: ", "Architecture: ");
+    public static final Text LABEL_TIME = Text.zhEn("时间: ", "Time: ");
+    public static final Text LABEL_THREAD_COUNT = Text.zhEn("线程总数: ", "Total threads: ");
+    public static final Text LABEL_THREAD = Text.zhEn("线程: ", "Thread: ");
+    public static final Text LABEL_THREAD_STATE = Text.zhEn("  状态: ", "  State: ");
+
+    public static final Text SECTION_NATIVE_HEAP = Text.zhEn("===== 原生堆内存 =====", "===== Native heap memory =====");
+    public static final Text SECTION_JAVA_RUNTIME = Text.zhEn("===== Java运行时内存 =====", "===== Java runtime memory =====");
+
+    public static final Text VALUE_YES = Text.zhEn("是", "yes");
+    public static final Text VALUE_NO = Text.zhEn("否", "no");
+    /** 「无法读取 /proc/meminfo: 」+ 异常消息，AbstractMemoryCommand 里彩色输出和拼字符串两处都在用。 */
+    public static final Text READ_MEMINFO_FAILED = Text.zhEn("无法读取 /proc/meminfo: ", "Failed to read /proc/meminfo: ");
+    public static final Text UNKNOWN_ERROR = Text.zhEn("未知错误", "Unknown error");
 
     private MemoryTexts() {
     }

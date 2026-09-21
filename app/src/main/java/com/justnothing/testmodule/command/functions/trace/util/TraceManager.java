@@ -3,6 +3,7 @@ package com.justnothing.testmodule.command.functions.trace.util;
 import com.justnothing.testmodule.command.functions.intercept.base.AbstractInterceptManager;
 import com.justnothing.testmodule.command.functions.intercept.base.TaskType;
 import com.justnothing.testmodule.command.functions.intercept.TraceInterceptTask;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
 
 public class TraceManager extends AbstractInterceptManager<TraceInterceptTask> {
@@ -43,7 +44,8 @@ public class TraceManager extends AbstractInterceptManager<TraceInterceptTask> {
             return addTask(task);
         } catch (Exception e) {
             logger.error("添加trace任务失败", e);
-            throw new RuntimeException("添加trace任务失败: " + e.getMessage(), e);
+            throw new RuntimeException(
+                    Text.zhEn("添加trace任务失败: %s", "Failed to add trace task: %s").format(e.getMessage()), e);
         }
     }
 

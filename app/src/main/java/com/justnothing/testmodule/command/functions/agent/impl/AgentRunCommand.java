@@ -1,6 +1,7 @@
 package com.justnothing.testmodule.command.functions.agent.impl;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.framework.model.AbstractCommand;
 import com.justnothing.testmodule.command.framework.model.CommandResult;
 import com.justnothing.testmodule.command.functions.agent.inspect.InspectionClient;
@@ -22,7 +23,8 @@ public class AgentRunCommand extends AbstractCommand<AgentRunRequest, CommandRes
         String pkg = context.getRequest().getPackageName();
         String cmd = context.getRequest().getCommand();
 
-        context.println("[代理执行] " + pkg + " → " + cmd + " (交互模式)", Colors.CYAN);
+        context.println(Text.zhEn("[代理执行] %s → %s (交互模式)", "[Proxy] %s → %s (interactive mode)")
+                .format(pkg, cmd), Colors.CYAN);
         context.println("---", Colors.DARK_GRAY);
 
         // 目标进程没有自己的终端，RichConsole 渲染要靠客户端真实能力（宽高 / ANSI）——
@@ -61,7 +63,7 @@ public class AgentRunCommand extends AbstractCommand<AgentRunRequest, CommandRes
             @Override
             public void onError(String errorText) {
                 if (errorText != null) {
-                    context.print("[错误] " + errorText, Colors.RED);
+                    context.print(Text.zhEn("[错误] ", "[Error] ").text() + errorText, Colors.RED);
                 }
             }
 
@@ -73,7 +75,7 @@ public class AgentRunCommand extends AbstractCommand<AgentRunRequest, CommandRes
             @Override
             public void onSessionEnd() {
                 context.println("---", Colors.DARK_GRAY);
-                context.println("[完成] 代理命令执行结束", Colors.GREEN);
+                context.println(Text.zhEn("[完成] 代理命令执行结束", "[Done] Proxied command finished").text(), Colors.GREEN);
             }
         });
 

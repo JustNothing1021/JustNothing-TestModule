@@ -1,5 +1,6 @@
 package com.justnothing.testmodule.command.framework.output;
 
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 
@@ -26,7 +27,7 @@ public class StreamOutputWriter implements ICommandOutputHandler {
 
     public StreamOutputWriter(OutputStream outputStream) {
         if (outputStream == null) {
-            throw new IllegalArgumentException("OutputStream不能为null");
+            throw new IllegalArgumentException(CliMessages.ERR_OUTPUT_STREAM_NULL.text());
         }
         this.outputStream = outputStream;
         this.printWriter = new PrintWriter(outputStream, true);
@@ -77,7 +78,7 @@ public class StreamOutputWriter implements ICommandOutputHandler {
     @Override
     public void println(String line) {
         if (closed.get()) {
-            throw new IllegalStateException("输出器已关闭");
+            throw new IllegalStateException(CliMessages.ERR_WRITER_CLOSED.text());
         }
 
         if (line == null) {
@@ -96,7 +97,7 @@ public class StreamOutputWriter implements ICommandOutputHandler {
     @Override
     public void print(String text) {
         if (closed.get()) {
-            throw new IllegalStateException("输出器已关闭");
+            throw new IllegalStateException(CliMessages.ERR_WRITER_CLOSED.text());
         }
 
         if (text == null) {

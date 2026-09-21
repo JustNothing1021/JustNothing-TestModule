@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.framework.utils;
 
 import android.util.Log;
 import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
 import com.justnothing.testmodule.command.framework.output.Colors;
 
 import java.util.LinkedHashMap;
@@ -92,36 +93,42 @@ public class CommandExceptionHandler {
         ctx.println(ERROR_SEPARATOR, Colors.RED);
         errorText.append(ERROR_SEPARATOR).append("\n");
 
-        ctx.print("错误: 执行", Colors.RED);
+        String headPrefix = CliMessages.ERR_HEAD_PREFIX.text();
+        String headSuffix = CliMessages.ERR_HEAD_SUFFIX.text();
+        ctx.print(headPrefix, Colors.RED);
         ctx.print(commandName, Colors.YELLOW);
-        ctx.println("命令时发生异常", Colors.RED);
-        errorText.append("错误: 执行").append(commandName).append("命令时发生异常\n");
+        ctx.println(headSuffix, Colors.RED);
+        errorText.append(headPrefix).append(commandName).append(headSuffix).append("\n");
 
         ctx.println("----------------------------------------", Colors.RED);
         errorText.append("----------------------------------------\n");
-        
-        ctx.print("异常类型: ", Colors.CYAN);
-        ctx.println(e.getClass().getSimpleName(), Colors.YELLOW);
-        errorText.append("异常类型: ").append(e.getClass().getSimpleName()).append("\n");
 
-        String errorMessage = e.getMessage() != null ? e.getMessage() : "无详细信息";
-        ctx.print("错误信息: ", Colors.CYAN);
+        String exceptionType = CliMessages.ERR_EXCEPTION_TYPE.text();
+        ctx.print(exceptionType, Colors.CYAN);
+        ctx.println(e.getClass().getSimpleName(), Colors.YELLOW);
+        errorText.append(exceptionType).append(e.getClass().getSimpleName()).append("\n");
+
+        String errorMessage = e.getMessage() != null ? e.getMessage() : CliMessages.ERR_NO_MESSAGE.text();
+        String messageLabel = CliMessages.ERR_MESSAGE.text();
+        ctx.print(messageLabel, Colors.CYAN);
         ctx.println(errorMessage, Colors.RED);
-        errorText.append("错误信息: ").append(errorMessage).append("\n");
-        
+        errorText.append(messageLabel).append(errorMessage).append("\n");
+
         if (errorHint != null && !errorHint.isEmpty()) {
             ctx.println("----------------------------------------", Colors.RED);
-            ctx.print("错误详情: ", Colors.CYAN);
+            String detailsLabel = CliMessages.ERR_DETAILS.text();
+            ctx.print(detailsLabel, Colors.CYAN);
             ctx.println(errorHint, Colors.ORANGE);
             errorText.append("----------------------------------------\n");
-            errorText.append("错误详情: ").append(errorHint).append("\n");
+            errorText.append(detailsLabel).append(errorHint).append("\n");
         }
-        
+
         if (context != null && !context.isEmpty()) {
             ctx.println("----------------------------------------", Colors.RED);
-            ctx.println("上下文信息:", Colors.CYAN);
+            String contextLabel = CliMessages.ERR_CONTEXT.text();
+            ctx.println(contextLabel, Colors.CYAN);
             errorText.append("----------------------------------------\n");
-            errorText.append("上下文信息:\n");
+            errorText.append(contextLabel).append("\n");
             for (Map.Entry<String, Object> entry : context.entrySet()) {
                 ctx.print("  " + entry.getKey() + ": ", Colors.CYAN);
                 ctx.println(String.valueOf(entry.getValue()), Colors.LIGHT_GREEN);
@@ -129,11 +136,12 @@ public class CommandExceptionHandler {
                         .append(entry.getValue()).append("\n");
             }
         }
-        
+
+        String stackTraceLabel = CliMessages.ERR_STACK_TRACE.text();
         ctx.println("----------------------------------------", Colors.RED);
-        ctx.println("堆栈追踪:", Colors.CYAN);
+        ctx.println(stackTraceLabel, Colors.CYAN);
         errorText.append("----------------------------------------\n");
-        errorText.append("堆栈追踪:\n");
+        errorText.append(stackTraceLabel).append("\n");
 
         String stackTrace = Log.getStackTraceString(e);
         for (String line : stackTrace.split("\n")) {

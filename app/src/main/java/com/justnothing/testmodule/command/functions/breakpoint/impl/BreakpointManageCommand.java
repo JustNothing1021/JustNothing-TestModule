@@ -3,6 +3,8 @@ package com.justnothing.testmodule.command.functions.breakpoint.impl;
 import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.functions.breakpoint.BreakpointTexts;
 import com.justnothing.testmodule.command.functions.breakpoint.request.BreakpointAddRequest;
 import com.justnothing.testmodule.command.functions.breakpoint.request.BreakpointEnableRequest;
@@ -47,7 +49,7 @@ public class BreakpointManageCommand extends AbstractBreakpointCommand<CommandRe
             return handleClear((BreakpointClearRequest) request);
         }
 
-        return createErrorResult("未知的断点管理请求类型");
+        return createErrorResult(Text.zhEn("未知的断点管理请求类型", "Unknown breakpoint management request type").text());
     }
 
     private BreakpointResult handleAdd(BreakpointAddRequest request) {
@@ -59,24 +61,25 @@ public class BreakpointManageCommand extends AbstractBreakpointCommand<CommandRe
         try {
             int id = manager.addBreakpoint(className, methodName, signature, classLoader);
 
-            out("断点已添加", Colors.GREEN);
+            out(Text.zhEn("断点已添加", "Breakpoint added").text(), Colors.GREEN);
             out("ID: ", Colors.CYAN);
             out(String.valueOf(id), Colors.YELLOW);
-            out("类: ", Colors.CYAN);
+            out(CliMessages.LABEL_CLASS.text(), Colors.CYAN);
             out(className, Colors.GREEN);
-            out("方法: ", Colors.CYAN);
+            out(CliMessages.LABEL_METHOD.text(), Colors.CYAN);
             out(methodName, Colors.GREEN);
-            out("签名: ", Colors.CYAN);
-            out(signature != null ? signature : "所有重载", Colors.GRAY);
-            out("状态: ", Colors.CYAN);
-            out("启用", Colors.GREEN);
+            out(Text.zhEn("签名: ", "Signature: ").text(), Colors.CYAN);
+            out(signature != null ? signature : BreakpointTexts.VALUE_ALL_OVERLOADS.text(), Colors.GRAY);
+            out(Text.zhEn("状态: ", "Status: ").text(), Colors.CYAN);
+            out(BreakpointTexts.VALUE_ENABLED.text(), Colors.GREEN);
             out("", Colors.WHITE);
-            out("断点已设置并生效！", Colors.GREEN);
+            out(Text.zhEn("断点已设置并生效！", "Breakpoint is set and active!").text(), Colors.GREEN);
 
-            return createSuccessResult("断点已添加，ID=" + id);
+            return createSuccessResult(Text.zhEn("断点已添加，ID=%d", "Breakpoint added, ID=%d").format(id));
         } catch (Exception e) {
-            out("错误: 添加断点失败 - " + e.getMessage(), Colors.RED);
-            return createErrorResult("添加断点失败: " + e.getMessage());
+            out(CliMessages.ERROR_PREFIX.text() + BreakpointTexts.ERR_ADD_FAILED.text()
+                    + " - " + e.getMessage(), Colors.RED);
+            return createErrorResult(BreakpointTexts.ERR_ADD_FAILED.text() + ": " + e.getMessage());
         }
     }
 
@@ -84,13 +87,13 @@ public class BreakpointManageCommand extends AbstractBreakpointCommand<CommandRe
         int id = Integer.parseInt(request.getId());
 
         if (manager.enableTask(id)) {
-            out("断点已启用", Colors.GREEN);
+            out(Text.zhEn("断点已启用", "Breakpoint enabled").text(), Colors.GREEN);
             out("ID: ", Colors.CYAN);
             out(String.valueOf(id), Colors.YELLOW);
-            return createSuccessResult("断点已启用，ID=" + id);
+            return createSuccessResult(Text.zhEn("断点已启用，ID=%d", "Breakpoint enabled, ID=%d").format(id));
         } else {
-            out("错误: 断点不存在", Colors.RED);
-            return createErrorResult("断点不存在");
+            out(CliMessages.ERROR_PREFIX.text() + BreakpointTexts.ERR_NOT_FOUND.text(), Colors.RED);
+            return createErrorResult(BreakpointTexts.ERR_NOT_FOUND.text());
         }
     }
 
@@ -98,13 +101,13 @@ public class BreakpointManageCommand extends AbstractBreakpointCommand<CommandRe
         int id = Integer.parseInt(request.getId());
 
         if (manager.disableTask(id)) {
-            out("断点已禁用", Colors.YELLOW);
+            out(Text.zhEn("断点已禁用", "Breakpoint disabled").text(), Colors.YELLOW);
             out("ID: ", Colors.CYAN);
             out(String.valueOf(id), Colors.YELLOW);
-            return createSuccessResult("断点已禁用，ID=" + id);
+            return createSuccessResult(Text.zhEn("断点已禁用，ID=%d", "Breakpoint disabled, ID=%d").format(id));
         } else {
-            out("错误: 断点不存在", Colors.RED);
-            return createErrorResult("断点不存在");
+            out(CliMessages.ERROR_PREFIX.text() + BreakpointTexts.ERR_NOT_FOUND.text(), Colors.RED);
+            return createErrorResult(BreakpointTexts.ERR_NOT_FOUND.text());
         }
     }
 
@@ -112,22 +115,22 @@ public class BreakpointManageCommand extends AbstractBreakpointCommand<CommandRe
         int id = Integer.parseInt(request.getId());
 
         if (manager.removeTask(id)) {
-            out("断点已移除", Colors.GREEN);
+            out(Text.zhEn("断点已移除", "Breakpoint removed").text(), Colors.GREEN);
             out("ID: ", Colors.CYAN);
             out(String.valueOf(id), Colors.YELLOW);
-            return createSuccessResult("断点已移除，ID=" + id);
+            return createSuccessResult(Text.zhEn("断点已移除，ID=%d", "Breakpoint removed, ID=%d").format(id));
         } else {
-            out("错误: 断点不存在", Colors.RED);
-            return createErrorResult("断点不存在");
+            out(CliMessages.ERROR_PREFIX.text() + BreakpointTexts.ERR_NOT_FOUND.text(), Colors.RED);
+            return createErrorResult(BreakpointTexts.ERR_NOT_FOUND.text());
         }
     }
 
     private BreakpointResult handleClear(BreakpointClearRequest request) {
         int count = manager.getTaskCount();
         manager.clearAll();
-        out("已清除所有断点", Colors.GREEN);
-        out("清除数量: ", Colors.CYAN);
+        out(Text.zhEn("已清除所有断点", "All breakpoints cleared").text(), Colors.GREEN);
+        out(Text.zhEn("清除数量: ", "Cleared: ").text(), Colors.CYAN);
         out(String.valueOf(count), Colors.YELLOW);
-        return createSuccessResult("已清除 " + count + " 个断点");
+        return createSuccessResult(Text.zhEn("已清除 %d 个断点", "Cleared %d breakpoint(s)").format(count));
     }
 }

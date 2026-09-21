@@ -1,5 +1,6 @@
 package com.justnothing.testmodule.command.functions.watch.impl;
 
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.framework.model.AbstractCommand;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.CommandExecutor;
@@ -21,7 +22,7 @@ public abstract class AbstractWatchCommand<Req extends CommandRequest<?>, Res ex
     protected Res executeInternal(CommandExecutor.CmdExecContext<Req> context) throws Exception {
         Req request = context.getCommandRequest();
         if (request == null) {
-            throw new IllegalStateException("Request不能为null");
+            throw new IllegalStateException(Text.zhEn("Request不能为null", "Request must not be null").text());
         }
         
         try {

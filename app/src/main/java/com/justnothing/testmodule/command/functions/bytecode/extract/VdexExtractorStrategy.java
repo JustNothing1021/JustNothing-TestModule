@@ -1,5 +1,6 @@
 package com.justnothing.testmodule.command.functions.bytecode.extract;
 
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.functions.bytecode.util.BundledToolProvider;
 import com.justnothing.testmodule.constants.FileDirectory;
 import com.justnothing.testmodule.utils.logging.Logger;
@@ -37,7 +38,7 @@ public final class VdexExtractorStrategy implements DexExtractor {
 
     @Override
     public String name() {
-        return "vdexExtractor（de-quicken）";
+        return Text.zhEn("vdexExtractor（de-quicken）", "vdexExtractor (de-quicken)").text();
     }
 
     @Override
@@ -88,7 +89,8 @@ public final class VdexExtractorStrategy implements DexExtractor {
             results.add(new Result(
                     Files.readAllBytes(dex.toPath()),
                     DexTrust.DEQUICKENED,
-                    "由 vdexExtractor 还原（" + dex.getName() + "）"));
+                    Text.zhEn("由 vdexExtractor 还原（%s）", "restored by vdexExtractor (%s)")
+                            .format(dex.getName())));
         }
         logger.info("vdexExtractor 还原出 " + results.size() + " 个 dex: " + source);
         return results;

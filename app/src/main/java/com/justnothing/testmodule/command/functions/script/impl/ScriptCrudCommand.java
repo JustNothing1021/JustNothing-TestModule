@@ -1,6 +1,8 @@
 package com.justnothing.testmodule.command.functions.script.impl;
 
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.functions.script.ScriptTexts;
 import com.justnothing.testmodule.command.functions.script.response.ScriptResult;
@@ -45,7 +47,8 @@ public class ScriptCrudCommand extends AbstractScriptCommand<ScriptBaseRequest<?
         if (request instanceof ScriptDeleteRequest r) {
             return handleDelete(r.getName());
         }
-        throw new IllegalArgumentException("不支持的请求类型: " + request.getClass().getSimpleName());
+        throw new IllegalArgumentException(
+                ScriptTexts.ERR_UNSUPPORTED_REQUEST_TYPE.format(request.getClass().getSimpleName()));
     }
 
     protected ScriptResult handleCreate(String scriptName) throws IOException {
@@ -53,27 +56,29 @@ public class ScriptCrudCommand extends AbstractScriptCommand<ScriptBaseRequest<?
         r.setSubCommand("create");
 
         if (scriptName == null || scriptName.isEmpty()) {
-            context.println("错误: 需要指定脚本名称", Colors.RED);
-            context.println("用法: script create <name>", Colors.GRAY);
+            context.println(CliMessages.ERROR_PREFIX.text() + ScriptTexts.ERR_NEED_SCRIPT_NAME.text(), Colors.RED);
+            context.println(CliMessages.HELP_USAGE_INLINE.text() + "script create <name>", Colors.GRAY);
             r.setSuccess(false);
-            r.setOutput("需要指定脚本名称");
+            r.setOutput(ScriptTexts.ERR_NEED_SCRIPT_NAME.text());
             return r;
         }
 
         if (!isValidScriptName(scriptName)) {
-            context.println("错误: 脚本名称只能包含字母、数字和下划线", Colors.RED);
+            context.println(CliMessages.ERROR_PREFIX.text()
+                    + Text.zhEn("脚本名称只能包含字母、数字和下划线",
+                            "Script name may contain only letters, digits and underscores").text(), Colors.RED);
             r.setSuccess(false);
-            r.setOutput("脚本名称无效: " + scriptName);
+            r.setOutput(Text.zhEn("脚本名称无效: %s", "Invalid script name: %s").format(scriptName));
             return r;
         }
 
         File scriptFile = DataBridge.getScriptFile(scriptName);
         if (scriptFile.exists()) {
-            context.print("错误: 脚本 '", Colors.RED);
+            context.print(CliMessages.ERROR_PREFIX.text() + ScriptTexts.PREFIX_SCRIPT_QUOTED.text(), Colors.RED);
             context.print(scriptName, Colors.YELLOW);
-            context.println("' 已存在", Colors.RED);
+            context.println(ScriptTexts.SUFFIX_ALREADY_EXISTS.text(), Colors.RED);
             r.setSuccess(false);
-            r.setOutput("脚本已存在: " + scriptName);
+            r.setOutput(Text.zhEn("脚本已存在: %s", "Script already exists: %s").format(scriptName));
             return r;
         }
 
@@ -85,14 +90,14 @@ public class ScriptCrudCommand extends AbstractScriptCommand<ScriptBaseRequest<?
                         .format(new Date())
                 +
                 "\n" +
-                "// 在这里编写你的脚本代码...\n";
+                Text.zhEn("// 在这里编写你的脚本代码...\n", "// Write your script code here...\n").text();
 
         IOManager.writeFile(scriptFile.getAbsolutePath(), content);
 
-        context.print("脚本 '", Colors.GREEN);
+        context.print(ScriptTexts.PREFIX_SCRIPT_QUOTED.text(), Colors.GREEN);
         context.print(scriptName, Colors.YELLOW);
-        context.println("' 创建成功", Colors.GREEN);
-        context.print("路径: ", Colors.CYAN);
+        context.println(Text.zhEn("' 创建成功", "' created").text(), Colors.GREEN);
+        context.print(ScriptTexts.LABEL_PATH.text(), Colors.CYAN);
         context.println(scriptFile.getAbsolutePath(), Colors.GREEN);
 
         r.setSuccess(true);
@@ -105,26 +110,26 @@ public class ScriptCrudCommand extends AbstractScriptCommand<ScriptBaseRequest<?
         r.setSubCommand("show");
 
         if (fileName == null || fileName.isEmpty()) {
-            context.println("错误: 需要指定文件名称", Colors.RED);
-            context.println("用法: script show <name>", Colors.GRAY);
+            context.println(CliMessages.ERROR_PREFIX.text() + ScriptTexts.ERR_NEED_FILE_NAME.text(), Colors.RED);
+            context.println(CliMessages.HELP_USAGE_INLINE.text() + "script show <name>", Colors.GRAY);
             r.setSuccess(false);
-            r.setOutput("需要指定文件名称");
+            r.setOutput(ScriptTexts.ERR_NEED_FILE_NAME.text());
             return r;
         }
 
         File targetFile = DataBridge.resolveScriptFile(fileName);
 
         if (!targetFile.exists()) {
-            context.print("错误: 文件 '", Colors.RED);
+            context.print(CliMessages.ERROR_PREFIX.text() + ScriptTexts.PREFIX_FILE_QUOTED.text(), Colors.RED);
             context.print(fileName, Colors.YELLOW);
-            context.println("' 不存在", Colors.RED);
+            context.println(ScriptTexts.SUFFIX_NOT_EXIST.text(), Colors.RED);
             r.setSuccess(false);
-            r.setOutput("文件不存在: " + fileName);
+            r.setOutput(ScriptTexts.ERR_FILE_NOT_FOUND.format(fileName));
             return r;
         }
 
         String content = IOManager.readFile(targetFile.getAbsolutePath());
-        context.print("===== 文件内容: ", Colors.CYAN);
+        context.print(Text.zhEn("===== 文件内容: ", "===== File contents: ").text(), Colors.CYAN);
         context.print(fileName, Colors.YELLOW);
         context.println(" =====", Colors.CYAN);
         context.println("", Colors.WHITE);
@@ -141,35 +146,36 @@ public class ScriptCrudCommand extends AbstractScriptCommand<ScriptBaseRequest<?
         r.setSubCommand("delete");
 
         if (fileName == null || fileName.isEmpty()) {
-            context.println("错误: 需要指定文件名称", Colors.RED);
-            context.println("用法: script delete <name>", Colors.GRAY);
+            context.println(CliMessages.ERROR_PREFIX.text() + ScriptTexts.ERR_NEED_FILE_NAME.text(), Colors.RED);
+            context.println(CliMessages.HELP_USAGE_INLINE.text() + "script delete <name>", Colors.GRAY);
             r.setSuccess(false);
-            r.setOutput("需要指定文件名称");
+            r.setOutput(ScriptTexts.ERR_NEED_FILE_NAME.text());
             return r;
         }
 
         File targetFile = DataBridge.resolveScriptFile(fileName);
 
         if (!targetFile.exists()) {
-            context.print("错误: 文件 '", Colors.RED);
+            context.print(CliMessages.ERROR_PREFIX.text() + ScriptTexts.PREFIX_FILE_QUOTED.text(), Colors.RED);
             context.print(fileName, Colors.YELLOW);
-            context.println("' 不存在", Colors.RED);
+            context.println(ScriptTexts.SUFFIX_NOT_EXIST.text(), Colors.RED);
             r.setSuccess(false);
-            r.setOutput("文件不存在: " + fileName);
+            r.setOutput(ScriptTexts.ERR_FILE_NOT_FOUND.format(fileName));
             return r;
         }
 
         if (IOManager.deleteFile(targetFile.getAbsolutePath())) {
-            context.print("文件 '", Colors.GREEN);
+            context.print(ScriptTexts.PREFIX_FILE_QUOTED.text(), Colors.GREEN);
             context.print(fileName, Colors.YELLOW);
-            context.println("' 已删除", Colors.GREEN);
+            context.println(Text.zhEn("' 已删除", "' deleted").text(), Colors.GREEN);
             r.setSuccess(true);
         } else {
-            context.print("错误: 无法删除文件 '", Colors.RED);
+            context.print(CliMessages.ERROR_PREFIX.text()
+                    + Text.zhEn("无法删除文件 '", "Cannot delete file '").text(), Colors.RED);
             context.print(fileName, Colors.YELLOW);
             context.println("'", Colors.RED);
             r.setSuccess(false);
-            r.setOutput("无法删除文件: " + fileName);
+            r.setOutput(Text.zhEn("无法删除文件: %s", "Cannot delete file: %s").format(fileName));
         }
 
         r.setDeletedName(fileName);

@@ -1,5 +1,7 @@
 package com.justnothing.testmodule.command.functions.script;
 
+import com.justnothing.testmodule.command.framework.i18n.Text;
+
 import java.util.Map;
 
 /**
@@ -51,6 +53,49 @@ public final class ScriptTexts {
     public static final String PARAM_SCRIPT_PERMISSION_GRANT_PERMISSIONS_DESC = "param.script.permission.grant.permissions.desc";
     public static final String PARAM_SCRIPT_PERMISSION_DENY_PERMISSIONS_DESC = "param.script.permission.deny.permissions.desc";
     public static final String PARAM_SCRIPT_PERMISSION_PRESET_PRESETNAME_DESC = "param.script.permission.preset.presetName.desc";
+
+    // ==================== 族内复用输出文案 ====================
+    // 判据只看「在本族里出现了两次以上」；只用一次的就地写 Text.zhEn。
+    // 跨族复用的标签（「错误: 」「用法: 」这类）在 CliMessages 里，这里不重复。
+
+    /** 请求对象和处理器对不上时的护栏文案（crud / exec / manage 三个分发入口都用）。 */
+    public static final Text ERR_UNSUPPORTED_REQUEST_TYPE =
+            Text.zhEn("不支持的请求类型: %s", "Unsupported request type: %s");
+
+    /** 「需要指定…」系列：打印行再前置 CliMessages.ERROR_PREFIX，结果消息直接用。 */
+    public static final Text ERR_NEED_FILE_NAME = Text.zhEn("需要指定文件名称", "File name required");
+    public static final Text ERR_NEED_SCRIPT_NAME = Text.zhEn("需要指定脚本名称", "Script name required");
+    public static final Text ERR_NEED_FILE_PATH = Text.zhEn("需要指定文件路径", "File path required");
+    public static final Text ERR_NEED_NAME_AND_EXPORT_PATH =
+            Text.zhEn("需要指定文件名称和导出路径", "File name and export path required");
+
+    /** 结果消息里的「文件不存在: <路径>」。 */
+    public static final Text ERR_FILE_NOT_FOUND = Text.zhEn("文件不存在: %s", "File not found: %s");
+
+    // 打印行是「前缀 + 名字 + 后缀」三段，名字单独着色，所以引号前缀和「不存在/已存在」后缀各拆一条。
+    /** 带引号的文件名前缀，打印行里再前置 CliMessages.ERROR_PREFIX。 */
+    public static final Text PREFIX_FILE_QUOTED = Text.zhEn("文件 '", "File '");
+    /** 带引号的脚本名前缀，打印行里再前置 CliMessages.ERROR_PREFIX。 */
+    public static final Text PREFIX_SCRIPT_QUOTED = Text.zhEn("脚本 '", "Script '");
+    /** 跟在被引号包住的名字后面的「不存在」。 */
+    public static final Text SUFFIX_NOT_EXIST = Text.zhEn("' 不存在", "' does not exist");
+    /** 跟在被引号包住的名字后面的「已存在」。 */
+    public static final Text SUFFIX_ALREADY_EXISTS = Text.zhEn("' 已存在", "' already exists");
+
+    /** 「语法错误: 」前缀：交互模式的输入报错和异常转储共用。 */
+    public static final Text SYNTAX_ERROR_PREFIX = Text.zhEn("语法错误: ", "Syntax error: ");
+
+    /** 取不到异常信息时的兜底（交互模式的异常路径与结果消息共用）。 */
+    public static final Text NO_DETAILS = Text.zhEn("没有详细信息", "no details");
+
+    /** 权限配置表里 9 行的取值（「磁盘读取: 允许」）。 */
+    public static final Text PERMISSION_ALLOWED = Text.zhEn("允许", "Allowed");
+    public static final Text PERMISSION_DENIED = Text.zhEn("禁止", "Denied");
+
+    /** 「总计: 」前缀（脚本列表 / 变量列表 / Codebase 列表共用）。 */
+    public static final Text LABEL_TOTAL = Text.zhEn("总计: ", "Total: ");
+    /** 「路径: 」标签。 */
+    public static final Text LABEL_PATH = Text.zhEn("路径: ", "Path: ");
 
     private ScriptTexts() {
     }

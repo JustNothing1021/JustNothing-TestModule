@@ -1,5 +1,7 @@
 package com.justnothing.testmodule.command.functions.system;
 
+import com.justnothing.testmodule.command.framework.i18n.Text;
+
 import java.util.Map;
 
 /**
@@ -33,6 +35,22 @@ public final class SystemTexts {
     public static final String PARAM_SYSTEM_OS_DESC = "param.system.os.desc";
     public static final String PARAM_SYSTEM_PROPS_DESC = "param.system.props.desc";
     public static final String PARAM_SYSTEM_ALL_DESC = "param.system.all.desc";
+
+    // ==================== 输出文案 ====================
+    // 判据只看「在本族里出现了两次以上」；只用一次的就地写 Text.zhEn。
+    // 同一批标签有两种形态：结构化结果（SystemFieldInfo 的 category/label）不带冒号，彩色输出带 ": "。
+    // 前者用 FIELD_ 前缀，后者用 LABEL_ 前缀，两边各留一份常量。
+    public static final Text FIELD_OS = Text.zhEn("操作系统", "OS");
+    public static final Text FIELD_CPU_INFO = Text.zhEn("CPU信息", "CPU information");
+    public static final Text FIELD_PROCESSOR_COUNT = Text.zhEn("处理器数", "Processor count");
+    public static final Text FIELD_JAVA_HEAP = Text.zhEn("Java堆内存", "Java heap");
+    public static final Text FIELD_SYSTEM_MEMORY = Text.zhEn("系统内存", "System memory");
+    public static final Text FIELD_SYSTEM_PROPS = Text.zhEn("系统属性", "System properties");
+    public static final Text LABEL_PROCESSOR_COUNT = Text.zhEn("处理器数: ", "Processor count: ");
+    public static final Text VALUE_PERMISSION_REQUIRED = Text.zhEn("需要权限", "permission required");
+    /** 「是」「否」当值用，memory 族的 AbstractMemoryCommand 里也是这两个字，可能是跨族复用。 */
+    public static final Text VALUE_YES = Text.zhEn("是", "yes");
+    public static final Text VALUE_NO = Text.zhEn("否", "no");
 
     private SystemTexts() {
     }

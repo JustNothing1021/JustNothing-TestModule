@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.intercept;
 
 import androidx.annotation.NonNull;
 
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.functions.intercept.base.AbstractInterceptTask;
 import com.justnothing.testmodule.command.functions.intercept.base.TaskType;
 import com.justnothing.testmodule.hooks.api.HookParam;
@@ -146,14 +147,14 @@ public class TraceInterceptTask extends AbstractInterceptTask {
     public String getTraceOutput(int limit) {
         synchronized (callRecords) {
             if (callRecords.isEmpty()) {
-                return "暂无调用记录";
+                return InterceptTexts.TRACE_NO_RECORDS.text();
             }
 
             StringBuilder sb = new StringBuilder();
-            sb.append("=== Trace 输出 ===\n");
-            sb.append("任务ID: ").append(id).append("\n");
-            sb.append("目标方法: ").append(className).append(".").append(methodName).append("\n");
-            sb.append("总调用次数: ").append(hitCount.get()).append("\n\n");
+            sb.append(Text.zhEn("=== Trace 输出 ===\n", "=== Trace output ===\n").text());
+            sb.append(InterceptTexts.TRACE_TASK_ID.text()).append(id).append("\n");
+            sb.append(InterceptTexts.TRACE_TARGET_METHOD.text()).append(className).append(".").append(methodName).append("\n");
+            sb.append(InterceptTexts.TRACE_TOTAL_CALLS.text()).append(hitCount.get()).append("\n\n");
 
             int count = 0;
             for (CallRecord record : callRecords) {
@@ -168,11 +169,11 @@ public class TraceInterceptTask extends AbstractInterceptTask {
 
     public String getCallTree() {
         synchronized (callTree) {
-            if (callTree.isEmpty()) return "暂无调用记录";
+            if (callTree.isEmpty()) return InterceptTexts.TRACE_NO_RECORDS.text();
 
             StringBuilder sb = new StringBuilder();
-            sb.append("=== 调用树 ===\n");
-            sb.append("总调用次数: ").append(hitCount.get()).append("\n\n");
+            sb.append(InterceptTexts.TRACE_CALL_TREE_HEADER.text());
+            sb.append(InterceptTexts.TRACE_TOTAL_CALLS.text()).append(hitCount.get()).append("\n\n");
 
             for (CallNode node : callTree.values()) {
                 sb.append(node.toString()).append("\n");
@@ -186,21 +187,21 @@ public class TraceInterceptTask extends AbstractInterceptTask {
         synchronized (callRecords) {
             try {
                 StringBuilder content = new StringBuilder();
-                content.append("=== Trace 调用记录 ===\n");
-                content.append("任务ID: ").append(id).append("\n");
-                content.append("目标方法: ").append(className).append(".").append(methodName).append("\n");
-                content.append("签名: ").append(signature != null ? signature : "所有").append("\n");
-                content.append("总调用次数: ").append(hitCount.get()).append("\n");
-                content.append("记录时间: ").append(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+                content.append(Text.zhEn("=== Trace 调用记录 ===\n", "=== Trace call records ===\n").text());
+                content.append(InterceptTexts.TRACE_TASK_ID.text()).append(id).append("\n");
+                content.append(InterceptTexts.TRACE_TARGET_METHOD.text()).append(className).append(".").append(methodName).append("\n");
+                content.append(InterceptTexts.LABEL_SIGNATURE.text()).append(signature != null ? signature : Text.zhEn("所有", "all").text()).append("\n");
+                content.append(InterceptTexts.TRACE_TOTAL_CALLS.text()).append(hitCount.get()).append("\n");
+                content.append(Text.zhEn("记录时间: ", "Recorded at: ").text()).append(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
                         .format(new Date())).append("\n\n");
 
-                content.append("=== 调用树 ===\n");
+                content.append(InterceptTexts.TRACE_CALL_TREE_HEADER.text());
                 for (CallNode node : callTree.values()) {
                     content.append(node.toString()).append("\n");
                 }
                 content.append("\n");
 
-                content.append("=== 详细调用记录 ===\n");
+                content.append(Text.zhEn("=== 详细调用记录 ===\n", "=== Detailed call records ===\n").text());
                 for (CallRecord record : callRecords) {
                     content.append(record.toString()).append("\n");
                 }
@@ -224,10 +225,10 @@ public class TraceInterceptTask extends AbstractInterceptTask {
             StringBuilder sb = new StringBuilder();
             sb.append("[").append(timestamp).append("] ");
             sb.append(className).append(".").append(methodName);
-            sb.append(" (深度: ").append(depth).append(")");
+            sb.append(Text.zhEn(" (深度: ", " (depth: ").text()).append(depth).append(")");
 
             if (args != null && args.length > 0) {
-                sb.append(" 参数: [");
+                sb.append(Text.zhEn(" 参数: [", " args: [").text());
                 for (int i = 0; i < args.length; i++) {
                     sb.append(args[i] != null ? args[i].toString() : "null");
                     if (i < args.length - 1) {
@@ -238,14 +239,14 @@ public class TraceInterceptTask extends AbstractInterceptTask {
             }
 
             if (exception != null) {
-                sb.append(" 异常: ").append(exception.getClass().getSimpleName())
+                sb.append(Text.zhEn(" 异常: ", " exception: ").text()).append(exception.getClass().getSimpleName())
                         .append(": ").append(exception.getMessage());
             } else if (returnValue != null) {
-                sb.append(" 返回值: ").append(returnValue);
+                sb.append(Text.zhEn(" 返回值: ", " return value: ").text()).append(returnValue);
             }
 
             if (duration > 0) {
-                sb.append(" 耗时: ").append(duration).append("ms");
+                sb.append(Text.zhEn(" 耗时: ", " duration: ").text()).append(duration).append("ms");
             }
 
             return sb.toString();
@@ -335,24 +336,24 @@ public class TraceInterceptTask extends AbstractInterceptTask {
         public String toString() {
             StringBuilder sb = new StringBuilder();
             sb.append(className).append(".").append(methodName);
-            sb.append(" (调用次数: ").append(callCount.get());
+            sb.append(Text.zhEn(" (调用次数: ", " (calls: ").text()).append(callCount.get());
 
             if (exceptionCount.get() > 0) {
-                sb.append(", 异常次数: ").append(exceptionCount.get());
+                sb.append(Text.zhEn(", 异常次数: ", ", exceptions: ").text()).append(exceptionCount.get());
             }
 
-            sb.append(", 最大深度: ").append(maxDepth);
+            sb.append(Text.zhEn(", 最大深度: ", ", max depth: ").text()).append(maxDepth);
 
             if (totalDuration > 0) {
-                sb.append(", 平均耗时: ").append(getAvgDuration()).append("ms");
-                sb.append(", 最大耗时: ").append(maxDuration).append("ms");
-                sb.append(", 最小耗时: ").append(getMinDuration()).append("ms");
+                sb.append(Text.zhEn(", 平均耗时: ", ", avg duration: ").text()).append(getAvgDuration()).append("ms");
+                sb.append(Text.zhEn(", 最大耗时: ", ", max duration: ").text()).append(maxDuration).append("ms");
+                sb.append(Text.zhEn(", 最小耗时: ", ", min duration: ").text()).append(getMinDuration()).append("ms");
             }
 
             sb.append(")");
 
             if (!returnValues.isEmpty()) {
-                sb.append("\n  返回值示例: ");
+                sb.append(Text.zhEn("\n  返回值示例: ", "\n  return value samples: ").text());
                 for (int i = 0; i < returnValues.size(); i++) {
                     sb.append(returnValues.get(i));
                     if (i < returnValues.size() - 1) {

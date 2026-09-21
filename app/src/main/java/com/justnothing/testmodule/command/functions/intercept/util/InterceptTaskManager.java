@@ -1,5 +1,7 @@
 package com.justnothing.testmodule.command.functions.intercept.util;
 
+import com.justnothing.testmodule.command.framework.i18n.Text;
+import com.justnothing.testmodule.command.functions.intercept.InterceptTexts;
 import com.justnothing.testmodule.command.functions.intercept.base.TaskType;
 import com.justnothing.testmodule.command.functions.intercept.base.InterceptTask;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
@@ -36,7 +38,7 @@ public class InterceptTaskManager {
         int id = nextId.getAndIncrement();
         task.setId(id);
         allTasks.put(id, task);
-        Objects.requireNonNull(tasksByType.get(task.getType()), "没有找到对应的任务类型: " + task.getType().getCommandName()).put(id, task);
+        Objects.requireNonNull(tasksByType.get(task.getType()), InterceptTexts.NO_TASK_TYPE_FOUND.format(task.getType().getCommandName())).put(id, task);
         logger.info("添加任务: " + id + " (" + task.getType().getCommandName() + ") " + task.getDisplayName());
         return id;
     }
@@ -56,7 +58,7 @@ public class InterceptTaskManager {
     public boolean stopTask(int id) {
         InterceptTask task = allTasks.remove(id);
         if (task != null) {
-            Objects.requireNonNull(tasksByType.get(task.getType()), "没有找到对应的任务类型: " + task.getType().getCommandName()).remove(id);
+            Objects.requireNonNull(tasksByType.get(task.getType()), InterceptTexts.NO_TASK_TYPE_FOUND.format(task.getType().getCommandName())).remove(id);
             task.stop();
             logger.info("停止任务: " + id);
             return true;
@@ -160,12 +162,12 @@ public class InterceptTaskManager {
 
     public String getTaskListString() {
         if (allTasks.isEmpty()) {
-            return "当前没有活跃的拦截任务";
+            return Text.zhEn("当前没有活跃的拦截任务", "No active intercept tasks").text();
         }
 
         StringBuilder sb = new StringBuilder();
-        sb.append("=== 活跃的拦截任务 ===\n");
-        sb.append("总计: ").append(allTasks.size()).append(" 个任务\n\n");
+        sb.append(Text.zhEn("=== 活跃的拦截任务 ===\n", "=== Active intercept tasks ===\n").text());
+        sb.append(InterceptTexts.LABEL_TOTAL_TASKS.format(allTasks.size())).append("\n\n");
 
         for (TaskType type : TaskType.values()) {
             List<InterceptTask> typeTasks = getTasksByType(type);
@@ -184,12 +186,12 @@ public class InterceptTaskManager {
     public String getTaskListString(TaskType type) {
         List<InterceptTask> typeTasks = getTasksByType(type);
         if (typeTasks.isEmpty()) {
-            return "当前没有活跃的" + type.getDescription() + "任务";
+            return InterceptTexts.NO_ACTIVE_TASKS.format(type.getDescription());
         }
 
         StringBuilder sb = new StringBuilder();
-        sb.append("=== 活跃的").append(type.getDescription()).append("任务 ===\n");
-        sb.append("总计: ").append(typeTasks.size()).append(" 个任务\n\n");
+        sb.append(InterceptTexts.ACTIVE_TASKS_HEADER.format(type.getDescription())).append("\n");
+        sb.append(InterceptTexts.LABEL_TOTAL_TASKS.format(typeTasks.size())).append("\n\n");
 
         for (InterceptTask task : typeTasks) {
             sb.append(task.toString()).append("\n");

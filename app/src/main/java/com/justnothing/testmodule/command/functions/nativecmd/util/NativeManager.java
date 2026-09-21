@@ -1,5 +1,6 @@
 package com.justnothing.testmodule.command.functions.nativecmd.util;
 
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.utils.io.IOManager;
 import com.justnothing.testmodule.utils.io.ShellExecutorProvider;
 import com.justnothing.testmodule.utils.logging.Logger;
@@ -134,7 +135,9 @@ public class NativeManager {
         Map<String, String> info = new HashMap<>();
         
         try {
-            info.put("注意", "完整的native堆信息需要malloc_hook或jemalloc支持");
+            info.put(Text.zhEn("注意", "Note").text(),
+                    Text.zhEn("完整的native堆信息需要malloc_hook或jemalloc支持",
+                            "Full native heap information requires malloc_hook or jemalloc support").text());
             
         } catch (Exception e) {
             logger.error("获取native堆信息失败", e);
@@ -162,7 +165,8 @@ public class NativeManager {
             
         } catch (Exception e) {
             logger.error("获取native栈失败", e);
-            sb.append("注意: 获取native栈需要root权限\n");
+            sb.append(Text.zhEn("注意: 获取native栈需要root权限\n",
+                    "Note: reading the native stack requires root\n").text());
         }
         
         return sb.toString();

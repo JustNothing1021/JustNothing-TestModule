@@ -1,5 +1,7 @@
 package com.justnothing.testmodule.command.functions.performance.trace;
 
+import com.justnothing.testmodule.command.functions.performance.PerformanceTexts;
+
 public record TraceData(String name, long startTime, long duration, int threadId,
                         String threadName) {
 
@@ -9,7 +11,7 @@ public record TraceData(String name, long startTime, long duration, int threadId
         long durationS = durationMs / 1000;
 
         if (durationS > 0) {
-            return durationS + " 秒";
+            return durationS + PerformanceTexts.UNIT_SECONDS.text();
         } else if (durationMs > 0) {
             return durationMs + " ms";
         } else if (durationUs > 0) {

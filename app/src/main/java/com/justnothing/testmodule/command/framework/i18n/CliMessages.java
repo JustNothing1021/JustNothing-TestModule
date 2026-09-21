@@ -115,6 +115,134 @@ public enum CliMessages {
     TYPE_BOOLEAN("布尔值", "boolean"),
     TYPE_STRING("字符串", "string"),
     TYPE_LIST("列表", "list"),
+
+    // ==================== 命令输出里的通用标签 ====================
+    // 「类名: 」「方法: 」这类标签在命令层到处都在用（实测 command/ 下各自出现 30+ 次、跨多个命令族），
+    // 放进各族的 XxxTexts 会各存一份、各译一遍，以后改措辞还要改多处，所以统一放这里。
+    // 判据是「跨族复用」；只在某一个族里出现的（比如 class 族的树形前缀文案）走那个族的 XxxTexts。
+    LABEL_CLASS_NAME("类名: ", "Class: "),
+    // 复数那两条是「计数」用的（「字段: 5」），单数这两条是「标签 + 单个名字」用的（「字段: mFoo」）。
+    // 中文没有单复数，但英文不加区分会印出 "Fields: mFoo"，所以两种都得留。
+    LABEL_METHODS("方法: ", "Methods: "),
+    LABEL_FIELDS("字段: ", "Fields: "),
+    LABEL_CONSTRUCTORS("构造函数: ", "Constructors: "),
+    LABEL_METHOD("方法: ", "Method: "),
+    LABEL_FIELD("字段: ", "Field: "),
+    LABEL_INTERFACES("接口: ", "Interfaces: "),
+    LABEL_MODIFIERS("修饰符: ", "Modifiers: "),
+    LABEL_CLASS_LOADER("类加载器: ", "Class loader: "),
+    LABEL_SUPER_CLASS("父类: ", "Super class: "),
+    LABEL_PACKAGE_NAME("包名: ", "Package: "),
+    // 与 LABEL_CLASS_NAME 的区别只在中文措辞（「类:」vs「类名:」），英文撞成一条是正常的。
+    LABEL_CLASS("类: ", "Class: "),
+
+    // 命令自己拼错误行时的前缀（「错误: 别名已存在」）。跟 ExceptionHandler 那套转储的措辞不同，
+    // 那边是整段格式，这里是单行提示，所以不共用。
+    ERROR_PREFIX("错误: ", "Error: "),
+
+    ERR_NOT_ENOUGH_ARGS("参数不足", "not enough arguments"),
+    ERR_UNKNOWN_TYPE("未知类型: %s", "Unknown type: %s"),
+
+    // 「无」在各种「取不到东西」的位置当值用（父类、包名、类加载器…），中文里它是完整答案，
+    // 英文里当值就要小写。
+    VALUE_NONE("无", "none"),
+
+    // ==================== 异常上下文里的键 ====================
+    // CommandExceptionHandler 会把 context 逐行打成「  键: 值」，所以这些键也是用户看得见的文案。
+    // 它们跨 command/ 多个族（hook、watch、class…），且是 map 的键，不能带冒号。
+    CONTEXT_CLASS_NAME("类名", "Class"),
+    CONTEXT_FIELD_NAME("字段名", "Field"),
+    CONTEXT_METHOD_NAME("方法名", "Method"),
+    CONTEXT_PARAM_INDEX("参数索引", "Parameter index"),
+    CONTEXT_PARAM_EXPRESSION("参数表达式", "Parameter expression"),
+    CONTEXT_ERROR_MESSAGE("错误信息", "Error"),
+    CONTEXT_SIGNATURE("签名", "Signature"),
+
+    // ==================== 异常转储（CommandExceptionHandler）====================
+    // 每一条都同时喂给「彩色输出」和「拼给调用方的纯文本」，所以调用点先把 .text() 存进局部变量，
+    // 别查两遍。
+    ERR_HEAD_PREFIX("错误: 执行", "Error: exception while executing "),
+    // 英语的语序里没有对应「命令时发生异常」的后半截，留空（中英两侧都只是收尾，不留额外空格）。
+    ERR_HEAD_SUFFIX("命令时发生异常", ""),
+    ERR_EXCEPTION_TYPE("异常类型: ", "Exception type: "),
+    ERR_MESSAGE("错误信息: ", "Error message: "),
+    ERR_DETAILS("错误详情: ", "Details: "),
+    ERR_CONTEXT("上下文信息:", "Context:"),
+    ERR_STACK_TRACE("堆栈追踪:", "Stack trace:"),
+    ERR_NO_MESSAGE("无详细信息", "no details"),
+
+    // ==================== 命令执行基类（CommandExecutor）====================
+    EXEC_EMPTY_COMMAND("命令不能为空", "Command cannot be empty"),
+    EXEC_EMPTY_REQUEST("请求不能为空", "Request cannot be empty"),
+    EXEC_NO_COMMAND("没有指定命令 (可以用help来获取帮助)", "No command given (use help for help)"),
+    EXEC_UNKNOWN_COMMAND("未知的命令: %s, 输入help获取帮助", "Unknown command: %s; run help for help"),
+    EXEC_ARG_ERROR("参数错误: %s", "Argument error: %s"),
+
+    // 这段严重错误报告是分三段打出来的：中间那段要单独染成黄色，所以没法在模板里一次成形。
+    // 中英语序不同，三段各自成句，拼起来仍是一句完整的话。
+    EXEC_FATAL_HEAD("执行命令出现严重错误...", "A fatal error occurred while executing the command..."),
+    EXEC_FATAL_DETAIL_PREFIX("（你现在看到的是命令执行基类的错误报告, 大概率是命令执行爆掉了或者命令内部",
+            "(This is the error report from the command execution base class — the command most likely blew up, or it threw an"),
+    EXEC_FATAL_DETAIL_HIGHLIGHT("出现了Error而不是Exception", "Error instead of an Exception"),
+    EXEC_FATAL_DETAIL_SUFFIX("!）", "!)"),
+
+    // ==================== 参数解析与校验 ====================
+    // 这些抛出的 IllegalArgumentException 会被外层接住、打到用户界面上。
+    // 模板里的 fieldName 是请求对象里的字段名（代码里的英文标识符），翻不了，所以只翻模板本身。
+    ERR_NOT_A_NUMBER("%s必须是数字", "%s must be a number"),
+    ERR_PARAM_TOO_SMALL("%s不能小于%d", "%s must not be less than %d"),
+    ERR_PARAM_TOO_LARGE("%s不能大于%d", "%s must not be greater than %d"),
+    ERR_PARAM_OUT_OF_RANGE("%s必须在%d到%d之间", "%s must be between %d and %d"),
+    ERR_NOT_ENOUGH_VALUES("参数不足，至少需要%d个参数", "not enough arguments: at least %d required"),
+    ERR_MISSING_PARAM("缺少必填参数: %s", "missing required parameter: %s"),
+    ERR_PARAM_NEEDS_VALUE("参数 %s 需要值", "parameter %s needs a value"),
+    ERR_PATTERN_MISMATCH("参数 %s 值 '%s' 不匹配模式: %s",
+            "parameter %s value '%s' does not match pattern: %s"),
+    ERR_WRONG_REQUEST_TYPE("命令请求类型错误; 期待%s, 却接收到了%s",
+            "Wrong request type; expected %s but received %s"),
+    ERR_INPUT_TIMEOUT("输入请求超时 (%d秒)", "input request timed out (%d s)"),
+    ERR_INPUT_FAILED("输入请求失败", "input request failed"),
+
+    // 字段级取值约束（CmdParamValidator）。这一层拿到的 fieldName / 参数名同样是代码里的英文标识符。
+    ERR_INVALID_PATTERN("无效的正则表达式: %s", "invalid regular expression: %s"),
+    ERR_NOT_IN_ALLOWED_VALUES("参数 %s 值 '%s' 不在允许列表中: %s",
+            "parameter %s value '%s' is not in the allowed list: %s"),
+    ERR_RANGE_ON_NON_NUMBER("参数 %s 声明了 min/max，但其值 '%s' (%s) 不是数值类型，无法比较大小",
+            "parameter %s declares min/max, but its value '%s' (%s) is not numeric and cannot be compared"),
+    ERR_BELOW_MIN("参数 %s 值 %s 小于最小值 %s", "parameter %s value %s is below the minimum %s"),
+    ERR_ABOVE_MAX("参数 %s 值 %s 大于最大值 %s", "parameter %s value %s is above the maximum %s"),
+    ERR_FIELD_ACCESS_FAILED("无法访问字段: %s", "cannot access field: %s"),
+    ERR_MUTEX_CONFLICT("参数 '%s' 与 '%s' 互斥，不能同时使用。\n提示: 请选择其中之一",
+            "parameters '%s' and '%s' are mutually exclusive.\nHint: pick one of them"),
+    ERR_REQUIRES_MISSING("参数 '%s' 需要同时指定 '%s'。\n提示: 请添加 --%s 参数",
+            "parameter '%s' also requires '%s'.\nHint: add the --%s option"),
+
+    // ==================== 路由（CommandRouter）====================
+    ERR_UNKNOWN_COMMAND("未知的命令: %s", "Unknown command: %s"),
+    ERR_NO_MATCHING_ROUTE("未找到匹配的路由: %s %s", "No matching route found: %s %s"),
+
+    // ==================== 框架内部断言 / 协议错误 ====================
+    // 这些大多是不可达的调用方误用断言，但它们跟上面那些一样会经由异常转储打到屏幕上，
+    // 所以一并翻译 —— 半中半英的报错比全英文更难读。
+    ERR_OUTPUT_HANDLER_NULL("输出处理器不能为null", "output handler must not be null"),
+    ERR_REQUEST_NULL("请求对象不能为 null", "request object must not be null"),
+    ERR_SET_FIELD_FAILED("设置字段 %s 失败: %s", "failed to set field %s: %s"),
+    ERR_INPUT_STREAM_NULL("InputStream不能为null", "InputStream must not be null"),
+    ERR_OUTPUT_STREAM_NULL("OutputStream不能为null", "OutputStream must not be null"),
+    ERR_WRITER_CLOSED("输出器已关闭", "the output writer is already closed"),
+    ERR_NO_TERMINAL_INPUT("InvalidConsole 不支持终端输入", "InvalidConsole does not support terminal input"),
+    ERR_UTILITY_NOT_INSTANTIABLE("工具类不能实例化", "utility class cannot be instantiated"),
+
+    // IPC 分帧错误：连接被写坏时才会抛，但会原样进错误转储。
+    ERR_FRAME_TRUNCATED_HEADER("帧被截断：流已结束，但只收到 %s 字节包头（需要 %s）",
+            "truncated frame: stream ended after only %s bytes of header (%s required)"),
+    ERR_FRAME_TRUNCATED_BODY("帧被截断：期望 %s 字节，流结束时只有 %s",
+            "truncated frame: expected %s bytes but the stream ended after %s"),
+    ERR_FRAME_BAD_START_MARKER("无效的起始标记: %s", "invalid start marker: %s"),
+    ERR_FRAME_BAD_END_MARKER("无效的结束标记: %s", "invalid end marker: %s"),
+    ERR_FRAME_BAD_DATA_LENGTH("无效的数据长度: %s", "invalid data length: %s"),
+    ERR_FRAME_TOO_LARGE("缓冲区已满(%s 字节)仍凑不出完整帧，帧长度超过上限",
+            "buffer is full (%s bytes) and still holds no complete frame; the frame exceeds the size limit"),
     ;
 
     private final String chinese;
@@ -139,11 +267,15 @@ public enum CliMessages {
 
     // 名字不能叫 chinese —— 那是每个枚举常量的实例字段名，同名字段会直接编译不过。
     //
-    // 用 ThreadLocal 而不是 static 布尔值：这里是**服务端**，同一个进程可能同时在服务多个客户端
+    // 用 ThreadLocal 而不是 static 字段：这里是**服务端**，同一个进程可能同时在服务多个客户端
     // （GUI 一个、设备终端一个、别的 app 通过 agent 再来一个），而它们的界面语言可以各不相同。
     // 语言是「按请求」决定的，不是「按进程」决定的，所以必须按线程隔离，否则两个客户端会互相踩。
     // 未设置时回落到本进程的 Locale.getDefault() —— 也就是引入这条通道之前的老行为。
-    private static final ThreadLocal<Boolean> chineseLocale = new ThreadLocal<>();
+    //
+    // 存的是语言码，不是「是不是中文」这个布尔值：本枚举只有中英两套骨架文案，判个 chinese()
+    // 就够了；但 Text（输出文案）是可能带第三语言的，布尔值表达不了。今天改成语言码是几行的事，
+    // 等输出文案都铺开之后再改就是横切手术。
+    private static final ThreadLocal<String> languageOverride = new ThreadLocal<>();
 
     /**
      * 覆盖<b>当前线程</b>的语言。
@@ -159,7 +291,7 @@ public enum CliMessages {
         if (language == null || language.isEmpty()) {
             clearLanguage();
         } else {
-            chineseLocale.set(isChinese(language));
+            languageOverride.set(normalize(language));
         }
     }
 
@@ -170,17 +302,72 @@ public enum CliMessages {
      * 残留的覆盖会把上一个客户端的语言泄漏给下一个。</p>
      */
     public static void clearLanguage() {
-        chineseLocale.remove();
+        languageOverride.remove();
     }
 
-    /** 当前线程实际生效的语言：有覆盖就用覆盖，否则看本进程的 Locale。 */
+    /**
+     * 在当前线程临时切到指定语言执行 {@code body}，结束后恢复本线程原来的语言。
+     *
+     * <p>给「文案不是命令线程产出的」用。有些任务（比如 {@code watch} 的监控任务、被 hook 的
+     * app 线程回调）在发起它的那条命令返回之后还在跑，而线程池的线程和被 hook 的线程上都没有
+     * 请求上下文；这时它渲染出来的文案会回落到本进程 Locale —— 也就是目标 app 的语言，
+     * 而不是客户的界面语言。做法是：命令线程上用 {@link #language()} 把语言记进任务对象，
+     * 任务在别的线程上产出文案时用本方法包一层。</p>
+     *
+     * <p>必须配对恢复（本方法用 finally 保证）：池线程是复用的，残留的语言会泄漏给
+     * 下一个跑在这条线程上的任务。</p>
+     *
+     * @param language 要切到的语言码；null 或空串表示「这个任务没有声明语言」，跟随本进程 Locale
+     */
+    public static void withLanguage(String language, Runnable body) {
+        String previous = languageOverride.get();
+        try {
+            useLanguage(language);
+            body.run();
+        } finally {
+            // 不能直接 useLanguage(previous)：它把 null 和空串都当「清除」，而这里要区分
+            // 「原本就没有覆盖（要 remove）」和「原本有覆盖（要写回去）」。
+            if (previous == null) {
+                clearLanguage();
+            } else {
+                languageOverride.set(previous);
+            }
+        }
+    }
+
+    /** 当前线程实际生效的语言码（如 {@code "zh"} / {@code "en"}）。 */
+    public static String language() {
+        String override = languageOverride.get();
+        return override != null ? override : normalize(Locale.getDefault().getLanguage());
+    }
+
+    /**
+     * 当前线程生效的是不是中文。
+     *
+     * <p>本枚举只有中英两套骨架文案，所以非中文（包括以后可能出现的第三语言）一律按英文处理。
+     * 要区分第三语言的是 {@link Text}，它自己按语言码查。</p>
+     */
     public static boolean chinese() {
-        Boolean override = chineseLocale.get();
-        return override != null ? override : isChinese(Locale.getDefault().getLanguage());
+        return "zh".equals(language());
     }
 
-    private static boolean isChinese(String language) {
-        // 只判语言码就够了：zh-CN / zh-TW / zh-Hans 的 getLanguage() 都是 "zh"。
-        return "zh".equalsIgnoreCase(language);
+    private static String normalize(String language) {
+        // 只取语言码就够了：zh-CN / zh-TW / zh-Hans 的 getLanguage() 都是 "zh"。
+        return language == null ? "" : language.toLowerCase(Locale.ROOT);
+    }
+
+    // ==================== 给守卫测试用 ====================
+
+    // 包级可见，不进公开 API。名字不能叫 chinese()：那会和上面的静态 chinese() 撞签名。
+    // 暴露出来是为了让 TextGuardTest 用反射遍历全部成员做占位符比对 —— 枚举成员在这之前是守卫的盲区。
+
+    /** 中文原文那一侧。 */
+    String chineseTemplate() {
+        return chinese;
+    }
+
+    /** 英文译文那一侧。 */
+    String englishTemplate() {
+        return english;
     }
 }

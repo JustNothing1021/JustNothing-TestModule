@@ -3,6 +3,7 @@ package com.justnothing.testmodule.command.functions.alias.impl;
 import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.model.AbstractCommand;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.functions.alias.request.AliasClearRequest;
 import com.justnothing.testmodule.command.functions.alias.response.AliasResult;
 import com.justnothing.testmodule.command.functions.alias.util.AliasManager;
@@ -36,7 +37,8 @@ public class AliasClearCommand extends AbstractCommand<AliasClearRequest, AliasR
         result.setSuccess(true);
 
         if (context.isCli()) {
-            context.println("已清空所有别名 (共删除 " + count + " 个)", Colors.GREEN);
+            context.println(Text.zhEn("已清空所有别名 (共删除 %s 个)", "All aliases cleared (%s removed)")
+                    .format(count), Colors.GREEN);
         }
 
         logger.info("清空所有别名，共删除 " + count + " 个");

@@ -1,6 +1,7 @@
 package com.justnothing.testmodule.command.functions.memory.util;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
 import com.justnothing.testmodule.command.framework.output.Colors;
 
 import java.util.Locale;
@@ -8,7 +9,7 @@ import java.util.Locale;
 public final class MemoryUtils {
 
     private MemoryUtils() {
-        throw new UnsupportedOperationException("工具类不能实例化");
+        throw new UnsupportedOperationException(CliMessages.ERR_UTILITY_NOT_INSTANTIABLE.text());
     }
 
     public static String formatBytes(long bytes) {

@@ -1,5 +1,7 @@
 package com.justnothing.testmodule.command.functions.alias;
 
+import com.justnothing.testmodule.command.framework.i18n.Text;
+
 import java.util.Map;
 
 /**
@@ -40,6 +42,14 @@ public final class AliasTexts {
     public static final String PARAM_ALIAS_ADD_NAME_DESC = "param.alias.add.name.desc";
     public static final String PARAM_ALIAS_ADD_COMMAND_DESC = "param.alias.add.command.desc";
     public static final String PARAM_ALIAS_REMOVE_NAME_DESC = "param.alias.remove.name.desc";
+
+    // ==================== ErrorInfo 文案 ====================
+    // 错误码是稳定标识，码和文案绑在同一处，调用点只引用常量。
+    public static final Text ERR_ALIAS_NOT_FOUND = Text.zhEn("别名不存在", "Alias not found");
+    public static final Text ERR_ALIAS_EXISTS = Text.zhEn("别名已存在", "Alias already exists");
+    // add 和 remove 两个子命令的参数校验结果消息（同时喂给 CLI 单行提示和 AliasResult.message）。
+    public static final Text ERR_NAME_REQUIRED = Text.zhEn("别名名称不能为空", "Alias name must not be empty");
+    public static final Text ERR_COMMAND_REQUIRED = Text.zhEn("别名命令不能为空", "Alias command must not be empty");
 
     private AliasTexts() {
     }

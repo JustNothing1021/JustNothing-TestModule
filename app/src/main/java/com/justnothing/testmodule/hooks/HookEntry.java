@@ -261,10 +261,8 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
     }
 
     private static void scheduleFileOperations() {
-        ThreadPoolManager.schedule(() -> {
-            // logger.info("延迟执行文件操作");
-            executeFileOperations();
-        }, FILE_OPERATION_DELAY, TimeUnit.MILLISECONDS);
+        // logger.info("延迟执行文件操作");
+        ThreadPoolManager.schedule(HookEntry::executeFileOperations, FILE_OPERATION_DELAY, TimeUnit.MILLISECONDS);
     }
 
 
@@ -298,9 +296,7 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
             int successCount = 0;
             int failCount = 0;
 
-            // 真正的 hook 是在 setupHooks() 里由 hookImplements() 登记进列表的。
-            // handleLoadPackage 那一路有这一步，initZygote 原来漏了 —— 于是下面的
-            // installHooks 遍历的是一个空列表：一个 hook 都没装，却因为「零失败」而返回成功。
+
             for (ZygoteHook hook : zygoteHooks) {
                 hook.setupHooks();
             }
@@ -320,12 +316,7 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
                         succeed = hook.installHooks(startupParam);
                     }
                 } catch (Throwable e) {
-                    // 这里必须是 Throwable，不能是 Exception。
-                    // hook 失败最常见的原因是「这个包/进程里压根没有这个类/这个方法」，
-                    // 而 Xposed 对这两种情况抛的分别是 ClassNotFoundError 与 NoSuchMethodError ——
-                    // 它们都继承 Error，不是 Exception。接 Exception 的话会直接穿透出去，
-                    // 被本方法最外层的 catch(Throwable) 兜住，代价是：这个包后面剩下的 hook
-                    // 一个都不会再装，而且日志里只剩一条笼统的「加载hook失败」，看不出是谁缺了什么。
+                    // Xposed 丢的是 MethodNotFoundError，是 Xposed 自己的，不 catch Throwable 会爆掉
                     logger.error("安装Zygote Hook " + hookName + " 时发生异常: " + e.getMessage(), e);
                     succeed = false;
                 }
@@ -397,9 +388,7 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
                         succeed = hook.installHooks(param);
                     }
                 } catch (Throwable e) {
-                    // 同 initZygote：缺类/缺方法抛的是 Error，只有 catch(Throwable) 才能
-                    // 把失败关在单个 hook 里。否则一个 app 里有一个 hook 找不到目标类，
-                    // 剩下的 hook 就全都不装了 —— 表现为「更新完应用之后功能莫名其妙少了一半」。
+                    // 同上
                     logger.error("安装Package Hook " + hookName + " 时发生异常: " + e.getMessage(), e);
                     succeed = false;
                 }

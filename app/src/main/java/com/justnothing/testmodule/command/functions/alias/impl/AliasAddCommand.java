@@ -4,6 +4,9 @@ import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.model.AbstractCommand;
 import com.justnothing.testmodule.command.framework.model.CommandResult;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
+import com.justnothing.testmodule.command.framework.i18n.CliTexts;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.functions.alias.request.AliasAddRequest;
 import com.justnothing.testmodule.command.functions.alias.response.AliasResult;
 import com.justnothing.testmodule.command.functions.alias.util.AliasManager;
@@ -39,18 +42,20 @@ public class AliasAddCommand extends AbstractCommand<AliasAddRequest, AliasResul
 
         if (name == null || name.isEmpty()) {
             if (context.isCli()) {
-                context.println("错误: 别名名称不能为空", Colors.RED);
-                context.println("用法: alias add <别名> <命令>", Colors.YELLOW);
+                context.println(CliMessages.ERROR_PREFIX.text() + AliasTexts.ERR_NAME_REQUIRED.text(), Colors.RED);
+                context.println(CliMessages.HELP_USAGE_INLINE.text()
+                        + CliTexts.resolve(AliasTexts.SUB_ALIAS_ADD_USAGE), Colors.YELLOW);
             }
-            return buildErrorResult("别名名称不能为空");
+            return buildErrorResult(AliasTexts.ERR_NAME_REQUIRED.text());
         }
 
         if (command == null || command.isEmpty()) {
             if (context.isCli()) {
-                context.println("错误: 别名命令不能为空", Colors.RED);
-                context.println("用法: alias add <别名> <命令>", Colors.YELLOW);
+                context.println(CliMessages.ERROR_PREFIX.text() + AliasTexts.ERR_COMMAND_REQUIRED.text(), Colors.RED);
+                context.println(CliMessages.HELP_USAGE_INLINE.text()
+                        + CliTexts.resolve(AliasTexts.SUB_ALIAS_ADD_USAGE), Colors.YELLOW);
             }
-            return buildErrorResult("别名命令不能为空");
+            return buildErrorResult(AliasTexts.ERR_COMMAND_REQUIRED.text());
         }
 
         boolean success = getAliasManager().addAlias(name, command);
@@ -60,16 +65,19 @@ public class AliasAddCommand extends AbstractCommand<AliasAddRequest, AliasResul
 
         if (success) {
             if (context.isCli()) {
-                context.println("别名已添加:", Colors.GREEN);
+                context.println(Text.zhEn("别名已添加:", "Alias added:").text(), Colors.GREEN);
                 context.print("  " + name, Colors.CYAN);
                 context.println(" -> " + command, Colors.WHITE);
             }
             logger.info("添加别名: " + name + " -> " + command);
         } else {
             if (context.isCli()) {
-                context.println("错误: 别名 '" + name + "' 已存在，请先删除或使用 alias clear 清空所有别名", Colors.RED);
+                context.println(CliMessages.ERROR_PREFIX.text() + Text.zhEn(
+                        "别名 '%s' 已存在，请先删除或使用 alias clear 清空所有别名",
+                        "alias '%s' already exists; remove it or run 'alias clear' to wipe them all")
+                        .format(name), Colors.RED);
             }
-            result.setError(new CommandResult.ErrorInfo("ALIAS_EXISTS", "别名已存在", (Throwable) null));
+            result.setError(new CommandResult.ErrorInfo("ALIAS_EXISTS", AliasTexts.ERR_ALIAS_EXISTS.text(), (Throwable) null));
         }
 
         return result;

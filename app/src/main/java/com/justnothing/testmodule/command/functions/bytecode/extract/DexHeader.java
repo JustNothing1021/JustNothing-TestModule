@@ -1,5 +1,7 @@
 package com.justnothing.testmodule.command.functions.bytecode.extract;
 
+import com.justnothing.testmodule.command.framework.i18n.Text;
+
 import java.nio.charset.StandardCharsets;
 import java.util.zip.Adler32;
 
@@ -78,14 +80,15 @@ public record DexHeader(
 
     public String describe() {
         StringBuilder sb = new StringBuilder();
-        sb.append("dex 版本: ").append(version).append("\n");
-        sb.append("声明大小: ").append(fileSize).append(" 字节\n");
-        sb.append("字符串: ").append(stringIdsSize).append("\n");
-        sb.append("类型: ").append(typeIdsSize).append("\n");
-        sb.append("原型(方法签名): ").append(protoIdsSize).append("\n");
-        sb.append("字段: ").append(fieldIdsSize).append("\n");
-        sb.append("方法: ").append(methodIdsSize).append("\n");
-        sb.append("类: ").append(classDefsSize).append("\n");
+        sb.append(Text.zhEn("dex 版本: %s\n", "Dex version: %s\n").format(version));
+        sb.append(Text.zhEn("声明大小: %s 字节\n", "Declared size: %s bytes\n").format(fileSize));
+        sb.append(Text.zhEn("字符串: %s\n", "Strings: %s\n").format(stringIdsSize));
+        sb.append(Text.zhEn("类型: %s\n", "Types: %s\n").format(typeIdsSize));
+        sb.append(Text.zhEn("原型(方法签名): %s\n", "Prototypes (method signatures): %s\n")
+                .format(protoIdsSize));
+        sb.append(Text.zhEn("字段: %s\n", "Fields: %s\n").format(fieldIdsSize));
+        sb.append(Text.zhEn("方法: %s\n", "Methods: %s\n").format(methodIdsSize));
+        sb.append(Text.zhEn("类: %s\n", "Classes: %s\n").format(classDefsSize));
         return sb.toString();
     }
 

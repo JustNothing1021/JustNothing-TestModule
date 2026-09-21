@@ -5,6 +5,8 @@ import com.justnothing.testmodule.command.framework.utils.CommandExceptionHandle
 import com.justnothing.testmodule.command.functions.nativecmd.response.NativeResult;
 import com.justnothing.testmodule.command.functions.nativecmd.request.*;
 import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.framework.i18n.Text;
+import com.justnothing.testmodule.command.functions.nativecmd.NativeTexts;
 
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
 
@@ -37,10 +39,10 @@ public class NativeManageCommand extends AbstractNativeCommand<CommandRequest<?>
                 }
             }
 
-            out("Native方法: ", Colors.CYAN);
+            out(Text.zhEn("Native方法: ", "Native methods: ").text(), Colors.CYAN);
             outln(className, Colors.GREEN);
-            out("数量: ", Colors.CYAN);
-            outln(nativeMethods.size() + " 个", Colors.YELLOW);
+            out(NativeTexts.LABEL_COUNT.text(), Colors.CYAN);
+            outln(NativeTexts.COUNT_UNIT.format(nativeMethods.size()), Colors.YELLOW);
             outln("", Colors.WHITE);
 
             for (Method method : nativeMethods) {
@@ -51,14 +53,14 @@ public class NativeManageCommand extends AbstractNativeCommand<CommandRequest<?>
 
                 if (verbose) {
                     String signature = manager.getNativeSignature(method);
-                    out("    JNI签名: ", Colors.CYAN);
+                    out(Text.zhEn("    JNI签名: ", "    JNI signature: ").text(), Colors.CYAN);
                     outln(signature, Colors.GRAY);
                 }
             }
 
         } catch (Exception e) {
             CommandExceptionHandler.handleException(
-                "native cli", e, context, "获取native方法失败");
+                "native cli", e, context, Text.zhEn("获取native方法失败", "Failed to get native methods").text());
         }
 
         NativeResult r = new NativeResult(java.util.UUID.randomUUID().toString());
@@ -73,7 +75,7 @@ public class NativeManageCommand extends AbstractNativeCommand<CommandRequest<?>
         try {
             String stackTrace = manager.getNativeStackTrace(threadId);
 
-            out("Native栈跟踪", Colors.CYAN);
+            out(Text.zhEn("Native栈跟踪", "Native stack trace").text(), Colors.CYAN);
             if (threadId != null) {
                 out(" (TID: ", Colors.GRAY);
                 out(threadId, Colors.YELLOW);
@@ -85,7 +87,7 @@ public class NativeManageCommand extends AbstractNativeCommand<CommandRequest<?>
 
         } catch (Exception e) {
             CommandExceptionHandler.handleException(
-                "native stack", e, context, "获取native栈失败");
+                "native stack", e, context, Text.zhEn("获取native栈失败", "Failed to get the native stack trace").text());
         }
 
         NativeResult r = new NativeResult(java.util.UUID.randomUUID().toString());
@@ -114,11 +116,11 @@ public class NativeManageCommand extends AbstractNativeCommand<CommandRequest<?>
                 }
             }
 
-            out("搜索结果: \"", Colors.CYAN);
+            out(Text.zhEn("搜索结果: \"", "Search results: \"").text(), Colors.CYAN);
             out(pattern, Colors.YELLOW);
             outln("\"", Colors.CYAN);
-            out("数量: ", Colors.CYAN);
-            outln(results.size() + " 个", Colors.YELLOW);
+            out(NativeTexts.LABEL_COUNT.text(), Colors.CYAN);
+            outln(NativeTexts.COUNT_UNIT.format(results.size()), Colors.YELLOW);
             outln("", Colors.WHITE);
 
             for (String result : results) {
@@ -128,7 +130,7 @@ public class NativeManageCommand extends AbstractNativeCommand<CommandRequest<?>
 
         } catch (Exception e) {
             CommandExceptionHandler.handleException(
-                "native search", e, context, "搜索失败");
+                "native search", e, context, Text.zhEn("搜索失败", "Search failed").text());
         }
 
         NativeResult r = new NativeResult(java.util.UUID.randomUUID().toString());
@@ -143,6 +145,7 @@ public class NativeManageCommand extends AbstractNativeCommand<CommandRequest<?>
         if (request instanceof NativeStackRequest r) return handleStack(r);
         if (request instanceof NativeSearchRequest r) return handleSearch(r);
 
-        throw new IllegalArgumentException("不支持的请求类型: " + request.getClass().getSimpleName());
+        throw new IllegalArgumentException(
+                NativeTexts.ERR_UNSUPPORTED_REQUEST_TYPE.format(request.getClass().getSimpleName()));
     }
 }

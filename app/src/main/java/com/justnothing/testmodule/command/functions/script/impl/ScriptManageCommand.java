@@ -1,6 +1,8 @@
 package com.justnothing.testmodule.command.functions.script.impl;
 
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.functions.script.ScriptTexts;
 import com.justnothing.testmodule.command.functions.script.response.ScriptResult;
@@ -38,7 +40,8 @@ public class ScriptManageCommand extends AbstractScriptCommand<ScriptBaseRequest
             handleManage();
             return okResult("manage");
         }
-        throw new IllegalArgumentException("不支持的请求类型: " + request.getClass().getSimpleName());
+        throw new IllegalArgumentException(
+                ScriptTexts.ERR_UNSUPPORTED_REQUEST_TYPE.format(request.getClass().getSimpleName()));
     }
 
     private ScriptResult okResult(String subCmd) {
@@ -59,13 +62,13 @@ public class ScriptManageCommand extends AbstractScriptCommand<ScriptBaseRequest
         File[] scriptFiles = scriptsDir.listFiles();
 
         if (scriptFiles == null || scriptFiles.length == 0) {
-            outln("没有找到脚本", Colors.GRAY);
+            outln(Text.zhEn("没有找到脚本", "No scripts found").text(), Colors.GRAY);
             r.setSuccess(true);
             r.setScriptList(new java.util.ArrayList<>());
             return r;
         }
 
-        outln("===== 脚本列表 =====", Colors.CYAN);
+        outln(Text.zhEn("===== 脚本列表 =====", "===== Script list =====").text(), Colors.CYAN);
         outln("", Colors.WHITE);
 
         java.util.List<String> names = new java.util.ArrayList<>();
@@ -75,20 +78,20 @@ public class ScriptManageCommand extends AbstractScriptCommand<ScriptBaseRequest
             long size = scriptFile.length();
             long lastModified = scriptFile.lastModified();
 
-            out("名称: ", Colors.CYAN);
+            out(Text.zhEn("名称: ", "Name: ").text(), Colors.CYAN);
             outln(name, Colors.YELLOW);
-            out("  大小: ", Colors.CYAN);
+            out(Text.zhEn("  大小: ", "  Size: ").text(), Colors.CYAN);
             outln(formatSize(size), Colors.GREEN);
-            out("  修改时间: ", Colors.CYAN);
+            out(Text.zhEn("  修改时间: ", "  Modified: ").text(), Colors.CYAN);
             outln(formatTime(lastModified), Colors.GREEN);
-            out("  路径: ", Colors.CYAN);
+            out("  " + ScriptTexts.LABEL_PATH.text(), Colors.CYAN);
             outln(scriptFile.getAbsolutePath(), Colors.GRAY);
             outln("", Colors.WHITE);
         }
 
-        out("总计: ", Colors.CYAN);
+        out(ScriptTexts.LABEL_TOTAL.text(), Colors.CYAN);
         out(String.valueOf(scriptFiles.length), Colors.YELLOW);
-        outln(" 个脚本", Colors.CYAN);
+        outln(Text.zhEn(" 个脚本", " scripts").text(), Colors.CYAN);
 
         r.setSuccess(true);
         r.setScriptList(names);
@@ -98,12 +101,12 @@ public class ScriptManageCommand extends AbstractScriptCommand<ScriptBaseRequest
     protected ScriptResult handleVars() {
         ScriptResult r = new ScriptResult(java.util.UUID.randomUUID().toString());
         r.setSubCommand("vars");
-        outln("===== 脚本执行器变量 =====", Colors.CYAN);
+        outln(Text.zhEn("===== 脚本执行器变量 =====", "===== Interpreter variables =====").text(), Colors.CYAN);
         outln("", Colors.WHITE);
 
         java.util.Map<String, Object> scriptVars = systemScriptRunner.getAllVariablesAsObject();
         if (scriptVars == null || scriptVars.isEmpty()) {
-            outln("  (空)", Colors.GRAY);
+            outln(Text.zhEn("  (空)", "  (empty)").text(), Colors.GRAY);
             r.setSuccess(true);
             r.setVariables(new java.util.ArrayList<>());
             return r;
@@ -128,9 +131,9 @@ public class ScriptManageCommand extends AbstractScriptCommand<ScriptBaseRequest
             outln("", Colors.WHITE);
         }
 
-        out("总计: ", Colors.CYAN);
+        out(ScriptTexts.LABEL_TOTAL.text(), Colors.CYAN);
         out(String.valueOf(scriptVars.size()), Colors.YELLOW);
-        outln(" 个变量", Colors.CYAN);
+        outln(Text.zhEn(" 个变量", " variables").text(), Colors.CYAN);
 
         r.setSuccess(true);
         r.setVariables(varList);
@@ -138,8 +141,9 @@ public class ScriptManageCommand extends AbstractScriptCommand<ScriptBaseRequest
     }
 
     protected void handleManage() {
-        outln("===== 交互式脚本管理器 =====", Colors.CYAN);
-        outln("输入 'help' 查看可用命令, 'exit' 或 'quit' 退出", Colors.GRAY);
+        outln(Text.zhEn("===== 交互式脚本管理器 =====", "===== Interactive script manager =====").text(), Colors.CYAN);
+        outln(Text.zhEn("输入 'help' 查看可用命令, 'exit' 或 'quit' 退出",
+                "Type 'help' for available commands, 'exit' or 'quit' to leave").text(), Colors.GRAY);
         outln("", Colors.WHITE);
 
         label: while (true) {
@@ -157,7 +161,7 @@ public class ScriptManageCommand extends AbstractScriptCommand<ScriptBaseRequest
                 case "exit":
                 case "quit":
                 case "0":
-                    outln("退出脚本管理器", Colors.GREEN);
+                    outln(Text.zhEn("退出脚本管理器", "Leaving the script manager").text(), Colors.GREEN);
                     break label;
                 case "help":
                 case "?":
@@ -168,36 +172,36 @@ public class ScriptManageCommand extends AbstractScriptCommand<ScriptBaseRequest
             handleManageCommand(input);
         }
 
-        outln("脚本管理器已退出", Colors.GREEN);
+        outln(Text.zhEn("脚本管理器已退出", "Script manager exited").text(), Colors.GREEN);
     }
 
     protected void showManageHelp() {
         outln("", Colors.WHITE);
-        outln("可用命令:", Colors.CYAN);
+        outln(Text.zhEn("可用命令:", "Available commands:").text(), Colors.CYAN);
         out("  create <name>        ", Colors.YELLOW);
-        outln("- 创建新脚本", Colors.GRAY);
+        outln(Text.zhEn("- 创建新脚本", "- Create a new script").text(), Colors.GRAY);
         out("  list                 ", Colors.YELLOW);
-        outln("- 列出所有脚本和codebase文件", Colors.GRAY);
+        outln(Text.zhEn("- 列出所有脚本和codebase文件", "- List all scripts and codebase files").text(), Colors.GRAY);
         out("  vars                 ", Colors.YELLOW);
-        outln("- 列出脚本执行器变量", Colors.GRAY);
+        outln(Text.zhEn("- 列出脚本执行器变量", "- List interpreter variables").text(), Colors.GRAY);
         out("  show <name>          ", Colors.YELLOW);
-        outln("- 显示文件内容", Colors.GRAY);
+        outln(Text.zhEn("- 显示文件内容", "- Show file contents").text(), Colors.GRAY);
         out("  edit <name>          ", Colors.YELLOW);
-        outln("- 编辑脚本内容", Colors.GRAY);
+        outln(Text.zhEn("- 编辑脚本内容", "- Edit script contents").text(), Colors.GRAY);
         out("  delete <name>        ", Colors.YELLOW);
-        outln("- 删除文件", Colors.GRAY);
+        outln(Text.zhEn("- 删除文件", "- Delete a file").text(), Colors.GRAY);
         out("  run <name>           ", Colors.YELLOW);
-        outln("- 执行脚本或codebase文件", Colors.GRAY);
+        outln(Text.zhEn("- 执行脚本或codebase文件", "- Run a script or codebase file").text(), Colors.GRAY);
         out("  import <path>        ", Colors.YELLOW);
-        outln("- 导入文件", Colors.GRAY);
+        outln(Text.zhEn("- 导入文件", "- Import a file").text(), Colors.GRAY);
         out("  export <name> <path> ", Colors.YELLOW);
-        outln("- 导出文件", Colors.GRAY);
+        outln(Text.zhEn("- 导出文件", "- Export a file").text(), Colors.GRAY);
         out("  codebase             ", Colors.YELLOW);
-        outln("- 列出codebase文件", Colors.GRAY);
+        outln(Text.zhEn("- 列出codebase文件", "- List codebase files").text(), Colors.GRAY);
         out("  help                 ", Colors.YELLOW);
-        outln("- 显示此帮助", Colors.GRAY);
+        outln(Text.zhEn("- 显示此帮助", "- Show this help").text(), Colors.GRAY);
         out("  exit / quit          ", Colors.YELLOW);
-        outln("- 退出管理器", Colors.GRAY);
+        outln(Text.zhEn("- 退出管理器", "- Exit the manager").text(), Colors.GRAY);
         outln("", Colors.WHITE);
     }
 
@@ -210,7 +214,7 @@ public class ScriptManageCommand extends AbstractScriptCommand<ScriptBaseRequest
             switch (cmd) {
                 case "1", "create" -> {
                     if (parts.length < 2) {
-                        outln("用法: create <name>", Colors.GRAY);
+                        outln(CliMessages.HELP_USAGE_INLINE.text() + "create <name>", Colors.GRAY);
                         break;
                     }
                     ScriptCrudCommand crud = new ScriptCrudCommand();
@@ -221,7 +225,7 @@ public class ScriptManageCommand extends AbstractScriptCommand<ScriptBaseRequest
                 case "vars" -> handleVars();
                 case "3", "show" -> {
                     if (parts.length < 2) {
-                        outln("用法: show <name>", Colors.GRAY);
+                        outln(CliMessages.HELP_USAGE_INLINE.text() + "show <name>", Colors.GRAY);
                         break;
                     }
                     ScriptCrudCommand crud = new ScriptCrudCommand();
@@ -230,14 +234,14 @@ public class ScriptManageCommand extends AbstractScriptCommand<ScriptBaseRequest
                 }
                 case "edit" -> {
                     if (parts.length < 2) {
-                        outln("用法: edit <name>", Colors.GRAY);
+                        outln(CliMessages.HELP_USAGE_INLINE.text() + "edit <name>", Colors.GRAY);
                         break;
                     }
                     handleEdit(parts[1]);
                 }
                 case "4", "delete" -> {
                     if (parts.length < 2) {
-                        outln("用法: delete <name>", Colors.GRAY);
+                        outln(CliMessages.HELP_USAGE_INLINE.text() + "delete <name>", Colors.GRAY);
                         break;
                     }
                     ScriptCrudCommand crud = new ScriptCrudCommand();
@@ -246,7 +250,7 @@ public class ScriptManageCommand extends AbstractScriptCommand<ScriptBaseRequest
                 }
                 case "5", "run" -> {
                     if (parts.length < 2) {
-                        outln("用法: run <name>", Colors.GRAY);
+                        outln(CliMessages.HELP_USAGE_INLINE.text() + "run <name>", Colors.GRAY);
                         break;
                     }
                     ScriptRunRequest runReq = new ScriptRunRequest();
@@ -257,7 +261,7 @@ public class ScriptManageCommand extends AbstractScriptCommand<ScriptBaseRequest
                 }
                 case "6", "import" -> {
                     if (parts.length < 2) {
-                        outln("用法: import <path>", Colors.GRAY);
+                        outln(CliMessages.HELP_USAGE_INLINE.text() + "import <path>", Colors.GRAY);
                         break;
                     }
                     ScriptImportRequest importReq = new ScriptImportRequest();
@@ -268,7 +272,7 @@ public class ScriptManageCommand extends AbstractScriptCommand<ScriptBaseRequest
                 }
                 case "7", "export" -> {
                     if (parts.length < 3) {
-                        outln("用法: export <name> <path>", Colors.GRAY);
+                        outln(CliMessages.HELP_USAGE_INLINE.text() + "export <name> <path>", Colors.GRAY);
                         break;
                     }
                     ScriptExportRequest exportReq = new ScriptExportRequest();
@@ -280,14 +284,14 @@ public class ScriptManageCommand extends AbstractScriptCommand<ScriptBaseRequest
                 }
                 case "codebase" -> handleCodebaseList();
                 default -> {
-                    out("未知命令: ", Colors.RED);
+                    out(Text.zhEn("未知命令: ", "Unknown command: ").text(), Colors.RED);
                     outln(cmd, Colors.YELLOW);
-                    outln("输入 'help' 查看帮助", Colors.GRAY);
+                    outln(Text.zhEn("输入 'help' 查看帮助", "Type 'help' for help").text(), Colors.GRAY);
                 }
             }
         } catch (Exception e) {
-            out("错误: ", Colors.RED);
-            outln(e.getMessage() != null ? e.getMessage() : "没有详细信息", Colors.ORANGE);
+            out(CliMessages.ERROR_PREFIX.text(), Colors.RED);
+            outln(e.getMessage() != null ? e.getMessage() : ScriptTexts.NO_DETAILS.text(), Colors.ORANGE);
         }
     }
 
@@ -295,20 +299,21 @@ public class ScriptManageCommand extends AbstractScriptCommand<ScriptBaseRequest
         File scriptFile = DataBridge.resolveScriptFile(name);
 
         if (!scriptFile.exists()) {
-            out("错误: 脚本 '", Colors.RED);
+            out(CliMessages.ERROR_PREFIX.text() + ScriptTexts.PREFIX_SCRIPT_QUOTED.text(), Colors.RED);
             out(name, Colors.YELLOW);
-            outln("' 不存在", Colors.RED);
+            outln(ScriptTexts.SUFFIX_NOT_EXIST.text(), Colors.RED);
             return;
         }
 
         String existingContent = IOManager.readFile(scriptFile.getAbsolutePath());
-        out("编辑脚本: ", Colors.CYAN);
+        out(Text.zhEn("编辑脚本: ", "Editing script: ").text(), Colors.CYAN);
         outln(name, Colors.YELLOW);
-        outln("当前内容 (输入空行结束编辑):", Colors.GRAY);
+        outln(Text.zhEn("当前内容 (输入空行结束编辑):", "Current contents (an empty line ends editing):").text(), Colors.GRAY);
         outln("", Colors.WHITE);
         outln(existingContent, Colors.WHITE);
         outln("", Colors.WHITE);
-        outln("--- 开始编辑 (输入空行保存并退出) ---", Colors.CYAN);
+        outln(Text.zhEn("--- 开始编辑 (输入空行保存并退出) ---",
+                "--- Start editing (an empty line saves and exits) ---").text(), Colors.CYAN);
         outln("", Colors.WHITE);
 
         StringBuilder newContent = new StringBuilder();
@@ -323,9 +328,9 @@ public class ScriptManageCommand extends AbstractScriptCommand<ScriptBaseRequest
 
         if (newContent.length() > 0) {
             IOManager.writeFile(scriptFile.getAbsolutePath(), newContent.toString());
-            outln("脚本已保存", Colors.GREEN);
+            outln(Text.zhEn("脚本已保存", "Script saved").text(), Colors.GREEN);
         } else {
-            outln("编辑已取消 (未做更改)", Colors.GRAY);
+            outln(Text.zhEn("编辑已取消 (未做更改)", "Editing cancelled (no changes were made)").text(), Colors.GRAY);
         }
     }
 
@@ -333,17 +338,17 @@ public class ScriptManageCommand extends AbstractScriptCommand<ScriptBaseRequest
         File codebaseDir = getScriptsDirectory();
 
         if (!codebaseDir.exists()) {
-            outln("Codebase目录不存在", Colors.GRAY);
+            outln(Text.zhEn("Codebase目录不存在", "Codebase directory does not exist").text(), Colors.GRAY);
             return;
         }
 
         File[] files = codebaseDir.listFiles();
         if (files == null || files.length == 0) {
-            outln("Codebase目录为空", Colors.GRAY);
+            outln(Text.zhEn("Codebase目录为空", "Codebase directory is empty").text(), Colors.GRAY);
             return;
         }
 
-        outln("===== Codebase文件列表 =====", Colors.CYAN);
+        outln(Text.zhEn("===== Codebase文件列表 =====", "===== Codebase file list =====").text(), Colors.CYAN);
         outln("", Colors.WHITE);
 
         for (File file : files) {
@@ -357,8 +362,8 @@ public class ScriptManageCommand extends AbstractScriptCommand<ScriptBaseRequest
         }
 
         outln("", Colors.WHITE);
-        out("总计: ", Colors.CYAN);
+        out(ScriptTexts.LABEL_TOTAL.text(), Colors.CYAN);
         out(String.valueOf(files.length), Colors.YELLOW);
-        outln(" 个文件", Colors.CYAN);
+        outln(Text.zhEn(" 个文件", " files").text(), Colors.CYAN);
     }
 }

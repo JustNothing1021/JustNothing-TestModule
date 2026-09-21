@@ -5,6 +5,7 @@ import android.content.Context;
 import android.os.Debug;
 
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.functions.memory.MemoryTexts;
 import com.justnothing.testmodule.command.functions.memory.request.MemoryInfoRequest;
@@ -61,24 +62,24 @@ public class InfoCommand extends AbstractMemoryCommand<MemoryInfoRequest, Memory
         result.setNativeFreeSize(Debug.getNativeHeapFreeSize());
 
         if (request.isHeapOnly()) {
-            context.println("===== 堆内存信息 =====", Colors.CYAN);
+            context.println(Text.zhEn("===== 堆内存信息 =====", "===== Heap memory information =====").text(), Colors.CYAN);
             context.println("");
 
-            context.println("===== 原生堆内存 =====", Colors.CYAN);
+            context.println(MemoryTexts.SECTION_NATIVE_HEAP.text(), Colors.CYAN);
             context.println("");
-            MemoryUtils.printMemoryValue(context, "已分配: ", Debug.getNativeHeapAllocatedSize());
-            MemoryUtils.printMemoryValue(context, "已用: ", Debug.getNativeHeapSize());
-            MemoryUtils.printMemoryValue(context, "空闲: ", Debug.getNativeHeapFreeSize());
+            MemoryUtils.printMemoryValue(context, MemoryTexts.LABEL_NATIVE_ALLOCATED.text(), Debug.getNativeHeapAllocatedSize());
+            MemoryUtils.printMemoryValue(context, MemoryTexts.LABEL_NATIVE_USED.text(), Debug.getNativeHeapSize());
+            MemoryUtils.printMemoryValue(context, MemoryTexts.LABEL_NATIVE_FREE.text(), Debug.getNativeHeapFreeSize());
             context.println("");
 
-            context.println("===== Java运行时内存 =====", Colors.CYAN);
+            context.println(MemoryTexts.SECTION_JAVA_RUNTIME.text(), Colors.CYAN);
             context.println("");
-            MemoryUtils.printMemoryValue(context, "最大内存: ", maxMemory);
-            MemoryUtils.printMemoryValue(context, "已分配内存: ", totalMemory);
-            MemoryUtils.printMemoryValue(context, "空闲内存: ", freeMemory);
-            MemoryUtils.printMemoryValue(context, "已用内存: ", usedMemory);
+            MemoryUtils.printMemoryValue(context, MemoryTexts.LABEL_JAVA_MAX.text(), maxMemory);
+            MemoryUtils.printMemoryValue(context, MemoryTexts.LABEL_JAVA_ALLOCATED.text(), totalMemory);
+            MemoryUtils.printMemoryValue(context, MemoryTexts.LABEL_JAVA_FREE.text(), freeMemory);
+            MemoryUtils.printMemoryValue(context, MemoryTexts.LABEL_JAVA_USED.text(), usedMemory);
         } else {
-            context.println("===== 详细内存信息 =====", Colors.CYAN);
+            context.println(Text.zhEn("===== 详细内存信息 =====", "===== Detailed memory information =====").text(), Colors.CYAN);
             context.println("");
 
             printJavaMemoryInfo(runtime, maxMemory, totalMemory, freeMemory, usedMemory);
@@ -100,17 +101,17 @@ public class InfoCommand extends AbstractMemoryCommand<MemoryInfoRequest, Memory
 
     private void printJavaMemoryInfo(Runtime runtime, long maxMemory, long totalMemory,
                                        long freeMemory, long usedMemory) {
-        context.println("===== Java运行时内存 =====", Colors.CYAN);
+        context.println(MemoryTexts.SECTION_JAVA_RUNTIME.text(), Colors.CYAN);
         context.println("");
 
-        MemoryUtils.printMemoryValue(context, "最大内存: ", maxMemory);
-        MemoryUtils.printMemoryValue(context, "已分配内存: ", totalMemory);
-        MemoryUtils.printMemoryValue(context, "空闲内存: ", freeMemory);
-        MemoryUtils.printMemoryValue(context, "已用内存: ", usedMemory);
+        MemoryUtils.printMemoryValue(context, MemoryTexts.LABEL_JAVA_MAX.text(), maxMemory);
+        MemoryUtils.printMemoryValue(context, MemoryTexts.LABEL_JAVA_ALLOCATED.text(), totalMemory);
+        MemoryUtils.printMemoryValue(context, MemoryTexts.LABEL_JAVA_FREE.text(), freeMemory);
+        MemoryUtils.printMemoryValue(context, MemoryTexts.LABEL_JAVA_USED.text(), usedMemory);
 
         if (maxMemory > 0) {
             double percent = (double) usedMemory / maxMemory * 100;
-            context.print("使用率: ", Colors.GRAY);
+            context.print(Text.zhEn("使用率: ", "Usage: ").text(), Colors.GRAY);
             context.print(String.format(Locale.US, "%.2f", percent), MemoryUtils.getPercentColor(percent));
             context.println("%", Colors.GRAY);
         }
@@ -118,17 +119,17 @@ public class InfoCommand extends AbstractMemoryCommand<MemoryInfoRequest, Memory
     }
 
     private void printNativeHeapInfo() {
-        context.println("===== 原生堆内存 =====", Colors.CYAN);
+        context.println(MemoryTexts.SECTION_NATIVE_HEAP.text(), Colors.CYAN);
         context.println("");
 
-        MemoryUtils.printMemoryValue(context, "已分配: ", Debug.getNativeHeapAllocatedSize());
-        MemoryUtils.printMemoryValue(context, "已用: ", Debug.getNativeHeapSize());
-        MemoryUtils.printMemoryValue(context, "空闲: ", Debug.getNativeHeapFreeSize());
+        MemoryUtils.printMemoryValue(context, MemoryTexts.LABEL_NATIVE_ALLOCATED.text(), Debug.getNativeHeapAllocatedSize());
+        MemoryUtils.printMemoryValue(context, MemoryTexts.LABEL_NATIVE_USED.text(), Debug.getNativeHeapSize());
+        MemoryUtils.printMemoryValue(context, MemoryTexts.LABEL_NATIVE_FREE.text(), Debug.getNativeHeapFreeSize());
         context.println("");
     }
 
     private void printProcessMemory(Context appContext, MemoryInfoResult result) {
-        context.println("===== 进程内存 =====", Colors.CYAN);
+        context.println(Text.zhEn("===== 进程内存 =====", "===== Process memory =====").text(), Colors.CYAN);
         context.println("");
 
         ActivityManager activityManager = (ActivityManager) appContext.getSystemService(Context.ACTIVITY_SERVICE);
@@ -136,11 +137,11 @@ public class InfoCommand extends AbstractMemoryCommand<MemoryInfoRequest, Memory
             ActivityManager.MemoryInfo memoryInfo = new ActivityManager.MemoryInfo();
             activityManager.getMemoryInfo(memoryInfo);
 
-            MemoryUtils.printMemoryValue(context, "可用内存: ", memoryInfo.availMem);
-            MemoryUtils.printMemoryValue(context, "总内存: ", memoryInfo.totalMem);
-            MemoryUtils.printMemoryValue(context, "内存阈值: ", memoryInfo.threshold);
-            context.print("低内存状态: ", Colors.GRAY);
-            context.println(memoryInfo.lowMemory ? "是" : "否", 
+            MemoryUtils.printMemoryValue(context, Text.zhEn("可用内存: ", "Available memory: ").text(), memoryInfo.availMem);
+            MemoryUtils.printMemoryValue(context, Text.zhEn("总内存: ", "Total memory: ").text(), memoryInfo.totalMem);
+            MemoryUtils.printMemoryValue(context, Text.zhEn("内存阈值: ", "Memory threshold: ").text(), memoryInfo.threshold);
+            context.print(Text.zhEn("低内存状态: ", "Low memory state: ").text(), Colors.GRAY);
+            context.println(memoryInfo.lowMemory ? MemoryTexts.VALUE_YES.text() : MemoryTexts.VALUE_NO.text(), 
                 memoryInfo.lowMemory ? Colors.RED : Colors.LIGHT_GREEN);
             context.println("");
 
@@ -153,7 +154,7 @@ public class InfoCommand extends AbstractMemoryCommand<MemoryInfoRequest, Memory
             Debug.MemoryInfo[] memoryInfos = activityManager.getProcessMemoryInfo(new int[]{pid});
             if (memoryInfos.length > 0) {
                 Debug.MemoryInfo processMemory = memoryInfos[0];
-                context.println("当前进程内存:", Colors.CYAN);
+                context.println(Text.zhEn("当前进程内存:", "Current process memory:").text(), Colors.CYAN);
                 MemoryUtils.printMemoryValue(context, "  PSS: ", processMemory.getTotalPss() * 1024L);
                 MemoryUtils.printMemoryValue(context, "  USS: ", processMemory.getTotalPrivateDirty() * 1024L);
                 MemoryUtils.printMemoryValue(context, "  RSS: ", processMemory.getTotalSharedDirty() * 1024L);
@@ -167,13 +168,13 @@ public class InfoCommand extends AbstractMemoryCommand<MemoryInfoRequest, Memory
     }
 
     private void printSystemMemoryInfo() {
-        context.println("===== 系统内存 =====", Colors.CYAN);
+        context.println(Text.zhEn("===== 系统内存 =====", "===== System memory =====").text(), Colors.CYAN);
         context.println("");
         printMeminfoColored();
     }
 
     private void printProcessMemoryStats() {
-        context.println("===== 进程内存统计 =====", Colors.CYAN);
+        context.println(Text.zhEn("===== 进程内存统计 =====", "===== Process memory statistics =====").text(), Colors.CYAN);
         context.println("");
         printProcessMemoryStatsColored();
     }

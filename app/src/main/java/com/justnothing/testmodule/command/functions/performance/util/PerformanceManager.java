@@ -3,6 +3,7 @@ package com.justnothing.testmodule.command.functions.performance.util;
 import com.justnothing.testmodule.command.functions.intercept.util.InterceptTaskManager;
 import com.justnothing.testmodule.command.functions.intercept.PerformanceInterceptTask;
 import com.justnothing.testmodule.command.functions.intercept.base.TaskType;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.reflect.ClassResolver;
 
@@ -39,7 +40,7 @@ public class PerformanceManager {
             return taskManager.addAndStartTask(task);
         } catch (Exception e) {
             logger.error("添加性能监控失败", e);
-            throw new RuntimeException("添加性能监控失败: " + e.getMessage(), e);
+            throw new RuntimeException(Text.zhEn("添加性能监控失败: %s", "Failed to add performance monitor: %s").format(e.getMessage()), e);
         }
     }
 

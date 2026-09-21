@@ -4,6 +4,8 @@ import com.justnothing.engine.ScriptRunner;
 import com.justnothing.engine.api.DefaultOutputHandler;
 import com.justnothing.engine.security.SandboxConfig;
 import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.framework.model.MainCommand;
 import com.justnothing.testmodule.command.framework.model.CommandResult;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
@@ -31,36 +33,32 @@ public class SandboxTestMain extends MainCommand<CommandResult> {
     private static volatile Throwable nativeLoadError = null;
     private static volatile String nativeLibPath = null;
 
+    // 本文件内多处复用的输出文案（「错误: 」这类跨文件通用的在 CliMessages 里，不在这里重复定义）。
+    private static final Text VALUE_AVAILABLE = Text.zhEn("可用", "available");
+    private static final Text VALUE_UNAVAILABLE = Text.zhEn("不可用", "unavailable");
+    private static final Text VALUE_SUCCESS = Text.zhEn("成功", "success");
+    private static final Text VALUE_FAILURE = Text.zhEn("失败", "failed");
+    private static final Text VALUE_BLOCKED = Text.zhEn("已拦截 ✓", "Blocked ✓");
+    private static final Text VALUE_NOT_BLOCKED = Text.zhEn("未拦截 ✗", "Not blocked ✗");
+    private static final Text INFO_PREFIX = Text.zhEn("  信息: ", "  Info: ");
+    private static final Text CONCLUSION_PREFIX = Text.zhEn("结论: ", "Conclusion: ");
+    private static final Text WARNING_PREFIX = Text.zhEn("警告: ", "Warning: ");
+    private static final Text HINT_PREFIX = Text.zhEn("提示: ", "Hint: ");
+    private static final Text ERROR_CODE_PREFIX = Text.zhEn("  错误码: ", "  Error code: ");
+    private static final Text TEST_FAILED = Text.zhEn("测试失败: %s", "Test failed: %s");
+    private static final Text RUNNING_IN_ISOLATED_THREAD =
+            Text.zhEn("[%s 测试] 在独立线程中执行...", "[%s test] running in an isolated thread...");
+
     public SandboxTestMain() {
         super("SandboxTest", CommandResult.class);
     }
 
     @Override
     public String getHelpText() {
-        return """
-                ===== 沙箱测试命令 =====
-                
-                用法: sandboxtest <子命令>
-                
-                子命令:
-                    load             - 加载 native 库
-                    blockguard       - 测试 BlockGuard I/O 拦截
-                    seccomp          - 测试 seccomp-bpf 进程拦截
-                    clonefork        - 测试 clone/fork 拦截
-                    penetration      - 安全渗透测试（尝试攻破沙箱）
-                    all              - 运行所有测试
-                    info             - 显示环境信息
-                
-                说明:
-                    此命令用于测试 Android 沙箱机制的可用性。
-                    - BlockGuard: 拦截磁盘 I/O 和网络操作
-                    - seccomp-bpf: 拦截进程创建和线程创建
-                    - penetration: 尝试各种方法绕过安全限制
-                    
-                相关命令:
-                    anonclasstest    - 匿名类生成诊断 (独立工具)
-                
-                """;
+        return Text.zhEn(
+                "===== 沙箱测试命令 =====\n\n用法: sandboxtest <子命令>\n\n子命令:\n    load             - 加载 native 库\n    blockguard       - 测试 BlockGuard I/O 拦截\n    seccomp          - 测试 seccomp-bpf 进程拦截\n    clonefork        - 测试 clone/fork 拦截\n    penetration      - 安全渗透测试（尝试攻破沙箱）\n    all              - 运行所有测试\n    info             - 显示环境信息\n\n说明:\n    此命令用于测试 Android 沙箱机制的可用性。\n    - BlockGuard: 拦截磁盘 I/O 和网络操作\n    - seccomp-bpf: 拦截进程创建和线程创建\n    - penetration: 尝试各种方法绕过安全限制\n\n相关命令:\n    anonclasstest    - 匿名类生成诊断 (独立工具)\n\n",
+                "===== Sandbox test command =====\n\nUsage: sandboxtest <subcommand>\n\nSubcommands:\n    load             - load the native library\n    blockguard       - test BlockGuard I/O interception\n    seccomp          - test seccomp-bpf process interception\n    clonefork        - test clone/fork interception\n    penetration      - security penetration test (try to break the sandbox)\n    all              - run all tests\n    info             - show environment info\n\nNotes:\n    Checks whether the Android sandbox mechanisms are available.\n    - BlockGuard: intercepts disk I/O and network operations\n    - seccomp-bpf: intercepts process and thread creation\n    - penetration: tries various ways to bypass the restrictions\n\nSee also:\n    anonclasstest    - anonymous class generation diagnostics (standalone tool)\n\n")
+                .text();
     }
 
     @Override
@@ -69,7 +67,7 @@ public class SandboxTestMain extends MainCommand<CommandResult> {
         
         if (args.length < 1) {
             context.println(getHelpText());
-            return createErrorResult("参数不足，需要指定子命令");
+            return createErrorResult(Text.zhEn("参数不足，需要指定子命令", "Not enough arguments; a subcommand is required").text());
         }
 
         String subCommand = args[0];
@@ -83,12 +81,12 @@ public class SandboxTestMain extends MainCommand<CommandResult> {
             case "all" -> runAllTests(context);
             case "info" -> showEnvironmentInfo(context);
             default -> {
-                context.print("未知子命令: ", Colors.RED);
+                context.print(Text.zhEn("未知子命令: ", "Unknown subcommand: ").text(), Colors.RED);
                 context.println(subCommand, Colors.YELLOW);
                 context.println(getHelpText());
             }
         }
-        return createSuccessResult("沙箱测试命令执行完成");
+        return createSuccessResult(Text.zhEn("沙箱测试命令执行完成", "Sandbox test command finished").text());
     }
 
     private interface TestRunnable {
@@ -96,7 +94,7 @@ public class SandboxTestMain extends MainCommand<CommandResult> {
     }
 
     private void executeInIsolatedThread(CommandExecutor.CmdExecContext context, String testName, TestRunnable test) {
-        context.println("[" + testName + " 测试] 在独立线程中执行...", Colors.CYAN);
+        context.println(RUNNING_IN_ISOLATED_THREAD.format(testName), Colors.CYAN);
         context.println("", Colors.WHITE);
         
         AtomicReference<Throwable> errorRef = new AtomicReference<>(null);
@@ -117,97 +115,97 @@ public class SandboxTestMain extends MainCommand<CommandResult> {
             
             if (errorRef.get() != null) {
                 Throwable e = errorRef.get();
-                context.print("测试过程中发生异常: ", Colors.RED);
+                context.print(Text.zhEn("测试过程中发生异常: ", "Exception while running the test: ").text(), Colors.RED);
                 context.println(e.getMessage(), Colors.ORANGE);
                 context.output().printStackTrace(e);
             } else if (!completed.get()) {
-                context.println("测试未完成（未知状态）", Colors.ORANGE);
+                context.println(Text.zhEn("测试未完成（未知状态）", "Test did not complete (unknown state)").text(), Colors.ORANGE);
             }
         } catch (TimeoutException e) {
             future.cancel(true);
-            context.println("测试超时（60秒），已取消", Colors.RED);
+            context.println(Text.zhEn("测试超时（60秒），已取消", "Test timed out (60s) and was cancelled").text(), Colors.RED);
         } catch (Exception e) {
-            context.print("等待测试结果时发生异常: ", Colors.RED);
+            context.print(Text.zhEn("等待测试结果时发生异常: ", "Exception while waiting for the test result: ").text(), Colors.RED);
             context.println(e.getMessage(), Colors.ORANGE);
         }
     }
 
     private void showEnvironmentInfo(CommandExecutor.CmdExecContext context) {
-        context.println("===== 环境信息 =====", Colors.CYAN);
+        context.println(Text.zhEn("===== 环境信息 =====", "===== Environment info =====").text(), Colors.CYAN);
         context.println("", Colors.WHITE);
         
-        context.print("进程 ID: ", Colors.CYAN);
+        context.print(Text.zhEn("进程 ID: ", "Process ID: ").text(), Colors.CYAN);
         context.println(String.valueOf(android.os.Process.myPid()), Colors.WHITE);
         
-        context.print("用户 ID: ", Colors.CYAN);
+        context.print(Text.zhEn("用户 ID: ", "User ID: ").text(), Colors.CYAN);
         context.println(String.valueOf(android.os.Process.myUid()), Colors.WHITE);
         
         context.println("", Colors.WHITE);
-        context.print("Native 库状态: ", Colors.CYAN);
+        context.print(Text.zhEn("Native 库状态: ", "Native library: ").text(), Colors.CYAN);
         if (nativeLoaded) {
-            context.println("已加载 (" + nativeLibPath + ")", Colors.GREEN);
+            context.println(Text.zhEn("已加载 (%s)", "Loaded (%s)").format(nativeLibPath), Colors.GREEN);
         } else if (nativeLoadError != null) {
-            context.println("加载失败", Colors.RED);
+            context.println(Text.zhEn("加载失败", "Load failed").text(), Colors.RED);
         } else {
-            context.println("未加载", Colors.GRAY);
+            context.println(Text.zhEn("未加载", "Not loaded").text(), Colors.GRAY);
         }
         
         context.println("", Colors.WHITE);
-        context.print("模块路径: ", Colors.CYAN);
+        context.print(Text.zhEn("模块路径: ", "Module path: ").text(), Colors.CYAN);
         String modulePath = DataBridge.getModulePath();
-        context.println(modulePath != null ? modulePath : "未知", Colors.GRAY);
+        context.println(modulePath != null ? modulePath : Text.zhEn("未知", "unknown").text(), Colors.GRAY);
         
         context.println("", Colors.WHITE);
         context.print("BlockGuard: ", Colors.CYAN);
-        context.println(BlockGuardSandbox.isBlockGuardAvailable() ? "可用" : "不可用", 
+        context.println(BlockGuardSandbox.isBlockGuardAvailable() ? VALUE_AVAILABLE.text() : VALUE_UNAVAILABLE.text(), 
                 BlockGuardSandbox.isBlockGuardAvailable() ? Colors.GREEN : Colors.RED);
     }
 
     private void loadNativeLibrary(CommandExecutor.CmdExecContext context) {
         if (nativeLoaded) {
-            context.println("Native 库已加载", Colors.GREEN);
-            context.println("路径: " + nativeLibPath, Colors.GRAY);
+            context.println(Text.zhEn("Native 库已加载", "Native library already loaded").text(), Colors.GREEN);
+            context.println(Text.zhEn("路径: %s", "Path: %s").format(nativeLibPath), Colors.GRAY);
             return;
         }
 
         if (nativeLoadError != null) {
-            context.println("Native 库加载已失败，不再重试", Colors.RED);
-            context.println("错误: " + nativeLoadError.getMessage(), Colors.GRAY);
+            context.println(Text.zhEn("Native 库加载已失败，不再重试", "Native library load already failed; not retrying").text(), Colors.RED);
+            context.println(CliMessages.ERROR_PREFIX.text() + nativeLoadError.getMessage(), Colors.GRAY);
             return;
         }
 
         synchronized (SandboxTestMain.class) {
             if (nativeLoaded) {
-                context.println("Native 库已加载", Colors.GREEN);
+                context.println(Text.zhEn("Native 库已加载", "Native library already loaded").text(), Colors.GREEN);
                 return;
             }
 
             try {
                 String apkPath = DataBridge.getModulePath();
                 if (apkPath == null) {
-                    throw new RuntimeException("无法获取模块 APK 路径");
+                    throw new RuntimeException(Text.zhEn("无法获取模块 APK 路径", "Cannot resolve the module APK path").text());
                 }
-                context.println("模块 APK: " + apkPath, Colors.GRAY);
+                context.println(Text.zhEn("模块 APK: %s", "Module APK: %s").format(apkPath), Colors.GRAY);
 
                 String abi = getAbi();
-                context.println("当前 ABI: " + abi, Colors.GRAY);
+                context.println(Text.zhEn("当前 ABI: %s", "Current ABI: %s").format(abi), Colors.GRAY);
 
                 File libFile = extractNativeLib(apkPath, abi, context);
                 if (libFile == null) {
-                    throw new RuntimeException("无法从 APK 提取 native 库");
+                    throw new RuntimeException(Text.zhEn("无法从 APK 提取 native 库", "Cannot extract the native library from the APK").text());
                 }
 
-                context.println("提取到: " + libFile.getAbsolutePath(), Colors.GRAY);
+                context.println(Text.zhEn("提取到: %s", "Extracted to: %s").format(libFile.getAbsolutePath()), Colors.GRAY);
 
                 System.load(libFile.getAbsolutePath());
                 nativeLibPath = libFile.getAbsolutePath();
                 nativeLoaded = true;
 
-                context.println("Native 库加载成功!", Colors.GREEN);
+                context.println(Text.zhEn("Native 库加载成功!", "Native library loaded!").text(), Colors.GREEN);
             } catch (Throwable e) {
                 nativeLoadError = e;
-                context.println("Native 库加载失败", Colors.RED);
-                context.println("错误: " + e.getMessage(), Colors.GRAY);
+                context.println(Text.zhEn("Native 库加载失败", "Failed to load the native library").text(), Colors.RED);
+                context.println(CliMessages.ERROR_PREFIX.text() + e.getMessage(), Colors.GRAY);
             }
         }
     }
@@ -223,20 +221,20 @@ public class SandboxTestMain extends MainCommand<CommandResult> {
         try (ZipFile zipFile = new ZipFile(apkPath)) {
             ZipEntry entry = zipFile.getEntry(entryName);
             if (entry == null) {
-                context.println("APK 中未找到: " + entryName, Colors.RED);
+                context.println(Text.zhEn("APK 中未找到: %s", "Not found in the APK: %s").format(entryName), Colors.RED);
                 for (String supportedAbi : android.os.Build.SUPPORTED_ABIS) {
                     String altEntry = "lib/" + supportedAbi + "/" + libName;
                     entry = zipFile.getEntry(altEntry);
                     if (entry != null) {
                         entryName = altEntry;
-                        context.println("使用备用 ABI: " + supportedAbi, Colors.GRAY);
+                        context.println(Text.zhEn("使用备用 ABI: %s", "Using the fallback ABI: %s").format(supportedAbi), Colors.GRAY);
                         break;
                     }
                 }
             }
 
             if (entry == null) {
-                context.println("APK 中未找到任何 native 库", Colors.RED);
+                context.println(Text.zhEn("APK 中未找到任何 native 库", "No native library found in the APK").text(), Colors.RED);
                 return null;
             }
 
@@ -257,27 +255,27 @@ public class SandboxTestMain extends MainCommand<CommandResult> {
             }
 
             if (!libFile.setExecutable(true)) {
-                context.println("警告: 无法设置可执行权限", Colors.ORANGE);
+                context.println(WARNING_PREFIX.text() + Text.zhEn("无法设置可执行权限", "cannot set the executable permission").text(), Colors.ORANGE);
             }
 
             return libFile;
         } catch (Exception e) {
-            context.println("提取失败: " + e.getMessage(), Colors.RED);
+            context.println(Text.zhEn("提取失败: %s", "Extraction failed: %s").format(e.getMessage()), Colors.RED);
             return null;
         }
     }
 
     private void testBlockGuardInternal(CommandExecutor.CmdExecContext context) {
-        context.println("===== 测试 BlockGuard I/O 拦截 =====", Colors.CYAN);
+        context.println(Text.zhEn("===== 测试 BlockGuard I/O 拦截 =====", "===== Testing BlockGuard I/O interception =====").text(), Colors.CYAN);
         context.println("", Colors.WHITE);
 
         boolean available = BlockGuardSandbox.isBlockGuardAvailable();
-        context.print("BlockGuard 可用性: ", Colors.CYAN);
-        context.println(available ? "可用" : "不可用", available ? Colors.GREEN : Colors.RED);
+        context.print(Text.zhEn("BlockGuard 可用性: ", "BlockGuard available: ").text(), Colors.CYAN);
+        context.println(available ? VALUE_AVAILABLE.text() : VALUE_UNAVAILABLE.text(), available ? Colors.GREEN : Colors.RED);
 
         if (!available) {
             context.println("", Colors.WHITE);
-            context.println("结论: BlockGuard 不可用（非 Android 环境？）", Colors.RED);
+            context.println(CONCLUSION_PREFIX.text() + Text.zhEn("BlockGuard 不可用（非 Android 环境？）", "BlockGuard is unavailable (not an Android environment?)").text(), Colors.RED);
             return;
         }
 
@@ -289,13 +287,13 @@ public class SandboxTestMain extends MainCommand<CommandResult> {
                 fos.write("test".getBytes());
                 fos.close();
             } catch (Exception e) {
-                context.println("警告: 无法创建测试文件: " + e.getMessage(), Colors.ORANGE);
+                context.println(WARNING_PREFIX.text() + Text.zhEn("无法创建测试文件: %s", "cannot create the test file: %s").format(e.getMessage()), Colors.ORANGE);
             }
         });
         
         context.println("", Colors.WHITE);
-        context.println("测试磁盘写入拦截...", Colors.CYAN);
-        context.println("测试文件: " + testFile.getAbsolutePath(), Colors.GRAY);
+        context.println(Text.zhEn("测试磁盘写入拦截...", "Testing disk write interception...").text(), Colors.CYAN);
+        context.println(Text.zhEn("测试文件: %s", "Test file: %s").format(testFile.getAbsolutePath()), Colors.GRAY);
         
         boolean[] writeBlocked = {false};
         String[] writeError = {null};
@@ -329,14 +327,14 @@ public class SandboxTestMain extends MainCommand<CommandResult> {
             }
         }
 
-        context.print("磁盘写入拦截: ", Colors.CYAN);
-        context.println(writeBlocked[0] ? "已拦截 ✓" : "未拦截 ✗", writeBlocked[0] ? Colors.GREEN : Colors.RED);
+        context.print(Text.zhEn("磁盘写入拦截: ", "Disk write interception: ").text(), Colors.CYAN);
+        context.println(writeBlocked[0] ? VALUE_BLOCKED.text() : VALUE_NOT_BLOCKED.text(), writeBlocked[0] ? Colors.GREEN : Colors.RED);
         if (writeError[0] != null) {
-            context.println("  信息: " + writeError[0], Colors.GRAY);
+            context.println(INFO_PREFIX.text() + writeError[0], Colors.GRAY);
         }
         
         context.println("", Colors.WHITE);
-        context.println("测试磁盘读取拦截...", Colors.CYAN);
+        context.println(Text.zhEn("测试磁盘读取拦截...", "Testing disk read interception...").text(), Colors.CYAN);
         
         boolean[] readBlocked = {false};
         String[] readError = {null};
@@ -370,14 +368,14 @@ public class SandboxTestMain extends MainCommand<CommandResult> {
             }
         }
 
-        context.print("磁盘读取拦截: ", Colors.CYAN);
-        context.println(readBlocked[0] ? "已拦截 ✓" : "未拦截 ✗", readBlocked[0] ? Colors.GREEN : Colors.RED);
+        context.print(Text.zhEn("磁盘读取拦截: ", "Disk read interception: ").text(), Colors.CYAN);
+        context.println(readBlocked[0] ? VALUE_BLOCKED.text() : VALUE_NOT_BLOCKED.text(), readBlocked[0] ? Colors.GREEN : Colors.RED);
         if (readError[0] != null) {
-            context.println("  信息: " + readError[0], Colors.GRAY);
+            context.println(INFO_PREFIX.text() + readError[0], Colors.GRAY);
         }
 
         context.println("", Colors.WHITE);
-        context.println("测试 File 元数据读取拦截...", Colors.CYAN);
+        context.println(Text.zhEn("测试 File 元数据读取拦截...", "Testing File metadata read interception...").text(), Colors.CYAN);
 
         // java.io.File / java.io.UnixFileSystem 曾在读白名单里，而白名单是"栈里出现即放行"，
         // 于是 File.exists()/length()/list() 这类调用栈里必然有 java.io.File 的读全部漏过。
@@ -388,7 +386,7 @@ public class SandboxTestMain extends MainCommand<CommandResult> {
             BlockGuardSandbox.execute(readConfig, () -> {
                 try {
                     if (!new File("/system/build.prop").exists()) {
-                        metaError[0] = "文件不存在";
+                        metaError[0] = Text.zhEn("文件不存在", "file does not exist").text();
                     }
                 } catch (SecurityException e) {
                     metaBlocked[0] = true;
@@ -402,15 +400,15 @@ public class SandboxTestMain extends MainCommand<CommandResult> {
             }
         }
 
-        context.print("File.exists() 拦截: ", Colors.CYAN);
-        context.println(metaBlocked[0] ? "已拦截 ✓" : "未拦截 ✗", metaBlocked[0] ? Colors.GREEN : Colors.RED);
+        context.print(Text.zhEn("File.exists() 拦截: ", "File.exists() interception: ").text(), Colors.CYAN);
+        context.println(metaBlocked[0] ? VALUE_BLOCKED.text() : VALUE_NOT_BLOCKED.text(), metaBlocked[0] ? Colors.GREEN : Colors.RED);
         if (metaError[0] != null) {
-            context.println("  信息: " + metaError[0], Colors.GRAY);
+            context.println(INFO_PREFIX.text() + metaError[0], Colors.GRAY);
         }
 
         context.println("", Colors.WHITE);
-        context.println("测试子线程继承（裸线程 vs wrap）...", Colors.CYAN);
-        context.println("注: libcore 的 BlockGuard 策略是 per-thread 且不继承，裸子线程会绕过 Java 层", Colors.GRAY);
+        context.println(Text.zhEn("测试子线程继承（裸线程 vs wrap）...", "Testing child thread inheritance (raw thread vs wrap)...").text(), Colors.CYAN);
+        context.println(Text.zhEn("注: libcore 的 BlockGuard 策略是 per-thread 且不继承，裸子线程会绕过 Java 层", "Note: libcore's BlockGuard policy is per-thread and not inherited, so a raw child thread bypasses the Java layer").text(), Colors.GRAY);
 
         File rawFile = new File(DataBridge.getDataDir(), "sandbox_child_raw_" + System.currentTimeMillis() + ".tmp");
         File wrappedFile = new File(DataBridge.getDataDir(), "sandbox_child_wrapped_" + System.currentTimeMillis() + ".tmp");
@@ -426,29 +424,29 @@ public class SandboxTestMain extends MainCommand<CommandResult> {
                     childTryWrite(rawFile, false, rawBlocked, rawError);
                     childTryWrite(wrappedFile, true, wrappedBlocked, wrappedError);
                 } catch (Exception e) {
-                    rawError[0] = "子线程测试异常: " + e.getMessage();
+                    rawError[0] = Text.zhEn("子线程测试异常: %s", "Child thread test failed: %s").format(e.getMessage());
                 }
             });
         } catch (RuntimeException e) {
-            rawError[0] = "沙箱外层异常: " + e.getMessage();
+            rawError[0] = Text.zhEn("沙箱外层异常: %s", "Exception outside the sandbox: %s").format(e.getMessage());
         }
 
-        context.print("裸子线程写入: ", Colors.CYAN);
-        context.println(rawBlocked[0] ? "已拦截" : "未拦截（符合预期：Java 层不继承）",
+        context.print(Text.zhEn("裸子线程写入: ", "Write from a raw child thread: ").text(), Colors.CYAN);
+        context.println(rawBlocked[0] ? Text.zhEn("已拦截", "Blocked").text() : Text.zhEn("未拦截（符合预期：Java 层不继承）", "Not blocked (expected: the Java layer policy is not inherited)").text(),
                 rawBlocked[0] ? Colors.GREEN : Colors.ORANGE);
         if (rawError[0] != null) {
-            context.println("  信息: " + rawError[0], Colors.GRAY);
+            context.println(INFO_PREFIX.text() + rawError[0], Colors.GRAY);
         }
 
-        context.print("wrap 后子线程写入: ", Colors.CYAN);
-        context.println(wrappedBlocked[0] ? "已拦截 ✓" : "未拦截 ✗", wrappedBlocked[0] ? Colors.GREEN : Colors.RED);
+        context.print(Text.zhEn("wrap 后子线程写入: ", "Write from a wrapped child thread: ").text(), Colors.CYAN);
+        context.println(wrappedBlocked[0] ? VALUE_BLOCKED.text() : VALUE_NOT_BLOCKED.text(), wrappedBlocked[0] ? Colors.GREEN : Colors.RED);
         if (wrappedError[0] != null) {
-            context.println("  信息: " + wrappedError[0], Colors.GRAY);
+            context.println(INFO_PREFIX.text() + wrappedError[0], Colors.GRAY);
         }
 
         context.println("", Colors.WHITE);
-        context.println("测试线程池交接（沙箱内提交到 IO 池）...", Colors.CYAN);
-        context.println("注: 池线程是另一个线程，交接时 Java 层策略会丢，靠 ThreadPoolManager.wrapTask 补装", Colors.GRAY);
+        context.println(Text.zhEn("测试线程池交接（沙箱内提交到 IO 池）...", "Testing thread-pool hand-off (submitting to the IO pool from inside the sandbox)...").text(), Colors.CYAN);
+        context.println(Text.zhEn("注: 池线程是另一个线程，交接时 Java 层策略会丢，靠 ThreadPoolManager.wrapTask 补装", "Note: a pool thread is a different thread, so the Java layer policy is lost on hand-off and is re-installed by ThreadPoolManager.wrapTask").text(), Colors.GRAY);
 
         File pooledFile = new File(DataBridge.getDataDir(), "sandbox_pool_" + System.currentTimeMillis() + ".tmp");
         boolean[] pooledBlocked = {false};
@@ -471,21 +469,21 @@ public class SandboxTestMain extends MainCommand<CommandResult> {
                     if (future != null) {
                         future.get(10, TimeUnit.SECONDS);
                     } else {
-                        pooledError[0] = "线程池未初始化，任务未提交";
+                        pooledError[0] = Text.zhEn("线程池未初始化，任务未提交", "thread pool not initialized; task not submitted").text();
                     }
                 } catch (Exception e) {
-                    pooledError[0] = "提交/等待异常: " + e.getClass().getSimpleName()
+                    pooledError[0] = Text.zhEn("提交/等待异常: %s", "Submit/wait failed: %s").format(e.getClass().getSimpleName())
                             + (e.getMessage() != null ? ": " + e.getMessage() : "");
                 }
             });
         } catch (RuntimeException e) {
-            pooledError[0] = "沙箱外层异常: " + e.getMessage();
+            pooledError[0] = Text.zhEn("沙箱外层异常: %s", "Exception outside the sandbox: %s").format(e.getMessage());
         }
 
-        context.print("池线程写入: ", Colors.CYAN);
-        context.println(pooledBlocked[0] ? "已拦截 ✓" : "未拦截 ✗", pooledBlocked[0] ? Colors.GREEN : Colors.RED);
+        context.print(Text.zhEn("池线程写入: ", "Pool thread write: ").text(), Colors.CYAN);
+        context.println(pooledBlocked[0] ? VALUE_BLOCKED.text() : VALUE_NOT_BLOCKED.text(), pooledBlocked[0] ? Colors.GREEN : Colors.RED);
         if (pooledError[0] != null) {
-            context.println("  信息: " + pooledError[0], Colors.GRAY);
+            context.println(INFO_PREFIX.text() + pooledError[0], Colors.GRAY);
         }
 
         BlockGuardSandbox.bypass(() -> {
@@ -500,13 +498,13 @@ public class SandboxTestMain extends MainCommand<CommandResult> {
         boolean allOk = writeBlocked[0] && readBlocked[0] && metaBlocked[0]
                 && wrappedBlocked[0] && pooledBlocked[0];
         if (allOk) {
-            context.println("结论: BlockGuard I/O 拦截正常工作", Colors.GREEN);
+            context.println(CONCLUSION_PREFIX.text() + Text.zhEn("BlockGuard I/O 拦截正常工作", "BlockGuard I/O interception works").text(), Colors.GREEN);
         } else if (writeBlocked[0] || readBlocked[0] || metaBlocked[0]
                 || wrappedBlocked[0] || pooledBlocked[0]) {
-            context.println("结论: BlockGuard 部分工作", Colors.ORANGE);
+            context.println(CONCLUSION_PREFIX.text() + Text.zhEn("BlockGuard 部分工作", "BlockGuard partially works").text(), Colors.ORANGE);
         } else {
-            context.println("结论: BlockGuard 未拦截任何操作", Colors.RED);
-            context.println("提示: 可能需要检查 BlockGuard 策略设置", Colors.GRAY);
+            context.println(CONCLUSION_PREFIX.text() + Text.zhEn("BlockGuard 未拦截任何操作", "BlockGuard did not block anything").text(), Colors.RED);
+            context.println(HINT_PREFIX.text() + Text.zhEn("可能需要检查 BlockGuard 策略设置", "the BlockGuard policy settings may need checking").text(), Colors.GRAY);
         }
     }
 
@@ -543,37 +541,37 @@ public class SandboxTestMain extends MainCommand<CommandResult> {
             return;
         }
 
-        context.println("===== 测试 seccomp-bpf 进程拦截 =====", Colors.CYAN);
+        context.println(Text.zhEn("===== 测试 seccomp-bpf 进程拦截 =====", "===== Testing seccomp-bpf process interception =====").text(), Colors.CYAN);
         context.println("", Colors.WHITE);
 
         try {
             SeccompTestResult result = testSeccompNative();
 
             context.print("prctl(PR_SET_NO_NEW_PRIVS): ", Colors.CYAN);
-            context.println(result.prctlSuccess ? "成功" : "失败", result.prctlSuccess ? Colors.GREEN : Colors.RED);
+            context.println(result.prctlSuccess ? VALUE_SUCCESS.text() : VALUE_FAILURE.text(), result.prctlSuccess ? Colors.GREEN : Colors.RED);
             if (result.prctlError != 0) {
-                context.println("  错误码: " + result.prctlError + " (" + strerror(result.prctlError) + ")", Colors.GRAY);
+                context.println(ERROR_CODE_PREFIX.text() + result.prctlError + " (" + strerror(result.prctlError) + ")", Colors.GRAY);
             }
 
             context.print("seccomp(SECCOMP_SET_MODE_FILTER): ", Colors.CYAN);
-            context.println(result.seccompSuccess ? "成功" : "失败", result.seccompSuccess ? Colors.GREEN : Colors.RED);
+            context.println(result.seccompSuccess ? VALUE_SUCCESS.text() : VALUE_FAILURE.text(), result.seccompSuccess ? Colors.GREEN : Colors.RED);
             if (result.seccompError != 0) {
-                context.println("  错误码: " + result.seccompError + " (" + strerror(result.seccompError) + ")", Colors.GRAY);
+                context.println(ERROR_CODE_PREFIX.text() + result.seccompError + " (" + strerror(result.seccompError) + ")", Colors.GRAY);
             }
 
-            context.print("execve 拦截测试: ", Colors.CYAN);
-            context.println(result.execveBlocked ? "已拦截 ✓" : "未拦截 ✗", result.execveBlocked ? Colors.GREEN : Colors.RED);
+            context.print(Text.zhEn("execve 拦截测试: ", "execve interception test: ").text(), Colors.CYAN);
+            context.println(result.execveBlocked ? VALUE_BLOCKED.text() : VALUE_NOT_BLOCKED.text(), result.execveBlocked ? Colors.GREEN : Colors.RED);
 
             context.println("", Colors.WHITE);
             if (result.seccompSuccess && result.execveBlocked) {
-                context.println("结论: seccomp-bpf 可用于进程创建拦截", Colors.GREEN);
+                context.println(CONCLUSION_PREFIX.text() + Text.zhEn("seccomp-bpf 可用于进程创建拦截", "seccomp-bpf can intercept process creation").text(), Colors.GREEN);
             } else if (result.prctlSuccess && !result.seccompSuccess) {
-                context.println("结论: prctl 可用但 seccomp 被阻止，可能是 SELinux 限制", Colors.ORANGE);
+                context.println(CONCLUSION_PREFIX.text() + Text.zhEn("prctl 可用但 seccomp 被阻止，可能是 SELinux 限制", "prctl works but seccomp is blocked, possibly by SELinux").text(), Colors.ORANGE);
             } else {
-                context.println("结论: seccomp-bpf 不可用", Colors.RED);
+                context.println(CONCLUSION_PREFIX.text() + Text.zhEn("seccomp-bpf 不可用", "seccomp-bpf is unavailable").text(), Colors.RED);
             }
         } catch (Throwable e) {
-            context.println("测试失败: " + e.getMessage(), Colors.RED);
+            context.println(TEST_FAILED.format(e.getMessage()), Colors.RED);
         }
     }
 
@@ -582,70 +580,70 @@ public class SandboxTestMain extends MainCommand<CommandResult> {
             return;
         }
 
-        context.println("===== 测试 clone/fork 拦截 =====", Colors.CYAN);
+        context.println(Text.zhEn("===== 测试 clone/fork 拦截 =====", "===== Testing clone/fork interception =====").text(), Colors.CYAN);
         context.println("", Colors.WHITE);
 
-        context.println("测试场景: 同时拦截线程和进程创建", Colors.CYAN);
+        context.println(Text.zhEn("测试场景: 同时拦截线程和进程创建", "Scenario: intercepting both thread and process creation").text(), Colors.CYAN);
         context.println("", Colors.WHITE);
 
         try {
             CloneForkTestResult result = testCloneForkBlocking(true, true);
 
-            context.print("seccomp 过滤器安装: ", Colors.CYAN);
-            context.println(result.seccompSuccess ? "成功" : "失败", result.seccompSuccess ? Colors.GREEN : Colors.RED);
+            context.print(Text.zhEn("seccomp 过滤器安装: ", "seccomp filter installation: ").text(), Colors.CYAN);
+            context.println(result.seccompSuccess ? VALUE_SUCCESS.text() : VALUE_FAILURE.text(), result.seccompSuccess ? Colors.GREEN : Colors.RED);
 
             if (!result.seccompSuccess) {
-                context.print("错误信息: ", Colors.RED);
-                context.println(result.errorMsg != null ? result.errorMsg : "未知错误", Colors.GRAY);
+                context.print(CliMessages.ERR_MESSAGE.text(), Colors.RED);
+                context.println(result.errorMsg != null ? result.errorMsg : Text.zhEn("未知错误", "unknown error").text(), Colors.GRAY);
                 return;
             }
 
             if (result.errorMsg != null) {
-                context.print("警告: ", Colors.ORANGE);
+                context.print(WARNING_PREFIX.text(), Colors.ORANGE);
                 context.println(result.errorMsg, Colors.GRAY);
             }
 
             context.println("", Colors.WHITE);
             
-            context.print("fork() 拦截: ", Colors.CYAN);
-            context.println(result.forkBlocked ? "已拦截 ✓" : "未拦截 ✗", result.forkBlocked ? Colors.GREEN : Colors.RED);
+            context.print(Text.zhEn("fork() 拦截: ", "fork() interception: ").text(), Colors.CYAN);
+            context.println(result.forkBlocked ? VALUE_BLOCKED.text() : VALUE_NOT_BLOCKED.text(), result.forkBlocked ? Colors.GREEN : Colors.RED);
 
-            context.print("pthread_create() 拦截: ", Colors.CYAN);
-            context.println(result.threadBlocked ? "已拦截 ✓" : "未拦截 ✗", result.threadBlocked ? Colors.GREEN : Colors.RED);
+            context.print(Text.zhEn("pthread_create() 拦截: ", "pthread_create() interception: ").text(), Colors.CYAN);
+            context.println(result.threadBlocked ? VALUE_BLOCKED.text() : VALUE_NOT_BLOCKED.text(), result.threadBlocked ? Colors.GREEN : Colors.RED);
 
             context.println("", Colors.WHITE);
             
             if (result.forkBlocked && result.threadBlocked) {
-                context.println("结论: seccomp-bpf 可完全拦截线程和进程创建", Colors.GREEN);
+                context.println(CONCLUSION_PREFIX.text() + Text.zhEn("seccomp-bpf 可完全拦截线程和进程创建", "seccomp-bpf fully intercepts thread and process creation").text(), Colors.GREEN);
             } else if (result.errorMsg != null) {
-                context.println("结论: 测试未完成，子进程在测试期间崩溃", Colors.ORANGE);
-                context.println("提示: 可能是 BPF 过滤器配置问题或设备兼容性问题", Colors.GRAY);
+                context.println(CONCLUSION_PREFIX.text() + Text.zhEn("测试未完成，子进程在测试期间崩溃", "the test did not finish; the child process crashed during the test").text(), Colors.ORANGE);
+                context.println(HINT_PREFIX.text() + Text.zhEn("可能是 BPF 过滤器配置问题或设备兼容性问题", "this may be a BPF filter configuration problem or a device compatibility issue").text(), Colors.GRAY);
             } else if (result.forkBlocked || result.threadBlocked) {
-                context.println("结论: seccomp-bpf 部分有效，需要进一步调试", Colors.ORANGE);
+                context.println(CONCLUSION_PREFIX.text() + Text.zhEn("seccomp-bpf 部分有效，需要进一步调试", "seccomp-bpf partially works; more debugging is needed").text(), Colors.ORANGE);
             } else {
-                context.println("结论: seccomp-bpf 未拦截任何操作", Colors.RED);
+                context.println(CONCLUSION_PREFIX.text() + Text.zhEn("seccomp-bpf 未拦截任何操作", "seccomp-bpf did not block anything").text(), Colors.RED);
             }
 
             context.println("", Colors.WHITE);
-            context.println("技术说明:", Colors.CYAN);
-            context.println("  - clone() 系统调用通过 CLONE_VM 标志区分线程/进程", Colors.GRAY);
-            context.println("  - fork()/vfork() 是进程创建的传统方式", Colors.GRAY);
-            context.println("  - pthread_create() 内部使用 clone() + CLONE_VM", Colors.GRAY);
+            context.println(Text.zhEn("技术说明:", "Technical notes:").text(), Colors.CYAN);
+            context.println(Text.zhEn("  - clone() 系统调用通过 CLONE_VM 标志区分线程/进程", "  - the clone() syscall distinguishes threads from processes via the CLONE_VM flag").text(), Colors.GRAY);
+            context.println(Text.zhEn("  - fork()/vfork() 是进程创建的传统方式", "  - fork()/vfork() are the traditional ways to create a process").text(), Colors.GRAY);
+            context.println(Text.zhEn("  - pthread_create() 内部使用 clone() + CLONE_VM", "  - pthread_create() uses clone() + CLONE_VM internally").text(), Colors.GRAY);
 
         } catch (Throwable e) {
-            context.println("测试失败: " + e.getMessage(), Colors.RED);
+            context.println(TEST_FAILED.format(e.getMessage()), Colors.RED);
         }
     }
 
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     private boolean ensureNativeLoaded(CommandExecutor.CmdExecContext context) {
         if (!nativeLoaded) {
-            context.println("Native 库未加载，正在加载...", Colors.ORANGE);
+            context.println(Text.zhEn("Native 库未加载，正在加载...", "Native library not loaded; loading it now...").text(), Colors.ORANGE);
             BlockGuardSandbox.bypass(() -> loadNativeLibrary(context));
         }
 
         if (!nativeLoaded) {
-            context.println("错误: Native 库未加载", Colors.RED);
+            context.println(CliMessages.ERROR_PREFIX.text() + Text.zhEn("Native 库未加载", "native library not loaded").text(), Colors.RED);
             return false;
         }
         return true;
@@ -683,9 +681,9 @@ public class SandboxTestMain extends MainCommand<CommandResult> {
     }
 
     private void testPenetrationInternal(CommandExecutor.CmdExecContext context) {
-        context.println("===== 安全渗透测试 =====", Colors.CYAN);
+        context.println(Text.zhEn("===== 安全渗透测试 =====", "===== Security penetration test =====").text(), Colors.CYAN);
         context.println("", Colors.WHITE);
-        context.println("尝试各种方法获取 Process 对象...", Colors.GRAY);
+        context.println(Text.zhEn("尝试各种方法获取 Process 对象...", "Trying various ways to obtain a Process object...").text(), Colors.GRAY);
         context.println("", Colors.WHITE);
 
         ScriptRunner runner = new ScriptRunner(context.classLoader());
@@ -696,25 +694,25 @@ public class SandboxTestMain extends MainCommand<CommandResult> {
         int passed = 0;
 
         String[][] attackScripts = {
-            {"1. 直接调用 Runtime.exec()", 
+            {Text.zhEn("1. 直接调用 Runtime.exec()", "1. Call Runtime.exec() directly").text(), 
                 "Runtime.getRuntime().exec(\"echo pwned\");"},
             
-            {"2. Runtime.exec() 数组参数", 
+            {Text.zhEn("2. Runtime.exec() 数组参数", "2. Runtime.exec() with an array argument").text(), 
                 "Runtime.getRuntime().exec(new String[]{\"echo\", \"pwned\"});"},
             
-            {"3. Runtime.exec() 带环境变量", 
+            {Text.zhEn("3. Runtime.exec() 带环境变量", "3. Runtime.exec() with environment variables").text(), 
                 "Runtime.getRuntime().exec(\"echo pwned\", null);"},
             
-            {"4. Runtime.exec() 带工作目录", 
+            {Text.zhEn("4. Runtime.exec() 带工作目录", "4. Runtime.exec() with a working directory").text(), 
                 "Runtime.getRuntime().exec(\"echo pwned\", null, new java.io.File(\"/tmp\"));"},
             
-            {"5. 变量存储后调用", 
+            {Text.zhEn("5. 变量存储后调用", "5. Store in a variable, then call").text(), 
                 "Runtime rt = Runtime.getRuntime(); Process p = rt.exec(\"echo pwned\"); p;"},
             
-            {"6. ProcessBuilder 单命令", 
+            {Text.zhEn("6. ProcessBuilder 单命令", "6. ProcessBuilder with a single command").text(), 
                 "new ProcessBuilder(\"echo\", \"pwned\").start();"},
             
-            {"7. ProcessBuilder 命令列表", 
+            {Text.zhEn("7. ProcessBuilder 命令列表", "7. ProcessBuilder with a command list").text(), 
                 "java.util.List<String> cmd = new java.util.ArrayList<>(); cmd.add(\"echo\"); cmd.add(\"pwned\"); new ProcessBuilder(cmd).start();"},
             
             {"8. ProcessBuilder.directory()", 
@@ -723,52 +721,52 @@ public class SandboxTestMain extends MainCommand<CommandResult> {
             {"9. ProcessBuilder.redirectErrorStream()", 
                 "new ProcessBuilder(\"echo\", \"pwned\").redirectErrorStream(true).start();"},
             
-            {"10. ProcessBuilder 数组命令", 
+            {Text.zhEn("10. ProcessBuilder 数组命令", "10. ProcessBuilder with an array command").text(), 
                 "new ProcessBuilder(new String[]{\"echo\", \"pwned\"}).start();"},
             
-            {"11. 反射获取 Runtime 后 exec", 
+            {Text.zhEn("11. 反射获取 Runtime 后 exec", "11. Reflect to Runtime, then exec").text(), 
                 "Class.forName(\"java.lang.Runtime\").getMethod(\"getRuntime\").invoke(null).getClass().getMethod(\"exec\", String.class).invoke(Class.forName(\"java.lang.Runtime\").getMethod(\"getRuntime\").invoke(null), \"echo pwned\");"},
             
-            {"12. 反射获取 ProcessBuilder", 
+            {Text.zhEn("12. 反射获取 ProcessBuilder", "12. Reflect to ProcessBuilder").text(), 
                 "Class<?> pb = Class.forName(\"java.lang.ProcessBuilder\"); java.lang.reflect.Constructor<?> ctor = pb.getConstructor(java.util.List.class); java.util.List<String> cmd = new java.util.ArrayList<>(); cmd.add(\"echo\"); ctor.newInstance(cmd).getClass().getMethod(\"start\").invoke(ctor.newInstance(cmd));"},
             
-            {"13. MethodHandle 调用 Runtime.exec", 
+            {Text.zhEn("13. MethodHandle 调用 Runtime.exec", "13. MethodHandle calling Runtime.exec").text(), 
                 "java.lang.invoke.MethodHandle mh = java.lang.invoke.MethodHandles.publicLookup().findVirtual(Runtime.class, \"exec\", java.lang.invoke.MethodType.methodType(Process.class, String.class)); mh.invoke(Runtime.getRuntime(), \"echo pwned\");"},
             
-            {"14. MethodHandle 调用 ProcessBuilder.start", 
+            {Text.zhEn("14. MethodHandle 调用 ProcessBuilder.start", "14. MethodHandle calling ProcessBuilder.start").text(), 
                 "java.lang.invoke.MethodHandle mh = java.lang.invoke.MethodHandles.publicLookup().findVirtual(ProcessBuilder.class, \"start\", java.lang.invoke.MethodType.methodType(Process.class)); mh.invoke(new ProcessBuilder(\"echo\", \"pwned\"));"},
             
-            {"15. 通过 getClass 获取 Runtime", 
+            {Text.zhEn("15. 通过 getClass 获取 Runtime", "15. Get Runtime via getClass").text(), 
                 "Object obj = Runtime.getRuntime(); obj.getClass().getMethod(\"exec\", String.class).invoke(obj, \"echo pwned\");"},
             
-            {"16. 通过 Object 数组存储", 
+            {Text.zhEn("16. 通过 Object 数组存储", "16. Store via an Object array").text(), 
                 "Object[] arr = new Object[]{Runtime.getRuntime()}; arr[0].getClass().getMethod(\"exec\", String.class).invoke(arr[0], \"echo pwned\");"},
             
-            {"17. 尝试 /bin/sh -c", 
+            {Text.zhEn("17. 尝试 /bin/sh -c", "17. Try /bin/sh -c").text(), 
                 "Runtime.getRuntime().exec(\"/bin/sh -c 'echo pwned'\");"},
             
-            {"18. 尝试 /system/bin/sh (Android)", 
+            {Text.zhEn("18. 尝试 /system/bin/sh (Android)", "18. Try /system/bin/sh (Android)").text(), 
                 "Runtime.getRuntime().exec(\"/system/bin/sh -c 'echo pwned'\");"},
             
-            {"19. ProcessBuilder.command() 链式调用", 
+            {Text.zhEn("19. ProcessBuilder.command() 链式调用", "19. ProcessBuilder.command() fluent chain").text(), 
                 "new ProcessBuilder().command(\"echo\", \"pwned\").start();"},
             
-            {"20. ProcessBuilder 环境变量注入", 
+            {Text.zhEn("20. ProcessBuilder 环境变量注入", "20. ProcessBuilder environment injection").text(), 
                 "ProcessBuilder pb = new ProcessBuilder(\"echo\", \"pwned\"); pb.environment().put(\"EVIL\", \"1\"); pb.start();"},
             
-            {"21. 反射 getMethod 链", 
+            {Text.zhEn("21. 反射 getMethod 链", "21. Reflection getMethod chain").text(), 
                 "Runtime.class.getMethod(\"getRuntime\").invoke(null).getClass().getMethod(\"exec\", String.class).invoke(Runtime.class.getMethod(\"getRuntime\").invoke(null), \"echo pwned\");"},
             
-            {"22. 通过 ClassLoader 加载后反射", 
+            {Text.zhEn("22. 通过 ClassLoader 加载后反射", "22. Load via ClassLoader, then reflect").text(), 
                 "Class<?> rt = String.class.getClassLoader().loadClass(\"java.lang.Runtime\"); rt.getMethod(\"getRuntime\").invoke(null).getClass().getMethod(\"exec\", String.class).invoke(rt.getMethod(\"getRuntime\").invoke(null), \"echo pwned\");"},
             
-            {"23. 尝试继承 ProcessBuilder", 
+            {Text.zhEn("23. 尝试继承 ProcessBuilder", "23. Try extending ProcessBuilder").text(), 
                 "new ProcessBuilder(\"echo\", \"pwned\") {}.start();"},
             
-            {"24. 通过 java.lang.ProcessBuilder$Redirect", 
+            {Text.zhEn("24. 通过 java.lang.ProcessBuilder$Redirect", "24. Via java.lang.ProcessBuilder$Redirect").text(), 
                 "new ProcessBuilder(\"echo\", \"pwned\").redirectOutput(ProcessBuilder.Redirect.INHERIT).start();"},
             
-            {"25. 尝试 native exec (通过 JNI)", 
+            {Text.zhEn("25. 尝试 native exec (通过 JNI)", "25. Try native exec (via JNI)").text(), 
                 "Class.forName(\"java.lang.UNIXProcess\");"},
         };
 
@@ -787,25 +785,25 @@ public class SandboxTestMain extends MainCommand<CommandResult> {
                 );
 
                 if (result instanceof Process) {
-                    context.println("⚠ 攻击成功! 获得了 Process 对象", Colors.RED);
+                    context.println(Text.zhEn("⚠ 攻击成功! 获得了 Process 对象", "⚠ Attack succeeded! Obtained a Process object").text(), Colors.RED);
                 } else {
-                    context.println("✓ 被阻止 (返回: " + (result != null ? result.getClass().getSimpleName() : "null") + ")", Colors.GREEN);
+                    context.println(Text.zhEn("✓ 被阻止 (返回: %s)", "✓ Blocked (returned: %s)").format(result != null ? result.getClass().getSimpleName() : "null"), Colors.GREEN);
                     passed++;
                 }
             } catch (SecurityException e) {
-                context.println("✓ 被阻止", Colors.GREEN);
+                context.println(Text.zhEn("✓ 被阻止", "✓ Blocked").text(), Colors.GREEN);
                 passed++;
             } catch (Exception e) {
                 Throwable cause = e.getCause();
                 if (cause instanceof SecurityException) {
-                    context.println("✓ 被阻止", Colors.GREEN);
+                    context.println(Text.zhEn("✓ 被阻止", "✓ Blocked").text(), Colors.GREEN);
                     passed++;
                 } else if (cause != null && cause.getMessage() != null && 
                            (cause.getMessage().contains("denied") || 
                             cause.getMessage().contains("禁止") ||
                             cause.getMessage().contains("not allowed") ||
                             cause.getMessage().contains("access denied"))) {
-                    context.println("✓ 被阻止", Colors.GREEN);
+                    context.println(Text.zhEn("✓ 被阻止", "✓ Blocked").text(), Colors.GREEN);
                     passed++;
                 } else {
                     String msg = cause != null ? cause.getMessage() : e.getMessage();
@@ -813,10 +811,10 @@ public class SandboxTestMain extends MainCommand<CommandResult> {
                         msg.contains("not allowed") || msg.contains("access denied") ||
                         msg.contains("cannot access") || msg.contains("not found") ||
                         msg.contains("cannot resolve") || msg.contains("Unknown class"))) {
-                        context.println("✓ 被阻止", Colors.GREEN);
+                        context.println(Text.zhEn("✓ 被阻止", "✓ Blocked").text(), Colors.GREEN);
                         passed++;
                     } else {
-                        context.println("⚠ 异常: " + (cause != null ? "[" + cause.getClass().getSimpleName() + "] "+ cause : e.getClass().getSimpleName()) , Colors.ORANGE);
+                        context.println(Text.zhEn("⚠ 异常: %s", "⚠ Error: %s").format(cause != null ? "[" + cause.getClass().getSimpleName() + "] "+ cause : e.getClass().getSimpleName()) , Colors.ORANGE);
                     }
                 }
             }
@@ -826,17 +824,17 @@ public class SandboxTestMain extends MainCommand<CommandResult> {
         context.println("", Colors.WHITE);
         context.println("─────────────────────────────", Colors.GRAY);
         context.println("", Colors.WHITE);
-        context.print("测试结果: ", Colors.CYAN);
-        context.print(passed + " 个攻击被阻止", passed == totalTests ? Colors.GREEN : Colors.YELLOW);
+        context.print(Text.zhEn("测试结果: ", "Test result: ").text(), Colors.CYAN);
+        context.print(Text.zhEn("%d 个攻击被阻止", "%d attacks blocked").format(passed), passed == totalTests ? Colors.GREEN : Colors.YELLOW);
         context.print(" / ", Colors.GRAY);
-        context.println(failed + " 个攻击成功", failed == 0 ? Colors.GREEN : Colors.RED);
+        context.println(Text.zhEn("%d 个攻击成功", "%d attacks succeeded").format(failed), failed == 0 ? Colors.GREEN : Colors.RED);
 
         if (failed == 0) {
-            context.println("结论: 沙箱安全机制有效，所有攻击都被阻止", Colors.GREEN);
+            context.println(CONCLUSION_PREFIX.text() + Text.zhEn("沙箱安全机制有效，所有攻击都被阻止", "the sandbox security mechanisms work; every attack was blocked").text(), Colors.GREEN);
         } else if (passed > failed) {
-            context.println("结论: 沙箱存在部分漏洞，需要加固", Colors.ORANGE);
+            context.println(CONCLUSION_PREFIX.text() + Text.zhEn("沙箱存在部分漏洞，需要加固", "the sandbox has some holes and needs hardening").text(), Colors.ORANGE);
         } else {
-            context.println("结论: 沙箱存在严重安全漏洞！", Colors.RED);
+            context.println(CONCLUSION_PREFIX.text() + Text.zhEn("沙箱存在严重安全漏洞！", "the sandbox has a severe security hole!").text(), Colors.RED);
         }
     }
 

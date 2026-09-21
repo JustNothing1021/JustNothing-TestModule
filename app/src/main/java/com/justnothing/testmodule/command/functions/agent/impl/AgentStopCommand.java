@@ -1,6 +1,7 @@
 package com.justnothing.testmodule.command.functions.agent.impl;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.framework.model.AbstractCommand;
 import com.justnothing.testmodule.command.framework.model.CommandResult;
 import com.justnothing.testmodule.command.functions.agent.inspect.InspectionClient;
@@ -20,16 +21,16 @@ public class AgentStopCommand extends AbstractCommand<AgentStopRequest, CommandR
 
         if (context.isCli()) {
             if (success) {
-                context.println("已停止: " + pkg, Colors.GREEN);
-                context.println("(ServerSocket 已关闭, .info 文件已清理)", Colors.YELLOW);
+                context.println(Text.zhEn("已停止: ", "Stopped: ").text() + pkg, Colors.GREEN);
+                context.println(Text.zhEn("(ServerSocket 已关闭, .info 文件已清理)", "(ServerSocket closed, .info file cleaned up)").text(), Colors.YELLOW);
             } else {
-                context.println("停止失败: " + pkg, Colors.RED);
+                context.println(Text.zhEn("停止失败: ", "Stop failed: ").text() + pkg, Colors.RED);
             }
         }
 
         CommandResult result = new CommandResult();
         result.setSuccess(true); // stop 本身总是成功（即使 agent 不在线）
-        result.setMessage("stop 请求已完成");
+        result.setMessage(Text.zhEn("stop 请求已完成", "Stop request completed").text());
         return result;
     }
 }

@@ -2,6 +2,8 @@ package com.justnothing.testmodule.command.functions.classcmd.impl;
 
 import com.justnothing.testmodule.command.framework.error.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.functions.classcmd.ClassTexts;
 import com.justnothing.testmodule.command.functions.classcmd.model.ClassCommandContext;
 import com.justnothing.testmodule.command.functions.classcmd.request.InvokeConstructorRequest;
@@ -47,7 +49,9 @@ public class ClassConstructorCommand extends AbstractClassCommand<InvokeConstruc
         String signature = request.getSignature();
 
         if (className == null || className.isEmpty()) {
-            throw new IllegalCommandLineArgumentException("参数不足: class constructor <class_name> [params...]");
+            throw new IllegalCommandLineArgumentException(Text.zhEn(
+                    "参数不足: class constructor <class_name> [params...]",
+                    "Not enough arguments: class constructor <class_name> [params...]").text());
         }
 
         List<Object> params = new ArrayList<>();
@@ -83,9 +87,10 @@ public class ClassConstructorCommand extends AbstractClassCommand<InvokeConstruc
             } catch (Exception e) {
                 context.logger().warn("无法解析参数: " + paramStr);
                 Map<String, Object> errContext = new HashMap<>();
-                errContext.put("参数索引", i);
-                errContext.put("参数表达式", paramStr);
-                CommandExceptionHandler.handleException("class constructor", e, context.execContext(), errContext, "解析参数失败");
+                errContext.put(CliMessages.CONTEXT_PARAM_INDEX.text(), i);
+                errContext.put(CliMessages.CONTEXT_PARAM_EXPRESSION.text(), paramStr);
+                CommandExceptionHandler.handleException("class constructor", e, context.execContext(), errContext,
+                        Text.zhEn("解析参数失败", "Failed to parse the argument").text());
                 return null;
             }
         }
@@ -94,9 +99,9 @@ public class ClassConstructorCommand extends AbstractClassCommand<InvokeConstruc
         InvokeConstructorResult result = new InvokeConstructorResult();
 
         if (!params.isEmpty()) {
-            context.execContext().println("调用参数：", Colors.CYAN);
+            context.execContext().println(ClassTexts.LABEL_CALL_PARAMS.text(), Colors.CYAN);
             for (int i = 0; i < params.size(); i++) {
-                context.execContext().print("参数", Colors.YELLOW);
+                context.execContext().print(ClassTexts.LABEL_PARAM.text(), Colors.YELLOW);
                 context.execContext().print("[", Colors.WHITE);
                 context.execContext().print(String.valueOf(i), Colors.LIGHT_GREEN);
                 context.execContext().print("]", Colors.WHITE);
@@ -135,8 +140,8 @@ public class ClassConstructorCommand extends AbstractClassCommand<InvokeConstruc
 
         if (constructor == null) {
             context.logger().warn("没有找到类" + className + "的匹配构造函数");
-            context.execContext().println("没有找到匹配的构造函数", Colors.RED);
-            context.execContext().print("参数类型: ", Colors.CYAN);
+            context.execContext().println(Text.zhEn("没有找到匹配的构造函数", "No matching constructor found").text(), Colors.RED);
+            context.execContext().print(Text.zhEn("参数类型: ", "Parameter types: ").text(), Colors.CYAN);
             for (int i = 0; i < paramTypes.size(); i++) {
                 context.execContext().print(paramTypes.get(i).getName(), Colors.GREEN);
                 if (i < paramTypes.size() - 1) {
@@ -145,7 +150,7 @@ public class ClassConstructorCommand extends AbstractClassCommand<InvokeConstruc
             }
             context.execContext().println("");
             context.execContext().println("");
-            context.execContext().println("可用的构造函数:", Colors.CYAN);
+            context.execContext().println(Text.zhEn("可用的构造函数:", "Available constructors:").text(), Colors.CYAN);
             for (Constructor<?> c : targetClass.getDeclaredConstructors()) {
                 context.execContext().print("  ", Colors.GRAY);
                 DescriptorColorizer.printColoredDescriptor(context.execContext(), c, true);
@@ -156,7 +161,7 @@ public class ClassConstructorCommand extends AbstractClassCommand<InvokeConstruc
             return result;
         }
 
-        context.execContext().print("找到构造函数: ", Colors.CYAN);
+        context.execContext().print(ClassTexts.LABEL_FOUND_CONSTRUCTOR.text(), Colors.CYAN);
         DescriptorColorizer.printColoredDescriptor(context.execContext(), constructor, true);
         context.execContext().println("");
         context.execContext().println("");
@@ -170,11 +175,11 @@ public class ClassConstructorCommand extends AbstractClassCommand<InvokeConstruc
         result.setResultHash(System.identityHashCode(instance));
 
         context.logger().info("创建实例成功: " + instance);
-        context.execContext().println("创建实例成功", Colors.GREEN);
+        context.execContext().println(Text.zhEn("创建实例成功", "Instance created").text(), Colors.GREEN);
         context.execContext().println("============================", Colors.CYAN);
         context.execContext().println(String.valueOf(instance), Colors.WHITE);
         context.execContext().println("============================", Colors.CYAN);
-        context.execContext().print("类型: ", Colors.CYAN);
+        context.execContext().print(ClassTexts.LABEL_TYPE.text(), Colors.CYAN);
         context.execContext().println(instance.getClass().getName(), Colors.YELLOW);
         context.execContext().print("Hash: ", Colors.CYAN);
         context.execContext().println(String.valueOf(System.identityHashCode(instance)), Colors.LIGHT_GREEN);

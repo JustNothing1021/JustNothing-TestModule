@@ -2,6 +2,8 @@ package com.justnothing.testmodule.command.functions.classcmd.impl;
 
 import com.justnothing.testmodule.command.framework.error.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.functions.classcmd.ClassTexts;
 import com.justnothing.testmodule.command.functions.classcmd.model.ClassCommandContext;
 import com.justnothing.testmodule.command.functions.classcmd.request.ClassGraphRequest;
@@ -34,7 +36,9 @@ public class ClassGraphCommand extends AbstractClassCommand<ClassGraphRequest, C
         String className = request.getClassName();
 
         if (className == null || className.isEmpty()) {
-            throw new IllegalCommandLineArgumentException("参数不足, 需要至少1个参数: class graph <class_name>");
+            throw new IllegalCommandLineArgumentException(Text.zhEn(
+                    "参数不足, 需要至少1个参数: class graph <class_name>",
+                    "Not enough arguments; at least 1 is required: class graph <class_name>").text());
         }
 
         Class<?> clazz = ClassResolver.findClassOrFail(className, context.classLoader());
@@ -51,8 +55,9 @@ public class ClassGraphCommand extends AbstractClassCommand<ClassGraphRequest, C
 
     private void generateClassInheritanceGraph(Class<?> clazz, ClassCommandContext<ClassGraphRequest> context, ClassGraphResult result,
             boolean showSubclasses, boolean showInterfaces, int maxDepth, boolean compactMode) {
-        context.execContext().println("===== 类继承图 =====", Colors.CYAN);
-        context.execContext().print("类名: ", Colors.CYAN);
+        context.execContext().println(
+                Text.zhEn("===== 类继承图 =====", "===== Class Inheritance Graph =====").text(), Colors.CYAN);
+        context.execContext().print(CliMessages.LABEL_CLASS_NAME.text(), Colors.CYAN);
         context.execContext().println(clazz.getName(), Colors.GREEN);
         context.execContext().println("");
 
@@ -61,7 +66,9 @@ public class ClassGraphCommand extends AbstractClassCommand<ClassGraphRequest, C
         List<ClassGraphResult.HierarchyLevel> hierarchyLevels = new ArrayList<>();
         List<String> allInterfaces = new ArrayList<>();
 
-        context.execContext().println("继承层次（从顶层父类到当前类）:", Colors.CYAN);
+        context.execContext().println(
+                Text.zhEn("继承层次（从顶层父类到当前类）:", "Inheritance chain (from topmost superclass to this class):").text(),
+                Colors.CYAN);
         for (int i = 0; i < hierarchy.size(); i++) {
             Class<?> currentClass = hierarchy.get(i);
 
@@ -83,7 +90,7 @@ public class ClassGraphCommand extends AbstractClassCommand<ClassGraphRequest, C
                         }
                     }
                     context.execContext().print(i != hierarchy.size() - 1 && !compactMode ? "├─" : "└", Colors.GRAY);
-                    context.execContext().print("实现接口: ", Colors.CYAN);
+                    context.execContext().print(Text.zhEn("实现接口: ", "Implements: ").text(), Colors.CYAN);
                     for (int k = 0; k < interfaces.length; k++) {
                         if (k > 0) {
                             context.execContext().print(", ", Colors.WHITE);
@@ -105,7 +112,10 @@ public class ClassGraphCommand extends AbstractClassCommand<ClassGraphRequest, C
         result.setImplementedInterfaces(allInterfaces);
 
         if (showSubclasses) {
-            context.execContext().println("警告: 怎么可能会有这种功能, 别指定这种选项了", Colors.GRAY);
+            context.execContext().println(
+                    Text.zhEn("警告: 怎么可能会有这种功能, 别指定这种选项了",
+                            "Warning: how would such a feature even exist? Just stop passing that option").text(),
+                    Colors.GRAY);
         }
     }
 

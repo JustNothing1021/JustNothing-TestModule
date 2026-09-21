@@ -5,6 +5,7 @@ import android.net.LocalServerSocket;
 import android.net.LocalSocket;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.framework.output.ClientRequirements;
 import com.justnothing.testmodule.command.framework.output.InteractiveOutputHandler;
 import com.justnothing.testmodule.command.framework.protocol.InteractiveProtocol;
@@ -142,7 +143,7 @@ public class InspectionAgent {
 
                 String requestJson = reader.readLine();
                 if (requestJson == null || requestJson.isEmpty()) {
-                    writer.write(buildError(-1, "EMPTY_REQUEST", "请求为空"));
+                    writer.write(buildError(-1, "EMPTY_REQUEST", Text.zhEn("请求为空", "empty request").text()));
                     writer.newLine();
                     writer.flush();
                     return;
@@ -162,7 +163,7 @@ public class InspectionAgent {
                 }
 
                 if (commandType.isEmpty()) {
-                    writer.write(buildError(-1, "MISSING_COMMAND", "缺少 command 字段"));
+                    writer.write(buildError(-1, "MISSING_COMMAND", Text.zhEn("缺少 command 字段", "missing command field").text()));
                     writer.newLine();
                     writer.flush();
                     return;
@@ -191,7 +192,7 @@ public class InspectionAgent {
                     String cmdStr = params != null ? params.optString("command", "") : "";
                     if (cmdStr.isEmpty()) {
                         writer.write(buildError(-1, "MISSING_PARAM",
-                                "_dispatch 缺少 command 参数"));
+                                Text.zhEn("_dispatch 缺少 command 参数", "_dispatch is missing the command parameter").text()));
                         writer.newLine();
                         writer.flush();
                         return;
@@ -216,7 +217,8 @@ public class InspectionAgent {
 
                 if (handler == null) {
                     writer.write(buildError(-1, "UNKNOWN_COMMAND",
-                            "未知命令: " + commandType + ", 可用: " + AgentCommandRouter.getAvailableCommands()));
+                            Text.zhEn("未知命令: %s, 可用: %s", "Unknown command: %s, available: %s")
+                                    .format(commandType, AgentCommandRouter.getAvailableCommands())));
                     writer.newLine();
                     writer.flush();
                     return;
@@ -437,7 +439,7 @@ public class InspectionAgent {
                 errResp.put("returnCode", -1);
                 org.json.JSONObject errObj = new org.json.JSONObject();
                 errObj.put("code", "DISPATCH_ERROR");
-                errObj.put("message", "命令执行失败: " + e.getMessage());
+                errObj.put("message", Text.zhEn("命令执行失败: %s", "Command failed: %s").format(e.getMessage()));
                 errResp.put("error", errObj);
                 socketOut.write((errResp.toString() + "\n").getBytes(StandardCharsets.UTF_8));
                 socketOut.flush();

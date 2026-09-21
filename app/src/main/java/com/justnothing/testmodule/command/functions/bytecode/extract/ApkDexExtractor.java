@@ -1,5 +1,6 @@
 package com.justnothing.testmodule.command.functions.bytecode.extract;
 
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.utils.logging.Logger;
 
 import java.io.ByteArrayOutputStream;
@@ -39,7 +40,7 @@ public final class ApkDexExtractor implements DexExtractor {
 
     @Override
     public String name() {
-        return "APK/JAR 内的 classes*.dex";
+        return Text.zhEn("APK/JAR 内的 classes*.dex", "classes*.dex inside the APK/JAR").text();
     }
 
     @Override
@@ -79,7 +80,8 @@ public final class ApkDexExtractor implements DexExtractor {
                     logger.warn("条目不是合法 dex（魔数不对），已跳过: " + entry.getName());
                     continue;
                 }
-                results.add(new Result(bytes, DexTrust.ORIGINAL, "来自 " + entry.getName()));
+                results.add(new Result(bytes, DexTrust.ORIGINAL,
+                        Text.zhEn("来自 %s", "from %s").format(entry.getName())));
             }
         }
         return results;

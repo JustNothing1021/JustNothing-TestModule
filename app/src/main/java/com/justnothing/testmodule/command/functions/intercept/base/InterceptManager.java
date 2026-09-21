@@ -1,6 +1,7 @@
 package com.justnothing.testmodule.command.functions.intercept.base;
 
 import com.justnothing.testmodule.command.framework.output.ICommandOutputHandler;
+import com.justnothing.testmodule.command.functions.intercept.InterceptTexts;
 
 import java.util.List;
 
@@ -39,7 +40,7 @@ public interface InterceptManager<T extends InterceptTask> {
     default String getTaskInfo(int id) {
         T task = getTask(id);
         if (task == null) {
-            return "未找到任务: " + id;
+            return InterceptTexts.TASK_NOT_FOUND.format(id);
         }
         return task.toString();
     }

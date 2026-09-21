@@ -2,6 +2,8 @@ package com.justnothing.testmodule.command.functions.classcmd.impl;
 
 import com.justnothing.testmodule.command.framework.error.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.functions.classcmd.ClassTexts;
 import com.justnothing.testmodule.command.functions.classcmd.model.ClassCommandContext;
 import com.justnothing.testmodule.command.functions.classcmd.request.InvokeMethodRequest;
@@ -50,7 +52,9 @@ public class ClassInvokeCommand extends AbstractClassCommand<InvokeMethodRequest
         List<String> rawParamTypes = request.getParamTypes();
 
         if (className == null || className.isEmpty() || methodName == null || methodName.isEmpty()) {
-            throw new IllegalCommandLineArgumentException("参数不足, 需要至少2个参数: class invoke <class> <method> [params...]");
+            throw new IllegalCommandLineArgumentException(Text.zhEn(
+                    "参数不足, 需要至少2个参数: class invoke <class> <method> [params...]",
+                    "Not enough arguments; at least 2 are required: class invoke <class> <method> [params...]").text());
         }
 
         boolean accessSuper = request.isAccessSuper();
@@ -94,20 +98,22 @@ public class ClassInvokeCommand extends AbstractClassCommand<InvokeMethodRequest
                         ": (" + parseResult.type().getName() + ")" + valueStr + typeHint);
             } catch (Exception e) {
                 Map<String, Object> errContext = Map.of(
-                        "参数索引", i,
-                        "参数表达式", paramStr,
-                        "错误信息", e.getMessage() != null ? e.getMessage() : "没有详细信息"
+                        CliMessages.CONTEXT_PARAM_INDEX.text(), i,
+                        CliMessages.CONTEXT_PARAM_EXPRESSION.text(), paramStr,
+                        CliMessages.CONTEXT_ERROR_MESSAGE.text(),
+                        e.getMessage() != null ? e.getMessage() : ClassTexts.TEXT_NO_DETAILS.text()
                 );
-                CommandExceptionHandler.handleException("class invoke", e, context.execContext(), errContext, "无法解析参数: " + paramStr);
+                CommandExceptionHandler.handleException("class invoke", e, context.execContext(), errContext,
+                        Text.zhEn("无法解析参数: %s", "Cannot parse the argument: %s").format(paramStr));
                 result.setSuccess(false);
                 return result;
             }
         }
 
         if (!params.isEmpty()) {
-            context.execContext().println("调用参数：", Colors.BLUE);
+            context.execContext().println(ClassTexts.LABEL_CALL_PARAMS.text(), Colors.BLUE);
             for (int i = 0; i < params.size(); i++) {
-                context.execContext().print("参数", Colors.YELLOW);
+                context.execContext().print(ClassTexts.LABEL_PARAM.text(), Colors.YELLOW);
                 context.execContext().print("[", Colors.WHITE);
                 context.execContext().print(String.valueOf(i), Colors.LIGHT_GREEN);
                 context.execContext().print("]", Colors.WHITE);
@@ -134,7 +140,7 @@ public class ClassInvokeCommand extends AbstractClassCommand<InvokeMethodRequest
 
             if (method == null) {
                 context.logger().warn("没有找到类" + className + "的方法" + methodName);
-                context.execContext().print("没有找到方法: ", Colors.RED);
+                context.execContext().print(Text.zhEn("没有找到方法: ", "Method not found: ").text(), Colors.RED);
                 context.execContext().print(methodName, Colors.YELLOW);
                 context.execContext().print("(", Colors.MAGENTA);
                 for (int i = 0; i < paramTypes.size(); i++) {
@@ -146,9 +152,9 @@ public class ClassInvokeCommand extends AbstractClassCommand<InvokeMethodRequest
                 context.execContext().println(")", Colors.MAGENTA);
 
                 context.execContext().println("");
-                context.execContext().print("目前找到符合名称 '", Colors.CYAN);
+                context.execContext().print(Text.zhEn("目前找到符合名称 '", "Methods whose name contains '").text(), Colors.CYAN);
                 context.execContext().print(methodName, Colors.YELLOW);
-                context.execContext().println("' 的方法有:", Colors.CYAN);
+                context.execContext().println(Text.zhEn("' 的方法有:", "' :").text(), Colors.CYAN);
                 boolean found = false;
                 for (Method m : targetClass.getDeclaredMethods()) {
                     if (m.getName().contains(methodName)) {
@@ -159,7 +165,7 @@ public class ClassInvokeCommand extends AbstractClassCommand<InvokeMethodRequest
                     }
                 }
                 if (!found) {
-                    context.execContext().println("(暂无)", Colors.GRAY);
+                    context.execContext().println(Text.zhEn("(暂无)", "(none)").text(), Colors.GRAY);
                 }
 
                 result.setSuccess(false);
@@ -167,7 +173,7 @@ public class ClassInvokeCommand extends AbstractClassCommand<InvokeMethodRequest
             }
         }
 
-        context.execContext().print("找到方法: ", Colors.CYAN);
+        context.execContext().print(ClassTexts.LABEL_FOUND_METHOD.text(), Colors.CYAN);
         DescriptorColorizer.printColoredDescriptor(context.execContext(), method, true);
         context.execContext().println("");
         context.execContext().println("");
@@ -185,10 +191,13 @@ public class ClassInvokeCommand extends AbstractClassCommand<InvokeMethodRequest
             if (isStaticMode) {
                 CommandExceptionHandler.handleException(
                     "class invoke",
-                    new IllegalStateException("方法 " + methodName + " 不是静态方法，但使用了 -s 选项"),
+                    new IllegalStateException(Text.zhEn(
+                            "方法 %s 不是静态方法，但使用了 -s 选项",
+                            "Method %s is not static, but the -s option was given").format(methodName)),
                     context.execContext(),
-                    Map.of("类名", className, "方法名", methodName),
-                    "非静态方法不能使用 -s 选项"
+                    Map.of(CliMessages.CONTEXT_CLASS_NAME.text(), className,
+                           CliMessages.CONTEXT_METHOD_NAME.text(), methodName),
+                    Text.zhEn("非静态方法不能使用 -s 选项", "A non-static method cannot be invoked with -s").text()
                 );
                 result.setSuccess(false);
                 return result;
@@ -215,12 +224,15 @@ public class ClassInvokeCommand extends AbstractClassCommand<InvokeMethodRequest
                         context.logger().info("通过无参构造创建实例: " + targetInstance);
                     } catch (Exception e) {
                         Map<String, Object> errContext = Map.of(
-                                "类名", className,
-                                "方法名", methodName,
-                                "参数", params,
-                                "错误信息", e.getMessage() == null ? e.getMessage() : "没有详细信息"
+                                CliMessages.CONTEXT_CLASS_NAME.text(), className,
+                                CliMessages.CONTEXT_METHOD_NAME.text(), methodName,
+                                ClassTexts.LABEL_PARAM.text(), params,
+                                CliMessages.CONTEXT_ERROR_MESSAGE.text(),
+                                e.getMessage() != null ? e.getMessage() : ClassTexts.TEXT_NO_DETAILS.text()
                         );
-                        CommandExceptionHandler.handleException("class invoke", e, context.execContext(), errContext, "非静态方法需要一个示例，在创建实例的时候出现错误");
+                        CommandExceptionHandler.handleException("class invoke", e, context.execContext(), errContext,
+                                Text.zhEn("非静态方法需要一个实例，在创建实例的时候出现错误",
+                                        "An instance is required for a non-static method, but creating one failed").text());
                         result.setSuccess(false);
                         return result;
                     }
@@ -237,7 +249,7 @@ public class ClassInvokeCommand extends AbstractClassCommand<InvokeMethodRequest
         // 映射结果到 InvokeMethodResult 字段
         if (returnValue == null) {
             context.logger().info("调用成功，返回: null");
-            context.execContext().print("结果: ", Colors.CYAN);
+            context.execContext().print(ClassTexts.LABEL_RESULT.text(), Colors.CYAN);
             context.execContext().println("null", Colors.LIGHT_BLUE);
             
             result.setResultString("null");
@@ -249,11 +261,11 @@ public class ClassInvokeCommand extends AbstractClassCommand<InvokeMethodRequest
             result.setResultTypeName(returnValue.getClass().getName());
             result.setResultHash(System.identityHashCode(returnValue));
 
-            context.execContext().println("结果:", Colors.CYAN);
+            context.execContext().println(ClassTexts.LABEL_RESULT.text(), Colors.CYAN);
             context.execContext().println("==========================", Colors.CYAN);
             context.execContext().println(String.valueOf(returnValue), Colors.WHITE);
             context.execContext().println("==========================", Colors.CYAN);
-            context.execContext().print("类型: ", Colors.CYAN);
+            context.execContext().print(ClassTexts.LABEL_TYPE.text(), Colors.CYAN);
             context.execContext().println(returnValue.getClass().getName(), Colors.GREEN);
             context.execContext().print("Hash: ", Colors.CYAN);
             context.execContext().println(String.valueOf(System.identityHashCode(returnValue)), Colors.LIGHT_GREEN);

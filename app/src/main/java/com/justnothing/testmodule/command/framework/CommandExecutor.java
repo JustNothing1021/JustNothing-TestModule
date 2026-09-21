@@ -21,6 +21,8 @@ import com.justnothing.testmodule.command.framework.utils.CommandArgumentParser;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.reflect.ClassLoaderManager;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -29,6 +31,9 @@ import java.util.Map;
 import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
+
+import org.jline.terminal.Terminal;
+import org.jline.terminal.TerminalBuilder;
 
 
 
@@ -151,13 +156,13 @@ public class CommandExecutor {
     public void execute(String fullCommand, ICommandOutputHandler output, ClientRequirements requirements, CommandType executionType) {
         if (fullCommand == null || fullCommand.trim().isEmpty()) {
             logger.warn("命令为空");
-            output.println("命令不能为空", Colors.RED);
+            output.println(CliMessages.EXEC_EMPTY_COMMAND.text(), Colors.RED);
             return;
         }
 
         if (output == null) {
             logger.error("输出处理器为null");
-            throw new IllegalArgumentException("输出处理器不能为null");
+            throw new IllegalArgumentException(CliMessages.ERR_OUTPUT_HANDLER_NULL.text());
         }
 
         logger.info("开始执行命令: " + fullCommand);
@@ -171,13 +176,13 @@ public class CommandExecutor {
                         ClientRequirements requirements, CommandType executionType) {
         if (request == null) {
             logger.warn("请求为空");
-            output.println("请求不能为空", Colors.RED);
+            output.println(CliMessages.EXEC_EMPTY_REQUEST.text(), Colors.RED);
             return;
         }
 
         if (output == null) {
             logger.error("输出处理器为null");
-            throw new IllegalArgumentException("输出处理器不能为null");
+            throw new IllegalArgumentException(CliMessages.ERR_OUTPUT_HANDLER_NULL.text());
         }
 
         logger.info("开始执行命令请求: " + request.getCommandType());
@@ -225,14 +230,14 @@ public class CommandExecutor {
         if (executionType == CommandType.COMMAND_LINE) {
             logger.error("执行命令异常", t);
             output.println("\n===============================================", Colors.RED);
-            output.println("执行命令出现严重错误...", Colors.RED);
-            output.print("（你现在看到的是命令执行基类的错误报告, 大概率是命令执行爆掉了或者命令内部", Colors.GRAY);
-            output.print("出现了Error而不是Exception", Colors.YELLOW);
-            output.println("!）", Colors.GRAY);
-            output.print("错误信息: ", Colors.ORANGE);
+            output.println(CliMessages.EXEC_FATAL_HEAD.text(), Colors.RED);
+            output.print(CliMessages.EXEC_FATAL_DETAIL_PREFIX.text(), Colors.GRAY);
+            output.print(CliMessages.EXEC_FATAL_DETAIL_HIGHLIGHT.text(), Colors.YELLOW);
+            output.println(CliMessages.EXEC_FATAL_DETAIL_SUFFIX.text(), Colors.GRAY);
+            output.print(CliMessages.ERR_MESSAGE.text(), Colors.ORANGE);
             output.printf(Colors.YELLOW, "[%s] ", t.getClass().getSimpleName());
             output.println(t.getMessage(), Colors.GRAY);
-            output.println("堆栈追踪:", Colors.GRAY);
+            output.println(CliMessages.ERR_STACK_TRACE.text(), Colors.GRAY);
             output.printStackTrace(t, Colors.GRAY);
             output.println("===============================================", Colors.RED);
             return null;
@@ -252,7 +257,7 @@ public class CommandExecutor {
             ClientRequirements requirements, CommandType executionType) throws Throwable {
         fullCommand = fullCommand.trim();
         if (fullCommand.isEmpty()) {
-            output.println("没有指定命令 (可以用help来获取帮助)", Colors.RED);
+            output.println(CliMessages.EXEC_NO_COMMAND.text(), Colors.RED);
             return null;
         }
 
@@ -266,7 +271,7 @@ public class CommandExecutor {
 
         String[] commandParams = CommandArgumentParser.splitArguments(parseResult.commandLine());
         if (commandParams.length == 0) {
-            output.println("没有指定命令 (可以用help来获取帮助)", Colors.ORANGE);
+            output.println(CliMessages.EXEC_NO_COMMAND.text(), Colors.ORANGE);
             return null;
         }
 
@@ -351,9 +356,9 @@ public class CommandExecutor {
             // 命令未注册
             if (executionType != CommandType.COMMAND_LINE) {
                 logger.error("在非命令行模式下执行未知命令: " + command);
-                throw new RuntimeException("未知的命令: " + command + ", 输入help获取帮助");
+                throw new RuntimeException(CliMessages.EXEC_UNKNOWN_COMMAND.format(command));
             }
-            output.println("未知的命令: " + command + ", 输入help获取帮助", Colors.ORANGE);
+            output.println(CliMessages.EXEC_UNKNOWN_COMMAND.format(command), Colors.ORANGE);
             return null;
         }
 
@@ -390,7 +395,7 @@ public class CommandExecutor {
             throw e;
         }
 
-        output.println("参数错误: " + e.getMessage(), Colors.RED);
+        output.println(CliMessages.EXEC_ARG_ERROR.format(e.getMessage()), Colors.RED);
         output.println("", Colors.DEFAULT);
 
         // 子命令级帮助优先（匹配到子命令时只显示该子命令的帮助）
@@ -519,7 +524,51 @@ public class CommandExecutor {
                     return console;
                 }
             }
-            return output.getConsole();
+            com.justnothing.richconsole.console.Console fromOutput = output.getConsole();
+            console = fromOutput != null ? fromOutput : plainConsole();
+            return console;
+        }
+
+        /** 降级 Console 的固定宽度。见 {@link #plainConsole()}。 */
+        static final int PLAIN_CONSOLE_WIDTH = 100;
+
+        /**
+         * 文件模式（{@code COMMAND_LINE}）下没有终端时的降级 Console。
+         *
+         * <p>{@code COMMAND_LINE} 模式下 output 是 StringBuilderCollector，而
+         * {@code getConsole()} 的默认实现返回 null —— 不兜底的话 {@link #console()} 就是 null，
+         * 命令渲染要么 NPE、要么静默跳过，表现是"输出文件里连文本都没有"。</p>
+         *
+         * <p><b>必须显式把 Terminal 的 streams 指到 System.out。</b> 不指的话 RichConsole 自建的
+         * 系统终端直接写真实 fd、绕过 {@code System.setOut}，{@code SystemOutputRedirector}
+         * 就抓不到它 —— 输出会掉进虚空（这个试过，网上看不出任何东西）。指到 System.out 之后它是
+         * 重定向层，会按线程转发给当前的 output handler，顺带复用了它那套 UTF-8 边界处理。</p>
+         *
+         * <p>{@code dumb} + {@code noColor} 为了纯文本：文件模式的输出是给文件看的，不该有颜色和
+         * 光标控制。宽度也必须显式给 —— 文件模式走 service call，没有 sys.hello 握手也就没有
+         * ClientRequirements，终端宽度量出来是 0，渲染出来是一片空白。</p>
+         *
+         * <p>{@code forceInteractive(false)} 是安全阀，不能省：客户端没有交互能力，服务端一主动
+         * 询问就会挂死。显式声明不可交互之后，凡是查 {@code isInteractive()} 的代码都会走安全分支；
+         * 没查的那些也会在空输入流上立刻 EOF 拿到 CancelledException（见 PlainConsoleFallbackTest）。
+         * 不显式声明的话就只靠"dumb 终端恰好不算交互"这个巧合了。</p>
+         */
+        static com.justnothing.richconsole.console.Console plainConsole() {
+            Terminal terminal = null;
+            try {
+                terminal = TerminalBuilder.builder()
+                        .streams(new ByteArrayInputStream(new byte[0]), System.out)
+                        .dumb(true)
+                        .build();
+            } catch (IOException e) {
+                logger.warn("文件模式降级 Console 的终端构造失败，渲染输出可能丢失", e);
+            }
+            Terminal resolved = terminal;
+            return com.justnothing.richconsole.console.Console.of(cfg -> cfg
+                    .withTerminal(resolved)
+                    .withWidth(PLAIN_CONSOLE_WIDTH)
+                    .withNoColor(true)
+                    .withForceInteractive(false));
         }
 
         /**

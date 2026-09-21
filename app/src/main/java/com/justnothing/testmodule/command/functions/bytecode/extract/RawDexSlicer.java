@@ -1,5 +1,6 @@
 package com.justnothing.testmodule.command.functions.bytecode.extract;
 
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.utils.logging.Logger;
 
 import java.io.File;
@@ -54,7 +55,8 @@ public final class RawDexSlicer implements DexExtractor {
 
     @Override
     public String name() {
-        return "vdex 直接切片（无法 de-quicken，只做校验与标注）";
+        return Text.zhEn("vdex 直接切片（无法 de-quicken，只做校验与标注）",
+                "raw vdex slicing (no de-quicken; verify and annotate only)").text();
     }
 
     @Override
@@ -96,10 +98,12 @@ public final class RawDexSlicer implements DexExtractor {
                     dex,
                     intact ? DexTrust.ORIGINAL : DexTrust.QUICKENED,
                     intact
-                            ? "文件内偏移 " + start + "，dex " + version + "，头部校验和自洽（未被改写）"
-                            : "文件内偏移 " + start + "，dex " + version
-                              + "，头部校验和对不上 —— 内容被改写（很可能被 ART quicken 过），"
-                              + "只能读结构，代码不可信；需要 de-quicken 才能反编译"));
+                            ? Text.zhEn("文件内偏移 %s，dex %s，头部校验和自洽（未被改写）",
+                                    "offset %s in file, dex %s, header checksum is consistent (not modified)")
+                                    .format(start, version)
+                            : Text.zhEn("文件内偏移 %s，dex %s，头部校验和对不上 —— 内容被改写（很可能被 ART quicken 过），只能读结构，代码不可信；需要 de-quicken 才能反编译",
+                                    "offset %s in file, dex %s, header checksum mismatch — content was modified (most likely quickened by ART); structure only, code is not trustworthy; de-quicken is required to decompile")
+                                    .format(start, version)));
 
             searchFrom = start + fileSize;
         }

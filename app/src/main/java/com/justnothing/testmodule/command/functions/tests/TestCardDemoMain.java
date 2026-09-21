@@ -212,6 +212,6 @@ public class TestCardDemoMain extends MainCommand<CommandResult> {
                 """,
                 cfg -> cfg.borderStyle("green").title("RichConsole").padding(1, 2)));
 
-        return createSuccessResult("完成");
+        return createSuccessResult(com.justnothing.testmodule.command.framework.i18n.Text.zhEn("完成", "Done").text());
     }
 }

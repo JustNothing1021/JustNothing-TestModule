@@ -1,6 +1,8 @@
 package com.justnothing.testmodule.command.functions.script.impl;
 
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.functions.script.ScriptTexts;
 import com.justnothing.testmodule.command.functions.script.response.ScriptResult;
 import com.justnothing.testmodule.command.functions.script.request.ScriptBaseRequest;
@@ -57,7 +59,7 @@ public class ScriptPermissionCommand extends AbstractScriptCommand<ScriptBaseReq
 
         ScriptResult result = new ScriptResult(request.getRequestId());
         result.setSuccess(false);
-        result.setOutput("未知的权限请求类型");
+        result.setOutput(Text.zhEn("未知的权限请求类型", "Unknown permission request type").text());
         return result;
     }
 
@@ -66,8 +68,9 @@ public class ScriptPermissionCommand extends AbstractScriptCommand<ScriptBaseReq
         result.setSubCommand(grant ? "grant" : "deny");
 
         if (permList == null || permList.isEmpty()) {
-            this.context.println("用法: script permission " + (grant ? "grant" : "deny") + " <PERM1,PERM2,...>", Colors.GRAY);
-            this.context.println("可用权限: " + getPermissionList(), Colors.GRAY);
+            this.context.println(CliMessages.HELP_USAGE_INLINE.text()
+                    + "script permission " + (grant ? "grant" : "deny") + " <PERM1,PERM2,...>", Colors.GRAY);
+            this.context.println(Text.zhEn("可用权限: ", "Available permissions: ").text() + getPermissionList(), Colors.GRAY);
             result.setSuccess(false);
             return result;
         }
@@ -84,46 +87,50 @@ public class ScriptPermissionCommand extends AbstractScriptCommand<ScriptBaseReq
         r.setSubCommand("show-config");
         SandboxConfig config = currentPermissionConfig.get();
 
-        this.context.println("===== 当前权限配置 =====", Colors.CYAN);
+        this.context.println(Text.zhEn("===== 当前权限配置 =====", "===== Current permission configuration =====").text(), Colors.CYAN);
         this.context.println("", Colors.WHITE);
 
         if (config == null) {
-            this.context.println("  未配置权限限制 (完全权限)", Colors.GREEN);
+            this.context.println(Text.zhEn("  未配置权限限制 (完全权限)",
+                    "  No permission restrictions configured (full permissions)").text(), Colors.GREEN);
             r.setSuccess(true);
             r.setPermissionMask(0x1FFL);
             return r;
         }
 
-        this.context.print("  磁盘读取: ", Colors.CYAN);
-        this.context.println(config.isDiskReadAllowed() ? "允许" : "禁止",
+        this.context.print(Text.zhEn("  磁盘读取: ", "  Disk read: ").text(), Colors.CYAN);
+        this.context.println(config.isDiskReadAllowed() ? ScriptTexts.PERMISSION_ALLOWED.text() : ScriptTexts.PERMISSION_DENIED.text(),
                 config.isDiskReadAllowed() ? Colors.GREEN : Colors.RED);
-        this.context.print("  磁盘写入: ", Colors.CYAN);
-        this.context.println(config.isDiskWriteAllowed() ? "允许" : "禁止",
+        this.context.print(Text.zhEn("  磁盘写入: ", "  Disk write: ").text(), Colors.CYAN);
+        this.context.println(config.isDiskWriteAllowed() ? ScriptTexts.PERMISSION_ALLOWED.text() : ScriptTexts.PERMISSION_DENIED.text(),
                 config.isDiskWriteAllowed() ? Colors.GREEN : Colors.RED);
-        this.context.print("  网络操作: ", Colors.CYAN);
-        this.context.println(config.isNetworkAllowed() ? "允许" : "禁止", config.isNetworkAllowed() ? Colors.GREEN : Colors.RED);
-        this.context.print("  创建线程: ", Colors.CYAN);
-        this.context.println(config.isThreadCreateAllowed() ? "允许" : "禁止",
+        this.context.print(Text.zhEn("  网络操作: ", "  Network: ").text(), Colors.CYAN);
+        this.context.println(config.isNetworkAllowed() ? ScriptTexts.PERMISSION_ALLOWED.text() : ScriptTexts.PERMISSION_DENIED.text(),
+                config.isNetworkAllowed() ? Colors.GREEN : Colors.RED);
+        this.context.print(Text.zhEn("  创建线程: ", "  Thread creation: ").text(), Colors.CYAN);
+        this.context.println(config.isThreadCreateAllowed() ? ScriptTexts.PERMISSION_ALLOWED.text() : ScriptTexts.PERMISSION_DENIED.text(),
                 config.isThreadCreateAllowed() ? Colors.GREEN : Colors.RED);
-        this.context.print("  创建进程: ", Colors.CYAN);
-        this.context.println(config.isProcessCreateAllowed() ? "允许" : "禁止",
+        this.context.print(Text.zhEn("  创建进程: ", "  Process creation: ").text(), Colors.CYAN);
+        this.context.println(config.isProcessCreateAllowed() ? ScriptTexts.PERMISSION_ALLOWED.text() : ScriptTexts.PERMISSION_DENIED.text(),
                 config.isProcessCreateAllowed() ? Colors.GREEN : Colors.RED);
-        this.context.print("  反射操作: ", Colors.CYAN);
-        this.context.println(config.isReflectionAllowed() ? "允许" : "禁止",
+        this.context.print(Text.zhEn("  反射操作: ", "  Reflection: ").text(), Colors.CYAN);
+        this.context.println(config.isReflectionAllowed() ? ScriptTexts.PERMISSION_ALLOWED.text() : ScriptTexts.PERMISSION_DENIED.text(),
                 config.isReflectionAllowed() ? Colors.GREEN : Colors.RED);
-        this.context.print("  系统退出: ", Colors.CYAN);
-        this.context.println(config.isSystemExitAllowed() ? "允许" : "禁止",
+        this.context.print(Text.zhEn("  系统退出: ", "  System exit: ").text(), Colors.CYAN);
+        this.context.println(config.isSystemExitAllowed() ? ScriptTexts.PERMISSION_ALLOWED.text() : ScriptTexts.PERMISSION_DENIED.text(),
                 config.isSystemExitAllowed() ? Colors.GREEN : Colors.RED);
-        this.context.print("  系统属性: ", Colors.CYAN);
-        this.context.println(config.isSystemPropertyAllowed() ? "允许" : "禁止",
+        this.context.print(Text.zhEn("  系统属性: ", "  System properties: ").text(), Colors.CYAN);
+        this.context.println(config.isSystemPropertyAllowed() ? ScriptTexts.PERMISSION_ALLOWED.text() : ScriptTexts.PERMISSION_DENIED.text(),
                 config.isSystemPropertyAllowed() ? Colors.GREEN : Colors.RED);
-        this.context.print("  类加载器: ", Colors.CYAN);
-        this.context.println(config.isClassLoaderAllowed() ? "允许" : "禁止",
+        this.context.print(Text.zhEn("  类加载器: ", "  Class loader: ").text(), Colors.CYAN);
+        this.context.println(config.isClassLoaderAllowed() ? ScriptTexts.PERMISSION_ALLOWED.text() : ScriptTexts.PERMISSION_DENIED.text(),
                 config.isClassLoaderAllowed() ? Colors.GREEN : Colors.RED);
 
         this.context.println("", Colors.WHITE);
-        this.context.println("使用 'script permission grant/deny <PERM>' 修改", Colors.GRAY);
-        this.context.println("使用 'script permission preset <name>' 应用预设", Colors.GRAY);
+        this.context.println(Text.zhEn("使用 'script permission grant/deny <PERM>' 修改",
+                "use 'script permission grant/deny <PERM>' to change them").text(), Colors.GRAY);
+        this.context.println(Text.zhEn("使用 'script permission preset <name>' 应用预设",
+                "use 'script permission preset <name>' to apply a preset").text(), Colors.GRAY);
 
         r.setSuccess(true);
         r.setPermissionMask(buildPermissionMask(config));
@@ -258,14 +265,15 @@ public class ScriptPermissionCommand extends AbstractScriptCommand<ScriptBaseReq
                     count++;
                 }
                 default -> {
-                    this.context.print("  未知权限: ", Colors.RED);
+                    this.context.print(Text.zhEn("  未知权限: ", "  Unknown permission: ").text(), Colors.RED);
                     this.context.println(p, Colors.YELLOW);
                 }
             }
         }
 
         currentPermissionConfig.set(builder.build());
-        this.context.print((grant ? "已授予" : "已拒绝") + " " + count + " 项权限", Colors.GREEN);
+        this.context.print((grant ? Text.zhEn("已授予", "Granted") : Text.zhEn("已拒绝", "Denied")).text()
+                + " " + count + Text.zhEn(" 项权限", " permissions").text(), Colors.GREEN);
         this.context.println(" (" + permList + ")", Colors.GRAY);
     }
 
@@ -275,24 +283,29 @@ public class ScriptPermissionCommand extends AbstractScriptCommand<ScriptBaseReq
         switch (preset.toLowerCase()) {
             case "sandbox" -> {
                 config = SandboxConfig.DEFAULT;
-                this.context.println("已应用预设: sandbox (沙箱模式)", Colors.GREEN);
+                this.context.println(Text.zhEn("已应用预设: sandbox (沙箱模式)",
+                        "Applied preset: sandbox (sandbox mode)").text(), Colors.GREEN);
             }
             case "expression" -> {
                 config = SandboxConfig.EXPRESSION_ONLY;
-                this.context.println("已应用预设: expression (表达式模式)", Colors.GREEN);
+                this.context.println(Text.zhEn("已应用预设: expression (表达式模式)",
+                        "Applied preset: expression (expression mode)").text(), Colors.GREEN);
             }
             case "minimal" -> {
                 config = SandboxConfig.MINIMAL;
-                this.context.println("已应用预设: minimal (最小权限)", Colors.GREEN);
+                this.context.println(Text.zhEn("已应用预设: minimal (最小权限)",
+                        "Applied preset: minimal (minimal permissions)").text(), Colors.GREEN);
             }
             case "full" -> {
                 config = null;
-                this.context.println("已应用预设: full (完全权限)", Colors.GREEN);
+                this.context.println(Text.zhEn("已应用预设: full (完全权限)",
+                        "Applied preset: full (full permissions)").text(), Colors.GREEN);
             }
             default -> {
-                this.context.print("未知预设: ", Colors.RED);
+                this.context.print(Text.zhEn("未知预设: ", "Unknown preset: ").text(), Colors.RED);
                 this.context.println(preset, Colors.YELLOW);
-                this.context.println("可用预设: sandbox, expression, minimal, full", Colors.GRAY);
+                this.context.println(Text.zhEn("可用预设: sandbox, expression, minimal, full",
+                        "Available presets: sandbox, expression, minimal, full").text(), Colors.GRAY);
 
                 ScriptResult result = new ScriptResult();
                 result.setSuccess(false);
@@ -310,7 +323,8 @@ public class ScriptPermissionCommand extends AbstractScriptCommand<ScriptBaseReq
 
     protected ScriptResult handleReset() {
         currentPermissionConfig.set(null);
-        this.context.println("权限配置已重置为默认 (无限制)", Colors.GREEN);
+        this.context.println(Text.zhEn("权限配置已重置为默认 (无限制)",
+                "Permission configuration reset to the default (unrestricted)").text(), Colors.GREEN);
 
         ScriptResult result = new ScriptResult();
         result.setSuccess(true);
@@ -319,21 +333,25 @@ public class ScriptPermissionCommand extends AbstractScriptCommand<ScriptBaseReq
     }
 
     protected ScriptResult handleList() {
-        this.context.println("可用权限类型:", Colors.CYAN);
+        this.context.println(Text.zhEn("可用权限类型:", "Available permission types:").text(), Colors.CYAN);
         for (PermissionType pt : PermissionType.values()) {
             this.context.print("  " + pt.getId(), Colors.YELLOW);
             this.context.println(" - " + pt.getDescription(), Colors.GRAY);
         }
         this.context.println("", Colors.WHITE);
-        this.context.println("预设:", Colors.CYAN);
+        this.context.println(Text.zhEn("预设:", "Presets:").text(), Colors.CYAN);
         this.context.print("  sandbox    ", Colors.YELLOW);
-        this.context.println("- 沙箱模式 (禁止文件/网络/线程/反射)", Colors.GRAY);
+        this.context.println(Text.zhEn("- 沙箱模式 (禁止文件/网络/线程/反射)",
+                "- sandbox (no file, network, thread or reflection access)").text(), Colors.GRAY);
         this.context.print("  expression ", Colors.YELLOW);
-        this.context.println("- 表达式模式 (仅允许计算)", Colors.GRAY);
+        this.context.println(Text.zhEn("- 表达式模式 (仅允许计算)",
+                "- expression (arithmetic only)").text(), Colors.GRAY);
         this.context.print("  minimal    ", Colors.YELLOW);
-        this.context.println("- 最小权限 (允许读文件)", Colors.GRAY);
+        this.context.println(Text.zhEn("- 最小权限 (允许读文件)",
+                "- minimal (file reads allowed)").text(), Colors.GRAY);
         this.context.print("  full       ", Colors.YELLOW);
-        this.context.println("- 完全权限 (无限制)", Colors.GRAY);
+        this.context.println(Text.zhEn("- 完全权限 (无限制)",
+                "- full (unrestricted)").text(), Colors.GRAY);
 
         ScriptResult result = new ScriptResult();
         result.setSuccess(true);

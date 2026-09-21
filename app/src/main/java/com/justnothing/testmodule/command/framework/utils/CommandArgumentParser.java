@@ -1,9 +1,9 @@
 package com.justnothing.testmodule.command.framework.utils;
 
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
 import com.justnothing.testmodule.utils.logging.Logger;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 public class CommandArgumentParser {
 
@@ -150,7 +150,7 @@ public class CommandArgumentParser {
             return Integer.parseInt(args[index]);
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException(
-                String.format(Locale.getDefault(), "%s必须是数字", fieldName)
+                CliMessages.ERR_NOT_A_NUMBER.format(fieldName)
             );
         }
     }
@@ -163,7 +163,7 @@ public class CommandArgumentParser {
             return Long.parseLong(args[index]);
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException(
-                String.format(Locale.getDefault(), "%s必须是数字", fieldName)
+                CliMessages.ERR_NOT_A_NUMBER.format(fieldName)
             );
         }
     }
@@ -171,7 +171,7 @@ public class CommandArgumentParser {
     public static void requireMin(long value, long min, String fieldName) {
         if (value < min) {
             throw new IllegalArgumentException(
-                String.format(Locale.getDefault(), "%s不能小于%d", fieldName, min)
+                CliMessages.ERR_PARAM_TOO_SMALL.format(fieldName, min)
             );
         }
     }
@@ -179,7 +179,7 @@ public class CommandArgumentParser {
     public static void requireMax(long value, long max, String fieldName) {
         if (value > max) {
             throw new IllegalArgumentException(
-                String.format(Locale.getDefault(), "%s不能大于%d", fieldName, max)
+                CliMessages.ERR_PARAM_TOO_LARGE.format(fieldName, max)
             );
         }
     }
@@ -187,7 +187,7 @@ public class CommandArgumentParser {
     public static void requireRange(long value, long min, long max, String fieldName) {
         if (value < min || value > max) {
             throw new IllegalArgumentException(
-                String.format(Locale.getDefault(), "%s必须在%d到%d之间", fieldName, min, max)
+                CliMessages.ERR_PARAM_OUT_OF_RANGE.format(fieldName, min, max)
             );
         }
     }
@@ -195,7 +195,7 @@ public class CommandArgumentParser {
     public static void requireArgsLength(String[] args, int min) {
         if (args.length < min) {
             throw new IllegalArgumentException(
-                String.format(Locale.getDefault(), "参数不足，至少需要%d个参数", min)
+                CliMessages.ERR_NOT_ENOUGH_VALUES.format(min)
             );
         }
     }

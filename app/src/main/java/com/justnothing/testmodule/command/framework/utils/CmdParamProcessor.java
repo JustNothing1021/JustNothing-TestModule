@@ -1,6 +1,7 @@
 package com.justnothing.testmodule.command.framework.utils;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
 import com.justnothing.testmodule.command.framework.model.CommandRouter;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.model.CustomCommandLineParser;
@@ -60,7 +61,7 @@ public class CmdParamProcessor {
      */
     public static CommandRequest<?> parseRequest(CommandRequest<?> request, String[] args) throws IllegalArgumentException {
         if (request == null) {
-            throw new IllegalArgumentException("请求对象不能为 null");
+            throw new IllegalArgumentException(CliMessages.ERR_REQUEST_NULL.text());
         }
 
         // 注意：args 为空时也必须继续解析——否则 required 参数会被静默放行、

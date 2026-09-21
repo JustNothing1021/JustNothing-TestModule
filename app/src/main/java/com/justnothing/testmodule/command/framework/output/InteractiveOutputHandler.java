@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.framework.output;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonArray;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
 import com.justnothing.testmodule.command.framework.model.CommandResult;
 import com.justnothing.testmodule.command.framework.protocol.RemoteServerTerminal;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
@@ -213,7 +214,7 @@ public class InteractiveOutputHandler implements ICommandOutputHandler {
             InputStream noInput = new InputStream() {
                 @Override
                 public int read() {
-                    throw new UnsupportedOperationException("InvalidConsole 不支持终端输入");
+                    throw new UnsupportedOperationException(CliMessages.ERR_NO_TERMINAL_INPUT.text());
                 }
                 @Override
                 public int available() {
@@ -318,7 +319,7 @@ public class InteractiveOutputHandler implements ICommandOutputHandler {
 
             if (timeoutMs > 0) {
                 logger.warn("cmd.prompt 请求超时: " + promptType + " (" + timeoutMs + "ms)");
-                throw new RuntimeException("输入请求超时 (" + (timeoutMs / 1000) + "秒)");
+                throw new RuntimeException(CliMessages.ERR_INPUT_TIMEOUT.format(timeoutMs / 1000));
             }
             // 无限等待模式下 result==null 只可能是连接关闭/取消
             logger.warn("cmd.prompt 连接已关闭，返回 null: " + promptType);
@@ -327,7 +328,7 @@ public class InteractiveOutputHandler implements ICommandOutputHandler {
             throw e;
         } catch (Exception e) {
             logger.error("cmd.prompt 请求异常: " + promptType, e);
-            throw new RuntimeException("输入请求失败", e);
+            throw new RuntimeException(CliMessages.ERR_INPUT_FAILED.text(), e);
         }
     }
 

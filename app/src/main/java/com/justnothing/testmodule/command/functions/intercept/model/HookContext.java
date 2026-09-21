@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.Locale;
 
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.functions.intercept.base.InterceptTask;
 import com.justnothing.testmodule.hooks.api.HookParam;
 
@@ -104,7 +105,7 @@ public class HookContext {
     public String getArgumentsString() {
         Object[] args = methodParam.getArgs();
         if (args == null || args.length == 0) {
-            return "无参数";
+            return Text.zhEn("无参数", "No arguments").text();
         }
 
         StringBuilder sb = new StringBuilder();

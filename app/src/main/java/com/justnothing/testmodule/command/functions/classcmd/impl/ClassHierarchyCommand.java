@@ -1,6 +1,8 @@
 package com.justnothing.testmodule.command.functions.classcmd.impl;
 
 import com.justnothing.testmodule.command.framework.model.CommandResult;
+import com.justnothing.testmodule.command.framework.i18n.Text;
+import com.justnothing.testmodule.command.functions.classcmd.ClassTexts;
 import com.justnothing.testmodule.command.functions.classcmd.model.ClassCommandContext;
 import com.justnothing.testmodule.command.functions.classcmd.request.ClassHierarchyRequest;
 import com.justnothing.testmodule.command.functions.classcmd.response.ClassHierarchyResult;
@@ -33,7 +35,7 @@ public class ClassHierarchyCommand extends DirectClassCommand<ClassHierarchyRequ
         ClassHierarchyResult result = new ClassHierarchyResult();
 
         if (className == null || className.isEmpty()) {
-            result.setError(new CommandResult.ErrorInfo("INVALID_REQUEST", "类名不能为空"));
+            result.setError(new CommandResult.ErrorInfo("INVALID_REQUEST", ClassTexts.ERR_INVALID_REQUEST.text()));
             result.setSuccess(false);
             return result;
         }
@@ -70,7 +72,8 @@ public class ClassHierarchyCommand extends DirectClassCommand<ClassHierarchyRequ
             result.setInterfacesPerLevel(interfacesPerLevel);
             result.setSuccess(true);
 
-            context.execContext().println("=== 类层次结构 ===", Colors.CYAN);
+            context.execContext().println(
+                    Text.zhEn("=== 类层次结构 ===", "=== Class Hierarchy ===").text(), Colors.CYAN);
             for (int i = 0; i < classChain.size(); i++) {
                 ClassHierarchyResult.HierarchyClassInfo info = classChain.get(i);
                 String prefix = "  ".repeat(i);
@@ -90,11 +93,11 @@ public class ClassHierarchyCommand extends DirectClassCommand<ClassHierarchyRequ
 
         } catch (ClassNotFoundException e) {
             logger.error("类未找到: " + className, e);
-            result.setError(new CommandResult.ErrorInfo("CLASS_NOT_FOUND", "类未找到: " + className));
+            result.setError(new CommandResult.ErrorInfo("CLASS_NOT_FOUND", ClassTexts.ERR_CLASS_NOT_FOUND.format(className)));
             result.setSuccess(false);
         } catch (Exception e) {
             logger.error("处理类层次结构失败: " + className, e);
-            result.setError(new CommandResult.ErrorInfo("INTERNAL_ERROR", "处理失败: " + e.getMessage()));
+            result.setError(new CommandResult.ErrorInfo("INTERNAL_ERROR", ClassTexts.ERR_INTERNAL_ERROR.format(e.getMessage())));
             result.setSuccess(false);
         }
 

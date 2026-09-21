@@ -1,6 +1,7 @@
 package com.justnothing.testmodule.command.functions.jank;
 
 import com.justnothing.testmodule.command.framework.i18n.CliTexts;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 
 import java.util.Map;
 
@@ -34,6 +35,16 @@ public final class JankTexts {
     public static final String PARAM_JANK_SAMPLE_INTERVAL_DESC = "param.jank.sample.interval.desc";
     public static final String PARAM_JANK_SAMPLE_TOP_DESC = "param.jank.sample.top.desc";
     public static final String PARAM_JANK_WATCH_INTERVAL_DESC = "param.jank.watch.interval.desc";
+
+    // ==================== 输出文案（族内复用）====================
+    // 判据同 SystemTexts：只在本族里出现两次以上的提到这里，只用一次的就地写 Text.zhEn。
+    // 「项」「值」在 cpuTable / memTable / statusTable 里各出现三次；「进程」既是 topTable 的列名，
+    // 也是 statusTable 里那一行的标签。
+    public static final Text TABLE_ITEM = Text.zhEn("项", "Item");
+    public static final Text TABLE_VALUE = Text.zhEn("值", "Value");
+    public static final Text TABLE_PROCESS = Text.zhEn("进程", "Process");
+    /** 汇总里两处列表的分隔符：中文顿号，英文逗号加空格。 */
+    public static final Text LIST_SEPARATOR = Text.zhEn("、", ", ");
 
     private JankTexts() {
     }

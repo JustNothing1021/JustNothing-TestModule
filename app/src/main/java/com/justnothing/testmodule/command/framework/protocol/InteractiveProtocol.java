@@ -1,5 +1,6 @@
 package com.justnothing.testmodule.command.framework.protocol;
 
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
 import com.justnothing.testmodule.utils.logging.Logger;
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -113,7 +114,7 @@ public final class InteractiveProtocol {
      */
     public static Object[] readMessage(InputStream input) throws IOException {
         if (input == null) {
-            throw new IllegalArgumentException("InputStream不能为null");
+            throw new IllegalArgumentException(CliMessages.ERR_INPUT_STREAM_NULL.text());
         }
 
         byte[] header = new byte[9];
@@ -199,7 +200,7 @@ public final class InteractiveProtocol {
      */
     public static synchronized void writeMessage(OutputStream output, byte type, byte[] data) throws IOException {
         if (output == null) {
-            throw new IllegalArgumentException("OutputStream不能为null");
+            throw new IllegalArgumentException(CliMessages.ERR_OUTPUT_STREAM_NULL.text());
         }
 
         try {

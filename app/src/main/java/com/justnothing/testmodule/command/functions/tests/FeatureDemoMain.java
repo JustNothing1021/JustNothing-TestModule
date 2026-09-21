@@ -20,6 +20,7 @@ import com.justnothing.richconsole.syntax.Syntax;
 
 import com.justnothing.testmodule.command.framework.model.MainCommand;
 import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.framework.model.CommandResult;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.annotation.Cmd;
@@ -121,7 +122,7 @@ public class FeatureDemoMain extends MainCommand<CommandResult> {
         console.rule("Progress.wrapFile()");
         File dir = new File(FileDirectory.METHODS_DATA_DIR);
         if (!dir.exists() && !dir.mkdirs()) {
-            throw new IllegalStateException("无法创建目录: " + dir);
+            throw new IllegalStateException(Text.zhEn("无法创建目录: %s", "Cannot create directory: %s").format(dir));
         }
         File target = new File(dir, "wrapfile_demo.bin");
         byte[] payload = new byte[512 * 1024];
@@ -144,7 +145,8 @@ public class FeatureDemoMain extends MainCommand<CommandResult> {
             }
         }
         if (!target.delete()) {
-            console.log("[yellow]警告:[/yellow] 临时文件删除失败 " + target);
+            console.log("[yellow]" + Text.zhEn("警告:", "Warning:").text() + "[/yellow] "
+                    + Text.zhEn("临时文件删除失败 %s", "Failed to delete the temporary file %s").format(target));
         }
         console.println();
 
@@ -152,9 +154,10 @@ public class FeatureDemoMain extends MainCommand<CommandResult> {
         // 6. 录制与导出 — beginRecord / exportHtml / exportSvg / time()
         // =====================================================================
         console.rule("Record & Export");
-        console.println("下面这段演示 beginRecord 运行时开启录制，再导出 HTML / SVG 到 "
-                + FileDirectory.METHODS_DATA_DIR);
-        console.println(new Panel("这段 Panel 也会被导出", "Export Panel"));
+        console.println(Text.zhEn("下面这段演示 beginRecord 运行时开启录制，再导出 HTML / SVG 到 %s",
+                "The demo below starts recording at runtime with beginRecord, then exports HTML / SVG to %s")
+                .format(FileDirectory.METHODS_DATA_DIR));
+        console.println(new Panel(Text.zhEn("这段 Panel 也会被导出", "This Panel is exported as well").text(), "Export Panel"));
         console.beginRecord();
         console.println("[bold cyan]Recorded[/] [red]content[/] [dim]dimmed[/] [reverse]reverse[/]");
         try (AutoCloseable timer = console.time("export")) {
@@ -169,13 +172,13 @@ public class FeatureDemoMain extends MainCommand<CommandResult> {
             try (FileWriter writer = new FileWriter(svgFile)) {
                 writer.write(svg);
             }
-            console.log("HTML 导出 " + html.length() + " 字符 -> " + htmlFile);
-            console.log("SVG 导出 " + svg.length() + " 字符 -> " + svgFile);
+            console.log(Text.zhEn("HTML 导出 %d 字符 -> %s", "Exported HTML: %d chars -> %s").format(html.length(), htmlFile));
+            console.log(Text.zhEn("SVG 导出 %d 字符 -> %s", "Exported SVG: %d chars -> %s").format(svg.length(), svgFile));
         }
         console.endRecord();
-        console.println("isRecording=" + console.isRecording() + " (应为 false)");
+        console.println("isRecording=" + console.isRecording() + Text.zhEn(" (应为 false)", " (should be false)").text());
         console.println();
 
-        return createSuccessResult("完成");
+        return createSuccessResult(Text.zhEn("完成", "Done").text());
     }
 }

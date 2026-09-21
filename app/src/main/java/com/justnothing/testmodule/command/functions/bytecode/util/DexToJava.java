@@ -5,6 +5,7 @@ import com.googlecode.d2j.node.DexFileNode;
 import com.googlecode.d2j.reader.DexFileReader;
 import com.googlecode.d2j.visitors.DexClassVisitor;
 import com.googlecode.d2j.visitors.DexFileVisitor;
+import com.justnothing.testmodule.command.functions.bytecode.BytecodeTexts;
 import com.justnothing.testmodule.command.functions.bytecode.extract.DexClassIndex;
 import com.justnothing.testmodule.utils.logging.Logger;
 
@@ -217,7 +218,7 @@ public final class DexToJava {
     private static void writeBytes(File target, byte[] data) throws IOException {
         File parent = target.getParentFile();
         if (parent != null && !parent.isDirectory() && !parent.mkdirs() && !parent.isDirectory()) {
-            throw new IOException("无法创建目录: " + parent.getAbsolutePath());
+            throw new IOException(BytecodeTexts.CANNOT_CREATE_DIR.format(parent.getAbsolutePath()));
         }
         try (FileOutputStream out = new FileOutputStream(target)) {
             out.write(data);

@@ -2,6 +2,8 @@ package com.justnothing.testmodule.command.functions.threads.impl;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.functions.threads.ThreadsTexts;
 import com.justnothing.testmodule.command.framework.utils.CommandArgumentParser;
@@ -32,7 +34,7 @@ public class ThreadProfileStartCommand extends AbstractThreadsCommand<ThreadProf
         try {
             CommandArgumentParser.requireMin(duration != null ? duration : 60, 1, "持续时间");
         } catch (IllegalArgumentException e) {
-            context.print("错误: ", Colors.RED);
+            context.print(CliMessages.ERROR_PREFIX.text(), Colors.RED);
             context.println(e.getMessage(), Colors.YELLOW);
             return createErrorResult(e.getMessage());
         }
@@ -43,11 +45,12 @@ public class ThreadProfileStartCommand extends AbstractThreadsCommand<ThreadProf
             ProfileManager manager = ProfileManager.getInstance();
             manager.startProfiling(actualDuration);
 
-            context.print("开始性能分析, 持续时间: ", Colors.LIGHT_GREEN);
+            context.print(Text.zhEn("开始性能分析, 持续时间: ", "Started profiling, duration: ").text(), Colors.LIGHT_GREEN);
             context.print(String.valueOf(actualDuration), Colors.YELLOW);
-            context.println("秒", Colors.WHITE);
-            context.println("提示: 使用 'threads profile show' 查看结果", Colors.GRAY);
-            context.println("      使用 'threads profile stop' 提前停止", Colors.GRAY);
+            context.println(Text.zhEn("秒", "s").text(), Colors.WHITE);
+            context.println(ThreadsTexts.HINT_VIEW_RESULTS.text(), Colors.GRAY);
+            context.println(Text.zhEn("      使用 'threads profile stop' 提前停止",
+                    "      run 'threads profile stop' to stop early").text(), Colors.GRAY);
 
             ThreadProfileStartResult result = new ThreadProfileStartResult();
             result.setDuration(actualDuration);
@@ -55,7 +58,8 @@ public class ThreadProfileStartCommand extends AbstractThreadsCommand<ThreadProf
 
             return result;
         } catch (Exception e) {
-            CommandExceptionHandler.handleException("threads profile start", e, context, "启动性能分析失败");
+            CommandExceptionHandler.handleException("threads profile start", e, context,
+                    Text.zhEn("启动性能分析失败", "Failed to start profiling").text());
             throw e;
         }
     }

@@ -1,5 +1,7 @@
 package com.justnothing.testmodule.command.functions.bytecode.extract;
 
+import com.justnothing.testmodule.command.framework.i18n.Text;
+
 /**
  * 一份 dex 的"可信度"。
  *
@@ -33,13 +35,15 @@ public enum DexTrust {
     public String describe() {
         switch (this) {
             case ORIGINAL:
-                return "原件，代码可信";
+                return Text.zhEn("原件，代码可信", "original, code is trustworthy").text();
             case DEQUICKENED:
-                return "已还原（已 de-quicken），代码可信";
+                return Text.zhEn("已还原（已 de-quicken），代码可信",
+                        "restored (de-quickened), code is trustworthy").text();
             case QUICKENED:
-                return "被 ART 改写且未还原，只能看结构，代码不可信";
+                return Text.zhEn("被 ART 改写且未还原，只能看结构，代码不可信",
+                        "rewritten by ART and not restored; structure only, code is not trustworthy").text();
             default:
-                return "可信度未知";
+                return Text.zhEn("可信度未知", "trust level unknown").text();
         }
     }
 }

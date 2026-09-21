@@ -1,6 +1,8 @@
 package com.justnothing.testmodule.command.functions.help.impl;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.framework.model.AbstractCommand;
 import com.justnothing.testmodule.command.framework.model.CommandResult;
 import com.justnothing.testmodule.command.framework.model.MainCommand;
@@ -23,8 +25,10 @@ public class HelpCommand extends AbstractCommand<NoArgRequest, CommandResult> {
             if (command != null) {
                 ctx.println(command.getHelpText(), Colors.WHITE);
             } else {
-                StringBuilder sb = new StringBuilder("未知的命令: " + commandName);
-                sb.append("\n\n可用命令:\n");
+                StringBuilder sb = new StringBuilder(
+                        CliMessages.ERR_UNKNOWN_COMMAND.format(commandName));
+                // 「可用命令」复用顶层帮助里那个小节标题，别在命令清单上再译一个变体。
+                sb.append("\n\n").append(CliMessages.HELP_GROUP_GENERAL.text()).append(":\n");
                 for (String name : CommandExecutor.getAllCommands().keySet()) {
                     sb.append("  ").append(name).append("\n");
                 }
@@ -36,7 +40,7 @@ public class HelpCommand extends AbstractCommand<NoArgRequest, CommandResult> {
 
         CommandResult result = new CommandResult();
         result.setSuccess(true);
-        result.setMessage("帮助信息已显示");
+        result.setMessage(Text.zhEn("帮助信息已显示", "Help shown").text());
         return result;
     }
 }

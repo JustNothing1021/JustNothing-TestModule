@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.threads.impl;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.functions.threads.ThreadsTexts;
 import com.justnothing.testmodule.command.functions.threads.request.ThreadListRequest;
@@ -38,9 +39,9 @@ public class ThreadListCommand extends AbstractThreadsCommand<ThreadListRequest,
 
         Map<Thread, StackTraceElement[]> allStackTraces = Thread.getAllStackTraces();
 
-        context.println("=== 线程信息 ===", Colors.CYAN);
+        context.println(Text.zhEn("=== 线程信息 ===", "=== Thread information ===").text(), Colors.CYAN);
         context.println("");
-        context.print("线程总数: ", Colors.GRAY);
+        context.print(ThreadsTexts.LABEL_THREAD_COUNT.text(), Colors.GRAY);
         context.println(String.valueOf(allStackTraces.size()), Colors.YELLOW);
         context.println("");
 
@@ -63,7 +64,7 @@ public class ThreadListCommand extends AbstractThreadsCommand<ThreadListRequest,
             }
         }
 
-        context.println("=== 线程状态统计 ===", Colors.CYAN);
+        context.println(Text.zhEn("=== 线程状态统计 ===", "=== Thread state stats ===").text(), Colors.CYAN);
         context.println("");
         printStateCount(context, "BLOCKED", blockedCount, Colors.RED);
         printStateCount(context, "WAITING", waitingCount, Colors.YELLOW);
@@ -73,7 +74,7 @@ public class ThreadListCommand extends AbstractThreadsCommand<ThreadListRequest,
         printStateCount(context, "NEW", newStateCount, Colors.CYAN);
         context.println("");
 
-        context.println("=== 线程详情 ===", Colors.CYAN);
+        context.println(Text.zhEn("=== 线程详情 ===", "=== Thread details ===").text(), Colors.CYAN);
         context.println("");
 
         boolean found = false;
@@ -94,7 +95,7 @@ public class ThreadListCommand extends AbstractThreadsCommand<ThreadListRequest,
         }
 
         if (!found && (filterId != null || filterName != null || filterState != null)) {
-            context.println("未找到匹配的线程", Colors.GRAY);
+            context.println(Text.zhEn("未找到匹配的线程", "No matching thread found").text(), Colors.GRAY);
         }
 
         logger.info("线程信息查询完成");
@@ -121,23 +122,23 @@ public class ThreadListCommand extends AbstractThreadsCommand<ThreadListRequest,
     private void printThreadInfo(CommandExecutor.CmdExecContext ctx, Thread thread, StackTraceElement[] stackTrace) {
         byte stateColor = getStateColor(thread.getState());
 
-        ctx.print("线程: ", Colors.CYAN);
+        ctx.print(ThreadsTexts.LABEL_THREAD.text(), Colors.CYAN);
         ctx.println(thread.getName(), Colors.LIGHT_GREEN);
         ctx.print("  ID: ", Colors.GRAY);
         ctx.println(String.valueOf(thread.getId()), Colors.YELLOW);
-        ctx.print("  状态: ", Colors.GRAY);
+        ctx.print(ThreadsTexts.LABEL_THREAD_STATE.text(), Colors.GRAY);
         ctx.println(thread.getState().toString(), stateColor);
-        ctx.print("  优先级: ", Colors.GRAY);
+        ctx.print(ThreadsTexts.LABEL_PRIORITY.text(), Colors.GRAY);
         ctx.println(String.valueOf(thread.getPriority()), Colors.LIGHT_GREEN);
-        ctx.print("  守护: ", Colors.GRAY);
-        ctx.println(thread.isDaemon() ? "是" : "否", thread.isDaemon() ? Colors.MAGENTA : Colors.LIGHT_GREEN);
-        ctx.print("  中断: ", Colors.GRAY);
-        ctx.println(thread.isInterrupted() ? "是" : "否", thread.isInterrupted() ? Colors.RED : Colors.LIGHT_GREEN);
-        ctx.print("  是否存活: ", Colors.GRAY);
-        ctx.println(thread.isAlive() ? "是" : "否", thread.isAlive() ? Colors.LIGHT_GREEN : Colors.GRAY);
+        ctx.print(ThreadsTexts.LABEL_DAEMON.text(), Colors.GRAY);
+        ctx.println(thread.isDaemon() ? ThreadsTexts.VALUE_YES.text() : ThreadsTexts.VALUE_NO.text(), thread.isDaemon() ? Colors.MAGENTA : Colors.LIGHT_GREEN);
+        ctx.print(ThreadsTexts.LABEL_INTERRUPTED.text(), Colors.GRAY);
+        ctx.println(thread.isInterrupted() ? ThreadsTexts.VALUE_YES.text() : ThreadsTexts.VALUE_NO.text(), thread.isInterrupted() ? Colors.RED : Colors.LIGHT_GREEN);
+        ctx.print(Text.zhEn("  是否存活: ", "  Alive: ").text(), Colors.GRAY);
+        ctx.println(thread.isAlive() ? ThreadsTexts.VALUE_YES.text() : ThreadsTexts.VALUE_NO.text(), thread.isAlive() ? Colors.LIGHT_GREEN : Colors.GRAY);
 
         if (stackTrace != null && stackTrace.length > 0) {
-            ctx.print("  堆栈:", Colors.GRAY);
+            ctx.print(Text.zhEn("  堆栈:", "  Stack trace:").text(), Colors.GRAY);
             ctx.println("");
             for (StackTraceElement element : stackTrace) {
                 ctx.print("    ", Colors.DEFAULT);

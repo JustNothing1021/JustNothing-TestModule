@@ -2,6 +2,8 @@ package com.justnothing.testmodule.command.functions.threads.impl;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.functions.threads.ThreadsTexts;
 import com.justnothing.testmodule.command.functions.threads.util.ProfileManager;
@@ -25,17 +27,17 @@ public class ThreadProfileExportCommand extends AbstractThreadsCommand<ThreadPro
         String filePath = request.getFilePath();
 
         if (filePath == null || filePath.isEmpty()) {
-            context.println("错误: 需要指定文件路径", Colors.RED);
-            context.println("用法: threads profile export <file>", Colors.GRAY);
-            return createErrorResult("需要指定文件路径");
+            context.println(CliMessages.ERROR_PREFIX.text() + ThreadsTexts.ERR_FILE_PATH_REQUIRED.text(), Colors.RED);
+            context.println(CliMessages.HELP_USAGE_INLINE.text() + "threads profile export <file>", Colors.GRAY);
+            return createErrorResult(ThreadsTexts.ERR_FILE_PATH_REQUIRED.text());
         }
 
         ProfileManager manager = ProfileManager.getInstance();
 
         String report = manager.getProfileReport();
         
-        if ("暂无性能分析数据".equals(report)) {
-            context.println("暂无分析结果可导出", Colors.YELLOW);
+        if (ThreadsTexts.NO_PROFILE_DATA.text().equals(report)) {
+            context.println(Text.zhEn("暂无分析结果可导出", "No profiling results to export").text(), Colors.YELLOW);
             
             ThreadProfileExportResult result = new ThreadProfileExportResult();
             result.setFilePath(filePath);
@@ -47,14 +49,14 @@ public class ThreadProfileExportCommand extends AbstractThreadsCommand<ThreadPro
             boolean success = manager.exportToFile(filePath);
 
             if (success) {
-                context.println("分析结果已导出到: " + filePath, Colors.GREEN);
+                context.println(Text.zhEn("分析结果已导出到: %s", "Profiling results exported to: %s").format(filePath), Colors.GREEN);
                 
                 ThreadProfileExportResult result = new ThreadProfileExportResult();
                 result.setFilePath(filePath);
                 result.setSuccess(true);
                 return result;
             } else {
-                context.println("导出失败", Colors.RED);
+                context.println(Text.zhEn("导出失败", "Export failed").text(), Colors.RED);
                 
                 ThreadProfileExportResult result = new ThreadProfileExportResult();
                 result.setFilePath(filePath);
@@ -62,7 +64,7 @@ public class ThreadProfileExportCommand extends AbstractThreadsCommand<ThreadPro
                 return result;
             }
         } catch (Exception e) {
-            context.println("导出失败: " + e.getMessage(), Colors.RED);
+            context.println(Text.zhEn("导出失败: %s", "Export failed: %s").format(e.getMessage()), Colors.RED);
             
             ThreadProfileExportResult result = new ThreadProfileExportResult();
             result.setFilePath(filePath);

@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.jank.impl;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.functions.jank.model.ProcSnapshot;
 import com.justnothing.testmodule.command.functions.jank.model.ProcessEntry;
@@ -78,11 +79,13 @@ public class JankWatchCommand extends AbstractJankCommand<JankWatchRequest> {
             context.println("+ " + entry.pid + " " + name);
         }
         context.println("");
-        context.println("（初始 " + alive.size() + " 个进程，间隔 " + intervalMs
-                + "ms；之后只打印变动，Ctrl-C 结束）");
+        context.println(Text.zhEn("（初始 %d 个进程，间隔 %dms；之后只打印变动，Ctrl-C 结束）",
+                "(initially %d processes, interval %dms; only changes are printed from now on, Ctrl-C to exit)")
+                .format(alive.size(), intervalMs));
         if (first.pidDirCount < BLIND_THRESHOLD) {
-            context.println("注意：只看得见 " + first.pidDirCount + " 个 pid 目录，当前进程不在 readproc 组，"
-                    + "被 /proc 的 hidepid=2 挡住了 —— 走 sinteractive（system_server）才看得见全量。",
+            context.println(Text.zhEn("注意：只看得见 %d 个 pid 目录，当前进程不在 readproc 组，被 /proc 的 hidepid=2 挡住了 —— 走 sinteractive（system_server）才看得见全量。",
+                    "Note: only %d pid directories are visible; this process is not in the readproc group, so /proc's hidepid=2 hides them — run via sinteractive (system_server) to see all of them.")
+                    .format(first.pidDirCount),
                     Colors.YELLOW);
         }
 
@@ -137,7 +140,8 @@ public class JankWatchCommand extends AbstractJankCommand<JankWatchRequest> {
 
         long seconds = Math.round((System.nanoTime() - startNanos) / 1_000_000_000.0);
         String summary = String.format(Locale.US,
-                "监视 %d s / %d 轮（间隔 %dms）：出现 %d 个，消失 %d 个，当前 %d 个进程",
+                Text.zhEn("监视 %d s / %d 轮（间隔 %dms）：出现 %d 个，消失 %d 个，当前 %d 个进程",
+                        "Watched %d s / %d rounds (interval %dms): %d appeared, %d disappeared, %d processes now").text(),
                 seconds, rounds, intervalMs, added, removed, alive.size());
         if (!context.output().isClosed()) {
             context.println(summary);

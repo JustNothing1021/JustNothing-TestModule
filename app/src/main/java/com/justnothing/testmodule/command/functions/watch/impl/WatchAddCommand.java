@@ -2,6 +2,8 @@ package com.justnothing.testmodule.command.functions.watch.impl;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.framework.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.command.functions.watch.util.WatchManager;
@@ -39,20 +41,29 @@ public class WatchAddCommand extends AbstractWatchCommand<WatchAddRequest, Watch
         Long interval = request.getInterval();
 
         if (targetType == null || className == null || memberName == null) {
-            context.println("错误: 参数不足", Colors.RED);
-            context.println("用法: watch add <field|method> <class_name> <member_name> [sig/signature <signature>] [interval]", Colors.GRAY);
-            return createErrorResult("参数不足");
+            context.println(CliMessages.ERROR_PREFIX.text() + CliMessages.ERR_NOT_ENOUGH_ARGS.text(), Colors.RED);
+            context.println(CliMessages.HELP_USAGE_INLINE.text()
+                    + "watch add <field|method> <class_name> <member_name> [sig/signature <signature>] [interval]", Colors.GRAY);
+            return createErrorResult(CliMessages.ERR_NOT_ENOUGH_ARGS.text());
         }
 
         if (!"field".equals(targetType) && !"method".equals(targetType)) {
-            context.println("错误: 未知类型: " + targetType + "，必须是 'field' 或 'method'", Colors.RED);
-            return createErrorResult("未知类型: " + targetType);
+            context.println(CliMessages.ERROR_PREFIX.text() + Text.zhEn(
+                    "未知类型: %s，必须是 'field' 或 'method'",
+                    "unknown type: %s; must be 'field' or 'method'").format(targetType), Colors.RED);
+            return createErrorResult(CliMessages.ERR_UNKNOWN_TYPE.format(targetType));
         }
 
         if (interval != null && interval < 10) {
-            context.println("错误: 间隔过小，最小10ms", Colors.RED);
-            context.println("(指定的是" + interval + "ms, 频率过高容易炸掉系统)", Colors.YELLOW);
-            return createErrorResult("间隔过小: " + interval + "ms");
+            context.println(CliMessages.ERROR_PREFIX.text() + Text.zhEn(
+                    "间隔过小，最小10ms",
+                    "interval too small; minimum is 10ms").text(), Colors.RED);
+            context.println(Text.zhEn(
+                    "(指定的是%sms, 频率过高容易炸掉系统)",
+                    "(specified %sms - such a high rate can easily blow up the system)").format(interval), Colors.YELLOW);
+            return createErrorResult(Text.zhEn(
+                    "间隔过小: %sms",
+                    "interval too small: %sms").format(interval));
         }
 
         try {
@@ -60,16 +71,16 @@ public class WatchAddCommand extends AbstractWatchCommand<WatchAddRequest, Watch
             if ("field".equals(targetType)) {
                 id = manager.addFieldWatch(classLoader, className, memberName, interval != null ? interval : 1000L);
                 
-                context.println("字段watch任务已添加", Colors.GREEN);
+                context.println(Text.zhEn("字段watch任务已添加", "Field watch task added").text(), Colors.GREEN);
                 context.print("ID: ", Colors.CYAN);
                 context.println(String.valueOf(id), Colors.YELLOW);
-                context.print("类: ", Colors.CYAN);
+                context.print(CliMessages.LABEL_CLASS.text(), Colors.CYAN);
                 context.println(className, Colors.GREEN);
-                context.print("字段: ", Colors.CYAN);
+                context.print(CliMessages.LABEL_FIELD.text(), Colors.CYAN);
                 context.println(memberName, Colors.GREEN);
-                context.print("间隔: ", Colors.CYAN);
+                context.print(WatchTexts.LABEL_INTERVAL.text(), Colors.CYAN);
                 context.println((interval != null ? interval : 1000L) + "ms", Colors.YELLOW);
-                context.println("提示: 使用 'watch output " + id + "' 查看输出", Colors.GRAY);
+                context.println(WatchTexts.HINT_VIEW_OUTPUT.format(id), Colors.GRAY);
 
                 WatchAddResult result = new WatchAddResult();
                 result.setTaskId(id);
@@ -81,20 +92,20 @@ public class WatchAddCommand extends AbstractWatchCommand<WatchAddRequest, Watch
             } else {
                 id = manager.addMethodWatch(classLoader, className, memberName, signature, interval != null ? interval : 1000L);
 
-                context.println("方法watch任务已添加", Colors.GREEN);
+                context.println(Text.zhEn("方法watch任务已添加", "Method watch task added").text(), Colors.GREEN);
                 context.print("ID: ", Colors.CYAN);
                 context.println(String.valueOf(id), Colors.YELLOW);
-                context.print("类: ", Colors.CYAN);
+                context.print(CliMessages.LABEL_CLASS.text(), Colors.CYAN);
                 context.println(className, Colors.GREEN);
-                context.print("方法: ", Colors.CYAN);
+                context.print(CliMessages.LABEL_METHOD.text(), Colors.CYAN);
                 context.println(memberName, Colors.GREEN);
                 if (signature != null) {
-                    context.print("签名: ", Colors.CYAN);
+                    context.print(Text.zhEn("签名: ", "Signature: ").text(), Colors.CYAN);
                     context.println(signature, Colors.GRAY);
                 }
-                context.print("间隔: ", Colors.CYAN);
+                context.print(WatchTexts.LABEL_INTERVAL.text(), Colors.CYAN);
                 context.println((interval != null ? interval : 1000L) + "ms", Colors.YELLOW);
-                context.println("提示: 使用 'watch output " + id + "' 查看输出", Colors.GRAY);
+                context.println(WatchTexts.HINT_VIEW_OUTPUT.format(id), Colors.GRAY);
 
                 WatchAddResult result = new WatchAddResult();
                 result.setTaskId(id);
@@ -107,13 +118,15 @@ public class WatchAddCommand extends AbstractWatchCommand<WatchAddRequest, Watch
             }
         } catch (Exception e) {
             Map<String, Object> errorContext = new HashMap<>();
-            errorContext.put("类型", targetType);
-            errorContext.put("类名", className);
-            errorContext.put("成员名", memberName);
-            errorContext.put("签名", signature != null ? signature : "无");
-            errorContext.put("间隔", interval + "ms");
+            errorContext.put(Text.zhEn("类型", "Type").text(), targetType);
+            errorContext.put(CliMessages.CONTEXT_CLASS_NAME.text(), className);
+            errorContext.put(Text.zhEn("成员名", "Member").text(), memberName);
+            errorContext.put(CliMessages.CONTEXT_SIGNATURE.text(),
+                    signature != null ? signature : CliMessages.VALUE_NONE.text());
+            errorContext.put(Text.zhEn("间隔", "Interval").text(), interval + "ms");
             
-            CommandExceptionHandler.handleException("watch add", e, context, errorContext, "添加watch任务失败");
+            CommandExceptionHandler.handleException("watch add", e, context, errorContext,
+                    Text.zhEn("添加watch任务失败", "Failed to add watch task").text());
             throw e;
         }
     }

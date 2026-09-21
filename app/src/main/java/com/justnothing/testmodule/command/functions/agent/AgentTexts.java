@@ -1,5 +1,7 @@
 package com.justnothing.testmodule.command.functions.agent;
 
+import com.justnothing.testmodule.command.framework.i18n.Text;
+
 import java.util.Map;
 
 /**
@@ -56,6 +58,11 @@ public final class AgentTexts {
 
     public static final String PARAM_AGENT_RUN_PKG_DESC = "param.agent.run.pkg.desc";
     public static final String PARAM_AGENT_RUN_COMMAND_DESC = "param.agent.run.command.desc";
+
+    // ==================== 族内复用输出文案 ====================
+    // 只放本族内部出现两次以上的 Text 常量；只出现一次的在调用点就地写 {@code Text.zhEn(...)}。
+
+    public static final Text UNKNOWN_ERROR = Text.zhEn("未知错误", "Unknown error");
 
     private AgentTexts() {
     }

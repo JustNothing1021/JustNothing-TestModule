@@ -3,6 +3,7 @@ package com.justnothing.testmodule.command.functions.threads.impl;
 import com.justnothing.testmodule.command.framework.model.AbstractCommand;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.functions.threads.response.ThreadCommandResult;
 import com.justnothing.testmodule.utils.logging.Logger;
 
@@ -21,7 +22,7 @@ public abstract class AbstractThreadsCommand<Req extends CommandRequest<?>, Res 
     protected Res executeInternal(CommandExecutor.CmdExecContext<Req> context) throws Exception {
         Req request = context.getCommandRequest();
         if (request == null) {
-            throw new IllegalStateException("Request不能为null");
+            throw new IllegalStateException(Text.zhEn("Request不能为null", "Request must not be null").text());
         }
         
         try {

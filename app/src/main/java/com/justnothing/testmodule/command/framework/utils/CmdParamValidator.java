@@ -1,6 +1,7 @@
 package com.justnothing.testmodule.command.framework.utils;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.utils.logging.Logger;
 
@@ -24,10 +25,11 @@ public class CmdParamValidator {
             try {
                 Pattern p = Pattern.compile(param.pattern());
                 if (!p.matcher(value.toString()).matches()) {
-                    throw new IllegalArgumentException("参数 " + fieldName + " 值 '" + value + "' 不匹配模式: " + param.pattern());
+                    throw new IllegalArgumentException(
+                            CliMessages.ERR_PATTERN_MISMATCH.format(fieldName, value, param.pattern()));
                 }
             } catch (PatternSyntaxException e) {
-                throw new IllegalStateException("无效的正则表达式: " + param.pattern(), e);
+                throw new IllegalStateException(CliMessages.ERR_INVALID_PATTERN.format(param.pattern()), e);
             }
         }
 
@@ -36,7 +38,7 @@ public class CmdParamValidator {
                 .anyMatch(allowed -> allowed.equals(value.toString()));
             if (!found) {
                 throw new IllegalArgumentException(
-                    "参数 " + fieldName + " 值 '" + value + "' 不在允许列表中: " + Arrays.toString(param.allowedValues()));
+                    CliMessages.ERR_NOT_IN_ALLOWED_VALUES.format(fieldName, value, Arrays.toString(param.allowedValues())));
             }
         }
 
@@ -47,17 +49,16 @@ public class CmdParamValidator {
                 // 声明错误：min/max 只能约束数值型参数。字符串等类型无法比较大小，
                 // 若静默跳过会让约束形同虚设，因此这里直接快速失败暴露问题。
                 throw new IllegalStateException(
-                    "参数 " + fieldName + " 声明了 min/max，但其值 '" + value
-                    + "' (" + value.getClass().getSimpleName() + ") 不是数值类型，无法比较大小");
+                    CliMessages.ERR_RANGE_ON_NON_NUMBER.format(fieldName, value, value.getClass().getSimpleName()));
             }
             double numValue = ((Number) value).doubleValue();
             if (numValue < param.min()) {
                 throw new IllegalArgumentException(
-                    "参数 " + fieldName + " 值 " + numValue + " 小于最小值 " + param.min());
+                    CliMessages.ERR_BELOW_MIN.format(fieldName, numValue, param.min()));
             }
             if (numValue > param.max()) {
                 throw new IllegalArgumentException(
-                    "参数 " + fieldName + " 值 " + numValue + " 大于最大值 " + param.max());
+                    CliMessages.ERR_ABOVE_MAX.format(fieldName, numValue, param.max()));
             }
         }
     }
@@ -81,7 +82,7 @@ public class CmdParamValidator {
                         fi.field().set(request, converted);
                         logger.debug("使用默认值: " + fi.param().name() + " = " + defaultVal);
                     } else {
-                        throw new IllegalArgumentException("缺少必填参数: " + fi.param().name());
+                        throw new IllegalArgumentException(CliMessages.ERR_MISSING_PARAM.format(fi.param().name()));
                     }
                 } else if (isPrimitiveDefaultValue(value) && !explicitlySet.contains(fi.field().getName())) {
                     String defaultVal = fi.param().defaultValue();
@@ -90,11 +91,11 @@ public class CmdParamValidator {
                         fi.field().set(request, converted);
                         logger.debug("使用默认值: " + fi.param().name() + " = " + defaultVal);
                     } else {
-                        throw new IllegalArgumentException("缺少必填参数: " + fi.param().name());
+                        throw new IllegalArgumentException(CliMessages.ERR_MISSING_PARAM.format(fi.param().name()));
                     }
                 }
             } catch (IllegalAccessException e) {
-                throw new RuntimeException("无法访问字段: " + fi.field().getName(), e);
+                throw new RuntimeException(CliMessages.ERR_FIELD_ACCESS_FAILED.format(fi.field().getName()), e);
             }
         }
     }
@@ -147,8 +148,7 @@ public class CmdParamValidator {
                 if (!paramUsage.containsKey(mutexTarget.toLowerCase())) continue;
 
                 throw new IllegalArgumentException(
-                    "参数 '" + fi.param().name() + "' 与 '" + mutexTarget + "' 互斥，不能同时使用。\n" +
-                    "提示: 请选择其中之一");
+                    CliMessages.ERR_MUTEX_CONFLICT.format(fi.param().name(), mutexTarget));
             }
         }
 
@@ -161,8 +161,7 @@ public class CmdParamValidator {
             for (String requiredParam : requires) {
                 if (!paramUsage.containsKey(requiredParam.toLowerCase())) {
                     throw new IllegalArgumentException(
-                        "参数 '" + fi.param().name() + "' 需要同时指定 '" + requiredParam + "'。\n" +
-                        "提示: 请添加 --" + requiredParam + " 参数");
+                        CliMessages.ERR_REQUIRES_MISSING.format(fi.param().name(), requiredParam, requiredParam));
                 }
             }
         }

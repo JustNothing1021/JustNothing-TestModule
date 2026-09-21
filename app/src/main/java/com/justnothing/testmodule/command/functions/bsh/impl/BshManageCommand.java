@@ -1,7 +1,10 @@
 package com.justnothing.testmodule.command.functions.bsh.impl;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
+import com.justnothing.testmodule.command.functions.bsh.BshTexts;
 import com.justnothing.testmodule.command.functions.bsh.request.BshClearRequest;
 import com.justnothing.testmodule.command.functions.bsh.request.BshExecuteRequest;
 import com.justnothing.testmodule.command.functions.bsh.request.BshScriptCreateRequest;
@@ -48,7 +51,7 @@ public class BshManageCommand extends AbstractBeanShellCommand<CommandRequest<?>
             return handleScriptExport(req, context);
         }
 
-        return buildErrorResult("不支持的请求类型: " + request.getClass().getSimpleName());
+        return buildErrorResult(BshTexts.ERR_UNSUPPORTED_REQUEST_TYPE.format(request.getClass().getSimpleName()));
     }
 
     public BeanShellResult handleExecute(BshExecuteRequest request, CommandExecutor.CmdExecContext<CommandRequest<?>> context) {
@@ -57,13 +60,13 @@ public class BshManageCommand extends AbstractBeanShellCommand<CommandRequest<?>
 
         if (code == null || code.isEmpty()) {
             context.println(getHelpText(), Colors.WHITE);
-            return buildErrorResult("参数不足，需要提供BeanShell代码");
+            return buildErrorResult(Text.zhEn("参数不足，需要提供BeanShell代码", "Not enough arguments; BeanShell code is required").text());
         }
 
         try {
             logger.info("执行BeanShell代码: " + code);
             String result = getBeanShellExecutor(classLoader).execute(code, beanShellExecutionContext);
-            context.println("BeanShell执行器结果:", Colors.CYAN);
+            context.println(Text.zhEn("BeanShell执行器结果:", "BeanShell executor result:").text(), Colors.CYAN);
             context.println("", Colors.WHITE);
             context.println(result, Colors.GRAY);
 
@@ -73,8 +76,8 @@ public class BshManageCommand extends AbstractBeanShellCommand<CommandRequest<?>
             return bshResult;
 
         } catch (Exception e) {
-            CommandExceptionHandler.handleException("bsh", e, context, "BeanShell执行出错");
-            return buildErrorResult("BeanShell执行出错: " + e.getMessage());
+            CommandExceptionHandler.handleException("bsh", e, context, BshTexts.ERR_BSH_EXEC_FAILED.text());
+            return buildErrorResult(BshTexts.ERR_BSH_EXEC_FAILED.text() + ": " + e.getMessage());
         }
     }
 
@@ -83,26 +86,26 @@ public class BshManageCommand extends AbstractBeanShellCommand<CommandRequest<?>
         String targetPackage = context.targetPackage();
 
         getBeanShellExecutor(classLoader).clearVariables();
-        context.println("已清空BeanShell执行器的所有变量", Colors.GREEN);
-        context.print("提示: 只清空了", Colors.GRAY);
-        context.print(targetPackage == null ? "默认" : targetPackage, Colors.YELLOW);
-        context.println("的ClassLoader的执行器的变量，其他ClassLoader的并没有被清空", Colors.GRAY);
+        context.println(Text.zhEn("已清空BeanShell执行器的所有变量", "Cleared all variables of the BeanShell executor").text(), Colors.GREEN);
+        context.print(Text.zhEn("提示: 只清空了", "Tip: only cleared the variables of ").text(), Colors.GRAY);
+        context.print(targetPackage == null ? Text.zhEn("默认", "the default").text() : targetPackage, Colors.YELLOW);
+        context.println(Text.zhEn("的ClassLoader的执行器的变量，其他ClassLoader的并没有被清空", " ClassLoader's executor; other ClassLoaders were left untouched").text(), Colors.GRAY);
 
-        return buildSuccessResult("bclear", "已清空变量");
+        return buildSuccessResult("bclear", Text.zhEn("已清空变量", "Variables cleared").text());
     }
 
     public BeanShellResult handleScriptCreate(BshScriptCreateRequest request, CommandExecutor.CmdExecContext<CommandRequest<?>> context) throws IOException {
         String scriptName = request.getName();
 
         if (!isValidScriptName(scriptName)) {
-            context.println("错误: 脚本名称只能包含字母、数字和下划线", Colors.RED);
-            return buildErrorResult("脚本名称无效");
+            context.println(CliMessages.ERROR_PREFIX.text() + Text.zhEn("脚本名称只能包含字母、数字和下划线", "Script name may contain only letters, digits and underscores").text(), Colors.RED);
+            return buildErrorResult(Text.zhEn("脚本名称无效", "Invalid script name").text());
         }
 
         File scriptFile = getBeanShellScriptFile(scriptName);
         if (scriptFile.exists()) {
-            context.println("错误: 脚本 '" + scriptName + "' 已存在", Colors.RED);
-            return buildErrorResult("脚本已存在");
+            context.println(CliMessages.ERROR_PREFIX.text() + BshTexts.ERR_SCRIPT_EXISTS.format(scriptName), Colors.RED);
+            return buildErrorResult(BshTexts.ERR_SCRIPT_ALREADY_EXISTS.text());
         }
 
         IOManager.createDirectory(Objects.requireNonNull(scriptFile.getParentFile()).getAbsolutePath());
@@ -110,18 +113,18 @@ public class BshManageCommand extends AbstractBeanShellCommand<CommandRequest<?>
         String content = "# BeanShell Script: " + scriptName + "\n" +
                 "# Created by: " + System.currentTimeMillis() + "\n" +
                 "\n" +
-                "# 在这里编写你的BeanShell脚本代码...\n";
+                Text.zhEn("# 在这里编写你的BeanShell脚本代码...\n", "# Write your BeanShell script code here...\n").text();
 
         IOManager.writeFile(scriptFile.getAbsolutePath(), content);
 
-        context.println("BeanShell脚本创建成功", Colors.GREEN);
-        context.print("名称: ", Colors.CYAN);
+        context.println(Text.zhEn("BeanShell脚本创建成功", "BeanShell script created").text(), Colors.GREEN);
+        context.print(BshTexts.LABEL_NAME.text(), Colors.CYAN);
         context.println(scriptName, Colors.YELLOW);
-        context.print("路径: ", Colors.CYAN);
+        context.print(BshTexts.LABEL_PATH.text(), Colors.CYAN);
         context.println(scriptFile.getAbsolutePath(), Colors.GRAY);
-        context.println("提示: 使用 'bscript edit " + scriptName + "' 编辑脚本", Colors.GRAY);
+        context.println(BshTexts.TIP_PREFIX.text() + Text.zhEn("使用 'bscript edit %s' 编辑脚本", "use 'bscript edit %s' to edit the script").format(scriptName), Colors.GRAY);
 
-        return buildSuccessResult("bscript:create", "脚本创建成功: " + scriptName);
+        return buildSuccessResult("bscript:create", Text.zhEn("脚本创建成功: %s", "Script created: %s").format(scriptName));
     }
 
     public BeanShellResult handleScriptEdit(BshScriptEditRequest request, CommandExecutor.CmdExecContext<CommandRequest<?>> context) {
@@ -129,18 +132,18 @@ public class BshManageCommand extends AbstractBeanShellCommand<CommandRequest<?>
         File scriptFile = getBeanShellScriptFile(scriptName);
 
         if (!scriptFile.exists()) {
-            context.println("错误: 脚本 '" + scriptName + "' 不存在", Colors.RED);
-            return buildErrorResult("脚本不存在");
+            context.println(CliMessages.ERROR_PREFIX.text() + BshTexts.ERR_SCRIPT_NOT_FOUND.format(scriptName), Colors.RED);
+            return buildErrorResult(BshTexts.ERR_SCRIPT_MISSING.text());
         }
 
-        context.println("BeanShell脚本已准备好编辑", Colors.GREEN);
-        context.print("名称: ", Colors.CYAN);
+        context.println(Text.zhEn("BeanShell脚本已准备好编辑", "BeanShell script is ready to edit").text(), Colors.GREEN);
+        context.print(BshTexts.LABEL_NAME.text(), Colors.CYAN);
         context.println(scriptName, Colors.YELLOW);
-        context.print("路径: ", Colors.CYAN);
+        context.print(BshTexts.LABEL_PATH.text(), Colors.CYAN);
         context.println(scriptFile.getAbsolutePath(), Colors.GRAY);
-        context.println("提示: 使用外部编辑器编辑脚本文件", Colors.GRAY);
+        context.println(BshTexts.TIP_PREFIX.text() + Text.zhEn("使用外部编辑器编辑脚本文件", "edit the script file with an external editor").text(), Colors.GRAY);
 
-        return buildSuccessResult("bscript:edit", "脚本已准备好编辑: " + scriptName);
+        return buildSuccessResult("bscript:edit", Text.zhEn("脚本已准备好编辑: %s", "Script is ready to edit: %s").format(scriptName));
     }
 
     public BeanShellResult handleScriptDelete(BshScriptDeleteRequest request, CommandExecutor.CmdExecContext<CommandRequest<?>> context) {
@@ -148,18 +151,18 @@ public class BshManageCommand extends AbstractBeanShellCommand<CommandRequest<?>
         File scriptFile = getBeanShellScriptFile(scriptName);
 
         if (!scriptFile.exists()) {
-            context.println("错误: 脚本 '" + scriptName + "' 不存在", Colors.RED);
-            return buildErrorResult("脚本不存在");
+            context.println(CliMessages.ERROR_PREFIX.text() + BshTexts.ERR_SCRIPT_NOT_FOUND.format(scriptName), Colors.RED);
+            return buildErrorResult(BshTexts.ERR_SCRIPT_MISSING.text());
         }
 
         if (IOManager.deleteFile(scriptFile.getAbsolutePath())) {
-            context.println("BeanShell脚本已删除", Colors.GREEN);
-            context.print("名称: ", Colors.CYAN);
+            context.println(Text.zhEn("BeanShell脚本已删除", "BeanShell script deleted").text(), Colors.GREEN);
+            context.print(BshTexts.LABEL_NAME.text(), Colors.CYAN);
             context.println(scriptName, Colors.YELLOW);
-            return buildSuccessResult("bscript:delete", "脚本已删除: " + scriptName);
+            return buildSuccessResult("bscript:delete", Text.zhEn("脚本已删除: %s", "Script deleted: %s").format(scriptName));
         } else {
-            context.println("错误: 无法删除脚本 '" + scriptName + "'", Colors.RED);
-            return buildErrorResult("无法删除脚本");
+            context.println(CliMessages.ERROR_PREFIX.text() + Text.zhEn("无法删除脚本 '%s'", "Cannot delete script '%s'").format(scriptName), Colors.RED);
+            return buildErrorResult(Text.zhEn("无法删除脚本", "Cannot delete script").text());
         }
     }
 
@@ -168,26 +171,26 @@ public class BshManageCommand extends AbstractBeanShellCommand<CommandRequest<?>
         File scriptFile = getBeanShellScriptFile(scriptName);
 
         if (!scriptFile.exists()) {
-            context.println("错误: 脚本 '" + scriptName + "' 不存在", Colors.RED);
-            return buildErrorResult("脚本不存在");
+            context.println(CliMessages.ERROR_PREFIX.text() + BshTexts.ERR_SCRIPT_NOT_FOUND.format(scriptName), Colors.RED);
+            return buildErrorResult(BshTexts.ERR_SCRIPT_MISSING.text());
         }
 
         String content = IOManager.readFile(scriptFile.getAbsolutePath());
 
-        context.println("===== 执行BeanShell脚本: " + scriptName + " =====", Colors.CYAN);
+        context.println(Text.zhEn("===== 执行BeanShell脚本: %s =====", "===== Running BeanShell script: %s =====").format(scriptName), Colors.CYAN);
         context.println("", Colors.WHITE);
 
         try {
             String execResult = getBeanShellExecutor(context.classLoader()).execute(content, beanShellExecutionContext);
-            context.println("执行结果:", Colors.GREEN);
+            context.println(Text.zhEn("执行结果:", "Result:").text(), Colors.GREEN);
             context.println(execResult, Colors.GRAY);
 
             BeanShellResult result = buildVariableResult("bscript:run", context.classLoader());
             result.setOutput(execResult);
             return result;
         } catch (Exception e) {
-            CommandExceptionHandler.handleException("bsh", e, context, "BeanShell执行出错");
-            return buildErrorResult("BeanShell执行出错: " + e.getMessage());
+            CommandExceptionHandler.handleException("bsh", e, context, BshTexts.ERR_BSH_EXEC_FAILED.text());
+            return buildErrorResult(BshTexts.ERR_BSH_EXEC_FAILED.text() + ": " + e.getMessage());
         }
     }
 
@@ -196,8 +199,8 @@ public class BshManageCommand extends AbstractBeanShellCommand<CommandRequest<?>
         File sourceFile = new File(filePath);
 
         if (!sourceFile.exists()) {
-            context.println("错误: 文件 '" + filePath + "' 不存在", Colors.RED);
-            return buildErrorResult("文件不存在");
+            context.println(CliMessages.ERROR_PREFIX.text() + Text.zhEn("文件 '%s' 不存在", "File '%s' does not exist").format(filePath), Colors.RED);
+            return buildErrorResult(Text.zhEn("文件不存在", "File does not exist").text());
         }
 
         String content = IOManager.readFile(sourceFile.getAbsolutePath());
@@ -205,23 +208,23 @@ public class BshManageCommand extends AbstractBeanShellCommand<CommandRequest<?>
         File destFile = getBeanShellScriptFile(scriptName);
 
         if (destFile.exists()) {
-            context.println("错误: 脚本 '" + scriptName + "' 已存在", Colors.RED);
-            context.println("提示: 使用 'bscript delete " + scriptName + "' 删除旧脚本", Colors.GRAY);
-            return buildErrorResult("脚本已存在");
+            context.println(CliMessages.ERROR_PREFIX.text() + BshTexts.ERR_SCRIPT_EXISTS.format(scriptName), Colors.RED);
+            context.println(BshTexts.TIP_PREFIX.text() + Text.zhEn("使用 'bscript delete %s' 删除旧脚本", "use 'bscript delete %s' to delete the old script").format(scriptName), Colors.GRAY);
+            return buildErrorResult(BshTexts.ERR_SCRIPT_ALREADY_EXISTS.text());
         }
 
         IOManager.createDirectory(Objects.requireNonNull(destFile.getParentFile()).getAbsolutePath());
         IOManager.writeFile(destFile.getAbsolutePath(), content);
 
-        context.println("BeanShell脚本导入成功", Colors.GREEN);
-        context.print("源文件: ", Colors.CYAN);
+        context.println(Text.zhEn("BeanShell脚本导入成功", "BeanShell script imported").text(), Colors.GREEN);
+        context.print(Text.zhEn("源文件: ", "Source: ").text(), Colors.CYAN);
         context.println(sourceFile.getAbsolutePath(), Colors.GRAY);
-        context.print("脚本名称: ", Colors.CYAN);
+        context.print(Text.zhEn("脚本名称: ", "Script name: ").text(), Colors.CYAN);
         context.println(scriptName, Colors.YELLOW);
-        context.print("目标路径: ", Colors.CYAN);
+        context.print(Text.zhEn("目标路径: ", "Destination: ").text(), Colors.CYAN);
         context.println(destFile.getAbsolutePath(), Colors.GRAY);
 
-        return buildSuccessResult("bscript:import", "导入成功: " + scriptName);
+        return buildSuccessResult("bscript:import", Text.zhEn("导入成功: %s", "Imported: %s").format(scriptName));
     }
 
     public BeanShellResult handleScriptExport(BshScriptExportRequest request, CommandExecutor.CmdExecContext<CommandRequest<?>> context) throws IOException {
@@ -230,8 +233,8 @@ public class BshManageCommand extends AbstractBeanShellCommand<CommandRequest<?>
         File scriptFile = getBeanShellScriptFile(scriptName);
 
         if (!scriptFile.exists()) {
-            context.println("错误: 脚本 '" + scriptName + "' 不存在", Colors.RED);
-            return buildErrorResult("脚本不存在");
+            context.println(CliMessages.ERROR_PREFIX.text() + BshTexts.ERR_SCRIPT_NOT_FOUND.format(scriptName), Colors.RED);
+            return buildErrorResult(BshTexts.ERR_SCRIPT_MISSING.text());
         }
 
         File exportFile = new File(exportPath);
@@ -239,12 +242,12 @@ public class BshManageCommand extends AbstractBeanShellCommand<CommandRequest<?>
 
         IOManager.writeFile(exportFile.getAbsolutePath(), content);
 
-        context.println("BeanShell脚本导出成功", Colors.GREEN);
-        context.print("脚本: ", Colors.CYAN);
+        context.println(Text.zhEn("BeanShell脚本导出成功", "BeanShell script exported").text(), Colors.GREEN);
+        context.print(Text.zhEn("脚本: ", "Script: ").text(), Colors.CYAN);
         context.println(scriptName, Colors.YELLOW);
-        context.print("导出路径: ", Colors.CYAN);
+        context.print(Text.zhEn("导出路径: ", "Export path: ").text(), Colors.CYAN);
         context.println(exportFile.getAbsolutePath(), Colors.GRAY);
 
-        return buildSuccessResult("bscript:export", "导出成功: " + scriptName);
+        return buildSuccessResult("bscript:export", Text.zhEn("导出成功: %s", "Exported: %s").format(scriptName));
     }
 }

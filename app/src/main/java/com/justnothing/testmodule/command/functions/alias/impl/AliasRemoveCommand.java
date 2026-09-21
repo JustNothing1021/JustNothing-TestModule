@@ -4,6 +4,9 @@ import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.model.AbstractCommand;
 import com.justnothing.testmodule.command.framework.model.CommandResult;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
+import com.justnothing.testmodule.command.framework.i18n.CliTexts;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.functions.alias.request.AliasRemoveRequest;
 import com.justnothing.testmodule.command.functions.alias.response.AliasResult;
 import com.justnothing.testmodule.command.functions.alias.util.AliasManager;
@@ -38,10 +41,11 @@ public class AliasRemoveCommand extends AbstractCommand<AliasRemoveRequest, Alia
 
         if (name == null || name.isEmpty()) {
             if (context.isCli()) {
-                context.println("错误: 别名名称不能为空", Colors.RED);
-                context.println("用法: alias remove <别名>", Colors.YELLOW);
+                context.println(CliMessages.ERROR_PREFIX.text() + AliasTexts.ERR_NAME_REQUIRED.text(), Colors.RED);
+                context.println(CliMessages.HELP_USAGE_INLINE.text()
+                        + CliTexts.resolve(AliasTexts.SUB_ALIAS_REMOVE_USAGE), Colors.YELLOW);
             }
-            return buildErrorResult("别名名称不能为空");
+            return buildErrorResult(AliasTexts.ERR_NAME_REQUIRED.text());
         }
 
         boolean removed = getAliasManager().removeAlias(name);
@@ -51,14 +55,15 @@ public class AliasRemoveCommand extends AbstractCommand<AliasRemoveRequest, Alia
 
         if (removed) {
             if (context.isCli()) {
-                context.println("别名已删除: " + name, Colors.GREEN);
+                context.println(Text.zhEn("别名已删除: %s", "Alias removed: %s").format(name), Colors.GREEN);
             }
             logger.info("删除别名: " + name);
         } else {
             if (context.isCli()) {
-                context.println("错误: 别名 '" + name + "' 不存在", Colors.RED);
+                context.println(CliMessages.ERROR_PREFIX.text()
+                        + Text.zhEn("别名 '%s' 不存在", "alias '%s' not found").format(name), Colors.RED);
             }
-            result.setError(new CommandResult.ErrorInfo("ALIAS_NOT_FOUND", "别名不存在", (Throwable) null));
+            result.setError(new CommandResult.ErrorInfo("ALIAS_NOT_FOUND", AliasTexts.ERR_ALIAS_NOT_FOUND.text(), (Throwable) null));
         }
 
         return result;

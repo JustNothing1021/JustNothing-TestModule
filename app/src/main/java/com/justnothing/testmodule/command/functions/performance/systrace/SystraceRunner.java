@@ -2,6 +2,8 @@ package com.justnothing.testmodule.command.functions.performance.systrace;
 
 import android.util.Log;
 
+import com.justnothing.testmodule.command.framework.i18n.Text;
+import com.justnothing.testmodule.command.functions.performance.PerformanceTexts;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 import com.justnothing.testmodule.utils.io.IOManager;
 
@@ -32,7 +34,7 @@ public class SystraceRunner {
 
     public void start(int duration, String[] categories) {
         if (running.get()) {
-            throw new IllegalStateException("Systrace 已在运行");
+            throw new IllegalStateException(Text.zhEn("Systrace 已在运行", "systrace is already running").text());
         }
 
         try {
@@ -44,7 +46,7 @@ public class SystraceRunner {
             File dir = new File(outputDir);
             if (!dir.exists()) {
                 if (!IOManager.createDirectory(dir)) {
-                    throw new IOException("无法创建输出目录: " + outputDir);
+                    throw new IOException(Text.zhEn("无法创建输出目录: %s", "cannot create output directory: %s").format(outputDir));
                 }
             }
 
@@ -106,11 +108,11 @@ public class SystraceRunner {
         } catch (IOException e) {
             Log.e(TAG, "启动 Systrace 失败: IO 错误", e);
             running.set(false);
-            throw new RuntimeException("启动 Systrace 失败: " + e.getMessage(), e);
+            throw new RuntimeException(PerformanceTexts.ERR_START_SYSTRACE_FAILED.format(e.getMessage()), e);
         } catch (Exception e) {
             Log.e(TAG, "启动 Systrace 失败", e);
             running.set(false);
-            throw new RuntimeException("启动 Systrace 失败: " + e.getMessage(), e);
+            throw new RuntimeException(PerformanceTexts.ERR_START_SYSTRACE_FAILED.format(e.getMessage()), e);
         }
     }
 
@@ -142,7 +144,7 @@ public class SystraceRunner {
             
         } catch (Exception e) {
             Log.e(TAG, "停止 Systrace 失败", e);
-            throw new RuntimeException("停止 Systrace 失败: " + e.getMessage(), e);
+            throw new RuntimeException(Text.zhEn("停止 Systrace 失败: %s", "Failed to stop systrace: %s").format(e.getMessage()), e);
         }
     }
 

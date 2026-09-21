@@ -3,6 +3,7 @@ package com.justnothing.testmodule.command.functions.breakpoint.impl;
 import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.functions.breakpoint.BreakpointTexts;
 import com.justnothing.testmodule.command.functions.breakpoint.request.BreakpointListRequest;
 import com.justnothing.testmodule.command.functions.breakpoint.request.BreakpointHitsRequest;
@@ -39,22 +40,22 @@ public class BreakpointQueryCommand extends AbstractBreakpointCommand<CommandReq
             return handleHits((BreakpointHitsRequest) request);
         }
 
-        return createErrorResult("未知的断点查询请求类型");
+        return createErrorResult(Text.zhEn("未知的断点查询请求类型", "Unknown breakpoint query request type").text());
     }
 
     private BreakpointResult handleList(BreakpointListRequest request) {
         List<BreakpointInterceptTask> breakpoints = manager.listTasks();
         
         if (breakpoints.isEmpty()) {
-            out("没有设置任何断点", Colors.GRAY);
-            return createSuccessResult("没有设置任何断点");
+            out(BreakpointTexts.NO_BREAKPOINTS.text(), Colors.GRAY);
+            return createSuccessResult(BreakpointTexts.NO_BREAKPOINTS.text());
         }
 
         BreakpointResult result = new BreakpointResult();
         result.setSuccess(true);
         result.setSubCommand("list");
 
-        out("=== 断点列表 ===", Colors.CYAN);
+        out(Text.zhEn("=== 断点列表 ===", "=== Breakpoints ===").text(), Colors.CYAN);
         out("", Colors.WHITE);
 
         for (BreakpointInterceptTask task : breakpoints) {
@@ -68,18 +69,19 @@ public class BreakpointQueryCommand extends AbstractBreakpointCommand<CommandReq
 
             out("ID: ", Colors.CYAN);
             out(String.valueOf(task.getId()), Colors.YELLOW);
-            out("  类: ", Colors.CYAN);
+            out(Text.zhEn("  类: ", "  Class: ").text(), Colors.CYAN);
             out(task.getClassName(), Colors.GREEN);
-            out("  方法: ", Colors.CYAN);
+            out(Text.zhEn("  方法: ", "  Method: ").text(), Colors.CYAN);
             out(task.getMethodName(), Colors.GREEN);
-            out("  签名: ", Colors.CYAN);
-            out(task.getSignature() != null ? task.getSignature() : "所有重载", Colors.GRAY);
-            out("  状态: ", Colors.CYAN);
-            out(task.isEnabled() ? "启用" : "禁用", task.isEnabled() ? Colors.GREEN : Colors.RED);
-            out("  命中次数: ", Colors.CYAN);
+            out(Text.zhEn("  签名: ", "  Signature: ").text(), Colors.CYAN);
+            out(task.getSignature() != null ? task.getSignature() : BreakpointTexts.VALUE_ALL_OVERLOADS.text(), Colors.GRAY);
+            out(Text.zhEn("  状态: ", "  Status: ").text(), Colors.CYAN);
+            out(task.isEnabled() ? BreakpointTexts.VALUE_ENABLED.text() : BreakpointTexts.VALUE_DISABLED.text(),
+                    task.isEnabled() ? Colors.GREEN : Colors.RED);
+            out(Text.zhEn("  命中次数: ", "  Hits: ").text(), Colors.CYAN);
             out(String.valueOf(task.getHitCount()), Colors.YELLOW);
             if (task.getLastHitAt() > 0) {
-                out("  最后命中: ", Colors.CYAN);
+                out(Text.zhEn("  最后命中: ", "  Last hit: ").text(), Colors.CYAN);
                 out(String.valueOf(new Date(task.getLastHitAt())), Colors.GRAY);
             }
             out("", Colors.WHITE);
@@ -96,15 +98,15 @@ public class BreakpointQueryCommand extends AbstractBreakpointCommand<CommandReq
         List<BreakpointInterceptTask> breakpoints = manager.listTasks();
 
         if (breakpoints.isEmpty()) {
-            out("没有设置任何断点", Colors.GRAY);
-            return createSuccessResult("没有设置任何断点");
+            out(BreakpointTexts.NO_BREAKPOINTS.text(), Colors.GRAY);
+            return createSuccessResult(BreakpointTexts.NO_BREAKPOINTS.text());
         }
 
         BreakpointResult result = new BreakpointResult();
         result.setSuccess(true);
         result.setSubCommand("hits");
 
-        out("=== 断点命中统计 ===", Colors.CYAN);
+        out(Text.zhEn("=== 断点命中统计 ===", "=== Breakpoint hit statistics ===").text(), Colors.CYAN);
         out("", Colors.WHITE);
 
         int totalHits = 0;
@@ -113,18 +115,18 @@ public class BreakpointQueryCommand extends AbstractBreakpointCommand<CommandReq
             out(String.valueOf(task.getId()), Colors.YELLOW);
             out(": ", Colors.WHITE);
             out(task.getClassName() + "." + task.getMethodName(), Colors.GREEN);
-            out(" - 命中 ", Colors.WHITE);
+            out(Text.zhEn(" - 命中 ", " - hit ").text(), Colors.WHITE);
             out(String.valueOf(task.getHitCount()), Colors.YELLOW);
-            out(" 次", Colors.WHITE);
+            out(Text.zhEn(" 次", " times").text(), Colors.WHITE);
             totalHits += task.getHitCount();
         }
 
         out("", Colors.WHITE);
-        out("总计: ", Colors.CYAN);
+        out(Text.zhEn("总计: ", "Total: ").text(), Colors.CYAN);
         out(String.valueOf(totalHits), Colors.YELLOW);
-        out(" 次命中", Colors.WHITE);
+        out(Text.zhEn(" 次命中", " hits").text(), Colors.WHITE);
 
-        result.setOutput("总计 " + totalHits + " 次命中");
+        result.setOutput(Text.zhEn("总计 %d 次命中", "Total: %d hits").format(totalHits));
         return result;
     }
 }

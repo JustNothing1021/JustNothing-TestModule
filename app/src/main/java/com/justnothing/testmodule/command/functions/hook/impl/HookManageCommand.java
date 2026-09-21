@@ -1,6 +1,8 @@
 package com.justnothing.testmodule.command.functions.hook.impl;
 
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
+import com.justnothing.testmodule.command.framework.i18n.Text;
+import com.justnothing.testmodule.command.functions.hook.HookTexts;
 import com.justnothing.testmodule.command.functions.hook.response.HookListResult;
 import com.justnothing.testmodule.command.functions.hook.util.HookManager;
 import com.justnothing.testmodule.command.functions.hook.request.*;
@@ -25,12 +27,12 @@ public class HookManageCommand extends AbstractHookCommand<CommandRequest<?>, Ho
                 context);
 
         if (result.success()) {
-            outln("添加Hook成功", Colors.GREEN);
+            outln(Text.zhEn("添加Hook成功", "Hook added").text(), Colors.GREEN);
             out("Hook ID: ", Colors.CYAN);
             outln(result.hookId(), Colors.YELLOW);
             
             HookListResult r = okListResult("add");
-            r.setMessage("Hook已添加: " + result.hookId());
+            r.setMessage(Text.zhEn("Hook已添加: %s", "Hook added: %s").format(result.hookId()));
             return r;
         } else {
             throw new RuntimeException(result.errorMessage());
@@ -42,11 +44,11 @@ public class HookManageCommand extends AbstractHookCommand<CommandRequest<?>, Ho
 
         // 找不到就是失败，不能再无条件地报「移除成功」
         if (!HookManager.removeHook(request.getHookId(), context)) {
-            return createErrorResult("未找到Hook (ID: " + request.getHookId() + ")");
+            return createErrorResult(HookTexts.ERR_HOOK_ID_NOT_FOUND.format(request.getHookId()));
         }
 
         HookListResult r = okListResult("remove");
-        r.setMessage("Hook已移除: " + request.getHookId());
+        r.setMessage(Text.zhEn("Hook已移除: %s", "Hook removed: %s").format(request.getHookId()));
         return r;
     }
 
@@ -54,11 +56,11 @@ public class HookManageCommand extends AbstractHookCommand<CommandRequest<?>, Ho
         logger.info("启用Hook: %s", request.getHookId());
 
         if (!HookManager.enableHook(request.getHookId(), context)) {
-            return createErrorResult("未找到Hook (ID: " + request.getHookId() + ")");
+            return createErrorResult(HookTexts.ERR_HOOK_ID_NOT_FOUND.format(request.getHookId()));
         }
 
         HookListResult r = okListResult("enable");
-        r.setMessage("Hook已启用: " + request.getHookId());
+        r.setMessage(Text.zhEn("Hook已启用: %s", "Hook enabled: %s").format(request.getHookId()));
         return r;
     }
 
@@ -66,11 +68,11 @@ public class HookManageCommand extends AbstractHookCommand<CommandRequest<?>, Ho
         logger.info("禁用Hook: %s", request.getHookId());
 
         if (!HookManager.disableHook(request.getHookId(), context)) {
-            return createErrorResult("未找到Hook (ID: " + request.getHookId() + ")");
+            return createErrorResult(HookTexts.ERR_HOOK_ID_NOT_FOUND.format(request.getHookId()));
         }
 
         HookListResult r = okListResult("disable");
-        r.setMessage("Hook已禁用: " + request.getHookId());
+        r.setMessage(Text.zhEn("Hook已禁用: %s", "Hook disabled: %s").format(request.getHookId()));
         return r;
     }
 
@@ -80,13 +82,13 @@ public class HookManageCommand extends AbstractHookCommand<CommandRequest<?>, Ho
         
         HookManager.clearAllHooks();
         
-        out("已清除 ", Colors.LIGHT_GREEN);
+        out(Text.zhEn("已清除 ", "Cleared ").text(), Colors.LIGHT_GREEN);
         out(count + " ", Colors.YELLOW);
-        outln("个Hook", Colors.LIGHT_GREEN);
+        outln(Text.zhEn("个Hook", "hooks").text(), Colors.LIGHT_GREEN);
         
         HookListResult r = okListResult("clear");
         r.setTotalHookCount(count);
-        r.setMessage("已清除 " + count + " 个Hook");
+        r.setMessage(Text.zhEn("已清除 %d 个Hook", "Cleared %d hooks").format(count));
         return r;
     }
 
@@ -98,6 +100,7 @@ public class HookManageCommand extends AbstractHookCommand<CommandRequest<?>, Ho
         if (request instanceof HookDisableRequest r) return handleDisable(r);
         if (request instanceof HookClearRequest r) return handleClear(r);
         
-        throw new IllegalArgumentException("不支持的请求类型: " + request.getClass().getSimpleName());
+        throw new IllegalArgumentException(
+                HookTexts.ERR_UNSUPPORTED_REQUEST_TYPE.format(request.getClass().getSimpleName()));
     }
 }

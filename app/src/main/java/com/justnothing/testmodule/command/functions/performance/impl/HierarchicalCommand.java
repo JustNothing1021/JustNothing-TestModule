@@ -8,6 +8,7 @@ import com.justnothing.testmodule.command.functions.performance.response.Hierarc
 import com.justnothing.testmodule.command.functions.performance.sampler.HierarchicalSampleData;
 import com.justnothing.testmodule.command.functions.performance.sampler.HierarchicalSampler;
 import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.functions.performance.PerformanceTexts;
 
 import org.json.JSONException;
@@ -50,7 +51,7 @@ public class HierarchicalCommand extends AbstractPerfCommand<PerformanceRequest<
             return handleExport(exportReq);
         } else {
             logger.warn("[hier] 未知请求类型: %s", req.getClass().getName());
-            outln("未知请求类型", Colors.RED);
+            outln(PerformanceTexts.UNKNOWN_REQUEST_TYPE.text(), Colors.RED);
             return null;
         }
     }
@@ -62,12 +63,12 @@ public class HierarchicalCommand extends AbstractPerfCommand<PerformanceRequest<
 
         if (rate <= 0) {
             logger.warn("[hier/start] 频率无效: %d", rate);
-            outln("错误: 频率必须 > 0", Colors.RED);
+            outln(PerformanceTexts.ERR_RATE_MUST_BE_POSITIVE.text(), Colors.RED);
             return null;
         }
         if (rate > 10000) {
             logger.warn("[hier/start] 频率过高: %d Hz，可能影响性能", rate);
-            outln("警告: 频率过高", Colors.YELLOW);
+            outln(PerformanceTexts.WARN_RATE_TOO_HIGH.text(), Colors.YELLOW);
         }
 
         PerfTaskManager mgr = getTaskManager();
@@ -80,10 +81,10 @@ public class HierarchicalCommand extends AbstractPerfCommand<PerformanceRequest<
         r.setTaskId(id);
         r.setSampleRate(rate);
         r.setStatus("running");
-        outln("分层采样器已启动", Colors.GREEN);
+        outln(Text.zhEn("分层采样器已启动", "Hierarchical sampler started").text(), Colors.GREEN);
         out("ID: ", Colors.CYAN);
         outln(String.valueOf(id), Colors.YELLOW);
-        out("频率: ", Colors.CYAN);
+        out(PerformanceTexts.LABEL_RATE.text(), Colors.CYAN);
         outln(rate + " Hz", Colors.YELLOW);
         return r;
     }
@@ -98,9 +99,10 @@ public class HierarchicalCommand extends AbstractPerfCommand<PerformanceRequest<
         if (s == null) {
             logger.warn("[hier/stop] ❌ 采样器不存在: ID=%d, 当前运行中的IDs=%s",
                     taskId, mgr.getHierarchicalSamplers().keySet());
-            outln("错误: 分层采样器不存在 (ID: " + taskId + ")", Colors.RED);
-            outln("可用的IDs: " + mgr.getHierarchicalSamplers().keySet(), Colors.GRAY);
-            outln("提示: 先用 'performance hierarchical start' 启动，再用 'performance hierarchical stop <ID>' 停止", Colors.GRAY);
+            outln(Text.zhEn("错误: 分层采样器不存在 (ID: %d)", "Error: hierarchical sampler not found (ID: %d)").format(taskId), Colors.RED);
+            outln(PerformanceTexts.AVAILABLE_IDS.format(mgr.getHierarchicalSamplers().keySet()), Colors.GRAY);
+            outln(Text.zhEn("提示: 先用 'performance hierarchical start' 启动，再用 'performance hierarchical stop <ID>' 停止",
+                    "Hint: run 'performance hierarchical start' first, then 'performance hierarchical stop <ID>' to stop").text(), Colors.GRAY);
             return null;
         }
 
@@ -123,11 +125,11 @@ public class HierarchicalCommand extends AbstractPerfCommand<PerformanceRequest<
         r.setStatus("stopped");
         r.setTotalSamples(s.getTotalSamples());
         r.setMethodCount(s.getMethodCount());
-        outln("采样器已停止", Colors.YELLOW);
+        outln(PerformanceTexts.SAMPLER_STOPPED.text(), Colors.YELLOW);
         out("ID: ", Colors.CYAN); outln(String.valueOf(taskId), Colors.YELLOW);
-        out("总采样次数: ", Colors.CYAN); outln(String.valueOf(totalSamples), Colors.YELLOW);
-        out("持续时间: ", Colors.CYAN); outln(formatDurationNs(duration), Colors.YELLOW);
-        out("捕获方法数: ", Colors.CYAN); outln(String.valueOf(s.getMethodCount()), Colors.YELLOW);
+        out(PerformanceTexts.LABEL_TOTAL_SAMPLE_COUNT.text(), Colors.CYAN); outln(String.valueOf(totalSamples), Colors.YELLOW);
+        out(PerformanceTexts.LABEL_DURATION.text(), Colors.CYAN); outln(formatDurationNs(duration), Colors.YELLOW);
+        out(PerformanceTexts.LABEL_CAPTURED_METHODS.text(), Colors.CYAN); outln(String.valueOf(s.getMethodCount()), Colors.YELLOW);
         return r;
     }
 
@@ -138,7 +140,7 @@ public class HierarchicalCommand extends AbstractPerfCommand<PerformanceRequest<
 
         if (taskId == null) {
             logger.warn("[hier/report] 未指定ID，尝试查找最新数据");
-            outln("未指定ID，查找最新完成的采样...", Colors.GRAY);
+            outln(PerformanceTexts.NO_ID_SEARCH_LATEST_SAMPLE.text(), Colors.GRAY);
         }
 
         PerfTaskManager mgr = getTaskManager();
@@ -147,13 +149,14 @@ public class HierarchicalCommand extends AbstractPerfCommand<PerformanceRequest<
             Integer latestId = findLatestId(mgr.getHierarchicalSampleDataMap());
             if (latestId == null) {
                 logger.warn("[hier/report] ❌ 无任何已完成数据");
-                outln("错误: 没有已完成的采样数据", Colors.RED);
-                outln("提示: 先用 'performance hierarchical start' 开始采样，再用 'performance hierarchical stop <ID>' 停止", Colors.GRAY);
+                outln(PerformanceTexts.ERR_NO_COMPLETED_SAMPLE_DATA.text(), Colors.RED);
+                outln(Text.zhEn("提示: 先用 'performance hierarchical start' 开始采样，再用 'performance hierarchical stop <ID>' 停止",
+                        "Hint: run 'performance hierarchical start' to start sampling, then 'performance hierarchical stop <ID>' to stop").text(), Colors.GRAY);
                 return null;
             }
             taskId = latestId;
             logger.info("[hier/report] 自动选择最新ID: %d", taskId);
-            out("使用最新ID: ", Colors.GRAY); outln(String.valueOf(taskId), Colors.YELLOW);
+            out(PerformanceTexts.USING_LATEST_ID.text(), Colors.GRAY); outln(String.valueOf(taskId), Colors.YELLOW);
         }
 
         HierarchicalSampleData d = mgr.getHierarchicalSampleData(taskId);
@@ -161,21 +164,22 @@ public class HierarchicalCommand extends AbstractPerfCommand<PerformanceRequest<
         if (d == null) {
             Map<Integer, ?> availableIds = mgr.getHierarchicalSampleDataMap();
             logger.warn("[hier/report] ❌ 数据不存在: ID=%d, 可用IDs=%s", taskId, availableIds.keySet());
-            outln("错误: 数据不存在 (ID: " + taskId + ")", Colors.RED);
+            outln(PerformanceTexts.ERR_DATA_NOT_FOUND.format(taskId), Colors.RED);
             if (!availableIds.isEmpty()) {
-                outln("可用的报告ID: " + availableIds.keySet(), Colors.GRAY);
+                outln(PerformanceTexts.AVAILABLE_REPORT_IDS.format(availableIds.keySet()), Colors.GRAY);
             } else {
-                outln("提示: 没有任何已完成的采样。请先执行 'performance hierarchical stop <ID>'", Colors.GRAY);
+                outln(Text.zhEn("提示: 没有任何已完成的采样。请先执行 'performance hierarchical stop <ID>'",
+                        "Hint: there is no completed sample data. Run 'performance hierarchical stop <ID>' first").text(), Colors.GRAY);
             }
             return null;
         }
 
         if (d.methodCallInfos().isEmpty()) {
             logger.warn("[hier/report] ⚠️ 数据为空: ID=%d (采样期间无方法调用被捕获)", taskId);
-            outln("警告: 报告数据为空 (ID: " + taskId + ")", Colors.YELLOW);
-            outln("该采样周期内没有捕获到任何方法调用", Colors.GRAY);
-            out("采样率: ", Colors.CYAN); outln(d.sampleRate() + " Hz", Colors.WHITE);
-            out("持续时间: ", Colors.CYAN); outln(formatDurationNs(d.getDuration()), Colors.WHITE);
+            outln(PerformanceTexts.WARN_REPORT_DATA_EMPTY.format(taskId), Colors.YELLOW);
+            outln(PerformanceTexts.NO_METHOD_CALLS_CAPTURED.text(), Colors.GRAY);
+            out(PerformanceTexts.LABEL_SAMPLE_RATE.text(), Colors.CYAN); outln(d.sampleRate() + " Hz", Colors.WHITE);
+            out(PerformanceTexts.LABEL_DURATION.text(), Colors.CYAN); outln(formatDurationNs(d.getDuration()), Colors.WHITE);
             return null;
         }
 
@@ -189,12 +193,12 @@ public class HierarchicalCommand extends AbstractPerfCommand<PerformanceRequest<
         r.setMethodCount(d.methodCount());
 
         outln("", Colors.DEFAULT);
-        outln("=== 分层采样报告 ===", Colors.CYAN);
-        out("任务ID: ", Colors.CYAN); outln(String.valueOf(taskId), Colors.YELLOW);
-        out("采样率: ", Colors.CYAN); outln(d.sampleRate() + " Hz", Colors.WHITE);
-        out("总采样数: ", Colors.CYAN); outln(String.valueOf(d.totalSamples()), Colors.WHITE);
-        out("持续时间: ", Colors.CYAN); outln(formatDurationNs(d.getDuration()), Colors.WHITE);
-        out("热点方法 TOP-" + Math.min(d.methodCallInfos().size(), 20) + ":", Colors.CYAN);
+        outln(Text.zhEn("=== 分层采样报告 ===", "=== Hierarchical sampling report ===").text(), Colors.CYAN);
+        out(PerformanceTexts.LABEL_TASK_ID.text(), Colors.CYAN); outln(String.valueOf(taskId), Colors.YELLOW);
+        out(PerformanceTexts.LABEL_SAMPLE_RATE.text(), Colors.CYAN); outln(d.sampleRate() + " Hz", Colors.WHITE);
+        out(PerformanceTexts.LABEL_TOTAL_SAMPLES.text(), Colors.CYAN); outln(String.valueOf(d.totalSamples()), Colors.WHITE);
+        out(PerformanceTexts.LABEL_DURATION.text(), Colors.CYAN); outln(formatDurationNs(d.getDuration()), Colors.WHITE);
+        out(PerformanceTexts.HOT_METHODS_TOP.format(Math.min(d.methodCallInfos().size(), 20)), Colors.CYAN);
         outln("", Colors.DEFAULT);
 
         ArrayList<HierarchicalResult.MethodCallEntry> entries = new ArrayList<>();
@@ -255,8 +259,8 @@ public class HierarchicalCommand extends AbstractPerfCommand<PerformanceRequest<
         HierarchicalSampleData d = mgr.getHierarchicalSampleData(taskId);
         if (d == null) {
             logger.warn("[hier/export] ❌ 数据不存在: ID=%d, 可用IDs=%s", taskId, mgr.getHierarchicalSampleDataMap().keySet());
-            outln("错误: 数据不存在 (ID: " + taskId + ")", Colors.RED);
-            outln("可用的报告ID: " + mgr.getHierarchicalSampleDataMap().keySet(), Colors.GRAY);
+            outln(PerformanceTexts.ERR_DATA_NOT_FOUND.format(taskId), Colors.RED);
+            outln(PerformanceTexts.AVAILABLE_REPORT_IDS.format(mgr.getHierarchicalSampleDataMap().keySet()), Colors.GRAY);
             return null;
         }
 
@@ -267,7 +271,7 @@ public class HierarchicalCommand extends AbstractPerfCommand<PerformanceRequest<
 
         if (!writeToFile(filePath, j.toString(2))) {
             logger.error("[hier/export] ❌ 写入文件失败: %s", filePath);
-            outln("导出失败: 无法写入文件", Colors.RED);
+            outln(PerformanceTexts.ERR_EXPORT_WRITE_FAILED.text(), Colors.RED);
             return null;
         }
 
@@ -277,10 +281,10 @@ public class HierarchicalCommand extends AbstractPerfCommand<PerformanceRequest<
         r.setTaskId(taskId);
         r.setStatus("exported");
         r.setExportPath(filePath);
-        outln("数据已导出", Colors.GREEN);
-        out("路径: ", Colors.CYAN); outln(filePath, Colors.YELLOW);
-        out("方法数: ", Colors.CYAN); outln(String.valueOf(d.methodCount()), Colors.WHITE);
-        out("总采样: ", Colors.CYAN); outln(String.valueOf(d.totalSamples()), Colors.WHITE);
+        outln(PerformanceTexts.DATA_EXPORTED.text(), Colors.GREEN);
+        out(PerformanceTexts.LABEL_PATH.text(), Colors.CYAN); outln(filePath, Colors.YELLOW);
+        out(PerformanceTexts.LABEL_METHOD_COUNT.text(), Colors.CYAN); outln(String.valueOf(d.methodCount()), Colors.WHITE);
+        out(PerformanceTexts.LABEL_TOTAL_SAMPLES_SHORT.text(), Colors.CYAN); outln(String.valueOf(d.totalSamples()), Colors.WHITE);
         return r;
     }
 

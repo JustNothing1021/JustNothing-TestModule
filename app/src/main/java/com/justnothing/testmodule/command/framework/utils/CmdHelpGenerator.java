@@ -63,14 +63,14 @@ public class CmdHelpGenerator {
                 sb.append(String.format("  %s:\n", category));
                 for (CmdRoutes.Route route : entry.getValue()) {
                     String sig = buildRouteSignature(route);
-                    sb.append("    ").append(padRight(sig, 37))
+                    sb.append("    ").append(padColumn(sig, 37))
                       .append(CliTexts.resolve(route.description())).append("\n");
                 }
                 sb.append("\n");
             }
             for (CmdRoutes.Route route : flatRoutes) {
                 String sig = buildRouteSignature(route);
-                sb.append("  ").append(padRight(sig, 37))
+                sb.append("  ").append(padColumn(sig, 37))
                   .append(CliTexts.resolve(route.description())).append("\n");
             }
             if (!flatRoutes.isEmpty()) sb.append("\n");
@@ -143,7 +143,7 @@ public class CmdHelpGenerator {
         }
         sb.append("  ").append(padRight(nameStr, 22));
 
-        sb.append("  ").append(padRight(CliTexts.resolve(p.description()), 30));
+        sb.append("  ").append(padColumn(CliTexts.resolve(p.description()), 30));
 
         List<String> attrs = new ArrayList<>();
         attrs.add(p.required() ? CliMessages.PARAM_REQUIRED.text() : CliMessages.PARAM_OPTIONAL.text());
@@ -201,6 +201,16 @@ public class CmdHelpGenerator {
         StringBuilder sb = new StringBuilder(s);
         for (int i = 0; i < pad; i++) sb.append(' ');
         return sb.toString();
+    }
+
+    /**
+     * 用来排多列的行：右侧补空格到目标宽度，但即使内容本身已经超宽也至少留一个空格。
+     *
+     * <p>{@link #padRight} 在超宽时一格都不补，两列就会粘成一个词（英文描述普遍比中文长，
+     * i18n 之后才露出来，比如 {@code Number of rows in the CPU TOP listoptional}）。</p>
+     */
+    private static String padColumn(String s, int targetWidth) {
+        return displayWidth(s) >= targetWidth ? s + " " : padRight(s, targetWidth);
     }
 
     private static String inferTypeName(Class<?> type) {

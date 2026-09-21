@@ -1,5 +1,6 @@
 package com.justnothing.testmodule.command.functions.performance.sampler;
 
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
 import com.justnothing.testmodule.utils.logging.Logger;
 
@@ -25,7 +26,7 @@ public abstract class AbstractSampler<T extends SampleData> implements Sampler<T
     @Override
     public void start() {
         if (running) {
-            throw new IllegalStateException("采样器已在运行");
+            throw new IllegalStateException(Text.zhEn("采样器已在运行", "sampler is already running").text());
         }
 
         running = true;

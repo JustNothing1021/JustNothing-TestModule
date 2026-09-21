@@ -2,6 +2,8 @@ package com.justnothing.testmodule.command.functions.watch.impl;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.functions.watch.util.WatchManager;
 import com.justnothing.testmodule.command.functions.watch.request.WatchOutputRequest;
@@ -31,11 +33,15 @@ public class WatchOutputCommand extends AbstractWatchCommand<WatchOutputRequest,
         Integer limit = request.getLimit();
         
         if (target == null) {
-            context.println("错误: 参数不足", Colors.RED);
-            context.println("用法: watch output <id|all> [limit]", Colors.GRAY);
-            context.println("选项:", Colors.CYAN);
-            context.println("  - limit: 输出条数限制，默认20", Colors.GRAY);
-            return createErrorResult("参数不足: 需要目标ID或all");
+            context.println(CliMessages.ERROR_PREFIX.text() + CliMessages.ERR_NOT_ENOUGH_ARGS.text(), Colors.RED);
+            context.println(CliMessages.HELP_USAGE_INLINE.text() + "watch output <id|all> [limit]", Colors.GRAY);
+            context.println(Text.zhEn("选项:", "Options:").text(), Colors.CYAN);
+            context.println(Text.zhEn(
+                    "  - limit: 输出条数限制，默认20",
+                    "  - limit: max number of output lines, 20 by default").text(), Colors.GRAY);
+            return createErrorResult(Text.zhEn(
+                    "参数不足: 需要目标ID或all",
+                    "not enough arguments: a target ID or 'all' is required").text());
         }
 
         int actualLimit = limit != null ? limit : 20;
@@ -48,8 +54,10 @@ public class WatchOutputCommand extends AbstractWatchCommand<WatchOutputRequest,
                 int id = Integer.parseInt(target);
                 output = manager.getTaskOutput(id, actualLimit);
             } catch (NumberFormatException e) {
-                context.println("错误: ID必须是数字: " + target, Colors.RED);
-                return createErrorResult("无效ID: " + target);
+                context.println(CliMessages.ERROR_PREFIX.text() + Text.zhEn(
+                        "ID必须是数字: %s",
+                        "ID must be a number: %s").format(target), Colors.RED);
+                return createErrorResult(Text.zhEn("无效ID: %s", "Invalid ID: %s").format(target));
             }
         }
 

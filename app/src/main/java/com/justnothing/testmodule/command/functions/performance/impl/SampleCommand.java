@@ -8,6 +8,7 @@ import com.justnothing.testmodule.command.functions.performance.response.SampleR
 import com.justnothing.testmodule.command.functions.performance.sampler.SimpleSampleData;
 import com.justnothing.testmodule.command.functions.performance.sampler.SimpleSampler;
 import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.functions.performance.PerformanceTexts;
 
 import org.json.JSONException;
@@ -52,7 +53,7 @@ public class SampleCommand extends AbstractPerfCommand<PerformanceRequest<?>, Sa
             return handleExport(exportReq);
         } else {
             logger.warn("[sample] 未知请求类型: %s", request.getClass().getName());
-            outln("未知请求类型", Colors.RED);
+            outln(PerformanceTexts.UNKNOWN_REQUEST_TYPE.text(), Colors.RED);
             return null;
         }
     }
@@ -65,12 +66,12 @@ public class SampleCommand extends AbstractPerfCommand<PerformanceRequest<?>, Sa
 
         if (rate <= 0) {
             logger.warn("[sample/start] 频率无效: %d", rate);
-            outln("错误: 频率必须 > 0", Colors.RED);
+            outln(PerformanceTexts.ERR_RATE_MUST_BE_POSITIVE.text(), Colors.RED);
             return null;
         }
         if (rate > 10000) {
             logger.warn("[sample/start] 频率过高: %d Hz，可能影响性能", rate);
-            outln("警告: 频率过高", Colors.YELLOW);
+            outln(PerformanceTexts.WARN_RATE_TOO_HIGH.text(), Colors.YELLOW);
         }
 
         PerfTaskManager mgr = getTaskManager();
@@ -83,13 +84,13 @@ public class SampleCommand extends AbstractPerfCommand<PerformanceRequest<?>, Sa
         r.setTaskId(id);
         r.setSampleRate(rate);
         r.setStatus("running");
-        outln("采样器已启动", Colors.GREEN);
+        outln(Text.zhEn("采样器已启动", "Sampler started").text(), Colors.GREEN);
         out("ID: ", Colors.CYAN);
         outln(String.valueOf(id), Colors.YELLOW);
-        out("频率: ", Colors.CYAN);
+        out(PerformanceTexts.LABEL_RATE.text(), Colors.CYAN);
         outln(rate + " Hz", Colors.YELLOW);
         if (exclude != null && !exclude.isEmpty()) {
-            out("排除模式: ", Colors.CYAN);
+            out(Text.zhEn("排除模式: ", "Exclude pattern: ").text(), Colors.CYAN);
             outln(exclude, Colors.YELLOW);
         }
         return r;
@@ -105,14 +106,14 @@ public class SampleCommand extends AbstractPerfCommand<PerformanceRequest<?>, Sa
         if (s == null) {
             logger.warn("[sample/stop] ❌ 采样器不存在: ID=%d, 当前运行中的IDs=%s",
                     taskId, mgr.getSimpleSamplers().keySet());
-            outln("错误: 采样器不存在 (ID: " + taskId + ")", Colors.RED);
-            outln("提示: 使用 'performance list' 查看当前任务", Colors.GRAY);
+            outln(Text.zhEn("错误: 采样器不存在 (ID: %d)", "Error: sampler not found (ID: %d)").format(taskId), Colors.RED);
+            outln(PerformanceTexts.HINT_VIEW_TASKS.text(), Colors.GRAY);
             return null;
         }
 
         if (!s.isRunning()) {
             logger.warn("[sample/stop] 采样器已停止: ID=%d", taskId);
-            outln("警告: 该采样器已经停止过", Colors.YELLOW);
+            outln(Text.zhEn("警告: 该采样器已经停止过", "Warning: this sampler has already been stopped").text(), Colors.YELLOW);
         }
 
         s.stop();
@@ -136,11 +137,11 @@ public class SampleCommand extends AbstractPerfCommand<PerformanceRequest<?>, Sa
         r.setDuration(data.getDuration());
         r.setDurationStr(data.getDurationString());
 
-        outln("采样器已停止", Colors.YELLOW);
+        outln(PerformanceTexts.SAMPLER_STOPPED.text(), Colors.YELLOW);
         out("ID: ", Colors.CYAN); outln(String.valueOf(taskId), Colors.YELLOW);
-        out("总采样次数: ", Colors.CYAN); outln(String.valueOf(totalSamples), Colors.YELLOW);
-        out("持续时间: ", Colors.CYAN); outln(data.getDurationString(), Colors.YELLOW);
-        out("捕获方法数: ", Colors.CYAN); outln(String.valueOf(data.methodCounts().size()), Colors.YELLOW);
+        out(PerformanceTexts.LABEL_TOTAL_SAMPLE_COUNT.text(), Colors.CYAN); outln(String.valueOf(totalSamples), Colors.YELLOW);
+        out(PerformanceTexts.LABEL_DURATION.text(), Colors.CYAN); outln(data.getDurationString(), Colors.YELLOW);
+        out(PerformanceTexts.LABEL_CAPTURED_METHODS.text(), Colors.CYAN); outln(String.valueOf(data.methodCounts().size()), Colors.YELLOW);
         return r;
     }
 
@@ -151,7 +152,7 @@ public class SampleCommand extends AbstractPerfCommand<PerformanceRequest<?>, Sa
 
         if (taskId == null) {
             logger.warn("[sample/report] 未指定ID，尝试查找最新数据");
-            outln("未指定ID，查找最新完成的采样...", Colors.GRAY);
+            outln(PerformanceTexts.NO_ID_SEARCH_LATEST_SAMPLE.text(), Colors.GRAY);
         }
 
         PerfTaskManager mgr = getTaskManager();
@@ -160,13 +161,14 @@ public class SampleCommand extends AbstractPerfCommand<PerformanceRequest<?>, Sa
             Integer latestId = findLatestId(mgr.getSimpleSampleDataMap());
             if (latestId == null) {
                 logger.warn("[sample/report] ❌ 无任何已完成数据");
-                outln("错误: 没有已完成的采样数据", Colors.RED);
-                outln("提示: 先用 'performance sample start' 开始采样，再用 'performance sample stop <ID>' 停止", Colors.GRAY);
+                outln(PerformanceTexts.ERR_NO_COMPLETED_SAMPLE_DATA.text(), Colors.RED);
+                outln(Text.zhEn("提示: 先用 'performance sample start' 开始采样，再用 'performance sample stop <ID>' 停止",
+                        "Hint: run 'performance sample start' to start sampling, then 'performance sample stop <ID>' to stop").text(), Colors.GRAY);
                 return null;
             }
             taskId = latestId;
             logger.info("[sample/report] 自动选择最新ID: %d", taskId);
-            out("使用最新ID: ", Colors.GRAY); outln(String.valueOf(taskId), Colors.YELLOW);
+            out(PerformanceTexts.USING_LATEST_ID.text(), Colors.GRAY); outln(String.valueOf(taskId), Colors.YELLOW);
         }
 
         SimpleSampleData data = mgr.getSimpleSampleData(taskId);
@@ -174,21 +176,22 @@ public class SampleCommand extends AbstractPerfCommand<PerformanceRequest<?>, Sa
         if (data == null) {
             Map<Integer, ?> availableIds = mgr.getSimpleSampleDataMap();
             logger.warn("[sample/report] ❌ 数据不存在: ID=%d, 可用IDs=%s", taskId, availableIds.keySet());
-            outln("错误: 数据不存在 (ID: " + taskId + ")", Colors.RED);
+            outln(PerformanceTexts.ERR_DATA_NOT_FOUND.format(taskId), Colors.RED);
             if (!availableIds.isEmpty()) {
-                outln("可用的报告ID: " + availableIds.keySet(), Colors.GRAY);
+                outln(PerformanceTexts.AVAILABLE_REPORT_IDS.format(availableIds.keySet()), Colors.GRAY);
             } else {
-                outln("提示: 没有任何已完成的采样。请先执行 'performance sample stop <ID>'", Colors.GRAY);
+                outln(Text.zhEn("提示: 没有任何已完成的采样。请先执行 'performance sample stop <ID>'",
+                        "Hint: there is no completed sample data. Run 'performance sample stop <ID>' first").text(), Colors.GRAY);
             }
             return null;
         }
 
         if (data.methodCounts().isEmpty()) {
             logger.warn("[sample/report] ⚠️ 数据为空: ID=%d (采样期间无方法调用被捕获)", taskId);
-            outln("警告: 报告数据为空 (ID: " + taskId + ")", Colors.YELLOW);
-            outln("该采样周期内没有捕获到任何方法调用", Colors.GRAY);
-            out("采样率: ", Colors.CYAN); outln(data.sampleRate() + " Hz", Colors.WHITE);
-            out("持续时间: ", Colors.CYAN); outln(data.getDurationString(), Colors.WHITE);
+            outln(PerformanceTexts.WARN_REPORT_DATA_EMPTY.format(taskId), Colors.YELLOW);
+            outln(PerformanceTexts.NO_METHOD_CALLS_CAPTURED.text(), Colors.GRAY);
+            out(PerformanceTexts.LABEL_SAMPLE_RATE.text(), Colors.CYAN); outln(data.sampleRate() + " Hz", Colors.WHITE);
+            out(PerformanceTexts.LABEL_DURATION.text(), Colors.CYAN); outln(data.getDurationString(), Colors.WHITE);
             return null;
         }
 
@@ -203,12 +206,12 @@ public class SampleCommand extends AbstractPerfCommand<PerformanceRequest<?>, Sa
         r.setDurationStr(data.getDurationString());
 
         outln("", Colors.DEFAULT);
-        outln("=== 单线程采样报告 ===", Colors.CYAN);
-        out("任务ID: ", Colors.CYAN); outln(String.valueOf(taskId), Colors.YELLOW);
-        out("采样率: ", Colors.CYAN); outln(data.sampleRate() + " Hz", Colors.WHITE);
-        out("总采样数: ", Colors.CYAN); outln(String.valueOf(data.totalSamples()), Colors.WHITE);
-        out("持续时间: ", Colors.CYAN); outln(data.getDurationString(), Colors.WHITE);
-        out("热点方法 TOP-" + Math.min(data.methodCounts().size(), 20) + ":", Colors.CYAN);
+        outln(Text.zhEn("=== 单线程采样报告 ===", "=== Single-threaded sampling report ===").text(), Colors.CYAN);
+        out(PerformanceTexts.LABEL_TASK_ID.text(), Colors.CYAN); outln(String.valueOf(taskId), Colors.YELLOW);
+        out(PerformanceTexts.LABEL_SAMPLE_RATE.text(), Colors.CYAN); outln(data.sampleRate() + " Hz", Colors.WHITE);
+        out(PerformanceTexts.LABEL_TOTAL_SAMPLES.text(), Colors.CYAN); outln(String.valueOf(data.totalSamples()), Colors.WHITE);
+        out(PerformanceTexts.LABEL_DURATION.text(), Colors.CYAN); outln(data.getDurationString(), Colors.WHITE);
+        out(PerformanceTexts.HOT_METHODS_TOP.format(Math.min(data.methodCounts().size(), 20)), Colors.CYAN);
         outln("", Colors.DEFAULT);
 
         ArrayList<SampleResult.MethodEntry> entries = new ArrayList<>();
@@ -246,7 +249,7 @@ public class SampleCommand extends AbstractPerfCommand<PerformanceRequest<?>, Sa
         SimpleSampleData data = mgr.getSimpleSampleData(taskId);
         if (data == null) {
             logger.warn("[sample/export] ❌ 数据不存在: ID=%d", taskId);
-            outln("错误: 数据不存在 (ID: " + taskId + ")", Colors.RED);
+            outln(PerformanceTexts.ERR_DATA_NOT_FOUND.format(taskId), Colors.RED);
             return null;
         }
 
@@ -261,7 +264,7 @@ public class SampleCommand extends AbstractPerfCommand<PerformanceRequest<?>, Sa
 
         if (!writeToFile(filePath, json.toString(2))) {
             logger.error("[sample/export] ❌ 写入文件失败: %s", filePath);
-            outln("导出失败: 无法写入文件", Colors.RED);
+            outln(PerformanceTexts.ERR_EXPORT_WRITE_FAILED.text(), Colors.RED);
             return null;
         }
 
@@ -271,9 +274,9 @@ public class SampleCommand extends AbstractPerfCommand<PerformanceRequest<?>, Sa
         r.setTaskId(taskId);
         r.setStatus("exported");
         r.setExportPath(filePath);
-        outln("数据已导出", Colors.GREEN);
-        out("路径: ", Colors.CYAN); outln(filePath, Colors.YELLOW);
-        out("方法数: ", Colors.CYAN); outln(String.valueOf(data.methodCounts().size()), Colors.WHITE);
+        outln(PerformanceTexts.DATA_EXPORTED.text(), Colors.GREEN);
+        out(PerformanceTexts.LABEL_PATH.text(), Colors.CYAN); outln(filePath, Colors.YELLOW);
+        out(PerformanceTexts.LABEL_METHOD_COUNT.text(), Colors.CYAN); outln(String.valueOf(data.methodCounts().size()), Colors.WHITE);
         return r;
     }
 

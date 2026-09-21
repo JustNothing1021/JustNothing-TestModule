@@ -4,6 +4,7 @@ import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.model.AbstractCommand;
 import com.justnothing.testmodule.command.framework.error.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.functions.didyouknow.CliTips;
 import com.justnothing.testmodule.command.functions.didyouknow.request.DidYouKnowRequest;
 import com.justnothing.testmodule.command.functions.didyouknow.response.DidYouKnowResult;
@@ -43,7 +44,7 @@ public class DidYouKnowCommand extends AbstractCommand<DidYouKnowRequest, DidYou
 
         if (request.isShowHelp()) {
             context.println(getHelpText(), Colors.CYAN);
-            return ok("帮助信息");
+            return ok(Text.zhEn("帮助信息", "Help").text());
         }
         if (request.isShowCount()) return showCount(context);
         if (request.isShowList()) return showList(context);
@@ -64,7 +65,7 @@ public class DidYouKnowCommand extends AbstractCommand<DidYouKnowRequest, DidYou
         CliTips.TipEntry tip = CliTips.randomTip();
         int idx = findTipIndex(tip);
         printTipCard(ctx, tip, Colors.CYAN, false, idx);
-        return ok("随机提示",
+        return ok(Text.zhEn("随机提示", "Random tip").text(),
                 tip.content, tip.author, false, tip.isCliExclusive);
     }
 
@@ -72,11 +73,13 @@ public class DidYouKnowCommand extends AbstractCommand<DidYouKnowRequest, DidYou
         CliTips.TipEntry tip = CliTips.getTip(id);
         if (tip == null) {
             int total = CliTips.totalCount();
-            ctx.println("[错误] 找不到第 " + id + " 条提示（总共 " + total + " 条）", Colors.RED);
-            throw new IllegalCommandLineArgumentException("索引越界: #" + id);
+            ctx.println(Text.zhEn("[错误] 找不到第 %s 条提示（总共 %s 条）",
+                    "[Error] No tip found with index %s (out of %s)").format(id, total), Colors.RED);
+            throw new IllegalCommandLineArgumentException(
+                    Text.zhEn("索引越界: #%s", "Index out of range: #%s").format(id));
         }
         printTipCard(ctx, tip, Colors.CYAN, false, id);
-        DidYouKnowResult r = ok("指定提示 #" + id,
+        DidYouKnowResult r = ok(Text.zhEn("指定提示 #%s", "Tip #%s").format(id),
                 tip.content, tip.author, false, tip.isCliExclusive);
         r.setTipIndex(id);
         return r;
@@ -97,7 +100,7 @@ public class DidYouKnowCommand extends AbstractCommand<DidYouKnowRequest, DidYou
             if (i < all.size() - 1) ctx.println("", Colors.WHITE);
         }
 
-        DidYouKnowResult r = ok("列出 " + total + " 条提示");
+        DidYouKnowResult r = ok(Text.zhEn("列出 %s 条提示", "Listed %s tips").format(total));
         r.setTotalCount(total);
         r.setAppTipCount(CliTips.getAppTipCount());
         r.setCliTipCount(CliTips.getCliExclusiveCount());
@@ -110,25 +113,30 @@ public class DidYouKnowCommand extends AbstractCommand<DidYouKnowRequest, DidYou
         int total = CliTips.totalCount();
 
         List<TerminalFormatter.InfoRow> rows = new ArrayList<>();
-        rows.add(new TerminalFormatter.InfoRow("App 端共享:   ", String.valueOf(app) + " 条"));
-        rows.add(new TerminalFormatter.InfoRow("CLI 专属:     ", String.valueOf(cli) + " 条"));
+        rows.add(new TerminalFormatter.InfoRow(Text.zhEn("App 端共享:   ", "App shared:   ").text(),
+                DidYouKnowTexts.VALUE_TIP_COUNT.format(app)));
+        rows.add(new TerminalFormatter.InfoRow(Text.zhEn("CLI 专属:     ", "CLI-only:     ").text(),
+                DidYouKnowTexts.VALUE_TIP_COUNT.format(cli)));
         rows.add(new TerminalFormatter.InfoRow("───────────── ", "──────────"));
-        rows.add(new TerminalFormatter.InfoRow("总计:         ", String.valueOf(total) + " 条"));
+        rows.add(new TerminalFormatter.InfoRow(Text.zhEn("总计:         ", "Total:        ").text(),
+                DidYouKnowTexts.VALUE_TIP_COUNT.format(total)));
 
         CliTips.TipEntry special = CliTips.getSpecialForToday();
         if (special != null) {
             rows.add(new TerminalFormatter.InfoRow("───────────── ", "──────────"));
-            rows.add(new TerminalFormatter.InfoRow("[*] 今日特殊:  ", truncate(special.content, 24)));
+            rows.add(new TerminalFormatter.InfoRow(Text.zhEn("[*] 今日特殊:  ", "[*] Today's special:  ").text(),
+                    truncate(special.content, 24)));
         } else {
             rows.add(new TerminalFormatter.InfoRow("───────────── ", "──────────"));
-            rows.add(new TerminalFormatter.InfoRow("[ ] 今日无特殊 ", ""));
+            rows.add(new TerminalFormatter.InfoRow(Text.zhEn("[ ] 今日无特殊 ", "[ ] No special today ").text(), ""));
         }
 
-        String panel = TerminalFormatter.infoPanel("提示系统统计", rows, BOX_WIDTH);
+        String panel = TerminalFormatter.infoPanel(
+                Text.zhEn("提示系统统计", "Tip system statistics").text(), rows, BOX_WIDTH);
         ctx.println("", Colors.WHITE);
         ctx.println(panel, Colors.CYAN);
 
-        DidYouKnowResult r = ok("统计信息");
+        DidYouKnowResult r = ok(Text.zhEn("统计信息", "Statistics").text());
         r.setTotalCount(total);
         r.setAppTipCount(app);
         r.setCliTipCount(cli);
@@ -143,28 +151,31 @@ public class DidYouKnowCommand extends AbstractCommand<DidYouKnowRequest, DidYou
 
         if (results.isEmpty()) {
             String noResult = TerminalFormatter.box(
-                    "[搜索结果]",
-                    "没有找到包含 \"" + keyword + "\" 的提示",
-                    "提示: 尝试其他关键词或用 did-you-know --list",
+                    Text.zhEn("[搜索结果]", "[Search results]").text(),
+                    Text.zhEn("没有找到包含 \"%s\" 的提示", "No tips found containing \"%s\"").format(keyword),
+                    Text.zhEn("提示: 尝试其他关键词或用 did-you-know --list",
+                            "Tip: try another keyword or use did-you-know --list").text(),
                     BOX_WIDTH);
             ctx.println(noResult, Colors.YELLOW);
-            return ok("无搜索结果");
+            return ok(Text.zhEn("无搜索结果", "No search results").text());
         }
 
-        ctx.println("[搜索] 关键字: \"" + keyword + "\" — 找到 " + results.size() + " 条", Colors.CYAN);
+        ctx.println(Text.zhEn("[搜索] 关键字: \"%s\" — 找到 %s 条",
+                "[Search] Keyword: \"%s\" — %s found").format(keyword, results.size()), Colors.CYAN);
         ctx.println("", Colors.WHITE);
 
         for (int i = 0; i < results.size(); i++) {
             CliTips.TipEntry tip = results.get(i);
             int globalIdx = findTipIndex(tip);
-            String title = "#" + globalIdx + " (匹配 " + (i + 1) + "/" + results.size() + ")";
+            String title = Text.zhEn("#%s (匹配 %s/%s)", "#%s (match %s/%s)")
+                    .format(globalIdx, i + 1, results.size());
             String footer = buildFooter(tip, globalIdx, CliTips.totalCount());
             String boxStr = TerminalFormatter.box(title, tip.content, footer, BOX_WIDTH);
             ctx.println(boxStr, tip.isCliExclusive ? Colors.MAGENTA : Colors.CYAN);
             if (i < results.size() - 1) ctx.println("", Colors.WHITE);
         }
 
-        DidYouKnowResult r = ok("找到 " + results.size() + " 条结果");
+        DidYouKnowResult r = ok(Text.zhEn("找到 %s 条结果", "Found %s results").format(results.size()));
         r.setSearchResultCount(results.size());
         return r;
     }
@@ -179,17 +190,19 @@ public class DidYouKnowCommand extends AbstractCommand<DidYouKnowRequest, DidYou
 
         if (special == null) {
             String noSpecial = TerminalFormatter.box(
-                    "[今日特殊]",
-                    "今天没有什么特殊的~\n就是普普通通的一天",
-                    "用 did-you-know 随机看看别的吧",
+                    Text.zhEn("[今日特殊]", "[Today's special]").text(),
+                    Text.zhEn("今天没有什么特殊的~\n就是普普通通的一天",
+                            "Nothing special today~\njust an ordinary day").text(),
+                    Text.zhEn("用 did-you-know 随机看看别的吧",
+                            "Use did-you-know to browse something else at random").text(),
                     BOX_WIDTH);
             ctx.println(noSpecial, Colors.YELLOW);
-            return ok("今日无特殊提示");
+            return ok(Text.zhEn("今日无特殊提示", "No special tip today").text());
         }
 
         printTipCard(ctx, special, Colors.MAGENTA, true, findTipIndex(special));
 
-        DidYouKnowResult r = ok("今日特殊提示");
+        DidYouKnowResult r = ok(Text.zhEn("今日特殊提示", "Today's special tip").text());
         r.setSpecial(true);
         r.setTipContent(special.content);
         r.setTipAuthor(special.author);
@@ -205,16 +218,17 @@ public class DidYouKnowCommand extends AbstractCommand<DidYouKnowRequest, DidYou
         ctx.println("", Colors.WHITE);
 
         if (specials.isEmpty()) {
-            ctx.println("[信息] 当前没有已注册的特殊提示", Colors.YELLOW);
-            return ok("无特殊提示列表");
+            ctx.println(Text.zhEn("[信息] 当前没有已注册的特殊提示",
+                    "[Info] No special tips are registered yet").text(), Colors.YELLOW);
+            return ok(Text.zhEn("无特殊提示列表", "No special tips").text());
         }
 
-        ctx.println("[特殊提示] 共 " + specials.size() + " 条", Colors.MAGENTA);
+        ctx.println(Text.zhEn("[特殊提示] 共 %s 条", "[Special tips] %s in total").format(specials.size()), Colors.MAGENTA);
         ctx.println("", Colors.WHITE);
 
         for (int i = 0; i < specials.size(); i++) {
             CliTips.TipEntry tip = specials.get(i);
-            String title = "* 特殊 #" + (i + 1) + "/" + specials.size() + " *";
+            String title = Text.zhEn("* 特殊 #%s/%s *", "* Special #%s/%s *").format(i + 1, specials.size());
             String footer = "-- " + tip.author
                     + (tip.isCliExclusive ? " [CLI]" : "");
             String boxStr = TerminalFormatter.box(title, tip.content, footer, BOX_WIDTH);
@@ -222,7 +236,7 @@ public class DidYouKnowCommand extends AbstractCommand<DidYouKnowRequest, DidYou
             if (i < specials.size() - 1) ctx.println("", Colors.WHITE);
         }
 
-        DidYouKnowResult r = ok("列出 " + specials.size() + " 条特殊提示");
+        DidYouKnowResult r = ok(Text.zhEn("列出 %s 条特殊提示", "Listed %s special tips").format(specials.size()));
         r.setSpecial(true);
         return r;
     }
@@ -241,7 +255,8 @@ public class DidYouKnowCommand extends AbstractCommand<DidYouKnowRequest, DidYou
     private void printTipCard(CommandExecutor.CmdExecContext<?> ctx,
                               CliTips.TipEntry tip, byte color,
                               boolean isSpecial, int index) {
-        String title = isSpecial ? "* 今日特别 *" : "> 你知道吗 <";
+        String title = isSpecial ? Text.zhEn("* 今日特别 *", "* Today's Special *").text()
+                : Text.zhEn("> 你知道吗 <", "> Did You Know <").text();
         String footer = buildFooterSingleLine(tip, index, CliTips.totalCount());
 
         String boxStr = TerminalFormatter.box(title, tip.content + "\n", footer, BOX_WIDTH);
@@ -266,7 +281,7 @@ public class DidYouKnowCommand extends AbstractCommand<DidYouKnowRequest, DidYou
         int available = BOX_WIDTH - TerminalFormatter.DEFAULT_PADDING * 2 - usedWidth - 2; // -2 for safety margin
 
         if (index > 0 && total > 0 && available >= 10) {
-            String indexStr = "(第" + index + "/" + total + "条)";
+            String indexStr = Text.zhEn("(第%s/%s条)", "(tip %s/%s)").format(index, total);
             sb.append(TerminalFormatter.spaces(available - TerminalFormatter.displayWidth(indexStr)));
             sb.append(indexStr);
         }

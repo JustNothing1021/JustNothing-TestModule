@@ -2,6 +2,8 @@ package com.justnothing.testmodule.command.functions.intercept;
 
 import androidx.annotation.NonNull;
 
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.functions.intercept.base.AbstractInterceptTask;
 import com.justnothing.testmodule.command.functions.intercept.base.TaskType;
 import com.justnothing.testmodule.hooks.api.HookParam;
@@ -33,6 +35,12 @@ public class WatchInterceptTask extends AbstractInterceptTask {
     private final LinkedList<String> outputBuffer = new LinkedList<>();
     private final AtomicInteger outputCount = new AtomicInteger(0);
 
+    // 这个任务的输出不是命令线程产出的（定时监控在线程池上跑、方法watch 的回调在被 hook 的 app
+    // 线程上跑），那些线程上没有请求上下文，Text.text() 会回落到本进程 Locale —— 也就是目标 app 的
+    // 语言，而不是发起这条 watch 的那个客户的界面语言。所以在构造时（一定在命令线程上）把语言记下来，
+    // 产出文案时用 withLanguage 包一层。缓冲的字符串是按产出时的语言定死的，事后回显改不了。
+    private final String language = CliMessages.language();
+
     private Field targetField;
     private Object lastValue;
     private ScheduledFuture<?> scheduledFuture;
@@ -62,7 +70,8 @@ public class WatchInterceptTask extends AbstractInterceptTask {
             }
         } catch (Exception e) {
             logger.error("查找字段失败: " + methodName, e);
-            throw new RuntimeException("查找字段失败: " + e.getMessage(), e);
+            throw new RuntimeException(Text.zhEn("查找字段失败: %s", "Failed to resolve field: %s")
+                    .format(e.getMessage()), e);
         }
     }
 
@@ -85,7 +94,7 @@ public class WatchInterceptTask extends AbstractInterceptTask {
             } else {
                 resolveTargetField();
                 if (!Modifier.isStatic(targetField.getModifiers())) {
-                    throw new UnsupportedOperationException("无法监控一个非静态的字段");
+                    throw new UnsupportedOperationException(Text.zhEn("无法监控一个非静态的字段", "Cannot watch a non-static field").text());
                 }
                 startFieldMonitoring();
             }
@@ -94,20 +103,21 @@ public class WatchInterceptTask extends AbstractInterceptTask {
         } catch (Exception e) {
             running.set(false);
             logger.error("启动Watch任务失败: " + id, e);
-            throw new RuntimeException("启动Watch任务失败: " + e.getMessage(), e);
+            throw new RuntimeException(Text.zhEn("启动Watch任务失败: %s", "Failed to start watch task: %s")
+                    .format(e.getMessage()), e);
         }
     }
 
     private void startFieldMonitoring() {
         scheduledFuture = ThreadPoolManager.scheduleWithFixedDelayUntil(
-                () -> {
+                () -> CliMessages.withLanguage(language, () -> {
                     try {
                         monitorField();
                     } catch (Exception e) {
-                        addOutput("监控出错: " + e.getMessage());
+                        addOutput(Text.zhEn("监控出错: %s", "Monitoring failed: %s").format(e.getMessage()));
                         logger.error("监控出错", e);
                     }
-                },
+                }),
                 0,
                 interval, TimeUnit.MILLISECONDS,
                 () -> !running.get()
@@ -121,7 +131,7 @@ public class WatchInterceptTask extends AbstractInterceptTask {
         if (Modifier.isStatic(targetField.getModifiers())) {
             currentValue = targetField.get(null);
         } else {
-            addOutput("警告: 非静态字段，无法监控值变化");
+            addOutput(Text.zhEn("警告: 非静态字段，无法监控值变化", "Warning: not a static field, cannot monitor value changes").text());
             return;
         }
 
@@ -143,34 +153,33 @@ public class WatchInterceptTask extends AbstractInterceptTask {
         return new MethodHook() {
             @Override
             protected void beforeHookedMethod(HookParam param) {
-                String timestamp = new SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault()).format(new Date());
-                String output = String.format("[%s] 方法 %s.%s 被调用",
-                        timestamp,
-                        targetClass.getSimpleName(),
-                        methodName);
-                addOutput(output);
+                CliMessages.withLanguage(language, () -> {
+                    String timestamp = new SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault()).format(new Date());
+                    String output = Text.zhEn("[%s] 方法 %s.%s 被调用", "[%s] method %s.%s called")
+                            .format(timestamp, targetClass.getSimpleName(), methodName);
+                    addOutput(output);
 
-                Object[] args = param.getArgs();
-                if (args.length > 0) {
-                    StringBuilder argsStr = new StringBuilder("  参数: ");
-                    for (int i = 0; i < args.length; i++) {
-                        argsStr.append(args[i] != null ? args[i].toString() : "null");
-                        if (i < args.length - 1) argsStr.append(", ");
+                    Object[] args = param.getArgs();
+                    if (args.length > 0) {
+                        StringBuilder argsStr = new StringBuilder(Text.zhEn("  参数: ", "  args: ").text());
+                        for (int i = 0; i < args.length; i++) {
+                            argsStr.append(args[i] != null ? args[i].toString() : "null");
+                            if (i < args.length - 1) argsStr.append(", ");
+                        }
+                        addOutput(argsStr.toString());
                     }
-                    addOutput(argsStr.toString());
-                }
+                });
             }
 
             @Override
             protected void afterHookedMethod(HookParam param) {
-                String timestamp = new SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault()).format(new Date());
-                Object result = param.getResult();
-                String output = String.format("[%s] 方法 %s.%s 返回: %s",
-                        timestamp,
-                        targetClass.getSimpleName(),
-                        methodName,
-                        result != null ? result.toString() : "void");
-                addOutput(output);
+                CliMessages.withLanguage(language, () -> {
+                    String timestamp = new SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault()).format(new Date());
+                    Object result = param.getResult();
+                    String output = Text.zhEn("[%s] 方法 %s.%s 返回: %s", "[%s] method %s.%s returned: %s")
+                            .format(timestamp, targetClass.getSimpleName(), methodName, result != null ? result.toString() : "void");
+                    addOutput(output);
+                });
             }
         };
     }
@@ -232,17 +241,17 @@ public class WatchInterceptTask extends AbstractInterceptTask {
 
     public String getOutput(int limit) {
         synchronized (outputBuffer) {
-            if (outputBuffer.isEmpty()) return "暂无输出";
+            if (outputBuffer.isEmpty()) return Text.zhEn("暂无输出", "No output yet").text();
 
             StringBuilder sb = new StringBuilder();
-            sb.append("=== Watch ").append(id).append(" 输出 (最近").append(limit).append("条) ===\n");
+            sb.append(Text.zhEn("=== Watch %s 输出 (最近%s条) ===\n", "=== Watch %s output (last %s) ===\n").format(id, limit));
 
             int startIndex = Math.max(0, outputBuffer.size() - limit);
             for (int i = startIndex; i < outputBuffer.size(); i++) {
                 sb.append(outputBuffer.get(i)).append("\n");
             }
 
-            sb.append("总计: ").append(outputCount.get()).append(" 条记录\n");
+            sb.append(Text.zhEn("总计: %s 条记录\n", "Total: %s records\n").format(outputCount.get()));
             return sb.toString();
         }
     }
@@ -250,14 +259,14 @@ public class WatchInterceptTask extends AbstractInterceptTask {
     @NonNull
     @Override
     public String toString() {
-        return String.format(
-                Locale.getDefault(),
-                "Watch[%d] %s%s (%s, 间隔=%dms, 输出=%d条)",
-                id,
-                getDisplayName(),
-                watchType == WatchType.FIELD ? " [字段]" : " [方法]",
-                enabled ? "运行中" : "已暂停",
-                interval,
-                outputCount.get());
+        return Text.zhEn("Watch[%d] %s%s (%s, 间隔=%dms, 输出=%d条)",
+                        "Watch[%d] %s%s (%s, interval=%dms, output=%d)")
+                .format(
+                        id,
+                        getDisplayName(),
+                        watchType == WatchType.FIELD ? Text.zhEn(" [字段]", " [field]").text() : Text.zhEn(" [方法]", " [method]").text(),
+                        enabled ? InterceptTexts.STATUS_RUNNING.text() : InterceptTexts.STATUS_PAUSED.text(),
+                        interval,
+                        outputCount.get());
     }
 }

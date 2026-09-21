@@ -1,6 +1,7 @@
 package com.justnothing.testmodule.command.functions.watch;
 
 import com.justnothing.testmodule.command.framework.i18n.CliTexts;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 
 import java.util.Map;
 
@@ -40,6 +41,14 @@ public final class WatchTexts {
     public static final String PARAM_WATCH_STOP_WATCHID_DESC = "param.watch.stop.watchId.desc";
     public static final String PARAM_WATCH_OUTPUT_TARGET_DESC = "param.watch.output.target.desc";
     public static final String PARAM_WATCH_OUTPUT_LIMIT_DESC = "param.watch.output.limit.desc";
+
+    // ==================== 输出文案（族内复用）====================
+    // 「参数不足」「未知类型: %s」「类: 」在本族里也出现多次，但它们在别的族同样在用，
+    // 所以提到 CliMessages 了，这里不再各存一份。
+    public static final Text HINT_VIEW_OUTPUT = Text.zhEn(
+            "提示: 使用 'watch output %s' 查看输出",
+            "Hint: run 'watch output %s' to view the output");
+    public static final Text LABEL_INTERVAL = Text.zhEn("间隔: ", "Interval: ");
 
     private WatchTexts() {
     }

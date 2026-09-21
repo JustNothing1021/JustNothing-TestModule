@@ -5,7 +5,10 @@ import com.justnothing.richconsole.progress.Progress;
 import com.justnothing.richconsole.status.Status;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
+import com.justnothing.testmodule.command.functions.bytecode.BytecodeTexts;
 import com.justnothing.testmodule.command.functions.bytecode.extract.DexClassIndex;
 import com.justnothing.testmodule.command.functions.bytecode.extract.DexExtractionManager;
 import com.justnothing.testmodule.command.functions.bytecode.extract.DexExtractor;
@@ -76,7 +79,7 @@ public class BytecodeManageCommand extends AbstractBytecodeCommand<CommandReques
             return handleFind(req, context);
         }
 
-        return buildErrorResult("不支持的请求类型: " + request.getClass().getSimpleName());
+        return buildErrorResult(BytecodeTexts.UNSUPPORTED_REQUEST.format(request.getClass().getSimpleName()));
     }
 
     /**
@@ -96,9 +99,10 @@ public class BytecodeManageCommand extends AbstractBytecodeCommand<CommandReques
                 : locateWithProgress(console, className);
 
         if (sources.isEmpty()) {
-            return buildErrorResult("没能在本进程的代码来源里找到类 " + className + "。\n"
-                    + "用 `bytecode locate " + className + "` 可以看到到底扫了哪些文件。\n"
-                    + "（类不在任何代码文件里 → 通常是运行时动态生成的。）");
+            return buildErrorResult(Text.zhEn(
+                    "没能在本进程的代码来源里找到类 %s。\n用 `bytecode locate %s` 可以看到到底扫了哪些文件。\n（类不在任何代码文件里 → 通常是运行时动态生成的。）",
+                    "Could not find class %s in this process's code sources.\nRun `bytecode locate %s` to see exactly which files were scanned.\n(The class is in no code file at all → it was most likely generated at runtime.)")
+                    .format(className, className));
         }
         DexSource source = sources.get(0);
 
@@ -107,31 +111,34 @@ public class BytecodeManageCommand extends AbstractBytecodeCommand<CommandReques
         if (console == null) {
             results = DexExtractionManager.extract(source);
         } else {
-            try (Status status = console.status("从 " + source.getKind() + " 提取 dex…")) {
+            try (Status status = console.status(
+                    Text.zhEn("从 %s 提取 dex…", "Extracting dex from %s…").format(source.getKind()))) {
                 results = DexExtractionManager.extract(source);
             }
         }
         if (results.isEmpty()) {
-            return buildErrorResult("类 " + className + " 确实在 " + source.getLabel()
-                    + " 里，但没能把 dex 取出来。\n"
-                    + "跑 `bytecode locate " + className + "` 可以看到这个来源当前有没有可用的提取策略。");
+            return buildErrorResult(Text.zhEn(
+                    "类 %s 确实在 %s 里，但没能把 dex 取出来。\n跑 `bytecode locate %s` 可以看到这个来源当前有没有可用的提取策略。",
+                    "Class %s is indeed in %s, but its dex could not be extracted.\nRun `bytecode locate %s` to see whether this source has a usable extraction strategy right now.")
+                    .format(className, source.getLabel(), className));
         }
 
         File outputDir = resolveOutputDir(request.getOutputPath(), "dump");
         if (outputDir == null) {
-            return buildErrorResult("找不到可写的输出目录；请用 -o 指定一个（例如 /data/local/tmp/dex）");
+            return buildErrorResult(BytecodeTexts.NO_OUTPUT_DIR.text());
         }
         try {
             ensureDirectory(outputDir);
         } catch (IOException e) {
-            return buildErrorResult("无法创建输出目录: " + e.getMessage());
+            return buildErrorResult(BytecodeTexts.CANNOT_CREATE_OUT_DIR.format(e.getMessage()));
         }
 
         StringBuilder sb = new StringBuilder();
         List<String> written = new ArrayList<>();
-        sb.append("类: ").append(className).append("\n");
-        sb.append("来源: ").append(source.getLabel()).append("\n");
-        sb.append("输出目录: ").append(outputDir.getAbsolutePath()).append("\n\n");
+        sb.append(CliMessages.LABEL_CLASS.text()).append(className).append("\n");
+        sb.append(BytecodeTexts.LABEL_SOURCE.text()).append(source.getLabel()).append("\n");
+        sb.append(BytecodeTexts.LABEL_OUTPUT_DIR.text()).append(outputDir.getAbsolutePath())
+                .append("\n\n");
 
         DexTrust trust = null;
         // 一个来源（apk）里可能有好几个 dex，每个都要写几十 MB —— 给条进度，别让人以为卡死
@@ -140,7 +147,7 @@ public class BytecodeManageCommand extends AbstractBytecodeCommand<CommandReques
                 : null;
         int writeTask = -1;
         if (writeProgress != null) {
-            writeTask = writeProgress.addTask("写出 dex", results.size());
+            writeTask = writeProgress.addTask(Text.zhEn("写出 dex", "Writing dex").text(), results.size());
             writeProgress.start();
         }
         try {
@@ -158,13 +165,15 @@ public class BytecodeManageCommand extends AbstractBytecodeCommand<CommandReques
                     writeOutput(target, result.dex());
                 } catch (IOException e) {
                     logger.error("写出 " + target + " 失败", e);
-                    sb.append("  ✗ ").append(name).append(" —— 写入失败: ").append(e.getMessage()).append("\n");
+                    sb.append("  ✗ ").append(name)
+                            .append(Text.zhEn(" —— 写入失败: ", " — write failed: ").text())
+                            .append(e.getMessage()).append("\n");
                     continue;
                 }
 
                 written.add(target.getAbsolutePath());
                 sb.append("  ✓ ").append(name)
-                        .append("  ").append(result.dex().length).append(" 字节")
+                        .append("  ").append(result.dex().length).append(BytecodeTexts.UNIT_BYTES.text())
                         .append("  [").append(result.trust().describe()).append("]\n")
                         .append("      ").append(result.note()).append("\n");
             }
@@ -174,13 +183,22 @@ public class BytecodeManageCommand extends AbstractBytecodeCommand<CommandReques
             }
         }
 
-        sb.append("\n可信度: ").append(trust != null ? trust.describe() : "未知").append("\n");
+        sb.append("\n").append(BytecodeTexts.LABEL_TRUST.text())
+                .append(trust != null ? trust.describe() : Text.zhEn("未知", "unknown").text())
+                .append("\n");
         if (trust != null && !trust.isCodeTrustworthy()) {
-            sb.append("注意: 这份 dex 已被 ART 改写（quicken），反编译出来的逻辑不可信，\n");
-            sb.append("      但类/方法/字段结构仍然是准的。要拿到可信代码，先把它 de-quicken：\n");
-            sb.append("      把上面「来源」那个文件拉到电脑上，用 vdexExtractor 处理后即可反编译。\n");
+            sb.append(Text.zhEn("注意: 这份 dex 已被 ART 改写（quicken），反编译出来的逻辑不可信，\n",
+                    "Note: this dex has been rewritten by ART (quicken); the decompiled logic is not trustworthy,\n")
+                    .text());
+            sb.append(Text.zhEn("      但类/方法/字段结构仍然是准的。要拿到可信代码，先把它 de-quicken：\n",
+                    "      but the class/method/field structure is still accurate. To get trustworthy code, de-quicken it first:\n")
+                    .text());
+            sb.append(Text.zhEn("      把上面「来源」那个文件拉到电脑上，用 vdexExtractor 处理后即可反编译。\n",
+                    "      pull the file shown under \"Source\" above to a PC and run vdexExtractor on it, then decompile.\n")
+                    .text());
         } else {
-            sb.append("直接用 jadx / baksmali 打开这个 dex 就能反编译。\n");
+            sb.append(Text.zhEn("直接用 jadx / baksmali 打开这个 dex 就能反编译。\n",
+                    "Just open this dex with jadx / baksmali to decompile it.\n").text());
         }
 
         // 指令单独走一遍：终端上要高亮，纯文本那份再拼进 sb 供 output 字段用
@@ -191,12 +209,14 @@ public class BytecodeManageCommand extends AbstractBytecodeCommand<CommandReques
         out(context, sb.toString(), trust != null && trust.isCodeTrustworthy() ? Colors.LIGHT_GREEN : Colors.YELLOW);
 
         if (disasm != null) {
-            sb.append("\n指令:\n\n").append(disasm.text());
-            out(context, "\n指令:", Colors.DEFAULT);
+            sb.append(Text.zhEn("\n指令:\n\n", "\nInstructions:\n\n").text()).append(disasm.text());
+            out(context, Text.zhEn("\n指令:", "\nInstructions:").text(), Colors.DEFAULT);
             // dalvik 没有专用 lexer，借 java 的让注释/字符串/数字有个颜色区分
             printCode(context, disasm.text(), "java");
             if (disasm.truncated()) {
-                String hint = "\n... 已截断（上限 " + MAX_DISASM_LINES + " 行），完整内容看上面导出的 dex。\n";
+                String hint = Text.zhEn("\n... 已截断（上限 %s 行），完整内容看上面导出的 dex。\n",
+                                "\n... truncated (limit %s lines); see the dex exported above for the full content.\n")
+                        .format(MAX_DISASM_LINES);
                 sb.append(hint);
                 out(context, hint, Colors.GRAY);
             }
@@ -218,18 +238,22 @@ public class BytecodeManageCommand extends AbstractBytecodeCommand<CommandReques
     private static DexDisassembler.Result runDisassembly(String className, List<String> dexFiles,
             StringBuilder sb) {
         if (dexFiles.isEmpty()) {
-            sb.append("\n指令: 没有可反汇编的 dex（上面的写入都失败了）。\n");
+            sb.append(Text.zhEn("\n指令: 没有可反汇编的 dex（上面的写入都失败了）。\n",
+                    "\nInstructions: no dex to disassemble (all the writes above failed).\n").text());
             return null;
         }
         if (!DexDisassembler.available()) {
-            sb.append("\n指令: 这台设备没有 /system/bin/dexdump，跳过反汇编。\n");
+            sb.append(Text.zhEn("\n指令: 这台设备没有 /system/bin/dexdump，跳过反汇编。\n",
+                    "\nInstructions: this device has no /system/bin/dexdump; skipping disassembly.\n").text());
             return null;
         }
 
         DexDisassembler.Result result = DexDisassembler.disassembleClass(
                 new File(dexFiles.get(0)), className, null, MAX_DISASM_LINES);
         if (result == null) {
-            sb.append("\n指令: 没读到这个类的指令（dexdump 跑了但没匹配到）。\n");
+            sb.append(Text.zhEn("\n指令: 没读到这个类的指令（dexdump 跑了但没匹配到）。\n",
+                    "\nInstructions: no instructions read for this class (dexdump ran but matched nothing).\n")
+                    .text());
             return null;
         }
         return result;
@@ -250,12 +274,16 @@ public class BytecodeManageCommand extends AbstractBytecodeCommand<CommandReques
                 : locateWithProgress(console, className);
 
         StringBuilder sb = new StringBuilder();
-        sb.append("类: ").append(className).append("\n");
-        sb.append("命中来源: ").append(sources.size()).append(" 个\n\n");
+        sb.append(CliMessages.LABEL_CLASS.text()).append(className).append("\n");
+        sb.append(Text.zhEn("命中来源: ", "Matched sources: ").text()).append(sources.size())
+                .append(BytecodeTexts.COUNT_SUFFIX.text()).append("\n\n");
 
         if (sources.isEmpty()) {
-            sb.append("没有找到。这个类不是从本进程用到的任何代码文件里加载的\n");
-            sb.append("（运行时动态生成 / 从网络或内存加载的类都会是这种情况）。\n");
+            sb.append(Text.zhEn("没有找到。这个类不是从本进程用到的任何代码文件里加载的\n",
+                    "Not found. This class was not loaded from any code file this process uses\n").text());
+            sb.append(Text.zhEn("（运行时动态生成 / 从网络或内存加载的类都会是这种情况）。\n",
+                    "(classes generated at runtime, or loaded from the network or memory, all look like this).\n")
+                    .text());
             out(context, sb.toString(), Colors.YELLOW);
             return buildSuccessResult("locate", className, sb.toString());
         }
@@ -263,11 +291,15 @@ public class BytecodeManageCommand extends AbstractBytecodeCommand<CommandReques
         for (DexSource source : sources) {
             DexExtractor extractor = DexExtractionManager.findExtractor(source);
             sb.append("  ").append(source.getKind()).append("  ").append(source.getLabel()).append("\n");
-            sb.append("      可用的提取策略: ")
-                    .append(extractor != null ? extractor.name() : "无（当前工具链处理不了这个格式）")
+            sb.append(Text.zhEn("      可用的提取策略: ", "      Available extraction strategy: ").text())
+                    .append(extractor != null
+                            ? extractor.name()
+                            : Text.zhEn("无（当前工具链处理不了这个格式）",
+                                    "none (the current toolchain cannot handle this format)").text())
                     .append("\n");
         }
-        sb.append("\n用 `bytecode dump ").append(className).append("` 把 dex 导出来。\n");
+        sb.append(Text.zhEn("\n用 `bytecode dump %s` 把 dex 导出来。\n",
+                "\nUse `bytecode dump %s` to export the dex.\n").format(className));
 
         out(context, sb.toString(), Colors.DEFAULT);
         return buildSuccessResult("locate", className, sb.toString());
@@ -288,7 +320,7 @@ public class BytecodeManageCommand extends AbstractBytecodeCommand<CommandReques
         if (request.getSource() != null && !request.getSource().isEmpty()) {
             File file = new File(request.getSource());
             if (!file.isFile()) {
-                return buildErrorResult("来源文件不存在: " + request.getSource());
+                return buildErrorResult(BytecodeTexts.SOURCE_NOT_FOUND.format(request.getSource()));
             }
             sources.add(DexSource.of(DexSourceLocator.kindOfPath(file.getAbsolutePath()), file));
         } else {
@@ -296,7 +328,9 @@ public class BytecodeManageCommand extends AbstractBytecodeCommand<CommandReques
         }
 
         StringBuilder sb = new StringBuilder();
-        sb.append("来源: ").append(sources.size()).append(" 个，总共最多列出 ").append(limit).append(" 个类\n\n");
+        sb.append(BytecodeTexts.LABEL_SOURCE.text()).append(Text.zhEn(
+                        "%s 个，总共最多列出 %s 个类\n\n", "%s sources, listing up to %s classes in total\n\n")
+                .format(sources.size(), limit));
 
         Console console = context.supportsRichOutput() ? context.console() : null;
         // 同上：要 transient，否则进度条会一直在屏幕上留着
@@ -305,7 +339,7 @@ public class BytecodeManageCommand extends AbstractBytecodeCommand<CommandReques
                 : null;
         int task = -1;
         if (progress != null) {
-            task = progress.addTask("读取类名", sources.size());
+            task = progress.addTask(Text.zhEn("读取类名", "Reading class names").text(), sources.size());
             progress.start();
         }
 
@@ -313,21 +347,24 @@ public class BytecodeManageCommand extends AbstractBytecodeCommand<CommandReques
         try {
             for (DexSource source : sources) {
                 if (total >= limit) {
-                    sb.append("... 已达到总量上限 ").append(limit).append("，停止\n");
+                    sb.append(Text.zhEn("... 已达到总量上限 %s，停止\n",
+                            "... reached the total limit of %s, stopping\n").format(limit));
                     break;
                 }
                 List<String> classes;
                 try {
                     classes = DexClassIndex.listClasses(source.getFile(), limit - total);
                 } catch (IOException e) {
-                    sb.append(source.getLabel()).append("  —— 读取失败: ").append(e.getMessage()).append("\n\n");
+                    sb.append(source.getLabel()).append(BytecodeTexts.READ_FAILED.text())
+                            .append(e.getMessage()).append("\n\n");
                     if (progress != null) {
                         progress.advance(task, 1);
                     }
                     continue;
                 }
                 if (!classes.isEmpty()) {
-                    sb.append(source.getLabel()).append("  (").append(classes.size()).append(" 个)\n");
+                    sb.append(source.getLabel()).append("  (").append(classes.size())
+                            .append(BytecodeTexts.COUNT_SUFFIX.text()).append(")\n");
                     for (String name : classes) {
                         sb.append("  ").append(name).append("\n");
                     }
@@ -345,9 +382,11 @@ public class BytecodeManageCommand extends AbstractBytecodeCommand<CommandReques
         }
 
         if (total == 0) {
-            sb.append("没列出任何类。可能这些来源里没有 dex（framework jar 在多数设备上是空壳）。\n");
+            sb.append(Text.zhEn("没列出任何类。可能这些来源里没有 dex（framework jar 在多数设备上是空壳）。\n",
+                    "No classes listed. These sources may contain no dex (framework jars are empty shells on most devices).\n")
+                    .text());
         } else {
-            sb.append("合计 ").append(total).append(" 个类。\n");
+            sb.append(Text.zhEn("合计 %s 个类。\n", "%s classes in total.\n").format(total));
         }
 
         out(context, sb.toString(), Colors.DEFAULT);
@@ -373,7 +412,8 @@ public class BytecodeManageCommand extends AbstractBytecodeCommand<CommandReques
             CommandExecutor.CmdExecContext<CommandRequest<?>> context) {
         String rawKeyword = request.getKeyword();
         if (rawKeyword == null || rawKeyword.trim().isEmpty()) {
-            return buildErrorResult("请给出要搜索的关键词，例如: bytecode find ActivityManager");
+            return buildErrorResult(Text.zhEn("请给出要搜索的关键词，例如: bytecode find ActivityManager",
+                    "Please provide a keyword to search for, e.g. bytecode find ActivityManager").text());
         }
         String keyword = rawKeyword.trim();
         String needle = keyword.toLowerCase(Locale.ROOT);
@@ -383,7 +423,7 @@ public class BytecodeManageCommand extends AbstractBytecodeCommand<CommandReques
         if (request.getSource() != null && !request.getSource().isEmpty()) {
             File file = new File(request.getSource());
             if (!file.isFile()) {
-                return buildErrorResult("来源文件不存在: " + request.getSource());
+                return buildErrorResult(BytecodeTexts.SOURCE_NOT_FOUND.format(request.getSource()));
             }
             sources.add(DexSource.of(DexSourceLocator.kindOfPath(file.getAbsolutePath()), file));
         } else {
@@ -397,13 +437,14 @@ public class BytecodeManageCommand extends AbstractBytecodeCommand<CommandReques
                 : null;
         int task = -1;
         if (progress != null) {
-            task = progress.addTask("搜索类名", sources.size());
+            task = progress.addTask(Text.zhEn("搜索类名", "Searching class names").text(), sources.size());
             progress.start();
         }
 
         StringBuilder sb = new StringBuilder();
-        sb.append("关键词: ").append(keyword)
-                .append("    来源: ").append(sources.size()).append(" 个\n\n");
+        sb.append(Text.zhEn("关键词: ", "Keyword: ").text()).append(keyword)
+                .append("    ").append(BytecodeTexts.LABEL_SOURCE.text()).append(sources.size())
+                .append(BytecodeTexts.COUNT_SUFFIX.text()).append("\n\n");
 
         int total = 0;
         boolean limited = false;
@@ -411,14 +452,16 @@ public class BytecodeManageCommand extends AbstractBytecodeCommand<CommandReques
             for (DexSource source : sources) {
                 if (total >= limit) {
                     limited = true;
-                    sb.append("... 已达到上限 ").append(limit).append(" 个命中，停止扫描\n");
+                    sb.append(Text.zhEn("... 已达到上限 %s 个命中，停止扫描\n",
+                            "... reached the limit of %s matches, stopping the scan\n").format(limit));
                     break;
                 }
                 List<String> classes;
                 try {
                     classes = DexClassIndex.listClasses(source.getFile(), MAX_CLASSES_PER_SOURCE);
                 } catch (IOException e) {
-                    sb.append(source.getLabel()).append("  —— 读取失败: ").append(e.getMessage()).append("\n\n");
+                    sb.append(source.getLabel()).append(BytecodeTexts.READ_FAILED.text())
+                            .append(e.getMessage()).append("\n\n");
                     if (progress != null) {
                         progress.advance(task, 1);
                     }
@@ -436,7 +479,8 @@ public class BytecodeManageCommand extends AbstractBytecodeCommand<CommandReques
                     }
                 }
                 if (!hits.isEmpty()) {
-                    sb.append(source.getLabel()).append("  (").append(hits.size()).append(" 个)\n");
+                    sb.append(source.getLabel()).append("  (").append(hits.size())
+                            .append(BytecodeTexts.COUNT_SUFFIX.text()).append(")\n");
                     for (String name : hits) {
                         sb.append("  ").append(name).append("\n");
                     }
@@ -454,14 +498,20 @@ public class BytecodeManageCommand extends AbstractBytecodeCommand<CommandReques
         }
 
         if (total == 0) {
-            sb.append("没有匹配的类名。可以换个更短的子串（大小写不敏感），\n");
-            sb.append("或者用 `bytecode list_classes -s <文件>` 看看某个来源里到底有哪些类。\n");
+            sb.append(Text.zhEn("没有匹配的类名。可以换个更短的子串（大小写不敏感），\n",
+                    "No class names matched. Try a shorter substring (matching is case-insensitive),\n").text());
+            sb.append(Text.zhEn("或者用 `bytecode list_classes -s <文件>` 看看某个来源里到底有哪些类。\n",
+                    "or use `bytecode list_classes -s <file>` to see what classes a given source actually contains.\n")
+                    .text());
         } else {
-            sb.append("合计命中 ").append(total).append(" 个");
+            sb.append(Text.zhEn("合计命中 %s 个", "%s matches in total").format(total));
             if (limited) {
-                sb.append("（已到上限，用 -l 可以调大）");
+                sb.append(Text.zhEn("（已到上限，用 -l 可以调大）",
+                        " (limit reached; raise it with -l)").text());
             }
-            sb.append("。拿到类名后可以 `bytecode source <类名>` 看源码。\n");
+            sb.append(Text.zhEn("。拿到类名后可以 `bytecode source <类名>` 看源码。\n",
+                    ". Once you have the class name, use `bytecode source <class name>` to view the source.\n")
+                    .text());
         }
 
         out(context, sb.toString(), Colors.DEFAULT);
@@ -481,25 +531,29 @@ public class BytecodeManageCommand extends AbstractBytecodeCommand<CommandReques
         List<File> inputs = collectInputs(request.getSource(), limit);
         if (inputs.isEmpty()) {
             return buildErrorResult(request.getSource() != null && !request.getSource().isEmpty()
-                    ? "没有在 " + request.getSource() + " 里找到可处理的文件（apk/jar/dex/vdex/odex）"
-                    : "没找到当前应用的 APK；可以用 -s 指定来源文件或目录");
+                    ? Text.zhEn("没有在 %s 里找到可处理的文件（apk/jar/dex/vdex/odex）",
+                            "No processable files found in %s (apk/jar/dex/vdex/odex)")
+                            .format(request.getSource())
+                    : Text.zhEn("没找到当前应用的 APK；可以用 -s 指定来源文件或目录",
+                            "Could not find the current app's APK; use -s to specify a source file or directory")
+                            .text());
         }
 
         File outputDir = resolveOutputDir(request.getOutputPath(), "batch");
         if (outputDir == null) {
-            return buildErrorResult("找不到可写的输出目录；请用 -o 指定一个（例如 /data/local/tmp/dex）");
+            return buildErrorResult(BytecodeTexts.NO_OUTPUT_DIR.text());
         }
         try {
             ensureDirectory(outputDir);
         } catch (IOException e) {
-            return buildErrorResult("无法创建输出目录: " + e.getMessage());
+            return buildErrorResult(BytecodeTexts.CANNOT_CREATE_OUT_DIR.format(e.getMessage()));
         }
 
         StringBuilder sb = new StringBuilder();
         List<String> written = new ArrayList<>();
         int failed = 0;
-        sb.append("输出目录: ").append(outputDir.getAbsolutePath()).append("\n");
-        sb.append("待处理: ").append(inputs.size()).append(" 个来源\n\n");
+        sb.append(BytecodeTexts.LABEL_OUTPUT_DIR.text()).append(outputDir.getAbsolutePath()).append("\n");
+        sb.append(Text.zhEn("待处理: %s 个来源\n\n", "Pending: %s sources\n\n").format(inputs.size()));
 
         // 每个来源都要提取 + 写盘，vdex 的还原还可能跑几十秒 —— 必须有进度反馈。
         // 只有真的会有多条时才去取 console（取它会构造 JLine 终端，实测 ~530ms）。
@@ -509,7 +563,7 @@ public class BytecodeManageCommand extends AbstractBytecodeCommand<CommandReques
                 : null;
         int task = -1;
         if (progress != null) {
-            task = progress.addTask("导出 dex", inputs.size());
+            task = progress.addTask(Text.zhEn("导出 dex", "Exporting dex").text(), inputs.size());
             progress.start();
         }
 
@@ -528,7 +582,9 @@ public class BytecodeManageCommand extends AbstractBytecodeCommand<CommandReques
                 } catch (IOException e) {
                     failed++;
                     sb.append("  ✗ ").append(input.getAbsolutePath())
-                            .append("  —— 无法创建输出子目录: ").append(e.getMessage()).append("\n");
+                            .append(Text.zhEn("  —— 无法创建输出子目录: ", " — cannot create output subdirectory: ")
+                                    .text())
+                            .append(e.getMessage()).append("\n");
                     continue;
                 }
 
@@ -536,7 +592,8 @@ public class BytecodeManageCommand extends AbstractBytecodeCommand<CommandReques
                 List<DexExtractor.Result> results = DexExtractionManager.extract(source);
                 if (results.isEmpty()) {
                     failed++;
-                    sb.append("  ✗ ").append(input.getAbsolutePath()).append("  —— 取不出 dex\n");
+                    sb.append("  ✗ ").append(input.getAbsolutePath())
+                            .append(Text.zhEn("  —— 取不出 dex\n", " — could not extract any dex\n").text());
                     continue;
                 }
 
@@ -549,12 +606,13 @@ public class BytecodeManageCommand extends AbstractBytecodeCommand<CommandReques
                     } catch (IOException e) {
                         logger.error("写出 " + target + " 失败", e);
                         failed++;
-                        sb.append("      ✗ ").append(target.getName()).append(" 写入失败\n");
+                        sb.append("      ✗ ").append(target.getName())
+                                .append(Text.zhEn(" 写入失败\n", " write failed\n").text());
                         continue;
                     }
                     written.add(target.getAbsolutePath());
                     sb.append("      ✓ ").append(target.getName())
-                            .append("  ").append(result.dex().length).append(" 字节")
+                            .append("  ").append(result.dex().length).append(BytecodeTexts.UNIT_BYTES.text())
                             .append("  [").append(result.trust().describe()).append("]\n");
                 }
             }
@@ -564,8 +622,11 @@ public class BytecodeManageCommand extends AbstractBytecodeCommand<CommandReques
             }
         }
 
-        sb.append("\n合计导出 ").append(written.size()).append(" 个 dex")
-                .append(failed > 0 ? "，" + failed + " 个来源失败" : "").append("\n");
+        sb.append(Text.zhEn("\n合计导出 %s 个 dex", "\nExported %s dex files in total").format(written.size()))
+                .append(failed > 0
+                        ? Text.zhEn("，%s 个来源失败", ", %s sources failed").format(failed)
+                        : "")
+                .append("\n");
 
         out(context, sb.toString(), failed > 0 ? Colors.YELLOW : Colors.LIGHT_GREEN);
 
@@ -591,7 +652,7 @@ public class BytecodeManageCommand extends AbstractBytecodeCommand<CommandReques
                     if (total <= 0) {
                         return;
                     }
-                    task = progress.addTask("扫描代码来源", total);
+                    task = progress.addTask(BytecodeTexts.PROGRESS_SCAN_SOURCES.text(), total);
                     progress.start();
                 }
 

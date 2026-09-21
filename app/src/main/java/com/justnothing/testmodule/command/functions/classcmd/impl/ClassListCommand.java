@@ -2,6 +2,8 @@ package com.justnothing.testmodule.command.functions.classcmd.impl;
 
 import com.justnothing.testmodule.command.framework.error.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.functions.classcmd.ClassTexts;
 import com.justnothing.testmodule.command.functions.classcmd.model.ClassCommandContext;
 import com.justnothing.testmodule.command.functions.classcmd.request.MethodListRequest;
@@ -38,7 +40,9 @@ public class ClassListCommand extends AbstractClassCommand<MethodListRequest, Me
         String className = request.getClassName();
 
         if (className == null || className.isEmpty()) {
-            throw new IllegalCommandLineArgumentException("参数不足: class list [options] <class>");
+            throw new IllegalCommandLineArgumentException(Text.zhEn(
+                    "参数不足: class list [options] <class>",
+                    "Not enough arguments: class list [options] <class>").text());
         }
 
         context.logger().debug("目标类名: " + className + ", 详细模式: " + verbose);
@@ -49,16 +53,17 @@ public class ClassListCommand extends AbstractClassCommand<MethodListRequest, Me
         MethodListResult result = new MethodListResult();
         result.setClassName(className);
         result.setTargetPackage(context.targetPackage() != null ? context.targetPackage() : "default");
-        result.setClassLoader(context.classLoader() != null ? context.classLoader().toString() : "无");
+        result.setClassLoader(context.classLoader() != null
+                ? context.classLoader().toString() : CliMessages.VALUE_NONE.text());
 
-        context.execContext().print("类名: ", Colors.CYAN);
+        context.execContext().print(CliMessages.LABEL_CLASS_NAME.text(), Colors.CYAN);
         context.execContext().println(className, Colors.GREEN);
-        context.execContext().print("使用的包: ", Colors.CYAN);
+        context.execContext().print(Text.zhEn("使用的包: ", "Package in use: ").text(), Colors.CYAN);
         context.execContext().println(result.getTargetPackage(), Colors.YELLOW);
-        context.execContext().print("类加载器: ", Colors.CYAN);
+        context.execContext().print(CliMessages.LABEL_CLASS_LOADER.text(), Colors.CYAN);
         context.execContext().println(result.getClassLoader(), Colors.GRAY);
         context.execContext().println("");
-        context.execContext().println("方法列表:", Colors.CYAN);
+        context.execContext().println(Text.zhEn("方法列表:", "Method list:").text(), Colors.CYAN);
 
         context.logger().debug("开始获取类方法");
         Method[] methods = targetClass.getDeclaredMethods();
@@ -90,12 +95,12 @@ public class ClassListCommand extends AbstractClassCommand<MethodListRequest, Me
         result.setTotalCount(methods.length);
 
         context.execContext().println("");
-        context.execContext().println("结果:", Colors.CYAN);
-        context.execContext().print("  静态方法: ", Colors.CYAN);
+        context.execContext().println(Text.zhEn("结果:", "Result:").text(), Colors.CYAN);
+        context.execContext().print(Text.zhEn("  静态方法: ", "  Static methods: ").text(), Colors.CYAN);
         context.execContext().println(String.valueOf(staticCount), Colors.YELLOW);
-        context.execContext().print("  实例方法: ", Colors.CYAN);
+        context.execContext().print(Text.zhEn("  实例方法: ", "  Instance methods: ").text(), Colors.CYAN);
         context.execContext().println(String.valueOf(instanceCount), Colors.YELLOW);
-        context.execContext().print("  总计: ", Colors.CYAN);
+        context.execContext().print(Text.zhEn("  总计: ", "  Total: ").text(), Colors.CYAN);
         context.execContext().println(String.valueOf(methods.length), Colors.YELLOW);
 
         context.logger().info("执行成功，找到 " + methods.length + " 个方法 (静态: " + staticCount + ", 实例: " + instanceCount + ")");

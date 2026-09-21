@@ -10,6 +10,7 @@ import com.justnothing.testmodule.command.functions.performance.response.Perform
 import com.justnothing.testmodule.command.functions.performance.sampler.SampleData;
 import com.justnothing.testmodule.command.functions.performance.sampler.Sampler;
 import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.functions.performance.impl.*;
 import com.justnothing.testmodule.command.functions.performance.request.*;
 import com.justnothing.testmodule.command.functions.performance.sampler.HierarchicalSampler;
@@ -100,7 +101,7 @@ public class PerformanceMain extends MainCommand<PerformanceResult> {
             case "clear" -> { handleClear(context); yield null; }
             default -> {
                 context.println(getHelpText(), Colors.GRAY);
-                yield createErrorResult("未知子命令: " + args[0]);
+                yield createErrorResult(Text.zhEn("未知子命令: %s", "Unknown subcommand: %s").format(args[0]));
             }
         };
     }
@@ -109,18 +110,20 @@ public class PerformanceMain extends MainCommand<PerformanceResult> {
         logger.debug("列出所有性能分析任务");
 
         PerfTaskManager mgr = PerfTaskManager.getInstance();
-        ctx.println("=== 性能分析任务列表 ===", Colors.CYAN);
+        ctx.println(Text.zhEn("=== 性能分析任务列表 ===", "=== Performance tasks ===").text(), Colors.CYAN);
         ctx.println("", Colors.WHITE);
 
-        printSamplers(ctx, mgr.getSimpleSamplers(), mgr.getSimpleSampleDataMap(), "单线程采样");
-        printSamplers(ctx, mgr.getMultiThreadSamplers(), mgr.getMultiThreadSampleDataMap(), "多线程采样");
+        printSamplers(ctx, mgr.getSimpleSamplers(), mgr.getSimpleSampleDataMap(),
+                Text.zhEn("单线程采样", "single-threaded sampling").text());
+        printSamplers(ctx, mgr.getMultiThreadSamplers(), mgr.getMultiThreadSampleDataMap(),
+                Text.zhEn("多线程采样", "multi-threaded sampling").text());
         printHierarchicalSamplers(ctx, mgr.getHierarchicalSamplers(), mgr.getHierarchicalSampleDataMap());
         printTracers(ctx, mgr.getTracers(), mgr.getTraceDataMap());
         printSystrace(ctx, mgr.getSystraceRunners(), mgr.getSystraceDataMap());
         printHooks(ctx);
 
         if (mgr.getTotalRunningCount() == 0 && mgr.getTotalCompletedCount() == 0) {
-            ctx.println("没有运行中的性能分析任务", Colors.GRAY);
+            ctx.println(Text.zhEn("没有运行中的性能分析任务", "No performance tasks are running").text(), Colors.GRAY);
         }
     }
 
@@ -130,33 +133,33 @@ public class PerformanceMain extends MainCommand<PerformanceResult> {
         mgr.clearAll();
 
         logger.info("已清除所有性能分析任务 (%d 个)", total);
-        ctx.println("已清除所有性能分析任务", Colors.GREEN);
-        ctx.print("共清除: ", Colors.CYAN);
-        ctx.println(total + " 个", Colors.YELLOW);
+        ctx.println(Text.zhEn("已清除所有性能分析任务", "All performance tasks cleared").text(), Colors.GREEN);
+        ctx.print(Text.zhEn("共清除: ", "Cleared: ").text(), Colors.CYAN);
+        ctx.println(Text.zhEn("%d 个", "%d task(s)").format(total), Colors.YELLOW);
     }
 
     private void printSamplers(CommandExecutor.CmdExecContext<?> ctx,
                                Map<Integer, ? extends Sampler<?>> running, Map<Integer, ? extends SampleData> completed, String label) {
         if (!running.isEmpty()) {
-            ctx.println("记录中的" + label + "器:", Colors.CYAN);
+            ctx.println(Text.zhEn("记录中的%s器:", "Samplers in progress: %s").format(label), Colors.CYAN);
             for (Map.Entry<Integer, ? extends Sampler<?>> e : running.entrySet()) {
                 ctx.print("  ID: ", Colors.CYAN);
                 ctx.println(String.valueOf(e.getKey()), Colors.YELLOW);
-                ctx.println("    类型: " + label, Colors.WHITE);
-                ctx.print("    状态: ", Colors.YELLOW);
-                ctx.println(e.getValue().isRunning() ? "运行中" : "已停止",
+                ctx.println(Text.zhEn("    类型: %s", "    Type: %s").format(label), Colors.WHITE);
+                ctx.print(PerformanceTexts.LABEL_STATUS_INDENTED.text(), Colors.YELLOW);
+                ctx.println(e.getValue().isRunning() ? PerformanceTexts.STATUS_RUNNING.text() : PerformanceTexts.STATUS_STOPPED.text(),
                             e.getValue().isRunning() ? Colors.GREEN : Colors.GRAY);
-                ctx.print("    采样数量: ", Colors.YELLOW);
+                ctx.print(PerformanceTexts.LABEL_SAMPLE_COUNT_INDENTED.text(), Colors.YELLOW);
                 ctx.println(String.valueOf(e.getValue().getTotalSamples()), Colors.CYAN);
             }
             ctx.println("", Colors.WHITE);
         }
         if (!completed.isEmpty()) {
-            ctx.println("已收集完成的" + label + "数据:", Colors.CYAN);
+            ctx.println(Text.zhEn("已收集完成的%s数据:", "Completed %s data:").format(label), Colors.CYAN);
             for (Map.Entry<Integer, ? extends SampleData> e : completed.entrySet()) {
                 ctx.print("  ID: ", Colors.CYAN);
                 ctx.println(String.valueOf(e.getKey()), Colors.YELLOW);
-                ctx.println("    采样数量: " + e.getValue().totalSamples(), Colors.GREEN);
+                ctx.println(PerformanceTexts.LABEL_SAMPLE_COUNT_INDENTED.text() + e.getValue().totalSamples(), Colors.GREEN);
 
             }
             ctx.println("", Colors.WHITE);
@@ -167,17 +170,17 @@ public class PerformanceMain extends MainCommand<PerformanceResult> {
                                            Map<Integer, HierarchicalSampler> running,
                                            Map<Integer, HierarchicalSampleData> completed) {
         if (!running.isEmpty()) {
-            ctx.println("运行中的分层采样器:", Colors.CYAN);
+            ctx.println(Text.zhEn("运行中的分层采样器:", "Hierarchical samplers in progress:").text(), Colors.CYAN);
             for (var e : running.entrySet()) {
                 ctx.print("  ID: ", Colors.CYAN);
                 ctx.println(String.valueOf(e.getKey()), Colors.YELLOW);
-                ctx.print("    方法数: ", Colors.CYAN);
+                ctx.print(Text.zhEn("    方法数: ", "    Methods: ").text(), Colors.CYAN);
                 ctx.println(String.valueOf(e.getValue().getMethodCount()), Colors.YELLOW);
             }
             ctx.println("", Colors.WHITE);
         }
         if (!completed.isEmpty()) {
-            ctx.println("已完成的分层数据:", Colors.CYAN);
+            ctx.println(Text.zhEn("已完成的分层数据:", "Completed hierarchical data:").text(), Colors.CYAN);
             for (var e : completed.entrySet()) {
                 ctx.print("  ID: ", Colors.CYAN);
                 ctx.println(String.valueOf(e.getKey()), Colors.YELLOW);
@@ -189,21 +192,21 @@ public class PerformanceMain extends MainCommand<PerformanceResult> {
     private void printTracers(CommandExecutor.CmdExecContext<?> ctx,
                               Map<Integer, Tracer> running, Map<Integer, List<TraceData>> completed) {
         if (!running.isEmpty()) {
-            ctx.println("运行中的 Tracer:", Colors.CYAN);
+            ctx.println(Text.zhEn("运行中的 Tracer:", "Tracers in progress:").text(), Colors.CYAN);
             for (var e : running.entrySet()) {
                 ctx.print("  ID: ", Colors.CYAN);
                 ctx.println(String.valueOf(e.getKey()), Colors.YELLOW);
-                ctx.print("    Trace数: ", Colors.CYAN);
+                ctx.print(Text.zhEn("    Trace数: ", "    Traces: ").text(), Colors.CYAN);
                 ctx.println(String.valueOf(e.getValue().getSectionCount()), Colors.YELLOW);
             }
             ctx.println("", Colors.WHITE);
         }
         if (!completed.isEmpty()) {
-            ctx.println("已完成的 Trace:", Colors.CYAN);
+            ctx.println(Text.zhEn("已完成的 Trace:", "Completed traces:").text(), Colors.CYAN);
             for (var e : completed.entrySet()) {
                 ctx.print("  ID: ", Colors.CYAN);
                 ctx.println(String.valueOf(e.getKey()), Colors.YELLOW);
-                ctx.print("    数量: ", Colors.CYAN);
+                ctx.print(Text.zhEn("    数量: ", "    Count: ").text(), Colors.CYAN);
                 ctx.println(String.valueOf(e.getValue().size()), Colors.YELLOW);
             }
             ctx.println("", Colors.WHITE);
@@ -213,21 +216,21 @@ public class PerformanceMain extends MainCommand<PerformanceResult> {
     private void printSystrace(CommandExecutor.CmdExecContext<?> ctx,
                                Map<Integer, SystraceRunner> running, Map<Integer, SystraceData> completed) {
         if (!running.isEmpty()) {
-            ctx.println("运行中的 Systrace:", Colors.CYAN);
+            ctx.println(Text.zhEn("运行中的 Systrace:", "Systrace runs in progress:").text(), Colors.CYAN);
             for (var e : running.entrySet()) {
                 ctx.print("  ID: ", Colors.CYAN);
                 ctx.println(String.valueOf(e.getKey()), Colors.YELLOW);
-                ctx.print("    持续: ", Colors.CYAN);
-                ctx.println(e.getValue().getDuration() / 1000.0 + " 秒", Colors.YELLOW);
+                ctx.print(Text.zhEn("    持续: ", "    Duration: ").text(), Colors.CYAN);
+                ctx.println(e.getValue().getDuration() / 1000.0 + PerformanceTexts.UNIT_SECONDS.text(), Colors.YELLOW);
             }
             ctx.println("", Colors.WHITE);
         }
         if (!completed.isEmpty()) {
-            ctx.println("已完成的 Systrace:", Colors.CYAN);
+            ctx.println(Text.zhEn("已完成的 Systrace:", "Completed systrace runs:").text(), Colors.CYAN);
             for (var e : completed.entrySet()) {
                 ctx.print("  ID: ", Colors.CYAN);
                 ctx.println(String.valueOf(e.getKey()), Colors.YELLOW);
-                ctx.print("    文件: ", Colors.CYAN);
+                ctx.print(Text.zhEn("    文件: ", "    File: ").text(), Colors.CYAN);
                 ctx.println(e.getValue().file(), Colors.GREEN);
             }
             ctx.println("", Colors.WHITE);
@@ -237,18 +240,19 @@ public class PerformanceMain extends MainCommand<PerformanceResult> {
     private void printHooks(CommandExecutor.CmdExecContext<?> ctx) {
         var hooks = PerformanceManager.getInstance().listPerformanceHooks();
         if (!hooks.isEmpty()) {
-            ctx.println("运行中的 Hook:", Colors.CYAN);
+            ctx.println(Text.zhEn("运行中的 Hook:", "Hooks in progress:").text(), Colors.CYAN);
             for (var task : hooks) {
                 var s = task.getStats();
                 ctx.print("  ID: ", Colors.CYAN);
                 ctx.println(String.valueOf(s.id()), Colors.YELLOW);
-                ctx.print("    状态: ", Colors.CYAN);
-                ctx.println(task.isRunning() ? "运行中" : "已停止", task.isRunning() ? Colors.GREEN : Colors.GRAY);
-                ctx.print("    类: ", Colors.CYAN);
+                ctx.print(PerformanceTexts.LABEL_STATUS_INDENTED.text(), Colors.CYAN);
+                ctx.println(task.isRunning() ? PerformanceTexts.STATUS_RUNNING.text() : PerformanceTexts.STATUS_STOPPED.text(),
+                            task.isRunning() ? Colors.GREEN : Colors.GRAY);
+                ctx.print(Text.zhEn("    类: ", "    Class: ").text(), Colors.CYAN);
                 ctx.println(s.className(), Colors.GREEN);
-                ctx.print("    方法: ", Colors.CYAN);
+                ctx.print(Text.zhEn("    方法: ", "    Method: ").text(), Colors.CYAN);
                 ctx.println(s.methodName(), Colors.GREEN);
-                ctx.print("    次数: ", Colors.CYAN);
+                ctx.print(Text.zhEn("    次数: ", "    Calls: ").text(), Colors.CYAN);
                 ctx.println(String.valueOf(s.callCount()), Colors.YELLOW);
                 ctx.println("", Colors.WHITE);
             }

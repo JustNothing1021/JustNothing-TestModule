@@ -8,6 +8,7 @@ import com.justnothing.testmodule.command.functions.performance.response.PerfTra
 import com.justnothing.testmodule.command.functions.performance.trace.TraceData;
 import com.justnothing.testmodule.command.functions.performance.trace.Tracer;
 import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.functions.performance.PerformanceTexts;
 
 import org.json.JSONArray;
@@ -51,7 +52,7 @@ public class TraceCommand extends AbstractPerfCommand<PerformanceRequest<?>, Per
             return handleExport(exportReq);
         } else {
             logger.warn("[trace] 未知请求类型: %s", req.getClass().getName());
-            outln("未知请求类型", Colors.RED);
+            outln(PerformanceTexts.UNKNOWN_REQUEST_TYPE.text(), Colors.RED);
             return null;
         }
     }
@@ -68,7 +69,7 @@ public class TraceCommand extends AbstractPerfCommand<PerformanceRequest<?>, Per
         PerfTraceResult r = new PerfTraceResult();
         r.setTaskId(id);
         r.setStatus("running");
-        outln("Tracer 已启动", Colors.GREEN);
+        outln(Text.zhEn("Tracer 已启动", "Tracer started").text(), Colors.GREEN);
         out("ID: ", Colors.CYAN);
         outln(String.valueOf(id), Colors.YELLOW);
         return r;
@@ -84,9 +85,10 @@ public class TraceCommand extends AbstractPerfCommand<PerformanceRequest<?>, Per
         if (t == null) {
             logger.warn("[trace/stop] ❌ Tracer 不存在: ID=%d, 当前运行中的IDs=%s",
                     taskId, mgr.getTracers().keySet());
-            outln("错误: Tracer 不存在 (ID: " + taskId + ")", Colors.RED);
-            outln("可用的IDs: " + mgr.getTracers().keySet(), Colors.GRAY);
-            outln("提示: 先用 'performance trace start' 启动，再用 'performance trace stop <ID>' 停止", Colors.GRAY);
+            outln(Text.zhEn("错误: Tracer 不存在 (ID: %d)", "Error: tracer not found (ID: %d)").format(taskId), Colors.RED);
+            outln(PerformanceTexts.AVAILABLE_IDS.format(mgr.getTracers().keySet()), Colors.GRAY);
+            outln(Text.zhEn("提示: 先用 'performance trace start' 启动，再用 'performance trace stop <ID>' 停止",
+                    "Hint: run 'performance trace start' first, then 'performance trace stop <ID>' to stop").text(), Colors.GRAY);
             return null;
         }
 
@@ -103,9 +105,9 @@ public class TraceCommand extends AbstractPerfCommand<PerformanceRequest<?>, Per
         r.setTaskId(taskId);
         r.setStatus("stopped");
         r.setTraceCount(traceData.size());
-        outln("已停止", Colors.YELLOW);
+        outln(PerformanceTexts.STATUS_STOPPED.text(), Colors.YELLOW);
         out("ID: ", Colors.CYAN); outln(String.valueOf(taskId), Colors.YELLOW);
-        out("捕获追踪数: ", Colors.CYAN); outln(String.valueOf(traceData.size()), Colors.YELLOW);
+        out(Text.zhEn("捕获追踪数: ", "Traces captured: ").text(), Colors.CYAN); outln(String.valueOf(traceData.size()), Colors.YELLOW);
         return r;
     }
 
@@ -116,7 +118,7 @@ public class TraceCommand extends AbstractPerfCommand<PerformanceRequest<?>, Per
 
         if (taskId == null) {
             logger.warn("[trace/report] 未指定ID，尝试查找最新数据");
-            outln("未指定ID，查找最新完成的追踪...", Colors.GRAY);
+            outln(Text.zhEn("未指定ID，查找最新完成的追踪...", "No ID given; looking for the latest completed trace...").text(), Colors.GRAY);
         }
 
         PerfTaskManager mgr = getTaskManager();
@@ -125,13 +127,14 @@ public class TraceCommand extends AbstractPerfCommand<PerformanceRequest<?>, Per
             Integer latestId = findLatestId(mgr.getTraceDataMap());
             if (latestId == null) {
                 logger.warn("[trace/report] ❌ 无任何已完成数据");
-                outln("错误: 没有已完成的追踪数据", Colors.RED);
-                outln("提示: 先用 'performance trace start' 开始追踪，再用 'performance trace stop <ID>' 停止", Colors.GRAY);
+                outln(Text.zhEn("错误: 没有已完成的追踪数据", "Error: no completed trace data").text(), Colors.RED);
+                outln(Text.zhEn("提示: 先用 'performance trace start' 开始追踪，再用 'performance trace stop <ID>' 停止",
+                        "Hint: run 'performance trace start' to start tracing, then 'performance trace stop <ID>' to stop").text(), Colors.GRAY);
                 return null;
             }
             taskId = latestId;
             logger.info("[trace/report] 自动选择最新ID: %d", taskId);
-            out("使用最新ID: ", Colors.GRAY); outln(String.valueOf(taskId), Colors.YELLOW);
+            out(PerformanceTexts.USING_LATEST_ID.text(), Colors.GRAY); outln(String.valueOf(taskId), Colors.YELLOW);
         }
 
         List<TraceData> data = mgr.getTraceData(taskId);
@@ -139,11 +142,12 @@ public class TraceCommand extends AbstractPerfCommand<PerformanceRequest<?>, Per
         if (data == null || data.isEmpty()) {
             Map<Integer, ?> availableIds = mgr.getTraceDataMap();
             logger.warn("[trace/report] ❌ 数据不存在或为空: ID=%d, 可用IDs=%s", taskId, availableIds.keySet());
-            outln("错误: 数据不存在 (ID: " + taskId + ")", Colors.RED);
+            outln(PerformanceTexts.ERR_DATA_NOT_FOUND.format(taskId), Colors.RED);
             if (!availableIds.isEmpty()) {
-                outln("可用的报告ID: " + availableIds.keySet(), Colors.GRAY);
+                outln(PerformanceTexts.AVAILABLE_REPORT_IDS.format(availableIds.keySet()), Colors.GRAY);
             } else {
-                outln("提示: 没有任何已完成的追踪。请先执行 'performance trace stop <ID>'", Colors.GRAY);
+                outln(Text.zhEn("提示: 没有任何已完成的追踪。请先执行 'performance trace stop <ID>'",
+                        "Hint: there is no completed trace data. Run 'performance trace stop <ID>' first").text(), Colors.GRAY);
             }
             return null;
         }
@@ -161,10 +165,10 @@ public class TraceCommand extends AbstractPerfCommand<PerformanceRequest<?>, Per
         r.setTraceCount(data.size());
 
         outln("", Colors.DEFAULT);
-        outln("=== Trace 追踪报告 ===", Colors.CYAN);
-        out("任务ID: ", Colors.CYAN); outln(String.valueOf(taskId), Colors.YELLOW);
-        out("追踪数: ", Colors.CYAN); outln(String.valueOf(data.size()), Colors.WHITE);
-        out("总耗时: ", Colors.CYAN); outln(formatDurationNs(totalDuration), Colors.WHITE);
+        outln(Text.zhEn("=== Trace 追踪报告 ===", "=== Trace report ===").text(), Colors.CYAN);
+        out(PerformanceTexts.LABEL_TASK_ID.text(), Colors.CYAN); outln(String.valueOf(taskId), Colors.YELLOW);
+        out(PerformanceTexts.LABEL_TRACE_COUNT.text(), Colors.CYAN); outln(String.valueOf(data.size()), Colors.WHITE);
+        out(PerformanceTexts.LABEL_TOTAL_TIME.text(), Colors.CYAN); outln(formatDurationNs(totalDuration), Colors.WHITE);
         outln("", Colors.DEFAULT);
 
         ArrayList<PerfTraceResult.TraceEntry> entries = new ArrayList<>();
@@ -198,8 +202,8 @@ public class TraceCommand extends AbstractPerfCommand<PerformanceRequest<?>, Per
         List<TraceData> td = mgr.getTraceData(taskId);
         if (td == null || td.isEmpty()) {
             logger.warn("[trace/export] ❌ 数据不存在或为空: ID=%d, 可用IDs=%s", taskId, mgr.getTraceDataMap().keySet());
-            outln("错误: 数据不存在 (ID: " + taskId + ")", Colors.RED);
-            outln("可用的报告ID: " + mgr.getTraceDataMap().keySet(), Colors.GRAY);
+            outln(PerformanceTexts.ERR_DATA_NOT_FOUND.format(taskId), Colors.RED);
+            outln(PerformanceTexts.AVAILABLE_REPORT_IDS.format(mgr.getTraceDataMap().keySet()), Colors.GRAY);
             return null;
         }
 
@@ -215,7 +219,7 @@ public class TraceCommand extends AbstractPerfCommand<PerformanceRequest<?>, Per
 
         if (!writeToFile(filePath, j.toString(2))) {
             logger.error("[trace/export] ❌ 写入文件失败: %s", filePath);
-            outln("导出失败: 无法写入文件", Colors.RED);
+            outln(PerformanceTexts.ERR_EXPORT_WRITE_FAILED.text(), Colors.RED);
             return null;
         }
 
@@ -225,9 +229,9 @@ public class TraceCommand extends AbstractPerfCommand<PerformanceRequest<?>, Per
         r.setTaskId(taskId);
         r.setStatus("exported");
         r.setExportPath(filePath);
-        outln("数据已导出", Colors.GREEN);
-        out("路径: ", Colors.CYAN); outln(filePath, Colors.YELLOW);
-        out("追踪数: ", Colors.CYAN); outln(String.valueOf(td.size()), Colors.WHITE);
+        outln(PerformanceTexts.DATA_EXPORTED.text(), Colors.GREEN);
+        out(PerformanceTexts.LABEL_PATH.text(), Colors.CYAN); outln(filePath, Colors.YELLOW);
+        out(PerformanceTexts.LABEL_TRACE_COUNT.text(), Colors.CYAN); outln(String.valueOf(td.size()), Colors.WHITE);
         return r;
     }
 

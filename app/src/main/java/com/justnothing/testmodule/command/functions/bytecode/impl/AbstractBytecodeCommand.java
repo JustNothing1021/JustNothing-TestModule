@@ -1,8 +1,10 @@
 package com.justnothing.testmodule.command.functions.bytecode.impl;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.framework.model.AbstractCommand;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
+import com.justnothing.testmodule.command.functions.bytecode.BytecodeTexts;
 import com.justnothing.testmodule.command.functions.bytecode.extract.ClassDexExtractor;
 import com.justnothing.testmodule.command.functions.bytecode.extract.DexClassIndex;
 import com.justnothing.testmodule.command.functions.bytecode.extract.DexSourceLocator;
@@ -103,10 +105,11 @@ public abstract class AbstractBytecodeCommand<Req extends CommandRequest<?>> ext
         if (!richAvailable || (!force && !withinHighlightBudget(code))) {
             context.println(code);
             if (richAvailable && !force) {
-                context.println("（这段有 " + countLines(code) + " 行 / " + code.length()
-                        + " 字符，超过高亮上限 " + MAX_HIGHLIGHT_LINES + " 行 / "
-                        + MAX_HIGHLIGHT_CHARS + " 字符，已按纯文本输出。\n"
-                        + "  加 --highlight 可以强制高亮，但大段代码在手表上会明显卡顿，慎用。）", Colors.GRAY);
+                context.println(Text.zhEn(
+                        "（这段有 %s 行 / %s 字符，超过高亮上限 %s 行 / %s 字符，已按纯文本输出。\n  加 --highlight 可以强制高亮，但大段代码在手表上会明显卡顿，慎用。）",
+                        "(This block has %s lines / %s chars, exceeding the highlight limit of %s lines / %s chars; printed as plain text.\n  Pass --highlight to force highlighting, but large listings can visibly lag on a watch, so use with care.)")
+                        .format(countLines(code), code.length(), MAX_HIGHLIGHT_LINES, MAX_HIGHLIGHT_CHARS),
+                        Colors.GRAY);
             }
             return;
         }
@@ -304,7 +307,7 @@ public abstract class AbstractBytecodeCommand<Req extends CommandRequest<?>> ext
                     if (total <= 0) {
                         return;
                     }
-                    task = progress.addTask("扫描代码来源", total);
+                    task = progress.addTask(BytecodeTexts.PROGRESS_SCAN_SOURCES.text(), total);
                     progress.start();
                 }
 
@@ -338,7 +341,7 @@ public abstract class AbstractBytecodeCommand<Req extends CommandRequest<?>> ext
 
     protected static void ensureDirectory(File dir) throws IOException {
         if (!dir.isDirectory() && !dir.mkdirs() && !dir.isDirectory()) {
-            throw new IOException("无法创建目录: " + dir.getAbsolutePath());
+            throw new IOException(BytecodeTexts.CANNOT_CREATE_DIR.format(dir.getAbsolutePath()));
         }
     }
 
@@ -395,8 +398,9 @@ public abstract class AbstractBytecodeCommand<Req extends CommandRequest<?>> ext
             out.flush();
         }
         if (target.length() != content.length) {
-            throw new IOException("写入不完整: 期望 " + content.length
-                    + " 字节，实际 " + target.length() + " 字节");
+            throw new IOException(Text.zhEn("写入不完整: 期望 %s 字节，实际 %s 字节",
+                    "Incomplete write: expected %s bytes, wrote %s bytes")
+                    .format(content.length, target.length()));
         }
     }
 }

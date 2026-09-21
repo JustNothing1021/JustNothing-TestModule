@@ -1,5 +1,7 @@
 package com.justnothing.testmodule.command.functions.breakpoint;
 
+import com.justnothing.testmodule.command.framework.i18n.Text;
+
 import java.util.Map;
 
 /**
@@ -35,6 +37,28 @@ public final class BreakpointTexts {
     public static final String PARAM_BREAKPOINT_ENABLE_ID_DESC = "param.breakpoint.enable.id.desc";
     public static final String PARAM_BREAKPOINT_DISABLE_ID_DESC = "param.breakpoint.disable.id.desc";
     public static final String PARAM_BREAKPOINT_REMOVE_ID_DESC = "param.breakpoint.remove.id.desc";
+
+    // ==================== 族内复用输出文案 ====================
+    // 判据只看「在本族里出现了两次以上」；只用一次的就地写 Text.zhEn。
+    // 跨族复用的标签（「类名: 」这类）在 CliMessages 里，这里不重复。
+    // 例外：「签名: 」「状态: 」在别的命令族里也有同款文案，但 CliMessages 里暂时没有成员，
+    // 先在调用点就地写，不在这里另立一份。
+
+    /** 「断点不存在」——enable / disable / remove 三个入口的行内报错和结果消息共用。 */
+    public static final Text ERR_NOT_FOUND = Text.zhEn("断点不存在", "Breakpoint not found");
+
+    /** 「添加断点失败」——命令的报错/结果消息和 BreakpointManager 抛出的异常共用。 */
+    public static final Text ERR_ADD_FAILED = Text.zhEn("添加断点失败", "Failed to add breakpoint");
+
+    /** 没写签名时当值用（add 的展示和 list 的逐条展示共用）。 */
+    public static final Text VALUE_ALL_OVERLOADS = Text.zhEn("所有重载", "all overloads");
+
+    /** list / hits 在一条断点都没有时的提示（行内打印和结果消息共用）。 */
+    public static final Text NO_BREAKPOINTS = Text.zhEn("没有设置任何断点", "No breakpoints set");
+
+    /** 断点的启用状态取值（list 的「状态: 」和 add 成功后的「状态: 」共用）。 */
+    public static final Text VALUE_ENABLED = Text.zhEn("启用", "Enabled");
+    public static final Text VALUE_DISABLED = Text.zhEn("禁用", "Disabled");
 
     private BreakpointTexts() {
     }

@@ -1,6 +1,7 @@
 package com.justnothing.testmodule.command.functions.packages.impl;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.framework.model.AbstractCommand;
 import com.justnothing.testmodule.command.functions.packages.response.PackagesResult;
 import com.justnothing.testmodule.utils.reflect.ClassLoaderManager;
@@ -26,7 +27,7 @@ public class PackagesCommand extends AbstractCommand<PackagesRequest, PackagesRe
         result.setPackages(packages);
 
         if (context.isCli()) {
-            context.println("当前进程的ClassLoader:", Colors.CYAN);
+            context.println(Text.zhEn("当前进程的ClassLoader:", "Class loaders in the current process:").text(), Colors.CYAN);
             for (String pkg : packages) {
                 context.println("  " + pkg, Colors.WHITE);
             }

@@ -1,6 +1,7 @@
 package com.justnothing.testmodule.command.functions.jank.impl;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.framework.model.AbstractCommand;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.output.Colors;
@@ -8,6 +9,7 @@ import com.justnothing.testmodule.command.functions.jank.model.JankFrame;
 import com.justnothing.testmodule.command.functions.jank.model.ProcChurn;
 import com.justnothing.testmodule.command.functions.jank.model.ProcessEntry;
 import com.justnothing.testmodule.command.functions.jank.response.JankResult;
+import com.justnothing.testmodule.command.functions.jank.JankTexts;
 import com.justnothing.richconsole.console.Console;
 import com.justnothing.richconsole.console.Group;
 import com.justnothing.richconsole.layout.Layout;
@@ -109,14 +111,14 @@ public abstract class AbstractJankCommand<Req extends CommandRequest<?>>
     protected Object buildFrame(JankFrame frame, int cores, Budget budget) {
         Layout left = new Layout(new Group(Arrays.asList(
                 Panel.of(cpuTable(frame, cores), cfg -> cfg.title("CPU").expand(true)),
-                Panel.of(memTable(frame), cfg -> cfg.title("内存").expand(true)),
+                Panel.of(memTable(frame), cfg -> cfg.title(Text.zhEn("内存", "Memory").text()).expand(true)),
                 Panel.of(topTable(frame, budget.topRows),
                         cfg -> cfg.title("CPU TOP").expand(true)))));
 
         Layout right = new Layout(new Group(Arrays.asList(
                 Panel.of(churnTable(frame, budget.churnRows),
-                        cfg -> cfg.title("进程变动").expand(true)),
-                Panel.of(statusTable(frame, cores), cfg -> cfg.title("状态").expand(true)))));
+                        cfg -> cfg.title(Text.zhEn("进程变动", "Process churn").text()).expand(true)),
+                Panel.of(statusTable(frame, cores), cfg -> cfg.title(Text.zhEn("状态", "Status").text()).expand(true)))));
 
         Layout root = new Layout((Object) null);
         root.splitColumn(left, right);
@@ -127,42 +129,45 @@ public abstract class AbstractJankCommand<Req extends CommandRequest<?>>
 
     private static Table cpuTable(JankFrame frame, int cores) {
         Table table = plainTable();
-        table.addColumn("项", "cyan", null);
+        table.addColumn(JankTexts.TABLE_ITEM.text(), "cyan", null);
         table.addColumn("", null, null);
-        table.addColumn("值", null, "right");
+        table.addColumn(JankTexts.TABLE_VALUE.text(), null, "right");
 
         if (!frame.cpuOk) {
-            table.addRow(style("red", "无法读取 /proc/stat"), "", "");
+            table.addRow(style("red", Text.zhEn("无法读取 /proc/stat", "Cannot read /proc/stat").text()),
+                    "", "");
             return table;
         }
         if (frame.baseline) {
-            table.addRow("基线", bar(0), style("dim", "…"));
+            table.addRow(Text.zhEn("基线", "Baseline").text(), bar(0), style("dim", "…"));
             return table;
         }
-        table.addRow("总状态", bar(frame.busyPct), coloredPct(frame.busyPct, levelCpu(frame.busyPct)));
+        table.addRow(Text.zhEn("总状态", "Overall").text(), bar(frame.busyPct),
+                coloredPct(frame.busyPct, levelCpu(frame.busyPct)));
         for (int i = 0; i < frame.corePct.length && i < cores; i++) {
             double pct = frame.corePct[i];
-            table.addRow("核 #" + i, bar(pct), coloredPct(pct, levelCpu(pct)));
+            table.addRow(Text.zhEn("核 #%d", "Core #%d").format(i), bar(pct), coloredPct(pct, levelCpu(pct)));
         }
         return table;
     }
 
     private static Table memTable(JankFrame frame) {
         Table table = plainTable();
-        table.addColumn("项", "cyan", null);
+        table.addColumn(JankTexts.TABLE_ITEM.text(), "cyan", null);
         table.addColumn("", null, null);
-        table.addColumn("值", null, "right");
+        table.addColumn(JankTexts.TABLE_VALUE.text(), null, "right");
 
         if (!frame.memOk) {
-            table.addRow(style("red", "无法读取 /proc/meminfo"), "", "");
+            table.addRow(style("red", Text.zhEn("无法读取 /proc/meminfo", "Cannot read /proc/meminfo").text()),
+                    "", "");
             return table;
         }
-        table.addRow("已用", bar(frame.memUsedPct),
+        table.addRow(Text.zhEn("已用", "Used").text(), bar(frame.memUsedPct),
                 coloredPct(frame.memUsedPct, levelMem(frame.memUsedPct)));
-        table.addRow("可用", "", style(levelMem(frame.memUsedPct), humanKb(
+        table.addRow(Text.zhEn("可用", "Available").text(), "", style(levelMem(frame.memUsedPct), humanKb(
                 Math.max(0, frame.memTotalKb - frame.memUsedKb))));
         if (frame.swapOk) {
-            table.addRow("交换空间", bar(frame.swapUsedPct),
+            table.addRow(Text.zhEn("交换空间", "Swap").text(), bar(frame.swapUsedPct),
                     style(levelMem(frame.swapUsedPct), humanKb(frame.swapUsedKb)));
         }
         return table;
@@ -171,19 +176,21 @@ public abstract class AbstractJankCommand<Req extends CommandRequest<?>>
 
     private static Table topTable(JankFrame frame, int topRows) {
         Table table = plainTable();
-        table.addColumn("占用", null, "right");
-        noWrap(table.addColumn("进程", null, null));
+        table.addColumn(Text.zhEn("占用", "Usage").text(), null, "right");
+        noWrap(table.addColumn(JankTexts.TABLE_PROCESS.text(), null, null));
 
         if (!frame.procOk) {
-            table.addRow(style("dim", "—"), style("red", "无法读取 /proc（hidepid？）"));
+            table.addRow(style("dim", "—"), style("red", Text.zhEn("无法读取 /proc（hidepid？）",
+                    "Cannot read /proc (hidepid?)").text()));
             return table;
         }
         if (frame.baseline) {
-            table.addRow("", style("dim", "正在建立基线…"));
+            table.addRow("", style("dim", Text.zhEn("正在建立基线…", "Establishing baseline…").text()));
             return table;
         }
         if (frame.topCpu.isEmpty()) {
-            table.addRow("", style("dim", "（这一帧没有进程在吃 CPU）"));
+            table.addRow("", style("dim", Text.zhEn("（这一帧没有进程在吃 CPU）",
+                    "(no process is burning CPU this frame)").text()));
             return table;
         }
         int rows = 0;
@@ -205,10 +212,10 @@ public abstract class AbstractJankCommand<Req extends CommandRequest<?>>
         // 名字列会从十几个字符缩到七八个 —— 而进程名（comm）最长 15 个字符，
         // 缩到 8 个就只能显示 "com.topj…"，等于白给。合成一列后 "+PID 名字" 正好一行。
         Table table = plainTable();
-        noWrap(table.addColumn("变动", null, null));
+        noWrap(table.addColumn(Text.zhEn("变动", "Change").text(), null, null));
 
         if (frame.churn.isEmpty()) {
-            table.addRow(style("dim", "（暂无变动）"));
+            table.addRow(style("dim", Text.zhEn("（暂无变动）", "(no changes yet)").text()));
             return table;
         }
         int rows = 0;
@@ -232,17 +239,17 @@ public abstract class AbstractJankCommand<Req extends CommandRequest<?>>
 
     private static Table statusTable(JankFrame frame, int cores) {
         Table table = plainTable();
-        table.addColumn("项", "cyan", null);
+        table.addColumn(JankTexts.TABLE_ITEM.text(), "cyan", null);
         table.addColumn("", null, null);
-        table.addColumn("值", null, "right");
+        table.addColumn(JankTexts.TABLE_VALUE.text(), null, "right");
 
         double progress = frame.totalTicks > 0 ? 100.0 * frame.tick / frame.totalTicks : 0;
-        table.addRow("采样", bar(progress, STATUS_BAR_WIDTH),
+        table.addRow(Text.zhEn("采样", "Sampling").text(), bar(progress, STATUS_BAR_WIDTH),
                 String.format(Locale.US, "%.0f%%", progress));
 
         if (frame.loadOk) {
             double queuePct = 100.0 * frame.runQueuePerCore(cores);
-            table.addRow("队列", bar(queuePct, STATUS_BAR_WIDTH),
+            table.addRow(Text.zhEn("队列", "Queue").text(), bar(queuePct, STATUS_BAR_WIDTH),
                     style(levelCpu(queuePct), String.format(Locale.US, "%.1f", frame.runQueuePerCore(cores))));
         }
         if (frame.cpuOk && !frame.baseline) {
@@ -252,13 +259,13 @@ public abstract class AbstractJankCommand<Req extends CommandRequest<?>>
             table.addRow("io", "", coloredPct(frame.iowaitPct, levelCpu(frame.iowaitPct)));
         }
         if (frame.procOk) {
-            table.addRow("进程", "", String.valueOf(frame.pidDirCount));
-            table.addRow("线程", "", String.valueOf(frame.threadCount));
+            table.addRow(JankTexts.TABLE_PROCESS.text(), "", String.valueOf(frame.pidDirCount));
+            table.addRow(Text.zhEn("线程", "Thread").text(), "", String.valueOf(frame.threadCount));
             table.addRow("D", "", frame.dStateCount > 0
                     ? style("yellow", String.valueOf(frame.dStateCount))
                     : String.valueOf(frame.dStateCount));
         }
-        table.addRow("耗时", "", frame.costMs + "ms");
+        table.addRow(Text.zhEn("耗时", "Time").text(), "", frame.costMs + "ms");
         return table;
     }
 
@@ -310,7 +317,7 @@ public abstract class AbstractJankCommand<Req extends CommandRequest<?>>
         if (frame.cpuOk && !frame.baseline) {
             line.append(String.format(Locale.US, "CPU %5.1f%%", frame.busyPct));
             if (frame.corePct.length > 0) {
-                line.append(" (核");
+                line.append(Text.zhEn(" (核", " (cores ").text());
                 for (int i = 0; i < frame.corePct.length && i < cores; i++) {
                     if (i > 0) {
                         line.append('/');
@@ -320,20 +327,24 @@ public abstract class AbstractJankCommand<Req extends CommandRequest<?>>
                 line.append(')');
             }
         } else if (frame.baseline) {
-            line.append("CPU   基线");
+            line.append(Text.zhEn("CPU   基线", "CPU   baseline").text());
         } else {
             // "读不到"和"基线"必须分开说：都写成"基线"的话，用户会以为再等一帧就有了
-            line.append("CPU 不可用");
+            line.append(Text.zhEn("CPU 不可用", "CPU unavailable").text());
         }
         if (frame.memOk) {
-            line.append(String.format(Locale.US, " | 内存 %.0f%% %s/%s",
+            line.append(String.format(Locale.US,
+                    Text.zhEn(" | 内存 %.0f%% %s/%s", " | Mem %.0f%% %s/%s").text(),
                     frame.memUsedPct, humanKb(frame.memUsedKb), humanKb(frame.memTotalKb)));
         }
         if (frame.loadOk) {
-            line.append(String.format(Locale.US, " | 队列 %.1f/核", frame.runQueuePerCore(cores)));
+            line.append(String.format(Locale.US,
+                    Text.zhEn(" | 队列 %.1f/核", " | Queue %.1f/core").text(),
+                    frame.runQueuePerCore(cores)));
         }
         if (frame.procOk) {
-            line.append(String.format(Locale.US, " | 进程 %d 线程 %d D %d",
+            line.append(String.format(Locale.US,
+                    Text.zhEn(" | 进程 %d 线程 %d D %d", " | Process %d Thread %d D %d").text(),
                     frame.pidDirCount, frame.threadCount, frame.dStateCount));
         }
         line.append(String.format(Locale.US, " | %dms", frame.costMs));
@@ -343,16 +354,20 @@ public abstract class AbstractJankCommand<Req extends CommandRequest<?>>
     /** 某一帧里最值得说的那一件事，没有就返回 null。 */
     protected static String hotspot(JankFrame frame, int cores) {
         if (frame.cpuOk && !frame.baseline && frame.busyPct >= 85) {
-            return "CPU 占用 " + String.format(Locale.US, "%.0f%%", frame.busyPct);
+            return String.format(Locale.US,
+                    Text.zhEn("CPU 占用 %.0f%%", "CPU usage %.0f%%").text(), frame.busyPct);
         }
         if (frame.loadOk && frame.runQueuePerCore(cores) >= 2) {
-            return "每核排队 " + String.format(Locale.US, "%.1f", frame.runQueuePerCore(cores));
+            return String.format(Locale.US,
+                    Text.zhEn("每核排队 %.1f", "Queue per core %.1f").text(), frame.runQueuePerCore(cores));
         }
         if (frame.dStateCount >= 3) {
-            return frame.dStateCount + " 个进程卡在 D 状态（等 IO）";
+            return Text.zhEn("%d 个进程卡在 D 状态（等 IO）",
+                    "%d processes are stuck in D state (waiting on I/O)").format(frame.dStateCount);
         }
         if (frame.memOk && frame.memUsedPct >= 92) {
-            return "内存占用 " + String.format(Locale.US, "%.0f%%", frame.memUsedPct);
+            return String.format(Locale.US,
+                    Text.zhEn("内存占用 %.0f%%", "Memory usage %.0f%%").text(), frame.memUsedPct);
         }
         return null;
     }

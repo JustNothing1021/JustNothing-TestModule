@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.alias.util;
 
 import androidx.annotation.NonNull;
 
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.io.IOManager;
 
@@ -241,11 +242,11 @@ public class AliasManager {
     
     public String formatAliasList() {
         if (aliases.isEmpty()) {
-            return "没有定义别名";
+            return Text.zhEn("没有定义别名", "No aliases defined").text();
         }
         
         StringBuilder sb = new StringBuilder();
-        sb.append("命令别名列表:\n");
+        sb.append(Text.zhEn("命令别名列表:\n", "Command aliases:\n").text());
         sb.append("────────────────────────────────────────\n");
         
         List<String> names = new ArrayList<>(aliases.keySet());
@@ -262,7 +263,8 @@ public class AliasManager {
         }
         
         sb.append("────────────────────────────────────────\n");
-        sb.append("共 ").append(aliases.size()).append(" 个别名");
+        // 列宽只跟别名本身有关（纯 ASCII），所以这里的量词按语言换掉不会撑坏上面的对齐。
+        sb.append(Text.zhEn("共 %d 个别名", "%d aliases in total").format(aliases.size()));
         
         return sb.toString();
     }

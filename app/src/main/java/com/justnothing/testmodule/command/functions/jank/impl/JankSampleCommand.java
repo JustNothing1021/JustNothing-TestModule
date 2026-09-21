@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.jank.impl;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.functions.jank.model.JankFrame;
 import com.justnothing.testmodule.command.functions.jank.model.ProcChurn;
 import com.justnothing.testmodule.command.functions.jank.request.JankSampleRequest;
@@ -133,20 +134,24 @@ public class JankSampleCommand extends AbstractJankCommand<JankSampleRequest> {
         List<String> suspects = rankSuspects(suspectCounter);
         String summary = summarize(frames, sampler, cores, intervalMs, durationSec, suspects);
         if (interrupted) {
-            summary = summary + "\n（采样被中断，以上是中断前采到的 " + frames.size() + " 帧）";
+            summary = summary + Text.zhEn("\n（采样被中断，以上是中断前采到的 %d 帧）",
+                    "\n(Sampling was interrupted; the %d frames above were collected before that)")
+                    .format(frames.size());
         }
         context.println(summary);
 
         JankResult result = new JankResult(context.getRequest().getRequestId());
         result.setSuccess(true);
         result.setSubCommand("sample");
-        result.setOutput(summary + "\n\n逐帧记录:\n" + series);
+        result.setOutput(summary + Text.zhEn("\n\n逐帧记录:\n", "\n\nPer-frame records:\n").text() + series);
         result.setSuspects(suspects);
         result.setChurn(churnText(sampler));
         fillStats(result, frames, cores);
 
         if (interrupted) {
-            result.setMessage("采样被中断，已返回中断前采到的 " + frames.size() + " 帧");
+            result.setMessage(Text.zhEn("采样被中断，已返回中断前采到的 %d 帧",
+                    "Sampling was interrupted; returning the %d frames collected before it")
+                    .format(frames.size()));
         }
         return result;
     }
@@ -154,7 +159,8 @@ public class JankSampleCommand extends AbstractJankCommand<JankSampleRequest> {
     private String summarize(List<JankFrame> frames, JankSampler sampler, int cores,
                              int intervalMs, int durationSec, List<String> suspects) {
         if (frames.isEmpty()) {
-            return "采样被中断，没有拿到任何帧。";
+            return Text.zhEn("采样被中断，没有拿到任何帧。",
+                    "Sampling was interrupted; no frames were collected.").text();
         }
 
         double sumBusy = 0;
@@ -195,32 +201,40 @@ public class JankSampleCommand extends AbstractJankCommand<JankSampleRequest> {
 
         JankFrame last = frames.get(frames.size() - 1);
         StringBuilder text = new StringBuilder();
-        text.append("采样 ").append(frames.size()).append(" 帧 / ").append(durationSec).append("s（间隔 ")
-                .append(intervalMs).append("ms，单帧平均耗时 ")
-                .append(sumCost / frames.size()).append("ms）\n");
+        text.append(Text.zhEn("采样 %d 帧 / %ds（间隔 %dms，单帧平均耗时 %dms）\n",
+                "Sampled %d frames / %ds (interval %dms, %dms average per frame)\n")
+                .format(frames.size(), durationSec, intervalMs, sumCost / frames.size()));
 
         if (busyFrames > 0) {
-            text.append(String.format(Locale.US, "CPU    平均 %.0f%%   峰值 %.0f%%   ≥85%% 的有 %d 帧\n",
+            text.append(String.format(Locale.US,
+                    Text.zhEn("CPU    平均 %.0f%%   峰值 %.0f%%   ≥85%% 的有 %d 帧\n",
+                            "CPU    avg %.0f%%   peak %.0f%%   %d frames at ≥85%%\n").text(),
                     sumBusy / busyFrames, peakBusy, hotFrames));
         } else {
-            text.append("CPU    不可用（无法读取 /proc/stat）\n");
+            text.append(Text.zhEn("CPU    不可用（无法读取 /proc/stat）\n",
+                    "CPU    unavailable (cannot read /proc/stat)\n").text());
         }
         if (peakQueue > 0) {
-            text.append(String.format(Locale.US, "队列   峰值 %.1f/核（共 %d 核）\n", peakQueue, cores));
+            text.append(String.format(Locale.US,
+                    Text.zhEn("队列   峰值 %.1f/核（共 %d 核）\n",
+                            "Queue   peak %.1f/core (%d cores in total)\n").text(),
+                    peakQueue, cores));
         }
         if (memFrames > 0) {
-            text.append(String.format(Locale.US, "内存   平均 %.0f%%   当前 %s / %s\n",
+            text.append(String.format(Locale.US,
+                    Text.zhEn("内存   平均 %.0f%%   当前 %s / %s\n",
+                            "Memory   avg %.0f%%   now %s / %s\n").text(),
                     sumMem / memFrames, humanKb(last.memUsedKb), humanKb(last.memTotalKb)));
         }
         if (last.procOk) {
-            text.append("进程   ").append(last.pidDirCount).append(" 个，线程 ")
-                    .append(last.threadCount).append(" 个，D 状态峰值 ").append(peakDState).append('\n');
+            text.append(Text.zhEn("进程   %d 个，线程 %d 个，D 状态峰值 %d\n",
+                    "Processes   %d, threads %d, peak D-state %d\n")
+                    .format(last.pidDirCount, last.threadCount, peakDState));
             if (last.pidDirCount < 40) {
                 // 这一条很关键：hidepid=2 只放行 readproc 组，普通应用注入模式下看到的就是个位数，
                 // 不说明的话用户会以为系统真的很干净
-                text.append("       看得见的进程数偏少：当前进程不在 readproc 组，被 ")
-                        .append("/proc 的 hidepid=2 挡住了。走 sinteractive（system_server，")
-                        .append("组里有 readproc）才能看到全量。\n");
+                text.append(Text.zhEn("       看得见的进程数偏少：当前进程不在 readproc 组，被 /proc 的 hidepid=2 挡住了。走 sinteractive（system_server，组里有 readproc）才能看到全量。\n",
+                        "       Fewer processes are visible than expected: this process is not in the readproc group, so /proc's hidepid=2 hides them. Run via sinteractive (system_server, which has readproc in its group) to see all of them.\n").text());
             }
         }
 
@@ -235,8 +249,10 @@ public class JankSampleCommand extends AbstractJankCommand<JankSampleRequest> {
         if (worst == null || worst.topCpu.isEmpty()) {
             return;
         }
-        text.append("\nCPU 峰值那一帧（第 ").append(worst.tick).append(" 帧，")
-                .append(String.format(Locale.US, "%.0f%%", worst.busyPct)).append("）主要是：\n");
+        text.append(String.format(Locale.US,
+                Text.zhEn("\nCPU 峰值那一帧（第 %d 帧，%.0f%%）主要是：\n",
+                        "\nThe frame with the CPU peak (frame %d, %.0f%%):\n").text(),
+                worst.tick, worst.busyPct));
         int shown = 0;
         for (JankFrame.TopEntry entry : worst.topCpu) {
             if (shown >= 3) {
@@ -249,8 +265,9 @@ public class JankSampleCommand extends AbstractJankCommand<JankSampleRequest> {
         if (worst.dStateCount > 0) {
             List<String> stuck = dStateNames(worst);
             if (!stuck.isEmpty()) {
-                text.append("  同时有 ").append(worst.dStateCount)
-                        .append(" 个进程卡在 D 状态：").append(join(stuck, "、")).append('\n');
+                text.append(Text.zhEn("  同时有 %d 个进程卡在 D 状态：%s\n",
+                        "  %d processes are also stuck in D state: %s\n")
+                        .format(worst.dStateCount, join(stuck, JankTexts.LIST_SEPARATOR.text())));
             }
         }
     }
@@ -260,7 +277,8 @@ public class JankSampleCommand extends AbstractJankCommand<JankSampleRequest> {
         if (suspects.isEmpty()) {
             return;
         }
-        text.append("\n反复上榜的进程（上榜 = 那一帧进了 CPU TOP）：\n");
+        text.append(Text.zhEn("\n反复上榜的进程（上榜 = 那一帧进了 CPU TOP）：\n",
+                "\nProcesses that keep showing up (a hit means they made that frame's CPU TOP list):\n").text());
         for (String suspect : suspects) {
             text.append("  ").append(suspect).append('\n');
         }
@@ -272,10 +290,11 @@ public class JankSampleCommand extends AbstractJankCommand<JankSampleRequest> {
             return;
         }
         int shown = Math.min(6, churn.size());
-        text.append("\n采样期间进程变动 ").append(churn.size()).append(" 次，最近 ")
-                .append(shown).append(" 条：");
+        text.append(Text.zhEn("\n采样期间进程变动 %d 次，最近 %d 条：",
+                "\n%d process changes during sampling, the latest %d:")
+                .format(churn.size(), shown));
         for (int i = 0; i < shown; i++) {
-            text.append(i == 0 ? " " : "、").append(churn.get(i));
+            text.append(i == 0 ? " " : JankTexts.LIST_SEPARATOR.text()).append(churn.get(i));
         }
         text.append('\n');
     }
@@ -356,7 +375,8 @@ public class JankSampleCommand extends AbstractJankCommand<JankSampleRequest> {
         Collections.sort(entries, (a, b) -> b.getValue().compareTo(a.getValue()));
         List<String> ranked = new ArrayList<>();
         for (int i = 0; i < entries.size() && i < SUSPECT_LIMIT; i++) {
-            ranked.add(entries.get(i).getKey() + " ×" + entries.get(i).getValue() + " 帧");
+            ranked.add(Text.zhEn("%s ×%d 帧", "%s ×%d frames")
+                    .format(entries.get(i).getKey(), entries.get(i).getValue()));
         }
         return ranked;
     }

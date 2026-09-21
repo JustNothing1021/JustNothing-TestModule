@@ -1,5 +1,7 @@
 package com.justnothing.testmodule.command.functions.bytecode;
 
+import com.justnothing.testmodule.command.framework.i18n.Text;
+
 import java.util.Map;
 
 /**
@@ -79,6 +81,65 @@ public final class BytecodeTexts {
     public static final String PARAM_BYTECODE_FIND_KEYWORD_DESC = "param.bytecode.find.keyword.desc";
     public static final String PARAM_BYTECODE_FIND_SOURCE_DESC = "param.bytecode.find.source.desc";
     public static final String PARAM_BYTECODE_FIND_LIMIT_DESC = "param.bytecode.find.limit.desc";
+
+    // ==================== 族内复用输出文案 ====================
+    // 本节只放本族内部出现两次以上的输出文案（中英并排的 Text 常量）。
+    // 只出现一次的在调用点就地写 Text.zhEn(...)；跨族复用的（「类名: 」那些）在 CliMessages 里。
+
+    /** 请求类型分发兜底（query / manage 各一处）。 */
+    public static final Text UNSUPPORTED_REQUEST =
+            Text.zhEn("不支持的请求类型: %s", "Unsupported request type: %s");
+
+    /** 指定的来源文件不存在（list_classes / find）。 */
+    public static final Text SOURCE_NOT_FOUND =
+            Text.zhEn("来源文件不存在: %s", "Source file does not exist: %s");
+
+    /** 「来源: 」标签。 */
+    public static final Text LABEL_SOURCE = Text.zhEn("来源: ", "Source: ");
+
+    /** 「可信度: 」标签，与 DexTrust 的说明搭配。 */
+    public static final Text LABEL_TRUST = Text.zhEn("可信度: ", "Trust: ");
+
+    /** 「输出目录: 」标签。 */
+    public static final Text LABEL_OUTPUT_DIR = Text.zhEn("输出目录: ", "Output dir: ");
+
+    /** 「已写入: 」标签。 */
+    public static final Text LABEL_WRITTEN = Text.zhEn("已写入: ", "Written to: ");
+
+    /** 中文计数后缀「个」；英文没有对应量词，留空。 */
+    public static final Text COUNT_SUFFIX = Text.zhEn(" 个", "");
+
+    /** 字节数后缀。 */
+    public static final Text UNIT_BYTES = Text.zhEn(" 字节", " bytes");
+
+    /** 取不到 dex 后给出的排查提示（analyze / disasm / verify / source 四处共用）。 */
+    public static final Text LOCATE_HINT =
+            Text.zhEn("先用 `bytecode locate %s` 确认它落在哪个文件里。",
+                    "Run `bytecode locate %s` first to see which file it lives in.");
+
+    /** 中间目录不可写（dump / source）。 */
+    public static final Text NO_WORK_DIR =
+            Text.zhEn("找不到可写的中间目录，无法落盘 dex", "No writable work directory for the dex");
+
+    /** 输出目录不可写（dump / batch_export）。 */
+    public static final Text NO_OUTPUT_DIR = Text.zhEn(
+            "找不到可写的输出目录；请用 -o 指定一个（例如 /data/local/tmp/dex）",
+            "No writable output directory; pass -o to pick one (e.g. /data/local/tmp/dex)");
+
+    /** 创建输出目录失败（dump / batch_export）。 */
+    public static final Text CANNOT_CREATE_OUT_DIR =
+            Text.zhEn("无法创建输出目录: %s", "Cannot create output directory: %s");
+
+    /** 创建目录失败（AbstractBytecodeCommand / DexToJava 各一处）。 */
+    public static final Text CANNOT_CREATE_DIR =
+            Text.zhEn("无法创建目录: %s", "Cannot create directory: %s");
+
+    /** 进度条任务名：定位阶段扫描来源（两处）。 */
+    public static final Text PROGRESS_SCAN_SOURCES =
+            Text.zhEn("扫描代码来源", "Scanning code sources");
+
+    /** 某个来源读取类名失败（list_classes / find）。 */
+    public static final Text READ_FAILED = Text.zhEn("  —— 读取失败: ", " — read failed: ");
 
     private BytecodeTexts() {
     }

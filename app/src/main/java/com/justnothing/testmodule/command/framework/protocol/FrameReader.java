@@ -1,5 +1,7 @@
 package com.justnothing.testmodule.command.framework.protocol;
 
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
@@ -99,14 +101,14 @@ public final class FrameReader {
     private Object[] extractBufferedFrame() throws IOException {
         if (size < HEADER_SIZE) {
             if (endOfStream && size > 0) {
-                throw new IOException("帧被截断：流已结束，但只收到 " + size + " 字节包头（需要 " + HEADER_SIZE + "）");
+                throw new IOException(CliMessages.ERR_FRAME_TRUNCATED_HEADER.format(size, HEADER_SIZE));
             }
             return null;
         }
 
         for (int i = 0; i < 4; i++) {
             if (buffer[i] != InteractiveProtocol.START_MARKER[i]) {
-                throw new IOException("无效的起始标记: " + toHex(buffer, 0, 4));
+                throw new IOException(CliMessages.ERR_FRAME_BAD_START_MARKER.format(toHex(buffer, 0, 4)));
             }
         }
 
@@ -117,13 +119,13 @@ public final class FrameReader {
                 | (buffer[8] & 0xFF);
 
         if (dataLength < 0 || dataLength > MAX_FRAME_PAYLOAD) {
-            throw new IOException("无效的数据长度: " + dataLength);
+            throw new IOException(CliMessages.ERR_FRAME_BAD_DATA_LENGTH.format(dataLength));
         }
 
         int frameLength = HEADER_SIZE + dataLength + TRAILER_SIZE;
         if (size < frameLength) {
             if (endOfStream) {
-                throw new IOException("帧被截断：期望 " + frameLength + " 字节，流结束时只有 " + size);
+                throw new IOException(CliMessages.ERR_FRAME_TRUNCATED_BODY.format(frameLength, size));
             }
             return null;
         }
@@ -131,7 +133,7 @@ public final class FrameReader {
         int endMarkerStart = HEADER_SIZE + dataLength;
         for (int i = 0; i < 4; i++) {
             if (buffer[endMarkerStart + i] != InteractiveProtocol.END_MARKER[i]) {
-                throw new IOException("无效的结束标记: " + toHex(buffer, endMarkerStart, 4));
+                throw new IOException(CliMessages.ERR_FRAME_BAD_END_MARKER.format(toHex(buffer, endMarkerStart, 4)));
             }
         }
 
@@ -154,7 +156,7 @@ public final class FrameReader {
 
         if (size == buffer.length) {
             if (buffer.length >= MAX_BUFFERED) {
-                throw new IOException("缓冲区已满(" + size + " 字节)仍凑不出完整帧，帧长度超过上限");
+                throw new IOException(CliMessages.ERR_FRAME_TOO_LARGE.format(size));
             }
             buffer = Arrays.copyOf(buffer, Math.min(buffer.length * 2, MAX_BUFFERED));
         }

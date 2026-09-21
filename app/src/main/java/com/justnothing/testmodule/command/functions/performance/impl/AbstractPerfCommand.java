@@ -6,6 +6,7 @@ import com.justnothing.testmodule.command.framework.model.CommandResult;
 import com.justnothing.testmodule.command.functions.performance.util.PerfTaskManager;
 import com.justnothing.testmodule.command.functions.performance.request.PerformanceRequest;
 import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.utils.io.IOManager;
 import com.justnothing.testmodule.utils.logging.Logger;
 
@@ -41,7 +42,7 @@ public abstract class AbstractPerfCommand<Req extends PerformanceRequest<?>, Res
 
     protected int parseId(String[] args, int index) throws NumberFormatException {
         if (args.length <= index) {
-            throw new IllegalArgumentException("参数不足，需要 ID");
+            throw new IllegalArgumentException(Text.zhEn("参数不足，需要 ID", "not enough arguments: an ID is required").text());
         }
         return Integer.parseInt(args[index]);
     }
@@ -50,11 +51,11 @@ public abstract class AbstractPerfCommand<Req extends PerformanceRequest<?>, Res
         if (args.length > index) {
             try {
                 int rate = Integer.parseInt(args[index]);
-                if (rate <= 0) { outln("错误: 采样频率必须大于 0", Colors.RED); return -1; }
-                if (rate > 10000) outln("警告: 采样频率过高", Colors.YELLOW);
+                if (rate <= 0) { outln(Text.zhEn("错误: 采样频率必须大于 0", "Error: sampling rate must be greater than 0").text(), Colors.RED); return -1; }
+                if (rate > 10000) outln(Text.zhEn("警告: 采样频率过高", "Warning: sampling rate too high").text(), Colors.YELLOW);
                 return rate;
             } catch (NumberFormatException e) {
-                outln("错误: 无效的采样频率: " + args[index], Colors.RED);
+                outln(Text.zhEn("错误: 无效的采样频率: %s", "Error: invalid sampling rate: %s").format(args[index]), Colors.RED);
                 return -1;
             }
         }

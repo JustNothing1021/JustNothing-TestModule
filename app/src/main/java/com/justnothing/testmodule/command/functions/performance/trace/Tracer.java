@@ -3,6 +3,8 @@ package com.justnothing.testmodule.command.functions.performance.trace;
 import android.os.Trace;
 import android.util.Log;
 
+import com.justnothing.testmodule.command.framework.i18n.Text;
+
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -25,7 +27,7 @@ public class Tracer {
 
     public void start() {
         if (running) {
-            throw new IllegalStateException("Tracer 已在运行");
+            throw new IllegalStateException(Text.zhEn("Tracer 已在运行", "tracer is already running").text());
         }
 
         running = true;
@@ -37,7 +39,7 @@ public class Tracer {
 
     public void stop() {
         if (!running) {
-            throw new IllegalStateException("Tracer 未在运行");
+            throw new IllegalStateException(Text.zhEn("Tracer 未在运行", "tracer is not running").text());
         }
 
         running = false;

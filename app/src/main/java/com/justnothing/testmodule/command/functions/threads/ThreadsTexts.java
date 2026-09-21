@@ -1,5 +1,7 @@
 package com.justnothing.testmodule.command.functions.threads;
 
+import com.justnothing.testmodule.command.framework.i18n.Text;
+
 import java.util.Map;
 
 /**
@@ -44,6 +46,45 @@ public final class ThreadsTexts {
     public static final String PARAM_THREADS_PROFILE_START_TARGET_THREADS_DESC = "param.threads.profile.start.target-threads.desc";
 
     public static final String PARAM_THREADS_PROFILE_EXPORT_FILE_DESC = "param.threads.profile.export.file.desc";
+
+    // ==================== 输出文案（族内复用）====================
+    // 判据只看「在本族里出现了两次以上」；只用一次的就地写 Text.zhEn。
+    // LABEL_TIME / LABEL_THREAD_COUNT / LABEL_THREAD / LABEL_THREAD_STATE / VALUE_YES / VALUE_NO
+    // 在别的族（memory、system）里也在用，先放在这里，等统一归位。
+    public static final Text LABEL_TIME = Text.zhEn("时间: ", "Time: ");
+    public static final Text LABEL_THREAD_COUNT = Text.zhEn("线程总数: ", "Total threads: ");
+    public static final Text LABEL_THREAD = Text.zhEn("线程: ", "Thread: ");
+    public static final Text LABEL_THREAD_STATE = Text.zhEn("  状态: ", "  State: ");
+    public static final Text LABEL_PRIORITY = Text.zhEn("  优先级: ", "  Priority: ");
+    public static final Text LABEL_DAEMON = Text.zhEn("  守护: ", "  Daemon: ");
+    public static final Text LABEL_INTERRUPTED = Text.zhEn("  中断: ", "  Interrupted: ");
+    public static final Text VALUE_YES = Text.zhEn("是", "yes");
+    public static final Text VALUE_NO = Text.zhEn("否", "no");
+
+    // 性能分析报告由「实时展示」和「导出到文件」两条路径共用，所以这些标签各只留一份。
+    public static final Text TITLE_PROFILE_REPORT = Text.zhEn("===== 性能分析报告 =====\n", "===== Profiling report =====\n");
+    public static final Text TITLE_SYSTEM_RESOURCES = Text.zhEn("===== 系统资源概况 =====\n", "===== System resource overview =====\n");
+    public static final Text TITLE_PROCESS_STATS = Text.zhEn("===== 进程资源统计 =====\n", "===== Process resource stats =====\n");
+    public static final Text TITLE_THREAD_STATS = Text.zhEn("===== 线程资源统计 =====\n", "===== Thread resource stats =====\n");
+    public static final Text LABEL_SAMPLE_COUNT = Text.zhEn("样本数量: ", "Samples: ");
+    public static final Text LABEL_ANALYSIS_TIME = Text.zhEn("分析时间: ", "Analysis time: ");
+    public static final Text LABEL_CPU_USAGE = Text.zhEn("CPU使用率: ", "CPU usage: ");
+    public static final Text LABEL_MEMORY_USAGE = Text.zhEn("内存使用: ", "Memory usage: ");
+    public static final Text LABEL_THREADS = Text.zhEn("线程数: ", "Threads: ");
+    public static final Text LABEL_PROCESSES = Text.zhEn("进程数: ", "Processes: ");
+    public static final Text LINE_PROCESS_STATS = Text.zhEn(
+            "  %s: CPU=%.2f%%, 内存=%s, 线程=%d\n",
+            "  %s: CPU=%.2f%%, memory=%s, threads=%d\n");
+    public static final Text LINE_THREAD_STATS = Text.zhEn(
+            "  %s: CPU=%.2f%%, 状态=%s\n",
+            "  %s: CPU=%.2f%%, state=%s\n");
+
+    // profile show / profile start / profile stop 三个子命令共享的两条提示与哨兵。
+    public static final Text HINT_VIEW_RESULTS = Text.zhEn(
+            "提示: 使用 'threads profile show' 查看结果",
+            "Hint: run 'threads profile show' to view the results");
+    public static final Text NO_PROFILE_DATA = Text.zhEn("暂无性能分析数据", "No profiling data available");
+    public static final Text ERR_FILE_PATH_REQUIRED = Text.zhEn("需要指定文件路径", "a file path is required");
 
     private ThreadsTexts() {
     }

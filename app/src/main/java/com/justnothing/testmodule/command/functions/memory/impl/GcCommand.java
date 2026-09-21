@@ -5,6 +5,7 @@ import android.content.Context;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.functions.memory.request.GcRequest;
 import com.justnothing.testmodule.command.functions.memory.response.GcResult;
 import com.justnothing.testmodule.command.functions.memory.util.MemoryUtils;
@@ -33,14 +34,14 @@ public class GcCommand extends AbstractMemoryCommand<GcRequest, GcResult> {
     protected GcResult executeMemoryCommand(GcRequest request) throws Exception {
         Runtime runtime = Runtime.getRuntime();
 
-        context.println("===== 垃圾回收 =====", Colors.CYAN);
+        context.println(Text.zhEn("===== 垃圾回收 =====", "===== Garbage collection =====").text(), Colors.CYAN);
         context.println("");
 
         long beforeUsed = runtime.totalMemory() - runtime.freeMemory();
         long beforeTotal = runtime.totalMemory();
         long beforeMax = runtime.maxMemory();
 
-        printMemoryStatus(context, "GC前堆内存: ", beforeUsed, beforeTotal, beforeMax);
+        printMemoryStatus(context, Text.zhEn("GC前堆内存: ", "Heap before GC: ").text(), beforeUsed, beforeTotal, beforeMax);
         context.println("");
 
         if (request.isFullGc()) {
@@ -68,21 +69,21 @@ public class GcCommand extends AbstractMemoryCommand<GcRequest, GcResult> {
         long afterTotal = runtime.totalMemory();
         long afterMax = runtime.maxMemory();
 
-        printMemoryStatus(context, "GC后堆内存: ", afterUsed, afterTotal, afterMax);
+        printMemoryStatus(context, Text.zhEn("GC后堆内存: ", "Heap after GC: ").text(), afterUsed, afterTotal, afterMax);
         context.println("");
 
         long freed = beforeUsed - afterUsed;
         if (freed > 0) {
-            context.print("释放内存: ", Colors.LIGHT_GREEN);
+            context.print(Text.zhEn("释放内存: ", "Freed memory: ").text(), Colors.LIGHT_GREEN);
             MemoryUtils.printBytes(context, freed);
             context.println("", Colors.DEFAULT);
         } else if (freed < 0) {
-            context.print("内存增加: ", Colors.RED);
+            context.print(Text.zhEn("内存增加: ", "Memory increased: ").text(), Colors.RED);
             MemoryUtils.printBytes(context, -freed);
             context.println(" (?)", Colors.GRAY);
-            context.println("可以试试 memory gc --full", Colors.YELLOW);
+            context.println(Text.zhEn("可以试试 memory gc --full", "Try running memory gc --full").text(), Colors.YELLOW);
         } else {
-            context.println("内存未变化", Colors.GRAY);
+            context.println(Text.zhEn("内存未变化", "Memory unchanged").text(), Colors.GRAY);
         }
 
         GcResult result = new GcResult(request.getRequestId());
@@ -126,17 +127,17 @@ public class GcCommand extends AbstractMemoryCommand<GcRequest, GcResult> {
 
     private void printGcStats(Runtime runtime, long afterUsed, long afterTotal, long afterMax) {
         context.println("");
-        context.println("===== GC统计信息 =====", Colors.CYAN);
+        context.println(Text.zhEn("===== GC统计信息 =====", "===== GC statistics =====").text(), Colors.CYAN);
         context.println("");
-        context.println("Tip: Android不提供详细的GC统计信息", Colors.GRAY);
-        context.println("以下是内存使用统计:", Colors.GRAY);
+        context.println(Text.zhEn("Tip: Android不提供详细的GC统计信息", "Tip: Android does not provide detailed GC statistics").text(), Colors.GRAY);
+        context.println(Text.zhEn("以下是内存使用统计:", "Memory usage statistics:").text(), Colors.GRAY);
         context.println("");
 
-        context.println("Java堆内存:", Colors.CYAN);
-        MemoryUtils.printMemoryValue(context, "  最大: ", afterMax);
-        MemoryUtils.printMemoryValue(context, "  已分配: ", afterTotal);
-        MemoryUtils.printMemoryValue(context, "  已用: ", afterUsed);
-        MemoryUtils.printMemoryValue(context, "  空闲: ", runtime.freeMemory());
+        context.println(Text.zhEn("Java堆内存:", "Java heap:").text(), Colors.CYAN);
+        MemoryUtils.printMemoryValue(context, MemoryTexts.LABEL_INDENTED_MAX.text(), afterMax);
+        MemoryUtils.printMemoryValue(context, MemoryTexts.LABEL_INDENTED_ALLOCATED.text(), afterTotal);
+        MemoryUtils.printMemoryValue(context, MemoryTexts.LABEL_INDENTED_USED.text(), afterUsed);
+        MemoryUtils.printMemoryValue(context, MemoryTexts.LABEL_INDENTED_FREE.text(), runtime.freeMemory());
         context.println("");
 
         Context appContext = getApplicationContext();
@@ -148,17 +149,17 @@ public class GcCommand extends AbstractMemoryCommand<GcRequest, GcResult> {
                     new ActivityManager.MemoryInfo();
                 activityManager.getMemoryInfo(memoryInfo);
 
-                context.println("系统内存:", Colors.CYAN);
-                MemoryUtils.printMemoryValue(context, "  可用: ", memoryInfo.availMem);
-                MemoryUtils.printMemoryValue(context, "  总计: ", memoryInfo.totalMem);
-                context.print("  低内存: ", Colors.GRAY);
-                context.println(memoryInfo.lowMemory ? "是" : "否",
+                context.println(MemoryTexts.LABEL_SYSTEM_MEMORY.text(), Colors.CYAN);
+                MemoryUtils.printMemoryValue(context, MemoryTexts.LABEL_INDENTED_AVAILABLE.text(), memoryInfo.availMem);
+                MemoryUtils.printMemoryValue(context, MemoryTexts.LABEL_INDENTED_TOTAL.text(), memoryInfo.totalMem);
+                context.print(MemoryTexts.LABEL_INDENTED_LOW_MEMORY.text(), Colors.GRAY);
+                context.println(memoryInfo.lowMemory ? MemoryTexts.VALUE_YES.text() : MemoryTexts.VALUE_NO.text(),
                     memoryInfo.lowMemory ? Colors.RED : Colors.LIGHT_GREEN);
                 context.println("");
             }
         }
 
-        context.println("进程内存统计:", Colors.CYAN);
+        context.println(Text.zhEn("进程内存统计:", "Process memory statistics:").text(), Colors.CYAN);
         printProcessMemoryStatsColored();
     }
 }

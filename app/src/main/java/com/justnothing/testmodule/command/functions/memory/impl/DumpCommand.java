@@ -1,6 +1,8 @@
 package com.justnothing.testmodule.command.functions.memory.impl;
 
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.functions.memory.MemoryTexts;
 import com.justnothing.testmodule.command.functions.memory.request.DumpRequest;
 import com.justnothing.testmodule.command.functions.memory.response.DumpResult;
@@ -49,11 +51,11 @@ public class DumpCommand extends AbstractMemoryCommand<DumpRequest, DumpResult> 
 
         StringBuilder output = new StringBuilder();
 
-        output.append("=== 内存转储 ===\n");
-        output.append("时间: ").append(new Date()).append("\n");
+        output.append(Text.zhEn("=== 内存转储 ===\n", "=== Memory dump ===\n").text());
+        output.append(MemoryTexts.LABEL_TIME.text()).append(new Date()).append("\n");
 
         if (request.getFilePath() != null) {
-            output.append("文件: ").append(request.getFilePath()).append("\n\n");
+            output.append(Text.zhEn("文件: ", "File: ").text()).append(request.getFilePath()).append("\n\n");
         } else {
             output.append("\n");
         }
@@ -84,20 +86,20 @@ public class DumpCommand extends AbstractMemoryCommand<DumpRequest, DumpResult> 
                 IOManager.writeFile(outputFile.getAbsolutePath(), output.toString());
                 logger.info("内存转储已完成");
 
-                context.print("内存转储已保存: ", Colors.LIGHT_GREEN);
+                context.print(Text.zhEn("内存转储已保存: ", "Memory dump saved: ").text(), Colors.LIGHT_GREEN);
                 context.println(request.getFilePath(), Colors.CYAN);
 
                 result.setFilePath(request.getFilePath());
             } catch (IOException e) {
                 logger.error("写入转储文件失败", e);
-                context.print("错误: ", Colors.RED);
-                context.println(e.getMessage() != null ? e.getMessage() : "未知错误", Colors.YELLOW);
+                context.print(CliMessages.ERROR_PREFIX.text(), Colors.RED);
+                context.println(e.getMessage() != null ? e.getMessage() : MemoryTexts.UNKNOWN_ERROR.text(), Colors.YELLOW);
                 result.setSuccess(false);
                 return result;
             }
         } else {
-            context.println("=== 内存转储 ===", Colors.CYAN);
-            context.print("时间: ", Colors.GRAY);
+            context.println(Text.zhEn("=== 内存转储 ===", "=== Memory dump ===").text(), Colors.CYAN);
+            context.print(MemoryTexts.LABEL_TIME.text(), Colors.GRAY);
             context.println(new Date().toString(), Colors.YELLOW);
             context.println("");
 
@@ -119,44 +121,44 @@ public class DumpCommand extends AbstractMemoryCommand<DumpRequest, DumpResult> 
     }
 
     private void appendHeapInfo(StringBuilder output) {
-        output.append("=== 堆内存信息 ===\n\n");
+        output.append(Text.zhEn("=== 堆内存信息 ===\n\n", "=== Heap memory information ===\n\n").text());
 
         Runtime runtime = Runtime.getRuntime();
-        output.append("Java运行时内存:\n");
-        output.append("  最大: ").append(MemoryUtils.formatBytes(runtime.maxMemory())).append("\n");
-        output.append("  已分配: ").append(MemoryUtils.formatBytes(runtime.totalMemory())).append("\n");
-        output.append("  空闲: ").append(MemoryUtils.formatBytes(runtime.freeMemory())).append("\n");
-        output.append("  已用: ").append(MemoryUtils.formatBytes(runtime.totalMemory() - runtime.freeMemory())).append("\n\n");
+        output.append(Text.zhEn("Java运行时内存:\n", "Java runtime memory:\n").text());
+        output.append(MemoryTexts.LABEL_INDENTED_MAX.text()).append(MemoryUtils.formatBytes(runtime.maxMemory())).append("\n");
+        output.append(MemoryTexts.LABEL_INDENTED_ALLOCATED.text()).append(MemoryUtils.formatBytes(runtime.totalMemory())).append("\n");
+        output.append(MemoryTexts.LABEL_INDENTED_FREE.text()).append(MemoryUtils.formatBytes(runtime.freeMemory())).append("\n");
+        output.append(MemoryTexts.LABEL_INDENTED_USED.text()).append(MemoryUtils.formatBytes(runtime.totalMemory() - runtime.freeMemory())).append("\n\n");
 
-        output.append("原生堆内存:\n");
-        output.append("  已分配: ").append(MemoryUtils.formatBytes(android.os.Debug.getNativeHeapAllocatedSize())).append("\n");
-        output.append("  已用: ").append(MemoryUtils.formatBytes(android.os.Debug.getNativeHeapSize())).append("\n");
-        output.append("  空闲: ").append(MemoryUtils.formatBytes(android.os.Debug.getNativeHeapFreeSize())).append("\n\n");
+        output.append(Text.zhEn("原生堆内存:\n", "Native heap memory:\n").text());
+        output.append(MemoryTexts.LABEL_INDENTED_ALLOCATED.text()).append(MemoryUtils.formatBytes(android.os.Debug.getNativeHeapAllocatedSize())).append("\n");
+        output.append(MemoryTexts.LABEL_INDENTED_USED.text()).append(MemoryUtils.formatBytes(android.os.Debug.getNativeHeapSize())).append("\n");
+        output.append(MemoryTexts.LABEL_INDENTED_FREE.text()).append(MemoryUtils.formatBytes(android.os.Debug.getNativeHeapFreeSize())).append("\n\n");
 
-        output.append("=== 内存详细信息 ===\n\n");
+        output.append(Text.zhEn("=== 内存详细信息 ===\n\n", "=== Detailed memory information ===\n\n").text());
         output.append(readMeminfo());
     }
 
     private void appendThreadInfo(StringBuilder output) {
-        output.append("=== 线程信息 ===\n\n");
+        output.append(Text.zhEn("=== 线程信息 ===\n\n", "=== Thread information ===\n\n").text());
 
         Map<Thread, StackTraceElement[]> allStackTraces = Thread.getAllStackTraces();
-        output.append("线程总数: ").append(allStackTraces.size()).append("\n\n");
+        output.append(MemoryTexts.LABEL_THREAD_COUNT.text()).append(allStackTraces.size()).append("\n\n");
 
         for (Map.Entry<Thread, StackTraceElement[]> entry : allStackTraces.entrySet()) {
             Thread thread = entry.getKey();
 
-            output.append("线程: ").append(thread.getName()).append("\n");
+            output.append(MemoryTexts.LABEL_THREAD.text()).append(thread.getName()).append("\n");
             output.append("  ID: ").append(thread.getId()).append("\n");
-            output.append("  状态: ").append(thread.getState()).append("\n\n");
+            output.append(MemoryTexts.LABEL_THREAD_STATE.text()).append(thread.getState()).append("\n\n");
         }
     }
 
     private void appendSystemInfo(StringBuilder output) {
-        output.append("=== 系统信息 ===\n\n");
+        output.append(Text.zhEn("=== 系统信息 ===\n\n", "=== System information ===\n\n").text());
 
-        output.append("操作系统: ").append(System.getProperty("os.name")).append("\n");
-        output.append("系统版本: ").append(System.getProperty("os.version")).append("\n");
-        output.append("架构: ").append(System.getProperty("os.arch")).append("\n\n");
+        output.append(MemoryTexts.LABEL_OS.text()).append(System.getProperty("os.name")).append("\n");
+        output.append(MemoryTexts.LABEL_OS_VERSION.text()).append(System.getProperty("os.version")).append("\n");
+        output.append(MemoryTexts.LABEL_ARCH.text()).append(System.getProperty("os.arch")).append("\n\n");
     }
 }

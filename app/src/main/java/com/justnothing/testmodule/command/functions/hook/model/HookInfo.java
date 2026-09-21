@@ -2,7 +2,10 @@ package com.justnothing.testmodule.command.functions.hook.model;
 
 import com.justnothing.engine.ast.ASTNode;
 import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.functions.hook.HookTexts;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -171,33 +174,35 @@ public class HookInfo {
     public String getDisplayInfo() {
         StringBuilder sb = new StringBuilder();
         sb.append("ID: ").append(id).append("\n");
-        sb.append("类名: ").append(className).append("\n");
-        sb.append("方法名: ").append(methodName).append("\n");
+        sb.append(CliMessages.LABEL_CLASS_NAME.text()).append(className).append("\n");
+        sb.append(HookTexts.LABEL_METHOD_NAME.text()).append(methodName).append("\n");
         if (signature != null && !signature.isEmpty()) {
-            sb.append("签名: ").append(signature).append("\n");
+            sb.append(HookTexts.LABEL_SIGNATURE.text()).append(signature).append("\n");
         }
-        sb.append("创建时间: ").append(formatTime(createTime)).append("\n");
-        sb.append("调用次数: ").append(callCount.get()).append("\n");
-        sb.append("状态: ").append(active ? "活跃" : "非活跃").append("\n");
-        sb.append("启用: ").append(enabled ? "是" : "否").append("\n");
+        sb.append(HookTexts.LABEL_CREATE_TIME.text()).append(formatTime(createTime)).append("\n");
+        sb.append(HookTexts.LABEL_CALL_COUNT.text()).append(callCount.get()).append("\n");
+        sb.append(HookTexts.LABEL_STATUS.text())
+                .append(active ? HookTexts.STATUS_ACTIVE.text() : HookTexts.STATUS_INACTIVE.text()).append("\n");
+        sb.append(HookTexts.LABEL_ENABLED.text())
+                .append(enabled ? HookTexts.VALUE_YES.text() : HookTexts.VALUE_NO.text()).append("\n");
         
         if (beforeCode != null && !beforeCode.isEmpty()) {
-            sb.append("before阶段代码: ").append(truncateCode(beforeCode)).append("\n");
+            sb.append(HookTexts.LABEL_BEFORE_CODE.text()).append(truncateCode(beforeCode)).append("\n");
         }
         if (beforeCodebase != null && !beforeCodebase.isEmpty()) {
-            sb.append("before阶段代码文件: ").append(beforeCodebase).append("\n");
+            sb.append(HookTexts.LABEL_BEFORE_CODEBASE.text()).append(beforeCodebase).append("\n");
         }
         if (afterCode != null && !afterCode.isEmpty()) {
-            sb.append("after阶段代码: ").append(truncateCode(afterCode)).append("\n");
+            sb.append(HookTexts.LABEL_AFTER_CODE.text()).append(truncateCode(afterCode)).append("\n");
         }
         if (afterCodebase != null && !afterCodebase.isEmpty()) {
-            sb.append("after阶段代码文件: ").append(afterCodebase).append("\n");
+            sb.append(HookTexts.LABEL_AFTER_CODEBASE.text()).append(afterCodebase).append("\n");
         }
         if (replaceCode != null && !replaceCode.isEmpty()) {
-            sb.append("replace代码: ").append(truncateCode(replaceCode)).append("\n");
+            sb.append(HookTexts.LABEL_REPLACE_CODE.text()).append(truncateCode(replaceCode)).append("\n");
         }
         if (replaceCodebase != null && !replaceCodebase.isEmpty()) {
-            sb.append("replace代码文件: ").append(replaceCodebase).append("\n");
+            sb.append(HookTexts.LABEL_REPLACE_CODEBASE.text()).append(replaceCodebase).append("\n");
         }
         
         return sb.toString();
@@ -207,51 +212,53 @@ public class HookInfo {
         ctx.print("ID: ", Colors.CYAN);
         ctx.println(id, Colors.YELLOW);
         
-        ctx.print("类名: ", Colors.CYAN);
+        ctx.print(CliMessages.LABEL_CLASS_NAME.text(), Colors.CYAN);
         ctx.println(className, Colors.GREEN);
         
-        ctx.print("方法名: ", Colors.CYAN);
+        ctx.print(HookTexts.LABEL_METHOD_NAME.text(), Colors.CYAN);
         ctx.println(methodName, Colors.YELLOW);
         
         if (signature != null && !signature.isEmpty()) {
-            ctx.print("签名: ", Colors.CYAN);
+            ctx.print(HookTexts.LABEL_SIGNATURE.text(), Colors.CYAN);
             ctx.println(signature, Colors.LIGHT_GREEN);
         }
         
-        ctx.print("创建时间: ", Colors.CYAN);
+        ctx.print(HookTexts.LABEL_CREATE_TIME.text(), Colors.CYAN);
         ctx.println(formatTime(createTime), Colors.GRAY);
         
-        ctx.print("调用次数: ", Colors.CYAN);
+        ctx.print(HookTexts.LABEL_CALL_COUNT.text(), Colors.CYAN);
         ctx.println(String.valueOf(callCount.get()), Colors.LIGHT_GREEN);
         
-        ctx.print("状态: ", Colors.CYAN);
-        ctx.println(active ? "活跃" : "非活跃", active ? Colors.LIGHT_GREEN : Colors.GRAY);
+        ctx.print(HookTexts.LABEL_STATUS.text(), Colors.CYAN);
+        ctx.println(active ? HookTexts.STATUS_ACTIVE.text() : HookTexts.STATUS_INACTIVE.text(),
+                active ? Colors.LIGHT_GREEN : Colors.GRAY);
         
-        ctx.print("启用: ", Colors.CYAN);
-        ctx.println(enabled ? "是" : "否", enabled ? Colors.LIGHT_GREEN : Colors.RED);
+        ctx.print(HookTexts.LABEL_ENABLED.text(), Colors.CYAN);
+        ctx.println(enabled ? HookTexts.VALUE_YES.text() : HookTexts.VALUE_NO.text(),
+                enabled ? Colors.LIGHT_GREEN : Colors.RED);
         
         if (beforeCode != null && !beforeCode.isEmpty()) {
-            ctx.print("before阶段代码: ", Colors.CYAN);
+            ctx.print(HookTexts.LABEL_BEFORE_CODE.text(), Colors.CYAN);
             ctx.println(truncateCode(beforeCode), Colors.MAGENTA);
         }
         if (beforeCodebase != null && !beforeCodebase.isEmpty()) {
-            ctx.print("before阶段代码文件: ", Colors.CYAN);
+            ctx.print(HookTexts.LABEL_BEFORE_CODEBASE.text(), Colors.CYAN);
             ctx.println(beforeCodebase, Colors.MAGENTA);
         }
         if (afterCode != null && !afterCode.isEmpty()) {
-            ctx.print("after阶段代码: ", Colors.CYAN);
+            ctx.print(HookTexts.LABEL_AFTER_CODE.text(), Colors.CYAN);
             ctx.println(truncateCode(afterCode), Colors.MAGENTA);
         }
         if (afterCodebase != null && !afterCodebase.isEmpty()) {
-            ctx.print("after阶段代码文件: ", Colors.CYAN);
+            ctx.print(HookTexts.LABEL_AFTER_CODEBASE.text(), Colors.CYAN);
             ctx.println(afterCodebase, Colors.MAGENTA);
         }
         if (replaceCode != null && !replaceCode.isEmpty()) {
-            ctx.print("replace代码: ", Colors.CYAN);
+            ctx.print(HookTexts.LABEL_REPLACE_CODE.text(), Colors.CYAN);
             ctx.println(truncateCode(replaceCode), Colors.MAGENTA);
         }
         if (replaceCodebase != null && !replaceCodebase.isEmpty()) {
-            ctx.print("replace代码文件: ", Colors.CYAN);
+            ctx.print(HookTexts.LABEL_REPLACE_CODEBASE.text(), Colors.CYAN);
             ctx.println(replaceCodebase, Colors.MAGENTA);
         }
     }

@@ -5,6 +5,7 @@ import androidx.annotation.NonNull;
 import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.annotation.Cmd;
 import com.justnothing.testmodule.command.framework.annotation.CmdRoutes;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
 import com.justnothing.testmodule.command.framework.utils.GsonFactory;
 import com.justnothing.testmodule.command.framework.utils.CmdParamProcessor;
 import com.justnothing.testmodule.utils.logging.Logger;
@@ -415,7 +416,8 @@ public class CommandRouter {
         RouteMatch match = matchRoute(cmdName, args);
         if (match == null) {
             if (!getRoutesForCommand(cmdName).isEmpty()) {
-                throw new IllegalArgumentException("未找到匹配的路由: " + cmdName + " " + String.join(" ", args));
+                throw new IllegalArgumentException(
+                        CliMessages.ERR_NO_MATCHING_ROUTE.format(cmdName, String.join(" ", args)));
             }
             return dispatchToRegisteredCommand(cmdName, context);
         }
@@ -480,7 +482,7 @@ public class CommandRouter {
                                                      CommandExecutor.CmdExecContext<?> context) throws Throwable {
         Class<? extends MainCommand<?>> cmdClass = commandRegistry.get(commandName);
         if (cmdClass == null) {
-            throw new IllegalArgumentException("未知的命令: " + commandName);
+            throw new IllegalArgumentException(CliMessages.ERR_UNKNOWN_COMMAND.format(commandName));
         }
 
         MainCommand<?> handler = cmdClass.getDeclaredConstructor().newInstance();
@@ -536,7 +538,7 @@ public class CommandRouter {
     public String generateHelpForCommand(String commandName) {
         Class<? extends MainCommand<?>> cmdClass = commandRegistry.get(commandName);
         if (cmdClass == null) {
-            return "未知命令: " + commandName;
+            return CliMessages.ERR_UNKNOWN_COMMAND.format(commandName);
         }
 
         return CmdParamProcessor.generateHelpText(cmdClass);

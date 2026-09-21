@@ -1,7 +1,9 @@
 package com.justnothing.testmodule.command.functions.intercept.base;
 
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.framework.output.ICommandOutputHandler;
+import com.justnothing.testmodule.command.functions.intercept.InterceptTexts;
 import com.justnothing.testmodule.command.functions.intercept.util.InterceptTaskManager;
 import com.justnothing.testmodule.utils.logging.Logger;
 
@@ -25,7 +27,8 @@ public abstract class AbstractInterceptManager<T extends InterceptTask> implemen
             return taskManager.addAndStartTask(task);
         } catch (Exception e) {
             logger.error("添加任务失败", e);
-            throw new RuntimeException("添加任务失败: " + e.getMessage(), e);
+            throw new RuntimeException(Text.zhEn("添加任务失败: %s", "Failed to add task: %s")
+                    .format(e.getMessage()), e);
         }
     }
 
@@ -105,12 +108,12 @@ public abstract class AbstractInterceptManager<T extends InterceptTask> implemen
     public void printTaskList(ICommandOutputHandler output) {
         List<T> tasks = listTasks();
         if (tasks.isEmpty()) {
-            output.println("当前没有活跃的" + getTaskType().getDescription() + "任务", Colors.GRAY);
+            output.println(InterceptTexts.NO_ACTIVE_TASKS.format(getTaskType().getDescription()), Colors.GRAY);
             return;
         }
 
-        output.println("=== 活跃的" + getTaskType().getDescription() + "任务 ===", Colors.CYAN);
-        output.println("总计: " + tasks.size() + " 个任务", Colors.WHITE);
+        output.println(InterceptTexts.ACTIVE_TASKS_HEADER.format(getTaskType().getDescription()), Colors.CYAN);
+        output.println(InterceptTexts.LABEL_TOTAL_TASKS.format(tasks.size()), Colors.WHITE);
         output.println("", Colors.DEFAULT);
 
         for (T task : tasks) {
@@ -120,13 +123,13 @@ public abstract class AbstractInterceptManager<T extends InterceptTask> implemen
             output.print(String.valueOf(task.getId()), Colors.LIGHT_GREEN);
             output.print("] ", Colors.GRAY);
             output.print(task.getDisplayName(), Colors.WHITE);
-            output.print(" (命中: ", Colors.GRAY);
+            output.print(Text.zhEn(" (命中: ", " (hits: ").text(), Colors.GRAY);
             output.print(String.valueOf(task.getHitCount()), Colors.CYAN);
-            output.print(", 状态: ", Colors.GRAY);
+            output.print(Text.zhEn(", 状态: ", ", status: ").text(), Colors.GRAY);
             if (task.isRunning()) {
-                output.print(task.isEnabled() ? "运行中" : "已暂停", task.isEnabled() ? Colors.LIGHT_GREEN : Colors.ORANGE);
+                output.print(task.isEnabled() ? InterceptTexts.STATUS_RUNNING.text() : InterceptTexts.STATUS_PAUSED.text(), task.isEnabled() ? Colors.LIGHT_GREEN : Colors.ORANGE);
             } else {
-                output.print("已停止", Colors.RED);
+                output.print(InterceptTexts.STATUS_STOPPED.text(), Colors.RED);
             }
             output.println(")", Colors.DEFAULT);
         }
@@ -136,7 +139,7 @@ public abstract class AbstractInterceptManager<T extends InterceptTask> implemen
     public String getTaskOutput(int id, int limit) {
         T task = getTask(id);
         if (task == null) {
-            return "未找到任务: " + id;
+            return InterceptTexts.TASK_NOT_FOUND.format(id);
         }
         return getTaskOutputInternal(task, limit);
     }

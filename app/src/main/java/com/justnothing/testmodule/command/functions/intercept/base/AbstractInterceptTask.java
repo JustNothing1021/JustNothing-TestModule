@@ -2,6 +2,8 @@ package com.justnothing.testmodule.command.functions.intercept.base;
 
 import androidx.annotation.NonNull;
 
+import com.justnothing.testmodule.command.framework.i18n.Text;
+import com.justnothing.testmodule.command.functions.intercept.InterceptTexts;
 import com.justnothing.testmodule.command.functions.intercept.model.HookContext;
 import com.justnothing.testmodule.hooks.api.HookAPI;
 import com.justnothing.testmodule.hooks.api.HookParam;
@@ -15,7 +17,6 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -63,7 +64,8 @@ public abstract class AbstractInterceptTask implements InterceptTask {
             logger.debug("找到方法: " + targetMethods);
         } catch (Exception e) {
             logger.error("查找方法失败: " + methodName, e);
-            throw new RuntimeException("查找方法失败: " + e.getMessage(), e);
+            throw new RuntimeException(Text.zhEn("查找方法失败: %s", "Failed to resolve methods: %s")
+                    .format(e.getMessage()), e);
         }
     }
 
@@ -85,7 +87,8 @@ public abstract class AbstractInterceptTask implements InterceptTask {
         } catch (Exception e) {
             running.set(false);
             logger.error("启动任务失败: " + id, e);
-            throw new RuntimeException("启动任务失败: " + e.getMessage(), e);
+            throw new RuntimeException(Text.zhEn("启动任务失败: %s", "Failed to start task: %s")
+                    .format(e.getMessage()), e);
         }
     }
 
@@ -232,13 +235,13 @@ public abstract class AbstractInterceptTask implements InterceptTask {
     @NonNull
     @Override
     public String toString() {
-        return String.format(
-                Locale.getDefault(),
-                "%s[%d] %s (命中: %d, 状态: %s)",
-                taskType.getCommandName().toUpperCase(),
-                id,
-                getDisplayName(),
-                hitCount.get(),
-                running.get() ? (enabled ? "运行中" : "已暂停") : "已停止");
+        return Text.zhEn("%s[%d] %s (命中: %d, 状态: %s)",
+                        "%s[%d] %s (hits: %d, status: %s)")
+                .format(
+                        taskType.getCommandName().toUpperCase(),
+                        id,
+                        getDisplayName(),
+                        hitCount.get(),
+                        running.get() ? (enabled ? InterceptTexts.STATUS_RUNNING.text() : InterceptTexts.STATUS_PAUSED.text()) : InterceptTexts.STATUS_STOPPED.text());
     }
 }

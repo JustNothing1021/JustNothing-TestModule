@@ -1,5 +1,6 @@
 package com.justnothing.testmodule.command.functions.watch.util;
 
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.functions.intercept.base.AbstractInterceptManager;
 import com.justnothing.testmodule.command.functions.intercept.base.TaskType;
 import com.justnothing.testmodule.command.functions.intercept.WatchInterceptTask;
@@ -37,7 +38,9 @@ public class WatchManager extends AbstractInterceptManager<WatchInterceptTask> {
             return addTask(task);
         } catch (Exception e) {
             logger.error("添加字段watch任务失败", e);
-            throw new RuntimeException("添加字段watch任务失败: " + e.getMessage(), e);
+            throw new RuntimeException(Text.zhEn(
+                    "添加字段watch任务失败: %s",
+                    "Failed to add field watch task: %s").format(e.getMessage()), e);
         }
     }
 
@@ -57,13 +60,15 @@ public class WatchManager extends AbstractInterceptManager<WatchInterceptTask> {
             return addTask(task);
         } catch (Exception e) {
             logger.error("添加方法watch任务失败", e);
-            throw new RuntimeException("添加方法watch任务失败: " + e.getMessage(), e);
+            throw new RuntimeException(Text.zhEn(
+                    "添加方法watch任务失败: %s",
+                    "Failed to add method watch task: %s").format(e.getMessage()), e);
         }
     }
 
     public String getAllWatchOutput(int limit) {
         StringBuilder sb = new StringBuilder();
-        sb.append("=== 所有Watch任务输出 ===\n\n");
+        sb.append(Text.zhEn("=== 所有Watch任务输出 ===\n\n", "=== Output of all watch tasks ===\n\n").text());
 
         for (WatchInterceptTask task : listTasks()) {
             sb.append(task.getOutput(limit)).append("\n");

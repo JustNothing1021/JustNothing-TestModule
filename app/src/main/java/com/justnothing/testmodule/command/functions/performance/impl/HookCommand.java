@@ -9,6 +9,8 @@ import com.justnothing.testmodule.command.functions.performance.request.Performa
 import com.justnothing.testmodule.command.functions.performance.request.*;
 import com.justnothing.testmodule.command.functions.performance.response.PerfHookResult;
 import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.functions.performance.PerformanceTexts;
 
 import org.json.JSONObject;
@@ -49,7 +51,7 @@ public class HookCommand extends AbstractPerfCommand<PerformanceRequest<?>, Perf
             return handleExport(exportReq);
         } else {
             logger.warn("[hook] 未知请求类型: %s", req.getClass().getName());
-            outln("未知请求类型", Colors.RED);
+            outln(PerformanceTexts.UNKNOWN_REQUEST_TYPE.text(), Colors.RED);
             return null;
         }
     }
@@ -64,7 +66,7 @@ public class HookCommand extends AbstractPerfCommand<PerformanceRequest<?>, Perf
 
         if (cn == null || cn.isEmpty()) {
             logger.warn("[hook/start] ❌ 类名为空");
-            outln("错误: 需要类名", Colors.RED);
+            outln(Text.zhEn("错误: 需要类名", "Error: a class name is required").text(), Colors.RED);
             return null;
         }
 
@@ -80,18 +82,19 @@ public class HookCommand extends AbstractPerfCommand<PerformanceRequest<?>, Perf
             r.setStatus("running");
             r.setClassName(cn);
             r.setMethodName(mn != null ? mn : "*");
-            outln("Hook 已添加", Colors.GREEN);
+            outln(Text.zhEn("Hook 已添加", "Hook added").text(), Colors.GREEN);
             out("ID: ", Colors.CYAN);
             outln(String.valueOf(id), Colors.YELLOW);
-            out("目标类: ", Colors.CYAN); outln(cn, Colors.YELLOW);
-            out("目标方法: ", Colors.CYAN); outln(mn != null ? mn : "* (所有方法)", Colors.YELLOW);
+            out(PerformanceTexts.LABEL_TARGET_CLASS.text(), Colors.CYAN); outln(cn, Colors.YELLOW);
+            out(PerformanceTexts.LABEL_TARGET_METHOD.text(), Colors.CYAN);
+            outln(mn != null ? mn : Text.zhEn("* (所有方法)", "* (all methods)").text(), Colors.YELLOW);
             if (sig != null && !sig.isEmpty()) {
-                out("方法签名: ", Colors.CYAN); outln(sig, Colors.GRAY);
+                out(Text.zhEn("方法签名: ", "Signature: ").text(), Colors.CYAN); outln(sig, Colors.GRAY);
             }
             return r;
         } catch (Exception e) {
             logger.warn("[hook/start] ❌ 添加Hook失败: class=%s, err=%s", cn, e.getMessage());
-            outln("错误: " + e.getMessage(), Colors.RED);
+            outln(CliMessages.ERROR_PREFIX.text() + e.getMessage(), Colors.RED);
             return null;
         }
     }
@@ -108,13 +111,13 @@ public class HookCommand extends AbstractPerfCommand<PerformanceRequest<?>, Perf
                     .collect(Collectors.toList());
             logger.warn("[hook/stop] ❌ Hook不存在: ID=%d, 当前活跃IDs=%s",
                     taskId, availableIds);
-            outln("错误: Hook不存在 (ID: " + taskId + ")", Colors.RED);
+            outln(Text.zhEn("错误: Hook不存在 (ID: %d)", "Error: hook not found (ID: %d)").format(taskId), Colors.RED);
             if (!availableIds.isEmpty()) {
-                outln("当前活跃的Hook IDs: " + availableIds, Colors.GRAY);
+                outln(Text.zhEn("当前活跃的Hook IDs: %s", "Active hook IDs: %s").format(availableIds), Colors.GRAY);
             } else {
-                outln("提示: 没有任何正在运行的Hook任务", Colors.GRAY);
+                outln(Text.zhEn("提示: 没有任何正在运行的Hook任务", "Hint: no hook task is running").text(), Colors.GRAY);
             }
-            outln("提示: 使用 'performance list' 查看当前任务", Colors.GRAY);
+            outln(PerformanceTexts.HINT_VIEW_TASKS.text(), Colors.GRAY);
             return null;
         }
 
@@ -133,14 +136,14 @@ public class HookCommand extends AbstractPerfCommand<PerformanceRequest<?>, Perf
                 taskId, stats != null ? stats.callCount() : 0,
                 stats != null ? formatDurationNs(stats.totalDurationNs()) : "N/A");
 
-        outln("Hook 已停止", Colors.YELLOW);
+        outln(Text.zhEn("Hook 已停止", "Hook stopped").text(), Colors.YELLOW);
         out("ID: ", Colors.CYAN); outln(String.valueOf(taskId), Colors.YELLOW);
         if (stats != null) {
-            out("目标类: ", Colors.CYAN); outln(stats.className(), Colors.WHITE);
-            out("目标方法: ", Colors.CYAN); outln(stats.methodName(), Colors.WHITE);
-            out("调用次数: ", Colors.CYAN); outln(String.valueOf(stats.callCount()), Colors.YELLOW);
-            out("总耗时: ", Colors.CYAN); outln(formatDurationNs(stats.totalDurationNs()), Colors.YELLOW);
-            out("平均/最小/最大: ", Colors.CYAN);
+            out(PerformanceTexts.LABEL_TARGET_CLASS.text(), Colors.CYAN); outln(stats.className(), Colors.WHITE);
+            out(PerformanceTexts.LABEL_TARGET_METHOD.text(), Colors.CYAN); outln(stats.methodName(), Colors.WHITE);
+            out(PerformanceTexts.LABEL_CALL_COUNT.text(), Colors.CYAN); outln(String.valueOf(stats.callCount()), Colors.YELLOW);
+            out(PerformanceTexts.LABEL_TOTAL_TIME.text(), Colors.CYAN); outln(formatDurationNs(stats.totalDurationNs()), Colors.YELLOW);
+            out(PerformanceTexts.LABEL_AVG_MIN_MAX.text(), Colors.CYAN);
             outln(formatDurationNs((long) stats.avgDurationNs()) + "/"
                     + formatDurationNs(stats.minDurationNs()) + "/"
                     + formatDurationNs(stats.maxDurationNs()), Colors.YELLOW);
@@ -174,7 +177,7 @@ public class HookCommand extends AbstractPerfCommand<PerformanceRequest<?>, Perf
 
         if (taskId == null) {
             logger.warn("[hook/report] 未指定ID，列出所有Hook数据");
-            outln("未指定ID，显示所有Hook报告...", Colors.GRAY);
+            outln(Text.zhEn("未指定ID，显示所有Hook报告...", "No ID given; showing all hook reports...").text(), Colors.GRAY);
         }
 
         if (taskId != null) {
@@ -185,13 +188,14 @@ public class HookCommand extends AbstractPerfCommand<PerformanceRequest<?>, Perf
                         .map(h -> h.getStats().id())
                         .collect(Collectors.toList());
                 logger.warn("[hook/report] ❌ 数据不存在: ID=%d, 可用IDs=%s", taskId, availableIds);
-                outln("错误: Hook数据不存在 (ID: " + taskId + ")", Colors.RED);
+                outln(PerformanceTexts.ERR_HOOK_DATA_NOT_FOUND.format(taskId), Colors.RED);
                 if (!availableIds.isEmpty()) {
-                    outln("可用的Hook IDs: " + availableIds, Colors.GRAY);
+                    outln(PerformanceTexts.AVAILABLE_HOOK_IDS.format(availableIds), Colors.GRAY);
                 } else {
-                    outln("提示: 没有任何Hook数据。请先执行 'performance hook stop <ID>' 生成报告", Colors.GRAY);
+                    outln(Text.zhEn("提示: 没有任何Hook数据。请先执行 'performance hook stop <ID>' 生成报告",
+                            "Hint: there is no hook data. Run 'performance hook stop <ID>' first to generate a report").text(), Colors.GRAY);
                 }
-                outln("提示: 使用 'performance list' 查看当前任务", Colors.GRAY);
+                outln(PerformanceTexts.HINT_VIEW_TASKS.text(), Colors.GRAY);
                 return null;
             }
 
@@ -216,8 +220,9 @@ public class HookCommand extends AbstractPerfCommand<PerformanceRequest<?>, Perf
             List<PerformanceInterceptTask> hooks = PerformanceManager.getInstance().listPerformanceHooks();
             if (hooks.isEmpty()) {
                 logger.warn("[hook/report] ❌ 无任何Hook数据");
-                outln("错误: 没有Hook数据", Colors.RED);
-                outln("提示: 先用 'performance hook start <class> <method>' 添加Hook，再用 'performance hook stop <ID>' 停止以生成报告", Colors.GRAY);
+                outln(Text.zhEn("错误: 没有Hook数据", "Error: no hook data").text(), Colors.RED);
+                outln(Text.zhEn("提示: 先用 'performance hook start <class> <method>' 添加Hook，再用 'performance hook stop <ID>' 停止以生成报告",
+                        "Hint: run 'performance hook start <class> <method>' to add a hook, then 'performance hook stop <ID>' to stop it and generate a report").text(), Colors.GRAY);
                 return null;
             }
 
@@ -240,20 +245,20 @@ public class HookCommand extends AbstractPerfCommand<PerformanceRequest<?>, Perf
                 s.id(), s.className(), s.methodName(), s.callCount(), s.totalDurationNs());
 
         outln("", Colors.DEFAULT);
-        outln("=== Hook 报告 ===", Colors.CYAN);
+        outln(Text.zhEn("=== Hook 报告 ===", "=== Hook report ===").text(), Colors.CYAN);
         out("ID: ", Colors.CYAN); outln(String.valueOf(s.id()), Colors.YELLOW);
-        out("目标类/方法: ", Colors.CYAN);
+        out(Text.zhEn("目标类/方法: ", "Target class/method: ").text(), Colors.CYAN);
         outln(s.className() + "." + s.methodName(), Colors.YELLOW);
         if (s.signature() != null && !s.signature().isEmpty()) {
-            out("签名: ", Colors.CYAN); outln(s.signature(), Colors.GRAY);
+            out(Text.zhEn("签名: ", "Signature: ").text(), Colors.CYAN); outln(s.signature(), Colors.GRAY);
         }
-        out("调用次数: ", Colors.CYAN); outln(String.valueOf(s.callCount()), Colors.YELLOW);
-        out("总耗时: ", Colors.CYAN); outln(formatDurationNs(s.totalDurationNs()), Colors.YELLOW);
-        out("平均/最小/最大: ", Colors.CYAN);
+        out(PerformanceTexts.LABEL_CALL_COUNT.text(), Colors.CYAN); outln(String.valueOf(s.callCount()), Colors.YELLOW);
+        out(PerformanceTexts.LABEL_TOTAL_TIME.text(), Colors.CYAN); outln(formatDurationNs(s.totalDurationNs()), Colors.YELLOW);
+        out(PerformanceTexts.LABEL_AVG_MIN_MAX.text(), Colors.CYAN);
         outln(formatDurationNs((long) s.avgDurationNs()) + "/" + formatDurationNs(s.minDurationNs()) + "/"
                 + formatDurationNs(s.maxDurationNs()), Colors.YELLOW);
         if (s.getDurationMs() > 0) {
-            out("监控时长: ", Colors.CYAN);
+            out(Text.zhEn("监控时长: ", "Monitor duration: ").text(), Colors.CYAN);
             outln(s.getDurationMs() + "ms", Colors.WHITE);
         }
     }
@@ -271,11 +276,11 @@ public class HookCommand extends AbstractPerfCommand<PerformanceRequest<?>, Perf
                     .map(h -> h.getStats().id())
                     .collect(Collectors.toList());
             logger.warn("[hook/export] ❌ 数据不存在: ID=%d, 可用IDs=%s", taskId, availableIds);
-            outln("错误: Hook数据不存在 (ID: " + taskId + ")", Colors.RED);
+            outln(PerformanceTexts.ERR_HOOK_DATA_NOT_FOUND.format(taskId), Colors.RED);
             if (!availableIds.isEmpty()) {
-                outln("可用的Hook IDs: " + availableIds, Colors.GRAY);
+                outln(PerformanceTexts.AVAILABLE_HOOK_IDS.format(availableIds), Colors.GRAY);
             } else {
-                outln("提示: 没有可导出的Hook数据", Colors.GRAY);
+                outln(Text.zhEn("提示: 没有可导出的Hook数据", "Hint: there is no hook data to export").text(), Colors.GRAY);
             }
             return null;
         }
@@ -309,7 +314,7 @@ public class HookCommand extends AbstractPerfCommand<PerformanceRequest<?>, Perf
 
             if (!writeToFile(filePath, json.toString(2))) {
                 logger.error("[hook/export] ❌ 写入文件失败: %s", filePath);
-                outln("导出失败: 无法写入文件", Colors.RED);
+                outln(PerformanceTexts.ERR_EXPORT_WRITE_FAILED.text(), Colors.RED);
                 return null;
             }
 
@@ -317,17 +322,17 @@ public class HookCommand extends AbstractPerfCommand<PerformanceRequest<?>, Perf
                     taskId, filePath, json.toString().length());
         } catch (org.json.JSONException e) {
             logger.error("[hook/export] ❌ JSON构建失败: ID=%d, err=%s", taskId, e.getMessage());
-            outln("导出失败: JSON构建错误 - " + e.getMessage(), Colors.RED);
+            outln(Text.zhEn("导出失败: JSON构建错误 - %s", "Export failed: JSON build error - %s").format(e.getMessage()), Colors.RED);
             return null;
         }
 
-        outln("Hook 数据已导出", Colors.GREEN);
-        out("路径: ", Colors.CYAN); outln(filePath, Colors.YELLOW);
-        out("任务ID: ", Colors.CYAN); outln(String.valueOf(taskId), Colors.WHITE);
-        out("目标: ", Colors.CYAN);
+        outln(Text.zhEn("Hook 数据已导出", "Hook data exported").text(), Colors.GREEN);
+        out(PerformanceTexts.LABEL_PATH.text(), Colors.CYAN); outln(filePath, Colors.YELLOW);
+        out(PerformanceTexts.LABEL_TASK_ID.text(), Colors.CYAN); outln(String.valueOf(taskId), Colors.WHITE);
+        out(Text.zhEn("目标: ", "Target: ").text(), Colors.CYAN);
         outln(stats.className() + "." + stats.methodName(), Colors.WHITE);
-        out("调用次数: ", Colors.CYAN); outln(String.valueOf(stats.callCount()), Colors.WHITE);
-        out("总耗时: ", Colors.CYAN); outln(formatDurationNs(stats.totalDurationNs()), Colors.WHITE);
+        out(PerformanceTexts.LABEL_CALL_COUNT.text(), Colors.CYAN); outln(String.valueOf(stats.callCount()), Colors.WHITE);
+        out(PerformanceTexts.LABEL_TOTAL_TIME.text(), Colors.CYAN); outln(formatDurationNs(stats.totalDurationNs()), Colors.WHITE);
         return r;
     }
 }

@@ -59,7 +59,6 @@ public final class ThemeSettings extends Logger {
 
 
     public String getThemeModeName(int mode) {
-        // TODO: i18n
         return switch (mode) {
             case MODE_LIGHT -> "浅色模式";
             case MODE_DARK -> "深色模式";

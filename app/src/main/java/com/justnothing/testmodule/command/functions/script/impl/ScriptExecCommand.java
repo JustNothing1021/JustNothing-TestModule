@@ -1,6 +1,8 @@
 package com.justnothing.testmodule.command.functions.script.impl;
 
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.framework.utils.CommandExceptionHandler;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
@@ -65,7 +67,8 @@ public class ScriptExecCommand extends AbstractScriptCommand<ScriptBaseRequest<?
             runInteractiveMode();
             return okResult("interactive");
         }
-        throw new IllegalArgumentException("不支持的请求类型: " + request.getClass().getSimpleName());
+        throw new IllegalArgumentException(
+                ScriptTexts.ERR_UNSUPPORTED_REQUEST_TYPE.format(request.getClass().getSimpleName()));
     }
 
     protected ScriptResult handleRun(ScriptRunRequest request) throws IOException {
@@ -74,21 +77,21 @@ public class ScriptExecCommand extends AbstractScriptCommand<ScriptBaseRequest<?
         String fileName = request.getName();
 
         if (fileName == null || fileName.isEmpty()) {
-            context.println("错误: 需要指定文件名称", Colors.RED);
-            context.println("用法: script [-p preset] run <name>", Colors.GRAY);
+            context.println(CliMessages.ERROR_PREFIX.text() + ScriptTexts.ERR_NEED_FILE_NAME.text(), Colors.RED);
+            context.println(CliMessages.HELP_USAGE_INLINE.text() + "script [-p preset] run <name>", Colors.GRAY);
             r.setSuccess(false);
-            r.setOutput("需要指定文件名称");
+            r.setOutput(ScriptTexts.ERR_NEED_FILE_NAME.text());
             return r;
         }
 
         File targetFile = DataBridge.resolveScriptFile(fileName);
 
         if (!targetFile.exists()) {
-            context.print("错误: 文件 '", Colors.RED);
+            context.print(CliMessages.ERROR_PREFIX.text() + ScriptTexts.PREFIX_FILE_QUOTED.text(), Colors.RED);
             context.print(fileName, Colors.YELLOW);
-            context.println("' 不存在", Colors.RED);
+            context.println(ScriptTexts.SUFFIX_NOT_EXIST.text(), Colors.RED);
             r.setSuccess(false);
-            r.setOutput("文件不存在: " + fileName);
+            r.setOutput(ScriptTexts.ERR_FILE_NOT_FOUND.format(fileName));
             return r;
         }
 
@@ -96,10 +99,10 @@ public class ScriptExecCommand extends AbstractScriptCommand<ScriptBaseRequest<?
         r.setScriptName(fileName);
         r.setCode(content);
 
-        context.print("===== 执行脚本: ", Colors.CYAN);
+        context.print(Text.zhEn("===== 执行脚本: ", "===== Running script: ").text(), Colors.CYAN);
         context.print(fileName, Colors.YELLOW);
         context.println(" =====", Colors.CYAN);
-        context.println("[脚本执行] 在独立线程中执行...", Colors.CYAN);
+        context.println(Text.zhEn("[脚本执行] 在独立线程中执行...", "[script] running on a dedicated thread...").text(), Colors.CYAN);
         context.println("", Colors.WHITE);
 
         long startTime = System.currentTimeMillis();
@@ -133,7 +136,8 @@ public class ScriptExecCommand extends AbstractScriptCommand<ScriptBaseRequest<?
         });
 
         try {
-            assert future != null : "无法获取用于执行代码的Future";
+            assert future != null : Text.zhEn("无法获取用于执行代码的Future",
+                    "Cannot obtain the Future used to run the code").text();
             future.get(5, TimeUnit.MINUTES);
             long elapsed = System.currentTimeMillis() - startTime;
             r.setExecutionTimeMs(elapsed);
@@ -145,25 +149,28 @@ public class ScriptExecCommand extends AbstractScriptCommand<ScriptBaseRequest<?
                     cause = cause.getCause();
                 }
                 if (cause instanceof SecurityException) {
-                    context.print("权限拒绝: ", Colors.RED);
-                    context.println(Objects.requireNonNullElse(cause.getMessage(), "没有详细信息"), Colors.ORANGE);
+                    context.print(Text.zhEn("权限拒绝: ", "Permission denied: ").text(), Colors.RED);
+                    context.println(Objects.requireNonNullElse(cause.getMessage(), ScriptTexts.NO_DETAILS.text()), Colors.ORANGE);
                 } else {
-                    CommandExceptionHandler.handleException("script run", e, context, "脚本执行失败");
+                    CommandExceptionHandler.handleException("script run", e, context,
+                            Text.zhEn("脚本执行失败", "Script execution failed").text());
                 }
                 r.setSuccess(false);
                 r.setOutput(cause.getMessage());
             } else {
-                context.println("脚本执行成功", Colors.GREEN);
+                context.println(Text.zhEn("脚本执行成功", "Script executed successfully").text(), Colors.GREEN);
                 r.setSuccess(true);
             }
         } catch (TimeoutException e) {
             future.cancel(true);
-            context.println("脚本执行超时（5分钟），已取消", Colors.RED);
+            context.println(Text.zhEn("脚本执行超时（5分钟），已取消",
+                    "Script execution timed out (5 minutes); cancelled").text(), Colors.RED);
             r.setSuccess(false);
-            r.setOutput("脚本执行超时");
+            r.setOutput(Text.zhEn("脚本执行超时", "Script execution timed out").text());
         } catch (Exception e) {
-            context.print("等待脚本执行结果时发生异常: ", Colors.RED);
-            context.println(Objects.requireNonNullElse(e.getMessage(), "没有详细信息"), Colors.ORANGE);
+            context.print(Text.zhEn("等待脚本执行结果时发生异常: ",
+                    "Exception while waiting for the script result: ").text(), Colors.RED);
+            context.println(Objects.requireNonNullElse(e.getMessage(), ScriptTexts.NO_DETAILS.text()), Colors.ORANGE);
             r.setSuccess(false);
             r.setOutput(e.getMessage());
         }
@@ -177,21 +184,21 @@ public class ScriptExecCommand extends AbstractScriptCommand<ScriptBaseRequest<?
         String filePath = request.getFilePath();
 
         if (filePath == null || filePath.isEmpty()) {
-            context.println("错误: 需要指定文件路径", Colors.RED);
-            context.println("用法: script import <file>", Colors.GRAY);
+            context.println(CliMessages.ERROR_PREFIX.text() + ScriptTexts.ERR_NEED_FILE_PATH.text(), Colors.RED);
+            context.println(CliMessages.HELP_USAGE_INLINE.text() + "script import <file>", Colors.GRAY);
             r.setSuccess(false);
-            r.setOutput("需要指定文件路径");
+            r.setOutput(ScriptTexts.ERR_NEED_FILE_PATH.text());
             return r;
         }
 
         File sourceFile = new File(filePath);
 
         if (!sourceFile.exists()) {
-            context.print("错误: 文件 '", Colors.RED);
+            context.print(CliMessages.ERROR_PREFIX.text() + ScriptTexts.PREFIX_FILE_QUOTED.text(), Colors.RED);
             context.print(filePath, Colors.YELLOW);
-            context.println("' 不存在", Colors.RED);
+            context.println(ScriptTexts.SUFFIX_NOT_EXIST.text(), Colors.RED);
             r.setSuccess(false);
-            r.setOutput("文件不存在: " + filePath);
+            r.setOutput(ScriptTexts.ERR_FILE_NOT_FOUND.format(filePath));
             return r;
         }
 
@@ -202,26 +209,26 @@ public class ScriptExecCommand extends AbstractScriptCommand<ScriptBaseRequest<?
         File destFile = new File(scriptsDir, fileName);
 
         if (destFile.exists()) {
-            context.print("错误: 文件 '", Colors.RED);
+            context.print(CliMessages.ERROR_PREFIX.text() + ScriptTexts.PREFIX_FILE_QUOTED.text(), Colors.RED);
             context.print(fileName, Colors.YELLOW);
-            context.println("' 已存在", Colors.RED);
-            context.print("提示: 使用 '", Colors.GRAY);
+            context.println(ScriptTexts.SUFFIX_ALREADY_EXISTS.text(), Colors.RED);
+            context.print(Text.zhEn("提示: 使用 '", "Tip: use '").text(), Colors.GRAY);
             context.print("script delete " + fileName, Colors.CYAN);
-            context.println("' 删除旧文件", Colors.GRAY);
+            context.println(Text.zhEn("' 删除旧文件", "' to delete the old file").text(), Colors.GRAY);
             r.setSuccess(false);
-            r.setOutput("目标文件已存在: " + fileName);
+            r.setOutput(Text.zhEn("目标文件已存在: %s", "Target file already exists: %s").format(fileName));
             return r;
         }
 
         IOManager.createDirectory(Objects.requireNonNull(destFile.getParentFile()).getAbsolutePath());
         IOManager.writeFile(destFile.getAbsolutePath(), content);
 
-        context.println("文件导入成功", Colors.GREEN);
-        context.print("源文件: ", Colors.CYAN);
+        context.println(Text.zhEn("文件导入成功", "File imported successfully").text(), Colors.GREEN);
+        context.print(Text.zhEn("源文件: ", "Source file: ").text(), Colors.CYAN);
         context.println(sourceFile.getAbsolutePath(), Colors.GREEN);
-        context.print("文件名称: ", Colors.CYAN);
+        context.print(Text.zhEn("文件名称: ", "File name: ").text(), Colors.CYAN);
         context.println(fileName, Colors.YELLOW);
-        context.print("目标路径: ", Colors.CYAN);
+        context.print(Text.zhEn("目标路径: ", "Target path: ").text(), Colors.CYAN);
         context.println(destFile.getAbsolutePath(), Colors.GREEN);
 
         r.setSuccess(true);
@@ -236,21 +243,21 @@ public class ScriptExecCommand extends AbstractScriptCommand<ScriptBaseRequest<?
         String exportPath = request.getFilePath();
 
         if (fileName == null || fileName.isEmpty() || exportPath == null || exportPath.isEmpty()) {
-            context.println("错误: 需要指定文件名称和导出路径", Colors.RED);
-            context.println("用法: script export <name> <file>", Colors.GRAY);
+            context.println(CliMessages.ERROR_PREFIX.text() + ScriptTexts.ERR_NEED_NAME_AND_EXPORT_PATH.text(), Colors.RED);
+            context.println(CliMessages.HELP_USAGE_INLINE.text() + "script export <name> <file>", Colors.GRAY);
             r.setSuccess(false);
-            r.setOutput("需要指定文件名称和导出路径");
+            r.setOutput(ScriptTexts.ERR_NEED_NAME_AND_EXPORT_PATH.text());
             return r;
         }
 
         File sourceFile = DataBridge.resolveScriptFile(fileName);
 
         if (!sourceFile.exists()) {
-            context.print("错误: 文件 '", Colors.RED);
+            context.print(CliMessages.ERROR_PREFIX.text() + ScriptTexts.PREFIX_FILE_QUOTED.text(), Colors.RED);
             context.print(fileName, Colors.YELLOW);
-            context.println("' 不存在", Colors.RED);
+            context.println(ScriptTexts.SUFFIX_NOT_EXIST.text(), Colors.RED);
             r.setSuccess(false);
-            r.setOutput("文件不存在: " + fileName);
+            r.setOutput(ScriptTexts.ERR_FILE_NOT_FOUND.format(fileName));
             return r;
         }
 
@@ -259,11 +266,11 @@ public class ScriptExecCommand extends AbstractScriptCommand<ScriptBaseRequest<?
 
         IOManager.writeFile(exportFile.getAbsolutePath(), content);
 
-        context.print("脚本", Colors.GREEN);
-        context.println("导出成功", Colors.GREEN);
-        context.print("文件: ", Colors.CYAN);
+        context.print(Text.zhEn("脚本", "Script ").text(), Colors.GREEN);
+        context.println(Text.zhEn("导出成功", "exported successfully").text(), Colors.GREEN);
+        context.print(Text.zhEn("文件: ", "File: ").text(), Colors.CYAN);
         context.println(fileName, Colors.YELLOW);
-        context.print("导出路径: ", Colors.CYAN);
+        context.print(Text.zhEn("导出路径: ", "Export path: ").text(), Colors.CYAN);
         context.println(exportFile.getAbsolutePath(), Colors.GREEN);
 
         r.setSuccess(true);
@@ -279,10 +286,13 @@ public class ScriptExecCommand extends AbstractScriptCommand<ScriptBaseRequest<?
         runner.setReplMode(true);
 
         logger.info("进入交互式脚本执行模式");
-        context.println("====== 脚本交互执行模式 =====", Colors.CYAN);
-        context.println("输入 'exit' 或 'quit' 退出 (你不会闲到拿这俩做变量名, 对吧)", Colors.GRAY);
-        context.println("输入 ':multi' 进入多行模式, ':eval' 执行, ':clear' 清空", Colors.GRAY);
-        context.println("输入 'setPrintAST(true)' 开启 AST 打印", Colors.GRAY);
+        context.println(Text.zhEn("====== 脚本交互执行模式 ======", "====== Interactive script mode ======").text(), Colors.CYAN);
+        context.println(Text.zhEn("输入 'exit' 或 'quit' 退出 (你不会闲到拿这俩做变量名, 对吧)",
+                "Type 'exit' or 'quit' to leave (you wouldn't name a variable that, right?)").text(), Colors.GRAY);
+        context.println(Text.zhEn("输入 ':multi' 进入多行模式, ':eval' 执行, ':clear' 清空",
+                "Type ':multi' for multi-line mode, ':eval' to run, ':clear' to clear").text(), Colors.GRAY);
+        context.println(Text.zhEn("输入 'setPrintAST(true)' 开启 AST 打印",
+                "Type 'setPrintAST(true)' to enable AST printing").text(), Colors.GRAY);
         context.println("", Colors.WHITE);
 
         StringBuilder multiLineBuffer = new StringBuilder();
@@ -315,7 +325,8 @@ public class ScriptExecCommand extends AbstractScriptCommand<ScriptBaseRequest<?
                     case ":multi":
                         multiLineMode = true;
                         autoMultiLine = false;
-                        context.println("进入多行模式, 输入 ':eval' 执行, ':clear' 清空, ':exit' 退出多行模式", Colors.CYAN);
+                        context.println(Text.zhEn("进入多行模式, 输入 ':eval' 执行, ':clear' 清空, ':exit' 退出多行模式",
+                                "Multi-line mode: ':eval' to run, ':clear' to clear, ':exit' to leave").text(), Colors.CYAN);
                         continue;
                 }
 
@@ -323,13 +334,13 @@ public class ScriptExecCommand extends AbstractScriptCommand<ScriptBaseRequest<?
                     multiLineMode = false;
                     autoMultiLine = false;
                     multiLineBuffer.setLength(0);
-                    context.println("退出多行模式", Colors.CYAN);
+                    context.println(Text.zhEn("退出多行模式", "Left multi-line mode").text(), Colors.CYAN);
                     continue;
                 }
 
                 if (code.equals(":clear") && (multiLineMode || autoMultiLine)) {
                     multiLineBuffer.setLength(0);
-                    context.println("已清空", Colors.GREEN);
+                    context.println(Text.zhEn("已清空", "Cleared").text(), Colors.GREEN);
                     continue;
                 }
 
@@ -340,7 +351,7 @@ public class ScriptExecCommand extends AbstractScriptCommand<ScriptBaseRequest<?
                     autoMultiLine = false;
 
                     if (fullCode.isEmpty()) {
-                        context.println("没有代码可执行", Colors.GRAY);
+                        context.println(Text.zhEn("没有代码可执行", "No code to run").text(), Colors.GRAY);
                         continue;
                     }
 
@@ -374,16 +385,16 @@ public class ScriptExecCommand extends AbstractScriptCommand<ScriptBaseRequest<?
             String errorMessage = (cause != null) ? cause.getMessage() : e.getMessage();
 
             if (errorMessage != null && errorMessage.toLowerCase().contains("unterminated string")) {
-                context.println("语法错误: " + errorMessage, Colors.RED);
+                context.println(ScriptTexts.SYNTAX_ERROR_PREFIX.text() + errorMessage, Colors.RED);
                 multiLineBuffer.setLength(0);
             } else if (e.getMessage() != null && (e.getMessage().contains("超时") || e.getMessage().contains("中断") || e.getMessage().contains("通信失败"))) {
-                context.println("输入处理出错: " + errorMessage, Colors.RED);
+                context.println(Text.zhEn("输入处理出错: ", "Input handling error: ").text() + errorMessage, Colors.RED);
                 multiLineBuffer.setLength(0);
             } else {
                 handleExecutionException(e, runner);
             }
         }
-        context.println("交互式模式已退出", Colors.GREEN);
+        context.println(Text.zhEn("交互式模式已退出", "Interactive mode exited").text(), Colors.GREEN);
     }
 
     protected void executeCode(ScriptRunner runner, String code) {
@@ -425,22 +436,25 @@ public class ScriptExecCommand extends AbstractScriptCommand<ScriptBaseRequest<?
 
         if (cause instanceof EvalException evalEx) {
             Throwable innerCause = evalEx.getCause();
-            context.print("执行错误: ", errorColor);
+            context.print(Text.zhEn("执行错误: ", "Execution error: ").text(), errorColor);
             context.println(evalEx.getMessage(), errorColor);
             if (runner.isPrintAST()) {
-                context.println("（AST 节点信息在此版本中不可用）", Colors.GRAY);
+                context.println(Text.zhEn("（AST 节点信息在此版本中不可用）",
+                        "(AST node info is unavailable in this version)").text(), Colors.GRAY);
             }
             if (innerCause != null) {
                 context.output().printStackTrace(innerCause, Colors.GRAY);
             }
         } else if (cause instanceof CythavaParseException parseEx) {
-            context.print("语法错误: ", errorColor);
+            context.print(ScriptTexts.SYNTAX_ERROR_PREFIX.text(), errorColor);
             context.println(parseEx.getMessage(), errorColor);
         } else if (cause != null) {
-            context.println((isParseError ? "语法错误: " : "错误: ") + cause.getMessage(), errorColor);
+            context.println((isParseError ? ScriptTexts.SYNTAX_ERROR_PREFIX.text() : CliMessages.ERROR_PREFIX.text())
+                    + cause.getMessage(), errorColor);
             context.output().printStackTrace(cause, Colors.GRAY);
         } else {
-            context.println((isParseError ? "语法错误: " : "错误: ") + message, errorColor);
+            context.println((isParseError ? ScriptTexts.SYNTAX_ERROR_PREFIX.text() : CliMessages.ERROR_PREFIX.text())
+                    + message, errorColor);
             context.output().printStackTrace(e, Colors.GRAY);
         }
     }

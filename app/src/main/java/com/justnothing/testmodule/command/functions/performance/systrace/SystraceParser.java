@@ -2,6 +2,8 @@ package com.justnothing.testmodule.command.functions.performance.systrace;
 
 import android.util.Log;
 
+import com.justnothing.testmodule.command.framework.i18n.Text;
+import com.justnothing.testmodule.command.functions.performance.PerformanceTexts;
 import com.justnothing.testmodule.utils.io.IOManager;
 
 import java.io.File;
@@ -18,7 +20,7 @@ public class SystraceParser {
         try {
             File traceFile = new File(file);
             if (!traceFile.exists()) {
-                throw new IllegalArgumentException("Systrace 文件不存在: " + file);
+                throw new IllegalArgumentException(Text.zhEn("Systrace 文件不存在: %s", "Systrace file not found: %s").format(file));
             }
 
             Log.i(TAG, "解析 Systrace 文件: " + file);
@@ -34,24 +36,26 @@ public class SystraceParser {
 
         } catch (Exception e) {
             Log.e(TAG, "解析 Systrace 文件失败", e);
-            throw new RuntimeException("解析 Systrace 文件失败: " + e.getMessage(), e);
+            throw new RuntimeException(Text.zhEn("解析 Systrace 文件失败: %s", "Failed to parse systrace file: %s").format(e.getMessage()), e);
         }
     }
 
     public static String generateReport(SystraceData data) {
         StringBuilder report = new StringBuilder();
-        report.append("=== Systrace 报告 ===\n");
-        report.append("文件: ").append(data.file()).append("\n");
-        report.append("持续时间: ").append(data.duration() / 1000.0).append(" 秒\n");
+        report.append(Text.zhEn("=== Systrace 报告 ===\n", "=== Systrace report ===\n").text());
+        report.append(Text.zhEn("文件: ", "File: ").text()).append(data.file()).append("\n");
+        report.append(PerformanceTexts.LABEL_DURATION.text()).append(data.duration() / 1000.0)
+              .append(Text.zhEn(" 秒\n", " s\n").text());
         report.append("\n");
 
         if (data.cpuData() != null) {
-            report.append("CPU 数据:\n");
-            report.append("  平均使用率: ").append(String.format(Locale.getDefault(), "%.2f%%", data.cpuData().averageUsage() * 100)).append("\n");
+            report.append(Text.zhEn("CPU 数据:\n", "CPU data:\n").text());
+            report.append(Text.zhEn("  平均使用率: ", "  Average usage: ").text())
+                  .append(String.format(Locale.getDefault(), "%.2f%%", data.cpuData().averageUsage() * 100)).append("\n");
             if (!data.cpuData().cpuUsage().isEmpty()) {
-                report.append("  各核心使用率:\n");
+                report.append(Text.zhEn("  各核心使用率:\n", "  Per-core usage:\n").text());
                 for (Map.Entry<Integer, Double> entry : data.cpuData().cpuUsage().entrySet()) {
-                    report.append("    核心 ").append(entry.getKey()).append(": ")
+                    report.append(Text.zhEn("    核心 ", "    Core ").text()).append(entry.getKey()).append(": ")
                           .append(String.format(Locale.getDefault(), "%.2f%%", entry.getValue() * 100)).append("\n");
                 }
             }
@@ -59,46 +63,48 @@ public class SystraceParser {
         }
 
         if (data.gpuData() != null) {
-            report.append("GPU 数据:\n");
-            report.append("  使用率: ").append(String.format(Locale.getDefault(), "%.2f%%", data.gpuData().usage() * 100)).append("\n");
+            report.append(Text.zhEn("GPU 数据:\n", "GPU data:\n").text());
+            report.append(Text.zhEn("  使用率: ", "  Usage: ").text())
+                  .append(String.format(Locale.getDefault(), "%.2f%%", data.gpuData().usage() * 100)).append("\n");
             report.append("  FPS: ").append(data.gpuData().fps()).append("\n");
-            report.append("  丢帧数: ").append(data.gpuData().droppedFrames()).append("\n");
+            report.append(Text.zhEn("  丢帧数: ", "  Dropped frames: ").text()).append(data.gpuData().droppedFrames()).append("\n");
             report.append("\n");
         }
 
         if (data.memoryData() != null) {
-            report.append("内存数据:\n");
-            report.append("  总内存: ").append(formatBytes(data.memoryData().totalMemory())).append("\n");
-            report.append("  堆内存: ").append(formatBytes(data.memoryData().heapMemory())).append("\n");
-            report.append("  GC 次数: ").append(data.memoryData().gcCount()).append("\n");
-            report.append("  GC 总耗时: ").append(data.memoryData().gcDuration() / 1_000_000.0).append(" ms\n");
+            report.append(Text.zhEn("内存数据:\n", "Memory data:\n").text());
+            report.append(Text.zhEn("  总内存: ", "  Total memory: ").text()).append(formatBytes(data.memoryData().totalMemory())).append("\n");
+            report.append(Text.zhEn("  堆内存: ", "  Heap memory: ").text()).append(formatBytes(data.memoryData().heapMemory())).append("\n");
+            report.append(Text.zhEn("  GC 次数: ", "  GC count: ").text()).append(data.memoryData().gcCount()).append("\n");
+            report.append(Text.zhEn("  GC 总耗时: ", "  GC total time: ").text()).append(data.memoryData().gcDuration() / 1_000_000.0).append(" ms\n");
             report.append("\n");
         }
 
         if (data.threadData() != null && !data.threadData().isEmpty()) {
-            report.append("线程数据:\n");
+            report.append(Text.zhEn("线程数据:\n", "Thread data:\n").text());
             for (SystraceData.ThreadData thread : data.threadData()) {
                 report.append("  ").append(thread.threadName()).append(" (ID: ").append(thread.threadId()).append(")\n");
-                report.append("    状态: ").append(thread.state()).append("\n");
-                report.append("    CPU 使用率: ").append(String.format(Locale.getDefault(), "%.2f%%", thread.cpuUsage() * 100)).append("\n");
+                report.append(PerformanceTexts.LABEL_STATUS_INDENTED.text()).append(thread.state()).append("\n");
+                report.append(Text.zhEn("    CPU 使用率: ", "    CPU usage: ").text())
+                      .append(String.format(Locale.getDefault(), "%.2f%%", thread.cpuUsage() * 100)).append("\n");
             }
             report.append("\n");
         }
 
         if (data.ioData() != null && !data.ioData().isEmpty()) {
-            report.append("I/O 数据:\n");
+            report.append(Text.zhEn("I/O 数据:\n", "I/O data:\n").text());
             for (SystraceData.IOData io : data.ioData()) {
                 report.append("  ").append(io.operation()).append("\n");
-                report.append("    字节数: ").append(formatBytes(io.bytes())).append("\n");
-                report.append("    耗时: ").append(io.duration() / 1_000_000.0).append(" ms\n");
+                report.append(Text.zhEn("    字节数: ", "    Bytes: ").text()).append(formatBytes(io.bytes())).append("\n");
+                report.append(Text.zhEn("    耗时: ", "    Duration: ").text()).append(io.duration() / 1_000_000.0).append(" ms\n");
             }
             report.append("\n");
         }
 
-        report.append("说明:\n");
-        report.append("  - Systrace 数据来自系统级性能分析\n");
-        report.append("  - 可以使用 Chrome 浏览器打开 HTML 文件查看详细信息\n");
-        report.append("  - 建议使用 Systrace HTML 文件进行详细分析\n");
+        report.append(Text.zhEn("说明:\n", "Notes:\n").text());
+        report.append(Text.zhEn("  - Systrace 数据来自系统级性能分析\n", "  - Systrace data comes from system-level profiling\n").text());
+        report.append(Text.zhEn("  - 可以使用 Chrome 浏览器打开 HTML 文件查看详细信息\n", "  - Open the HTML file in Chrome for details\n").text());
+        report.append(Text.zhEn("  - 建议使用 Systrace HTML 文件进行详细分析\n", "  - Detailed analysis is best done with the systrace HTML file\n").text());
 
         return report.toString();
     }

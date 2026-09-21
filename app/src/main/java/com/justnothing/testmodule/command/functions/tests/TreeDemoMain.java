@@ -6,6 +6,7 @@ import com.justnothing.richconsole.tree.Tree.TreeNode;
 
 import com.justnothing.testmodule.command.framework.model.MainCommand;
 import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.framework.model.CommandResult;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.annotation.Cmd;
@@ -61,6 +62,6 @@ public class TreeDemoMain extends MainCommand<CommandResult> {
         console.println(styled);
         console.println();
 
-        return createSuccessResult("完成");
+        return createSuccessResult(Text.zhEn("完成", "Done").text());
     }
 }

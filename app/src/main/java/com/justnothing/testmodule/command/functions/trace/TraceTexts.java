@@ -1,6 +1,7 @@
 package com.justnothing.testmodule.command.functions.trace;
 
 import com.justnothing.testmodule.command.framework.i18n.CliTexts;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 
 import java.util.Map;
 
@@ -37,6 +38,18 @@ public final class TraceTexts {
     public static final String PARAM_TRACE_EXPORT_ID_DESC = "param.trace.export.id.desc";
     public static final String PARAM_TRACE_EXPORT_FILEPATH_DESC = "param.trace.export.filePath.desc";
     public static final String PARAM_TRACE_STOP_ID_DESC = "param.trace.stop.id.desc";
+
+    // ==================== 族内复用输出文案 ====================
+    // 本节只放本族内部出现两次以上的输出文案（中英并排的 Text 常量）。
+    // 只出现一次的在调用点就地写 Text.zhEn(...)；跨族复用的（「错误: 」那些）在 CliMessages 里。
+
+    /** 请求类型分发兜底（query / manage 各一处）。 */
+    public static final Text UNSUPPORTED_REQUEST_TYPE =
+            Text.zhEn("不支持的请求类型: %s", "Unsupported request type: %s");
+
+    /** 按 ID 取任务失败（show / export 各一处）。 */
+    public static final Text TRACE_TASK_NOT_FOUND =
+            Text.zhEn("未找到trace任务 (ID: %s)", "Trace task not found (ID: %s)");
 
     private TraceTexts() {
     }

@@ -1,6 +1,7 @@
 package com.justnothing.testmodule.command.functions.agent.impl;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.framework.model.AbstractCommand;
 import com.justnothing.testmodule.command.framework.model.CommandResult;
 import com.justnothing.testmodule.command.functions.agent.inspect.InspectionClient;
@@ -23,10 +24,13 @@ public class AgentListCommand extends AbstractCommand<AgentListRequest, CommandR
 
         if (context.isCli()) {
             if (agents.isEmpty()) {
-                context.println("没有在线的 InspectionAgent", Colors.YELLOW);
+                context.println(Text.zhEn("没有在线的 InspectionAgent", "No online InspectionAgent").text(), Colors.YELLOW);
             } else {
-                context.println("在线 InspectionAgent (" + agents.size() + "):", Colors.CYAN);
-                context.println(String.format("  %-40s %-12s %s", "包名", "状态", "启动时间"), Colors.WHITE);
+                context.println(Text.zhEn("在线 InspectionAgent (%d):", "Online InspectionAgents (%d):").format(agents.size()), Colors.CYAN);
+                context.println(String.format("  %-40s %-12s %s",
+                        Text.zhEn("包名", "Package").text(),
+                        Text.zhEn("状态", "Status").text(),
+                        Text.zhEn("启动时间", "Start time").text()), Colors.WHITE);
                 context.println("  " + "-".repeat(70), Colors.DARK_GRAY);
 
                 SimpleDateFormat fmt = new SimpleDateFormat("HH:mm:ss");
@@ -37,7 +41,7 @@ public class AgentListCommand extends AbstractCommand<AgentListRequest, CommandR
                 context.println(String.format("  %-40s %-12s %s",
                         status.packageName(), statusStr, timeStr), color);
                     if (!status.online() && status.error() != null) {
-                        context.println("    原因: " + status.error(), Colors.RED);
+                        context.println(Text.zhEn("    原因: ", "    Reason: ").text() + status.error(), Colors.RED);
                     }
                 }
             }

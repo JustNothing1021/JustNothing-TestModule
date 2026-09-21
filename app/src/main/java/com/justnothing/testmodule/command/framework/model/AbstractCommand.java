@@ -33,9 +33,10 @@ public abstract class AbstractCommand<Req extends CommandRequest<?>, Res extends
     @SuppressWarnings("unchecked")
     public Res execute(CommandExecutor.CmdExecContext<? extends CommandRequest<?>> context) {
         if (!acceptable(context.getRequest())) {
-            throw new IllegalArgumentException("命令请求类型错误; 期待"
-                    + getAcceptableRequestType().getSimpleName()
-                    + ", 却接收到了" + context.getRequest().getClass().getSimpleName());
+            throw new IllegalArgumentException(
+                    CliMessages.ERR_WRONG_REQUEST_TYPE.format(
+                            getAcceptableRequestType().getSimpleName(),
+                            context.getRequest().getClass().getSimpleName()));
         }
         try {
 

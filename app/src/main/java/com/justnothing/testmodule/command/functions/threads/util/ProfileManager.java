@@ -2,6 +2,8 @@ package com.justnothing.testmodule.command.functions.threads.util;
 
 import androidx.annotation.NonNull;
 
+import com.justnothing.testmodule.command.framework.i18n.Text;
+import com.justnothing.testmodule.command.functions.threads.ThreadsTexts;
 import com.justnothing.testmodule.utils.logging.Logger;
 import com.justnothing.testmodule.utils.io.IOManager;
 import com.justnothing.testmodule.utils.concurrent.ThreadPoolManager;
@@ -41,7 +43,7 @@ public class ProfileManager {
     
     public void startProfiling(int duration) {
         if (profiling.get()) {
-            throw new IllegalStateException("性能分析已在运行中");
+            throw new IllegalStateException(Text.zhEn("性能分析已在运行中", "Profiling is already running").text());
         }
         
         profilingDuration.set(duration);
@@ -58,7 +60,7 @@ public class ProfileManager {
     
     public void stopProfiling() {
         if (!profiling.get()) {
-            throw new IllegalStateException("性能分析未在运行");
+            throw new IllegalStateException(Text.zhEn("性能分析未在运行", "Profiling is not running").text());
         }
         
         profiling.set(false);
@@ -86,26 +88,25 @@ public class ProfileManager {
     @SuppressWarnings("SequencedCollectionMethodCanBeUsed")
     public String getProfileReport() {
         if (samples.isEmpty()) {
-            return "暂无性能分析数据";
+            return ThreadsTexts.NO_PROFILE_DATA.text();
         }
         
         StringBuilder sb = new StringBuilder();
-        sb.append("===== 性能分析报告 =====\n");
-        sb.append("样本数量: ").append(samples.size()).append("\n");
-        sb.append("分析时间: ").append(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date())).append("\n\n");
+        sb.append(ThreadsTexts.TITLE_PROFILE_REPORT.text());
+        sb.append(ThreadsTexts.LABEL_SAMPLE_COUNT.text()).append(samples.size()).append("\n");
+        sb.append(ThreadsTexts.LABEL_ANALYSIS_TIME.text()).append(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date())).append("\n\n");
         
-        sb.append("===== 系统资源概况 =====\n");
+        sb.append(ThreadsTexts.TITLE_SYSTEM_RESOURCES.text());
         ProfileSample lastSample = samples.get(samples.size() - 1);
-        sb.append("CPU使用率: ").append(String.format(Locale.getDefault(), "%.2f%%", lastSample.cpuUsage * 100)).append("\n");
-        sb.append("内存使用: ").append(formatBytes(lastSample.memoryUsage)).append("\n");
-        sb.append("线程数: ").append(lastSample.threadCount).append("\n");
-        sb.append("进程数: ").append(lastSample.processCount).append("\n\n");
+        sb.append(ThreadsTexts.LABEL_CPU_USAGE.text()).append(String.format(Locale.getDefault(), "%.2f%%", lastSample.cpuUsage * 100)).append("\n");
+        sb.append(ThreadsTexts.LABEL_MEMORY_USAGE.text()).append(formatBytes(lastSample.memoryUsage)).append("\n");
+        sb.append(ThreadsTexts.LABEL_THREADS.text()).append(lastSample.threadCount).append("\n");
+        sb.append(ThreadsTexts.LABEL_PROCESSES.text()).append(lastSample.processCount).append("\n\n");
         
-        sb.append("===== 进程资源统计 =====\n");
+        sb.append(ThreadsTexts.TITLE_PROCESS_STATS.text());
         for (Map.Entry<String, ProcessStats> entry : processStatsMap.entrySet()) {
             ProcessStats stats = entry.getValue();
-            sb.append(String.format(Locale.getDefault(),
-                    "  %s: CPU=%.2f%%, 内存=%s, 线程=%d\n",
+            sb.append(ThreadsTexts.LINE_PROCESS_STATS.format(
                     entry.getKey(),
                     stats.cpuUsage * 100,
                     formatBytes(stats.memoryUsage),
@@ -113,25 +114,23 @@ public class ProfileManager {
         }
         sb.append("\n");
         
-        sb.append("===== 线程资源统计 =====\n");
+        sb.append(ThreadsTexts.TITLE_THREAD_STATS.text());
         for (Map.Entry<String, ThreadStats> entry : threadStatsMap.entrySet()) {
             ThreadStats stats = entry.getValue();
-            sb.append(String.format(Locale.getDefault(),
-                    "  %s: CPU=%.2f%%, 状态=%s\n",
+            sb.append(ThreadsTexts.LINE_THREAD_STATS.format(
                     entry.getKey(),
                     stats.cpuUsage * 100,
                     stats.state));
         }
         sb.append("\n");
         
-        sb.append("===== 性能趋势 =====\n");
+        sb.append(Text.zhEn("===== 性能趋势 =====\n", "===== Performance trend =====\n").text());
         int sampleCount = Math.min(10, samples.size());
         int step = samples.size() / sampleCount;
         for (int i = 0; i < sampleCount; i++) {
             int index = i * step;
             ProfileSample sample = samples.get(index);
-            sb.append(String.format(Locale.getDefault(),
-                    "  [%s] CPU=%.2f%%, 内存=%s\n",
+            sb.append(Text.zhEn("  [%s] CPU=%.2f%%, 内存=%s\n", "  [%s] CPU=%.2f%%, memory=%s\n").format(
                     sample.timestamp,
                     sample.cpuUsage * 100,
                     formatBytes(sample.memoryUsage)));
@@ -145,24 +144,23 @@ public class ProfileManager {
         synchronized (samples) {
             try {
                 StringBuilder content = new StringBuilder();
-                content.append("===== 性能分析报告 =====\n");
-                content.append("样本数量: ").append(samples.size()).append("\n");
-                content.append("分析时间: ").append(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date())).append("\n\n");
+                content.append(ThreadsTexts.TITLE_PROFILE_REPORT.text());
+                content.append(ThreadsTexts.LABEL_SAMPLE_COUNT.text()).append(samples.size()).append("\n");
+                content.append(ThreadsTexts.LABEL_ANALYSIS_TIME.text()).append(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date())).append("\n\n");
                 
-                content.append("===== 系统资源概况 =====\n");
+                content.append(ThreadsTexts.TITLE_SYSTEM_RESOURCES.text());
                 if (!samples.isEmpty()) {
                     ProfileSample lastSample = samples.get(samples.size() - 1);
-                    content.append("CPU使用率: ").append(String.format(Locale.getDefault(), "%.2f%%", lastSample.cpuUsage * 100)).append("\n");
-                    content.append("内存使用: ").append(formatBytes(lastSample.memoryUsage)).append("\n");
-                    content.append("线程数: ").append(lastSample.threadCount).append("\n");
-                    content.append("进程数: ").append(lastSample.processCount).append("\n\n");
+                    content.append(ThreadsTexts.LABEL_CPU_USAGE.text()).append(String.format(Locale.getDefault(), "%.2f%%", lastSample.cpuUsage * 100)).append("\n");
+                    content.append(ThreadsTexts.LABEL_MEMORY_USAGE.text()).append(formatBytes(lastSample.memoryUsage)).append("\n");
+                    content.append(ThreadsTexts.LABEL_THREADS.text()).append(lastSample.threadCount).append("\n");
+                    content.append(ThreadsTexts.LABEL_PROCESSES.text()).append(lastSample.processCount).append("\n\n");
                 }
                 
-                content.append("===== 进程资源统计 =====\n");
+                content.append(ThreadsTexts.TITLE_PROCESS_STATS.text());
                 for (Map.Entry<String, ProcessStats> entry : processStatsMap.entrySet()) {
                     ProcessStats stats = entry.getValue();
-                    content.append(String.format(Locale.getDefault(),
-                            "  %s: CPU=%.2f%%, 内存=%s, 线程=%d\n",
+                    content.append(ThreadsTexts.LINE_PROCESS_STATS.format(
                             entry.getKey(),
                             stats.cpuUsage * 100,
                             formatBytes(stats.memoryUsage),
@@ -170,18 +168,17 @@ public class ProfileManager {
                 }
                 content.append("\n");
                 
-                content.append("===== 线程资源统计 =====\n");
+                content.append(ThreadsTexts.TITLE_THREAD_STATS.text());
                 for (Map.Entry<String, ThreadStats> entry : threadStatsMap.entrySet()) {
                     ThreadStats stats = entry.getValue();
-                    content.append(String.format(Locale.getDefault(),
-                            "  %s: CPU=%.2f%%, 状态=%s\n",
+                    content.append(ThreadsTexts.LINE_THREAD_STATS.format(
                             entry.getKey(),
                             stats.cpuUsage * 100,
                             stats.state));
                 }
                 content.append("\n");
                 
-                content.append("===== 详细样本数据 =====\n");
+                content.append(Text.zhEn("===== 详细样本数据 =====\n", "===== Detailed samples =====\n").text());
                 for (ProfileSample sample : samples) {
                     content.append(sample.toString()).append("\n");
                 }
@@ -214,8 +211,8 @@ public class ProfileManager {
         @NonNull
         @Override
             public String toString() {
-                return String.format(Locale.getDefault(),
-                        "[%s] CPU=%.2f%%, 内存=%s, 线程=%d, 进程=%d",
+                return Text.zhEn("[%s] CPU=%.2f%%, 内存=%s, 线程=%d, 进程=%d",
+                        "[%s] CPU=%.2f%%, memory=%s, threads=%d, processes=%d").format(
                         timestamp, cpuUsage * 100, formatBytes(memoryUsage), threadCount, processCount);
             }
 

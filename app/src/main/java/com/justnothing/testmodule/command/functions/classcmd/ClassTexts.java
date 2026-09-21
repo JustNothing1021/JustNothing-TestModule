@@ -1,5 +1,7 @@
 package com.justnothing.testmodule.command.functions.classcmd;
 
+import com.justnothing.testmodule.command.framework.i18n.Text;
+
 import java.util.Map;
 
 /**
@@ -119,6 +121,37 @@ public final class ClassTexts {
 
     // --- class hierarchy ---
     public static final String PARAM_CLASS_HIERARCHY_CLASS_DESC = "param.class.hierarchy.class.desc";
+
+    // ==================== ErrorInfo 文案 ====================
+    // 错误码是稳定标识，码和文案绑在同一处，调用点只引用常量。
+    public static final Text ERR_INVALID_REQUEST = Text.zhEn("类名不能为空", "Class name must not be empty");
+    public static final Text ERR_CLASS_NOT_FOUND = Text.zhEn("类未找到: %s", "Class not found: %s");
+    public static final Text ERR_INTERNAL_ERROR = Text.zhEn("处理失败: %s", "Processing failed: %s");
+    public static final Text ERR_FIELD_NOT_FOUND = Text.zhEn("找不到字段: %s", "Field not found: %s");
+
+    // ==================== 输出文案 ====================
+    // 判据只看「在本族里出现了两次以上」；只用一次的就地写 Text.zhEn，
+    // 跨族复用的（「类名: 」「修饰符: 」那些）走 CliMessages。
+    public static final Text LABEL_FLAGS = Text.zhEn("特性: ", "Flags: ");
+    public static final Text LABEL_TYPE = Text.zhEn("类型: ", "Type: ");
+    public static final Text LABEL_RESULT = Text.zhEn("结果: ", "Result: ");
+    public static final Text LABEL_FOUND_METHOD = Text.zhEn("找到方法: ", "Found method: ");
+    public static final Text LABEL_FOUND_CONSTRUCTOR = Text.zhEn("找到构造函数: ", "Found constructor: ");
+    /** 「静态字段 」——后面紧跟字段名，所以这里要留尾空格。 */
+    public static final Text LABEL_STATIC_FIELD = Text.zhEn("静态字段 ", "Static field ");
+    public static final Text LABEL_SET_TO = Text.zhEn(" 已设置为: ", " set to: ");
+    public static final Text LABEL_FIELD_COUNT = Text.zhEn("字段总数: ", "Field count: ");
+    /** 「(N个):」——「字段 (3个):」这类标题的后半截。 */
+    public static final Text COUNT_PAREN = Text.zhEn(" (%s个):", " (%s):");
+    public static final Text LABEL_STATIC_COUNT = Text.zhEn(" (静态: ", " (static: ");
+    public static final Text LABEL_INSTANCE_COUNT = Text.zhEn(", 实例: ", ", instance: ");
+    /** 「%s 个」这种量词后缀；英文没有量词，直接落回数字。 */
+    public static final Text COUNT_UNIT = Text.zhEn("%s 个", "%s");
+    public static final Text TEXT_NO_FIELDS = Text.zhEn("无字段", "No fields");
+    /** invoke 和 constructor 两个子命令打参数列表用的同一套碎片。 */
+    public static final Text LABEL_CALL_PARAMS = Text.zhEn("调用参数：", "Call arguments:");
+    public static final Text LABEL_PARAM = Text.zhEn("参数", "Argument");
+    public static final Text TEXT_NO_DETAILS = Text.zhEn("没有详细信息", "no details");
 
     private ClassTexts() {
     }

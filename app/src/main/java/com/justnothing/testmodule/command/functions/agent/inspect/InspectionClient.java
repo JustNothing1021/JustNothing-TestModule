@@ -5,6 +5,7 @@ import android.net.LocalSocketAddress;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.framework.model.CommandResult;
 import com.justnothing.testmodule.command.framework.output.ClientRequirements;
 import com.justnothing.testmodule.command.framework.output.Colors;
@@ -12,6 +13,7 @@ import com.justnothing.testmodule.command.framework.utils.GsonFactory;
 import com.justnothing.testmodule.command.framework.protocol.InteractiveProtocol;
 import com.justnothing.testmodule.command.framework.protocol.ProtocolMethods;
 import com.justnothing.testmodule.command.framework.protocol.TerminalRpcChannel;
+import com.justnothing.testmodule.command.functions.agent.AgentTexts;
 import com.justnothing.testmodule.command.functions.agent.response.DbListResult;
 import com.justnothing.testmodule.command.functions.agent.response.DbQueryResult;
 import com.justnothing.testmodule.command.functions.agent.response.DbTablesResult;
@@ -107,7 +109,9 @@ public class InspectionClient {
         if (returnCode < 0) {
             JSONObject error = response.optJSONObject("error");
             String code = error != null ? error.optString("code", "UNKNOWN") : "ERROR_" + returnCode;
-            String msg = error != null ? error.optString("message", "未知错误") : "Agent 命令执行失败";
+            String msg = error != null
+                    ? error.optString("message", AgentTexts.UNKNOWN_ERROR.text())
+                    : Text.zhEn("Agent 命令执行失败", "Agent command failed").text();
             throw new AgentCommandFailedException(code, msg);
         }
 
@@ -122,7 +126,8 @@ public class InspectionClient {
             return jsonObjectToMap((JSONObject) data);
         }
         throw new AgentCommandFailedException("INVALID_RESPONSE",
-                "期望 data 为 JSON Object, 实际: " + (data != null ? data.getClass().getSimpleName() : "null"));
+                Text.zhEn("期望 data 为 JSON Object, 实际: %s", "Expected data to be a JSON Object, got: %s")
+                        .format(data != null ? data.getClass().getSimpleName() : "null"));
     }
 
     public static List<Map<String, Object>> executeAndGetList(String packageName, String command,
@@ -138,7 +143,8 @@ public class InspectionClient {
             return result;
         }
         throw new AgentCommandFailedException("INVALID_RESPONSE",
-                "期望 data 为 JSON Array, 实际: " + (data != null ? data.getClass().getSimpleName() : "null"));
+                Text.zhEn("期望 data 为 JSON Array, 实际: %s", "Expected data to be a JSON Array, got: %s")
+                        .format(data != null ? data.getClass().getSimpleName() : "null"));
     }
 
     public static Set<String> getAvailableCommands(String packageName) throws Exception {
@@ -197,7 +203,8 @@ public class InspectionClient {
                 // 目标应用已下线但 .info 文件残留，清理
                 logger.info("Agent 已离线 (清理遗留文件): " + pkg);
                 safeDelete(infoFile);
-                result.add(new AgentStatus(pkg, 0, "unknown", false, "应用已下线"));
+                result.add(new AgentStatus(pkg, 0, "unknown", false,
+                        Text.zhEn("应用已下线", "app is offline").text()));
             }
         }
 
@@ -331,7 +338,9 @@ public class InspectionClient {
             int returnCode = ack.optInt("returnCode", -1);
             if (returnCode != 0) {
                 JSONObject error = ack.optJSONObject("error");
-                String errMsg = error != null ? error.optString("message", "dispatch 被拒绝") : "未知错误";
+                String errMsg = error != null
+                        ? error.optString("message", Text.zhEn("dispatch 被拒绝", "dispatch rejected").text())
+                        : AgentTexts.UNKNOWN_ERROR.text();
                 callback.onError(errMsg);
                 return;
             }
@@ -690,15 +699,17 @@ public class InspectionClient {
 
     public static class AgentNotFoundException extends Exception {
         public AgentNotFoundException(String pkg) {
-            super("目标应用 " + pkg + " 未注册 InspectionAgent, " +
-                    "可能原因: 应用未运行或者应用未被 Xposed 注入 Agent;" +
-                    " 请确认应用已重启（Xposed Hook 需要应用重新启动才生效）");
+            super(Text.zhEn("目标应用 %s 未注册 InspectionAgent, 可能原因: 应用未运行或者应用未被 Xposed 注入 Agent; 请确认应用已重启（Xposed Hook 需要应用重新启动才生效）",
+                    "No InspectionAgent registered for %s. Possible reasons: the app is not running, or the Xposed Agent has not been injected; make sure the app has been restarted (the Xposed hook only takes effect after a restart)")
+                    .format(pkg));
         }
     }
 
     public static class AgentDeadException extends Exception {
         public AgentDeadException(String pkg) {
-            super("目标应用 " + pkg + " 的 InspectionAgent 无响应（应用可能已崩溃）");
+            super(Text.zhEn("目标应用 %s 的 InspectionAgent 无响应（应用可能已崩溃）",
+                    "The InspectionAgent in %s is not responding (the app may have crashed)")
+                    .format(pkg));
         }
     }
 

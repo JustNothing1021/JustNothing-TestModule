@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.watch.impl;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.functions.watch.util.WatchManager;
 import com.justnothing.testmodule.command.functions.watch.request.WatchClearRequest;
@@ -26,8 +27,8 @@ public class WatchClearCommand extends AbstractWatchCommand<WatchClearRequest, W
         
         manager.clearAll();
         
-        context.println("已清除所有watch任务", Colors.GREEN);
-        context.print("清除数量: ", Colors.CYAN);
+        context.println(Text.zhEn("已清除所有watch任务", "All watch tasks cleared").text(), Colors.GREEN);
+        context.print(Text.zhEn("清除数量: ", "Cleared: ").text(), Colors.CYAN);
         context.println(String.valueOf(count), Colors.YELLOW);
 
         WatchClearResult result = new WatchClearResult();

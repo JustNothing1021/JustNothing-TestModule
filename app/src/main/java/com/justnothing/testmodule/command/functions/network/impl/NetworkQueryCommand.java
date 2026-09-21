@@ -2,6 +2,9 @@ package com.justnothing.testmodule.command.functions.network.impl;
 
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.model.CommandResult;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
+import com.justnothing.testmodule.command.framework.i18n.Text;
+import com.justnothing.testmodule.command.functions.network.NetworkTexts;
 import com.justnothing.testmodule.command.functions.network.model.NetworkRequestInfo;
 import com.justnothing.testmodule.command.functions.network.request.*;
 import com.justnothing.testmodule.command.framework.output.Colors;
@@ -19,22 +22,24 @@ public class NetworkQueryCommand extends AbstractNetworkCommand<CommandRequest<?
     }
 
     public NetworkResult handleStatus(NetworkStatusRequest request) {
-        outln("=== 网络监控状态 ===", Colors.CYAN);
+        outln(Text.zhEn("=== 网络监控状态 ===", "=== Network monitoring status ===").text(), Colors.CYAN);
         outln("", Colors.WHITE);
 
-        out("拦截状态: ", Colors.CYAN);
-        outln(manager.isInterceptEnabled() ? "开启" : "关闭", manager.isInterceptEnabled() ? Colors.GREEN : Colors.RED);
+        out(Text.zhEn("拦截状态: ", "Intercept: ").text(), Colors.CYAN);
+        outln((manager.isInterceptEnabled() ? NetworkTexts.STATUS_ENABLED : NetworkTexts.STATUS_DISABLED).text(),
+                manager.isInterceptEnabled() ? Colors.GREEN : Colors.RED);
 
-        out("记录状态: ", Colors.CYAN);
-        outln(manager.isRecordEnabled() ? "开启" : "关闭", manager.isRecordEnabled() ? Colors.GREEN : Colors.RED);
+        out(Text.zhEn("记录状态: ", "Recording: ").text(), Colors.CYAN);
+        outln((manager.isRecordEnabled() ? NetworkTexts.STATUS_ENABLED : NetworkTexts.STATUS_DISABLED).text(),
+                manager.isRecordEnabled() ? Colors.GREEN : Colors.RED);
 
         int totalRequests = manager.getAllRequests().size();
-        out("已记录请求: ", Colors.CYAN);
-        outln(totalRequests + " 条", Colors.YELLOW);
+        out(Text.zhEn("已记录请求: ", "Recorded requests: ").text(), Colors.CYAN);
+        outln(NetworkTexts.COUNT_ITEMS.format(totalRequests), Colors.YELLOW);
 
         int mockRules = manager.getAllMockRules().size();
-        out("Mock规则: ", Colors.CYAN);
-        outln(mockRules + " 条", Colors.YELLOW);
+        out(Text.zhEn("Mock规则: ", "Mock rules: ").text(), Colors.CYAN);
+        outln(NetworkTexts.COUNT_ITEMS.format(mockRules), Colors.YELLOW);
 
         NetworkResult r = new NetworkResult();
         r.setSubCommand("status");
@@ -49,15 +54,15 @@ public class NetworkQueryCommand extends AbstractNetworkCommand<CommandRequest<?
         List<NetworkRequestInfo> allRequests = manager.getAllRequests();
         
         if (allRequests.isEmpty()) {
-            outln("没有记录的请求", Colors.GRAY);
+            outln(Text.zhEn("没有记录的请求", "No recorded requests").text(), Colors.GRAY);
             NetworkResult r = new NetworkResult();
             r.setSubCommand("list");
             r.setSuccess(true);
-            r.setMessage("无记录");
+            r.setMessage(Text.zhEn("无记录", "No records").text());
             return r;
         }
         
-        outln("=== 请求列表 (" + allRequests.size() + ") ===", Colors.CYAN);
+        outln(Text.zhEn("=== 请求列表 (%d) ===", "=== Request list (%d) ===").format(allRequests.size()), Colors.CYAN);
         outln("", Colors.WHITE);
         
         SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss.SSS");
@@ -66,9 +71,9 @@ public class NetworkQueryCommand extends AbstractNetworkCommand<CommandRequest<?
             out("[" + info.getId() + "] ", Colors.YELLOW);
             out(info.getMethod() + " ", Colors.GREEN);
             outln(info.getUrl(), Colors.WHITE);
-            out("  状态: ", Colors.GRAY);
+            out(Text.zhEn("  状态: ", "  Status: ").text(), Colors.GRAY);
             out(info.getResponseCode() + "", info.getResponseCode() == 200 ? Colors.GREEN : Colors.RED);
-            out(" | 时间: ", Colors.GRAY);
+            out(Text.zhEn(" | 时间: ", " | Time: ").text(), Colors.GRAY);
             outln(sdf.format(new Date(info.getRequestTime())), Colors.GRAY);
             outln("", Colors.WHITE);
         }
@@ -76,7 +81,7 @@ public class NetworkQueryCommand extends AbstractNetworkCommand<CommandRequest<?
         NetworkResult r = new NetworkResult();
         r.setSubCommand("list");
         r.setSuccess(true);
-        r.setMessage("共 " + allRequests.size() + " 条记录");
+        r.setMessage(Text.zhEn("共 %d 条记录", "%d records").format(allRequests.size()));
         return r;
     }
 
@@ -96,24 +101,24 @@ public class NetworkQueryCommand extends AbstractNetworkCommand<CommandRequest<?
             NetworkResult err = new NetworkResult();
             err.setSubCommand("info");
             err.setSuccess(false);
-            err.setMessage("未找到请求 (ID: " + requestId + ")");
+            err.setMessage(Text.zhEn("未找到请求 (ID: %d)", "Request not found (ID: %d)").format(requestId));
             return err;
         }
 
-        outln("=== 请求详情 #" + requestId + " ===", Colors.CYAN);
+        outln(Text.zhEn("=== 请求详情 #%d ===", "=== Request details #%d ===").format(requestId), Colors.CYAN);
         outln("", Colors.WHITE);
 
         out("URL: ", Colors.CYAN); outln(targetInfo.getUrl(), Colors.WHITE);
-        out("方法: ", Colors.CYAN); outln(targetInfo.getMethod(), Colors.GREEN);
-        out("状态码: ", Colors.CYAN); outln(targetInfo.getResponseCode() + "", Colors.YELLOW);
+        out(CliMessages.LABEL_METHOD.text(), Colors.CYAN); outln(targetInfo.getMethod(), Colors.GREEN);
+        out(Text.zhEn("状态码: ", "Status code: ").text(), Colors.CYAN); outln(targetInfo.getResponseCode() + "", Colors.YELLOW);
         out("Host: ", Colors.CYAN); outln(targetInfo.getHost(), Colors.WHITE);
-        out("客户端: ", Colors.CYAN); outln(targetInfo.getClientType(), Colors.GRAY);
+        out(Text.zhEn("客户端: ", "Client: ").text(), Colors.CYAN); outln(targetInfo.getClientType(), Colors.GRAY);
 
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
-        out("时间: ", Colors.CYAN); outln(sdf.format(new Date(targetInfo.getRequestTime())), Colors.GRAY);
+        out(Text.zhEn("时间: ", "Time: ").text(), Colors.CYAN); outln(sdf.format(new Date(targetInfo.getRequestTime())), Colors.GRAY);
 
         if (targetInfo.getHeaders() != null && !targetInfo.getHeaders().isEmpty()) {
-            outln("\n请求头:", Colors.CYAN);
+            outln(Text.zhEn("\n请求头:", "\nRequest headers:").text(), Colors.CYAN);
             targetInfo.getHeaders().forEach((k, v) -> {
                 out("  " + k + ": ", Colors.GRAY);
                 outln(v, Colors.WHITE);
@@ -121,10 +126,10 @@ public class NetworkQueryCommand extends AbstractNetworkCommand<CommandRequest<?
         }
 
         if (targetInfo.getResponseBody() != null) {
-            outln("\n响应体:", Colors.CYAN);
+            outln(Text.zhEn("\n响应体:", "\nResponse body:").text(), Colors.CYAN);
             String body = targetInfo.getResponseBody();
             if (body.length() > 500) {
-                outln(body.substring(0, 500) + "... (截断)", Colors.GRAY);
+                outln(body.substring(0, 500) + Text.zhEn("... (截断)", "... (truncated)").text(), Colors.GRAY);
             } else {
                 outln(body, Colors.GRAY);
             }
@@ -133,19 +138,20 @@ public class NetworkQueryCommand extends AbstractNetworkCommand<CommandRequest<?
         NetworkResult r = new NetworkResult();
         r.setSubCommand("info");
         r.setSuccess(true);
-        r.setMessage("请求 #" + requestId + " 详情");
+        r.setMessage(Text.zhEn("请求 #%d 详情", "Request #%d details").format(requestId));
         return r;
     }
 
     public NetworkResult handleWatch(NetworkWatchRequest request) {
-        outln("实时监控模式 (按 Ctrl+C 停止)...", Colors.CYAN);
+        outln(Text.zhEn("实时监控模式 (按 Ctrl+C 停止)...", "Watch mode (press Ctrl+C to stop)...").text(), Colors.CYAN);
         outln("", Colors.WHITE);
-        outln("提示: 监控模式需要持续运行，建议在后台使用", Colors.GRAY);
+        outln(Text.zhEn("提示: 监控模式需要持续运行，建议在后台使用", "Tip: watch mode runs continuously; use it in the background").text(),
+                Colors.GRAY);
 
         NetworkResult r = new NetworkResult();
         r.setSubCommand("watch");
         r.setSuccess(true);
-        r.setMessage("监控模式启动");
+        r.setMessage(Text.zhEn("监控模式启动", "Watch mode started").text());
         return r;
     }
 
@@ -154,7 +160,7 @@ public class NetworkQueryCommand extends AbstractNetworkCommand<CommandRequest<?
 
         List<NetworkRequestInfo> allRequests = manager.getAllRequests();
 
-        outln("导出 " + allRequests.size() + " 条请求记录到 " + filePath, Colors.CYAN);
+        outln(Text.zhEn("导出 %d 条请求记录到 %s", "Exporting %d request records to %s").format(allRequests.size(), filePath), Colors.CYAN);
 
         try {
             org.json.JSONArray array = new org.json.JSONArray();
@@ -176,13 +182,14 @@ public class NetworkQueryCommand extends AbstractNetworkCommand<CommandRequest<?
             r.setSubCommand("export");
             r.setSuccess(true);
             r.setOutput(json);
-            r.setMessage("导出 " + allRequests.size() + " 条记录 (JSON) → " + filePath);
+            r.setMessage(Text.zhEn("导出 %d 条记录 (JSON) → %s", "Exported %d records (JSON) → %s")
+                    .format(allRequests.size(), filePath));
             return r;
         } catch (Exception e) {
             NetworkResult err = new NetworkResult();
             err.setSubCommand("export");
             err.setSuccess(false);
-            err.setMessage("导出失败: " + e.getMessage());
+            err.setMessage(Text.zhEn("导出失败: %s", "Export failed: %s").format(e.getMessage()));
             return err;
         }
     }
@@ -195,6 +202,6 @@ public class NetworkQueryCommand extends AbstractNetworkCommand<CommandRequest<?
         if (request instanceof NetworkStatusRequest r) return handleStatus(r);
         if (request instanceof NetworkWatchRequest r) return handleWatch(r);
 
-        throw new IllegalArgumentException("不支持的请求类型: " + request.getClass().getSimpleName());
+        throw new IllegalArgumentException(NetworkTexts.UNSUPPORTED_REQUEST_TYPE.format(request.getClass().getSimpleName()));
     }
 }

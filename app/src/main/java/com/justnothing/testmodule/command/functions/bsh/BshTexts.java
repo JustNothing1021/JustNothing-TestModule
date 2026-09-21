@@ -1,6 +1,7 @@
 package com.justnothing.testmodule.command.functions.bsh;
 
 import com.justnothing.testmodule.command.framework.i18n.CliTexts;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 
 import java.util.Map;
 
@@ -40,6 +41,41 @@ public final class BshTexts {
     public static final String PARAM_BSH_SCRIPT_IMPORT_FILEPATH_DESC = "param.bsh.script.import.filePath.desc";
     public static final String PARAM_BSH_SCRIPT_EXPORT_NAME_DESC = "param.bsh.script.export.name.desc";
     public static final String PARAM_BSH_SCRIPT_EXPORT_EXPORTPATH_DESC = "param.bsh.script.export.exportPath.desc";
+
+    // ==================== 族内复用输出文案 ====================
+    // 判据只看「在本族里出现了两次以上」；只用一次的就地写 Text.zhEn。
+    // 跨族复用的标签（「错误: 」这类）在 CliMessages 里，这里不重复。
+
+    /** 请求对象和处理器对不上时的护栏文案（query / manage 两个分发入口都用）。 */
+    public static final Text ERR_UNSUPPORTED_REQUEST_TYPE =
+            Text.zhEn("不支持的请求类型: %s", "Unsupported request type: %s");
+    /** 「N 个脚本」量词后缀：脚本列表的打印行和结果消息共用。 */
+    public static final Text SCRIPT_COUNT = Text.zhEn("%s 个脚本", "%s scripts");
+    /** 脚本目录不存在：打印行在它后面接路径，结果消息直接用。 */
+    public static final Text ERR_SCRIPT_DIR_NOT_FOUND =
+            Text.zhEn("脚本目录不存在", "Script directory not found");
+    /** 带脚本名的「不存在」：打印行再前置 CliMessages.ERROR_PREFIX，结果消息直接用。 */
+    public static final Text ERR_SCRIPT_NOT_FOUND =
+            Text.zhEn("脚本 '%s' 不存在", "Script '%s' does not exist");
+    /** 不带脚本名的「不存在」，只当结果消息用。 */
+    public static final Text ERR_SCRIPT_MISSING =
+            Text.zhEn("脚本不存在", "Script does not exist");
+    /** 带脚本名的「已存在」：打印行再前置 CliMessages.ERROR_PREFIX。 */
+    public static final Text ERR_SCRIPT_EXISTS =
+            Text.zhEn("脚本 '%s' 已存在", "Script '%s' already exists");
+    /** 不带脚本名的「已存在」，只当结果消息用。 */
+    public static final Text ERR_SCRIPT_ALREADY_EXISTS =
+            Text.zhEn("脚本已存在", "Script already exists");
+    /** 执行 BeanShell 代码/脚本抛异常时的提示（异常转储的 Detail 段与结果消息共用）。 */
+    public static final Text ERR_BSH_EXEC_FAILED =
+            Text.zhEn("BeanShell执行出错", "BeanShell execution failed");
+
+    /** 「名称: 」标签。 */
+    public static final Text LABEL_NAME = Text.zhEn("名称: ", "Name: ");
+    /** 「路径: 」标签。 */
+    public static final Text LABEL_PATH = Text.zhEn("路径: ", "Path: ");
+    /** 「提示: 」前缀。 */
+    public static final Text TIP_PREFIX = Text.zhEn("提示: ", "Tip: ");
 
     private BshTexts() {
     }

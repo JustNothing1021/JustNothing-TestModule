@@ -2,6 +2,8 @@ package com.justnothing.testmodule.command.functions.classcmd.impl;
 
 import com.justnothing.testmodule.command.framework.error.IllegalCommandLineArgumentException;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.functions.classcmd.ClassTexts;
 import com.justnothing.testmodule.command.functions.classcmd.model.ClassCommandContext;
 import com.justnothing.testmodule.command.functions.classcmd.request.AnalyzeClassRequest;
@@ -49,7 +51,9 @@ public class ClassAnalyzeCommand extends AbstractClassCommand<AnalyzeClassReques
         var cmd = context.execContext();
 
         if (className == null || className.isEmpty()) {
-            throw new IllegalCommandLineArgumentException("参数不足: class analyze [options] <class_name>");
+            throw new IllegalCommandLineArgumentException(Text.zhEn(
+                    "参数不足: class analyze [options] <class_name>",
+                    "Not enough arguments: class analyze [options] <class_name>").text());
         }
         boolean showHierarchy = request.isShowHierarchy();
         boolean showFields = request.isShowFields();
@@ -71,10 +75,10 @@ public class ClassAnalyzeCommand extends AbstractClassCommand<AnalyzeClassReques
         context.logger().info("成功加载类: " + targetClass.getName());
 
         if (showAll || showFields) {
-            cmd.println("=== 字段 ===", Colors.CYAN);
+            cmd.println(Text.zhEn("=== 字段 ===", "=== Fields ===").text(), Colors.CYAN);
             Map<String, FieldInfo> fieldMap = collectAllFields(targetClass, context);
             if (fieldMap.isEmpty()) {
-                cmd.println("无字段", Colors.GRAY);
+                cmd.println(ClassTexts.TEXT_NO_FIELDS.text(), Colors.GRAY);
             } else {
                 for (FieldInfo fieldInfo : fieldMap.values()) {
                     Field field = findDeclaredField(targetClass, fieldInfo.getName());
@@ -98,9 +102,9 @@ public class ClassAnalyzeCommand extends AbstractClassCommand<AnalyzeClassReques
                                 cmd.print(value.toString(), Colors.LIGHT_GREEN);
                             }
                         } catch (IllegalAccessException | NullPointerException | IllegalArgumentException e) {
-                            cmd.print(" [无法访问: ", Colors.RED);
+                            cmd.print(Text.zhEn(" [无法访问: ", " [inaccessible: ").text(), Colors.RED);
                             String msg = e.getMessage();
-                            cmd.print(msg != null ? msg : "暂无错误信息", Colors.RED);
+                            cmd.print(msg != null ? msg : Text.zhEn("暂无错误信息", "no error message").text(), Colors.RED);
                             cmd.print("]", Colors.RED);
                         }
                     }
@@ -108,12 +112,12 @@ public class ClassAnalyzeCommand extends AbstractClassCommand<AnalyzeClassReques
                     cmd.println("");
 
                     if (showHierarchy && fieldInfo.getDeclaringClass() != null && !fieldInfo.getDeclaringClass().equals(targetClass.getName())) {
-                        cmd.print("    └─> 继承自 ", Colors.GRAY);
+                        cmd.print(Text.zhEn("    └─> 继承自 ", "    └─> inherited from ").text(), Colors.GRAY);
                         cmd.println(fieldInfo.getDeclaringClass(), Colors.GREEN);
                     }
                 }
             }
-            cmd.print("字段总数: ", Colors.CYAN);
+            cmd.print(ClassTexts.LABEL_FIELD_COUNT.text(), Colors.CYAN);
             cmd.println(String.valueOf(fieldMap.size()), Colors.YELLOW);
             cmd.println("");
 
@@ -121,11 +125,11 @@ public class ClassAnalyzeCommand extends AbstractClassCommand<AnalyzeClassReques
         }
 
         if (showAll || showMethods) {
-            cmd.println("=== 方法 ===", Colors.CYAN);
+            cmd.println(Text.zhEn("=== 方法 ===", "=== Methods ===").text(), Colors.CYAN);
             Map<String, MethodInfo> methodMap = collectAllMethods(targetClass, context);
             Map<String, List<String>> methodInterfaceMap = collectMethodInterfaces(targetClass, context);
             if (methodMap.isEmpty()) {
-                cmd.println("无方法", Colors.GRAY);
+                cmd.println(Text.zhEn("无方法", "No methods").text(), Colors.GRAY);
             } else {
                 for (MethodInfo methodInfo : methodMap.values()) {
                     Method method = findDeclaredMethod(targetClass, methodInfo.getName(), methodInfo.getParameterTypes());
@@ -139,7 +143,7 @@ public class ClassAnalyzeCommand extends AbstractClassCommand<AnalyzeClassReques
 
                     if (showHierarchy && interfaceSources != null && !interfaceSources.isEmpty()) {
                         cmd.println("");
-                        cmd.print("      └─> 实现接口: ", Colors.CYAN);
+                        cmd.print(Text.zhEn("      └─> 实现接口: ", "      └─> implements: ").text(), Colors.CYAN);
                         boolean first = true;
                         for (String iface : interfaceSources) {
                             if (!first) {
@@ -152,7 +156,7 @@ public class ClassAnalyzeCommand extends AbstractClassCommand<AnalyzeClassReques
 
                     if (showHierarchy && methodInfo.getDeclaringClass() != null && !methodInfo.getDeclaringClass().equals(targetClass.getName())) {
                         cmd.println("");
-                        cmd.print("      └─> 继承自: ", Colors.CYAN);
+                        cmd.print(Text.zhEn("      └─> 继承自: ", "      └─> inherited from: ").text(), Colors.CYAN);
                         cmd.print(methodInfo.getDeclaringClass(), Colors.GREEN);
                     }
 
@@ -160,7 +164,7 @@ public class ClassAnalyzeCommand extends AbstractClassCommand<AnalyzeClassReques
 
                 }
             }
-            cmd.print("方法总数: ", Colors.CYAN);
+            cmd.print(Text.zhEn("方法总数: ", "Method count: ").text(), Colors.CYAN);
             cmd.println(String.valueOf(methodMap.size()), Colors.YELLOW);
             cmd.println("");
 
@@ -168,11 +172,11 @@ public class ClassAnalyzeCommand extends AbstractClassCommand<AnalyzeClassReques
         }
 
         if (showAll || showConstructors) {
-            cmd.println("=== 构造函数 ===", Colors.CYAN);
+            cmd.println(Text.zhEn("=== 构造函数 ===", "=== Constructors ===").text(), Colors.CYAN);
             Constructor<?>[] constructors = targetClass.getDeclaredConstructors();
             List<MethodInfo> constructorList = new ArrayList<>();
             if (constructors.length == 0) {
-                cmd.println("无构造函数", Colors.GRAY);
+                cmd.println(Text.zhEn("无构造函数", "No constructors").text(), Colors.GRAY);
             } else {
                 for (Constructor<?> constructor : constructors) {
                     cmd.print("  ", Colors.GRAY);
@@ -181,35 +185,35 @@ public class ClassAnalyzeCommand extends AbstractClassCommand<AnalyzeClassReques
                     constructorList.add(MethodInfo.fromConstructor(constructor));
                 }
             }
-            cmd.print("构造函数总数: ", Colors.CYAN);
+            cmd.print(Text.zhEn("构造函数总数: ", "Constructor count: ").text(), Colors.CYAN);
             cmd.println(String.valueOf(constructors.length), Colors.YELLOW);
             cmd.println("");
             result.setConstructors(constructorList);
         }
 
         if (showAll || showModifiers) {
-            cmd.println("=== 类修饰符 ===", Colors.CYAN);
+            cmd.println(Text.zhEn("=== 类修饰符 ===", "=== Class Modifiers ===").text(), Colors.CYAN);
             int mods = targetClass.getModifiers();
-            cmd.print("修饰符: ", Colors.CYAN);
+            cmd.print(CliMessages.LABEL_MODIFIERS.text(), Colors.CYAN);
             cmd.println(Modifier.toString(mods), Colors.YELLOW);
 
-            String flags = ((targetClass.isInterface() ? "接口 " : "") +
-                    (targetClass.isArray() ? "数组 " : "") +
-                    (targetClass.isEnum() ? "枚举 " : "") +
-                    (targetClass.isAnnotation() ? "注解 " : "") +
-                    (Modifier.isAbstract(mods) ? "抽象 " : "") +
+            String flags = ((targetClass.isInterface() ? Text.zhEn("接口 ", "interface ").text() : "") +
+                    (targetClass.isArray() ? Text.zhEn("数组 ", "array ").text() : "") +
+                    (targetClass.isEnum() ? Text.zhEn("枚举 ", "enum ").text() : "") +
+                    (targetClass.isAnnotation() ? Text.zhEn("注解 ", "annotation ").text() : "") +
+                    (Modifier.isAbstract(mods) ? Text.zhEn("抽象 ", "abstract ").text() : "") +
                     (Modifier.isFinal(mods) ? "final " : "") +
-                    (targetClass.isAnonymousClass() ? "匿名类" : "")).trim();
+                    (targetClass.isAnonymousClass() ? Text.zhEn("匿名类", "anonymous class").text() : "")).trim();
 
             if (!flags.isEmpty()) {
-                cmd.print("特性: ", Colors.CYAN);
+                cmd.print(ClassTexts.LABEL_FLAGS.text(), Colors.CYAN);
                 cmd.println(flags, Colors.BLUE);
             }
             cmd.println("");
         }
 
         if (showStats) {
-            cmd.println("=== 统计信息 ===", Colors.CYAN);
+            cmd.println(Text.zhEn("=== 统计信息 ===", "=== Statistics ===").text(), Colors.CYAN);
             Map<String, FieldInfo> fieldMap = collectAllFields(targetClass, context);
             Map<String, MethodInfo> methodMap = collectAllMethods(targetClass, context);
             Constructor<?>[] constructors = targetClass.getDeclaredConstructors();
@@ -229,69 +233,70 @@ public class ClassAnalyzeCommand extends AbstractClassCommand<AnalyzeClassReques
                 else instanceMethodCount++;
             }
 
-            cmd.print("字段: ", Colors.CYAN);
-            cmd.print(fieldMap.size() + " 个", Colors.YELLOW);
-            cmd.print(" (静态: ", Colors.GRAY);
+            cmd.print(CliMessages.LABEL_FIELDS.text(), Colors.CYAN);
+            cmd.print(ClassTexts.COUNT_UNIT.format(fieldMap.size()), Colors.YELLOW);
+            cmd.print(ClassTexts.LABEL_STATIC_COUNT.text(), Colors.GRAY);
             cmd.print(staticFieldCount, Colors.GREEN);
-            cmd.print(", 实例: ", Colors.GRAY);
+            cmd.print(ClassTexts.LABEL_INSTANCE_COUNT.text(), Colors.GRAY);
             cmd.print(instanceFieldCount, Colors.GREEN);
             cmd.println(")", Colors.GRAY);
 
-            cmd.print("方法: ", Colors.CYAN);
-            cmd.print(methodMap.size() + " 个", Colors.YELLOW);
-            cmd.print(" (静态: ", Colors.GRAY);
+            cmd.print(CliMessages.LABEL_METHODS.text(), Colors.CYAN);
+            cmd.print(ClassTexts.COUNT_UNIT.format(methodMap.size()), Colors.YELLOW);
+            cmd.print(ClassTexts.LABEL_STATIC_COUNT.text(), Colors.GRAY);
             cmd.print(staticMethodCount, Colors.GREEN);
-            cmd.print(", 实例: ", Colors.GRAY);
+            cmd.print(ClassTexts.LABEL_INSTANCE_COUNT.text(), Colors.GRAY);
             cmd.print(instanceMethodCount, Colors.GREEN);
             cmd.println(")", Colors.GRAY);
 
-            cmd.print("构造函数: ", Colors.CYAN);
-            cmd.println(constructors.length + " 个", Colors.YELLOW);
+            cmd.print(CliMessages.LABEL_CONSTRUCTORS.text(), Colors.CYAN);
+            cmd.println(ClassTexts.COUNT_UNIT.format(constructors.length), Colors.YELLOW);
 
-            cmd.print("接口: ", Colors.CYAN);
-            cmd.println(interfaces.length + " 个", Colors.YELLOW);
+            cmd.print(CliMessages.LABEL_INTERFACES.text(), Colors.CYAN);
+            cmd.println(ClassTexts.COUNT_UNIT.format(interfaces.length), Colors.YELLOW);
 
             Class<?> current = targetClass;
             int depth = 0;
             while (current != null && current != Object.class) { depth++; current = current.getSuperclass(); }
-            cmd.print("继承深度: ", Colors.CYAN);
-            cmd.println(depth + " 层", Colors.YELLOW);
+            cmd.print(Text.zhEn("继承深度: ", "Inheritance depth: ").text(), Colors.CYAN);
+            cmd.println(Text.zhEn("%s 层", "%s level(s)").format(depth), Colors.YELLOW);
             cmd.println("");
         }
 
         if (showAll) {
-            cmd.println("=== 类信息 ===", Colors.CYAN);
-            cmd.print("类名: ", Colors.CYAN);
+            cmd.println(Text.zhEn("=== 类信息 ===", "=== Class Info ===").text(), Colors.CYAN);
+            cmd.print(CliMessages.LABEL_CLASS_NAME.text(), Colors.CYAN);
             cmd.println(targetClass.getName(), Colors.GREEN);
-            cmd.print("简单类名: ", Colors.CYAN);
+            cmd.print(Text.zhEn("简单类名: ", "Simple name: ").text(), Colors.CYAN);
             cmd.println(targetClass.getSimpleName(), Colors.GREEN);
-            cmd.print("包名: ", Colors.CYAN);
-            cmd.println(targetClass.getPackage() != null ? targetClass.getPackage().getName() : "无", Colors.GREEN);
+            cmd.print(CliMessages.LABEL_PACKAGE_NAME.text(), Colors.CYAN);
+            cmd.println(targetClass.getPackage() != null
+                    ? targetClass.getPackage().getName() : CliMessages.VALUE_NONE.text(), Colors.GREEN);
 
-            String typeInfo = "普通类";
+            String typeInfo = Text.zhEn("普通类", "plain class").text();
             if (targetClass.isArray()) {
-                typeInfo = "数组类型";
+                typeInfo = Text.zhEn("数组类型", "array type").text();
             } else if (targetClass.isPrimitive()) {
-                typeInfo = "原始类型";
+                typeInfo = Text.zhEn("原始类型", "primitive type").text();
             } else if (targetClass.isEnum()) {
-                typeInfo = "枚举";
+                typeInfo = Text.zhEn("枚举", "enum").text();
             } else if (targetClass.isAnnotation()) {
-                typeInfo = "注解";
+                typeInfo = Text.zhEn("注解", "annotation").text();
             } else if (targetClass.isInterface()) {
-                typeInfo = "接口";
+                typeInfo = Text.zhEn("接口", "interface").text();
             }
-            cmd.print("类型: ", Colors.CYAN);
+            cmd.print(ClassTexts.LABEL_TYPE.text(), Colors.CYAN);
             cmd.println(typeInfo, Colors.MAGENTA);
 
             List<String> modifiers = new ArrayList<>();
             if (Modifier.isAbstract(targetClass.getModifiers())) {
-                modifiers.add("抽象类");
+                modifiers.add(Text.zhEn("抽象类", "abstract class").text());
             }
             if (Modifier.isFinal(targetClass.getModifiers())) {
-                modifiers.add("final类");
+                modifiers.add(Text.zhEn("final类", "final class").text());
             }
             if (!modifiers.isEmpty()) {
-                cmd.print("修饰符: ", Colors.CYAN);
+                cmd.print(CliMessages.LABEL_MODIFIERS.text(), Colors.CYAN);
                 for (int i = 0; i < modifiers.size(); i++) {
                     if (i > 0) {
                         cmd.print(", ", Colors.WHITE);
@@ -302,26 +307,26 @@ public class ClassAnalyzeCommand extends AbstractClassCommand<AnalyzeClassReques
             }
             cmd.println("");
 
-            cmd.println("=== 父类 ===", Colors.CYAN);
+            cmd.println(Text.zhEn("=== 父类 ===", "=== Super Class ===").text(), Colors.CYAN);
             Class<?> superClass = targetClass.getSuperclass();
             if (superClass != null) {
                 cmd.println(superClass.getName(), Colors.GREEN);
             } else {
-                cmd.println("无父类", Colors.GRAY);
+                cmd.println(Text.zhEn("无父类", "No super class").text(), Colors.GRAY);
             }
             cmd.println("");
 
-            cmd.println("=== 实现的接口 ===", Colors.CYAN);
+            cmd.println(Text.zhEn("=== 实现的接口 ===", "=== Implemented Interfaces ===").text(), Colors.CYAN);
             Class<?>[] interfaces = targetClass.getInterfaces();
             if (interfaces.length == 0) {
-                cmd.println("无接口", Colors.GRAY);
+                cmd.println(Text.zhEn("无接口", "No interfaces").text(), Colors.GRAY);
             } else {
                 for (Class<?> _interface : interfaces) {
                     cmd.print("  - ", Colors.GRAY);
                     cmd.println(_interface.getName(), Colors.GREEN);
                 }
             }
-            cmd.print("接口总数: ", Colors.CYAN);
+            cmd.print(Text.zhEn("接口总数: ", "Interface count: ").text(), Colors.CYAN);
             cmd.println(String.valueOf(interfaces.length), Colors.YELLOW);
             cmd.println("");
 
@@ -331,11 +336,12 @@ public class ClassAnalyzeCommand extends AbstractClassCommand<AnalyzeClassReques
             }
             result.setInterfaces(interfaceList);
 
-            cmd.println("=== 包信息 ===", Colors.CYAN);
-            cmd.print("包: ", Colors.CYAN);
+            cmd.println(Text.zhEn("=== 包信息 ===", "=== Package Info ===").text(), Colors.CYAN);
+            cmd.print(Text.zhEn("包: ", "Package: ").text(), Colors.CYAN);
             cmd.println(context.targetPackage() != null ? context.targetPackage() : "default", Colors.GREEN);
-            cmd.print("类加载器: ", Colors.CYAN);
-            cmd.println(context.classLoader() != null ? context.classLoader().toString() : "无", Colors.LIGHT_GREEN);
+            cmd.print(CliMessages.LABEL_CLASS_LOADER.text(), Colors.CYAN);
+            cmd.println(context.classLoader() != null
+                    ? context.classLoader().toString() : CliMessages.VALUE_NONE.text(), Colors.LIGHT_GREEN);
         }
 
         context.logger().info("执行成功");

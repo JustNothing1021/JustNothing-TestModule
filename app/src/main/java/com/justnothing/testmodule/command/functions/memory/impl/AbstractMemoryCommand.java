@@ -5,10 +5,12 @@ import android.app.ActivityManager;
 import android.content.Context;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.framework.model.AbstractCommand;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.command.framework.model.CommandResult;
 import com.justnothing.testmodule.command.framework.output.Colors;
+import com.justnothing.testmodule.command.functions.memory.MemoryTexts;
 import com.justnothing.testmodule.command.functions.memory.util.MemoryUtils;
 import com.justnothing.testmodule.utils.logging.Logger;
 
@@ -38,7 +40,7 @@ public abstract class AbstractMemoryCommand<Req extends CommandRequest<?>, Res e
             @SuppressWarnings("unchecked")
             Res errorResult = (Res) new CommandResult();
             errorResult.setSuccess(false);
-            errorResult.setMessage("请求对象不能为空");
+            errorResult.setMessage(Text.zhEn("请求对象不能为空", "Request object must not be null").text());
             return errorResult;
         }
         return executeMemoryCommand(request);
@@ -91,9 +93,9 @@ public abstract class AbstractMemoryCommand<Req extends CommandRequest<?>, Res e
                 count++;
             }
         } catch (IOException e) {
-            context.print("无法读取 /proc/meminfo: ", Colors.RED);
+            context.print(MemoryTexts.READ_MEMINFO_FAILED.text(), Colors.RED);
             context.println(
-                Objects.requireNonNullElse(e.getMessage(), "未知错误"), Colors.YELLOW
+                Objects.requireNonNullElse(e.getMessage(), MemoryTexts.UNKNOWN_ERROR.text()), Colors.YELLOW
             );
         }
     }
@@ -113,18 +115,18 @@ public abstract class AbstractMemoryCommand<Req extends CommandRequest<?>, Res e
                         long text = Long.parseLong(parts[3]) * pageSize;
                         long data = Long.parseLong(parts[5]) * pageSize;
 
-                        MemoryUtils.printMemoryValue(context, "总大小: ", size);
-                        MemoryUtils.printMemoryValue(context, "驻留内存: ", resident);
-                        MemoryUtils.printMemoryValue(context, "共享内存: ", shared);
-                        MemoryUtils.printMemoryValue(context, "代码段: ", text);
-                        MemoryUtils.printMemoryValue(context, "数据段: ", data);
+                        MemoryUtils.printMemoryValue(context, Text.zhEn("总大小: ", "Total size: ").text(), size);
+                        MemoryUtils.printMemoryValue(context, Text.zhEn("驻留内存: ", "Resident memory: ").text(), resident);
+                        MemoryUtils.printMemoryValue(context, Text.zhEn("共享内存: ", "Shared memory: ").text(), shared);
+                        MemoryUtils.printMemoryValue(context, Text.zhEn("代码段: ", "Code segment: ").text(), text);
+                        MemoryUtils.printMemoryValue(context, Text.zhEn("数据段: ", "Data segment: ").text(), data);
                     }
                 }
             }
         } catch (IOException e) {
-            context.print("无法读取进程内存统计: ", Colors.RED);
+            context.print(Text.zhEn("无法读取进程内存统计: ", "Failed to read process memory stats: ").text(), Colors.RED);
             context.println(
-                Objects.requireNonNullElse(e.getMessage(), "未知错误"), Colors.YELLOW
+                Objects.requireNonNullElse(e.getMessage(), MemoryTexts.UNKNOWN_ERROR.text()), Colors.YELLOW
             );
         }
     }
@@ -139,27 +141,27 @@ public abstract class AbstractMemoryCommand<Req extends CommandRequest<?>, Res e
                 count++;
             }
         } catch (IOException e) {
-            result.append("无法读取 /proc/meminfo: ").append(e.getMessage()).append("\n");
+            result.append(MemoryTexts.READ_MEMINFO_FAILED.text()).append(e.getMessage()).append("\n");
         }
         return result.toString();
     }
 
     protected void dumpHeapInfoColored() {
-        context.println("=== 堆内存信息 ===", Colors.CYAN);
+        context.println(Text.zhEn("=== 堆内存信息 ===", "=== Heap memory information ===").text(), Colors.CYAN);
         context.println("");
 
         Runtime runtime = Runtime.getRuntime();
-        context.println("Java运行时内存:", Colors.CYAN);
-        MemoryUtils.printMemoryValue(context, "  最大: ", runtime.maxMemory());
-        MemoryUtils.printMemoryValue(context, "  已分配: ", runtime.totalMemory());
-        MemoryUtils.printMemoryValue(context, "  空闲: ", runtime.freeMemory());
-        MemoryUtils.printMemoryValue(context, "  已用: ", runtime.totalMemory() - runtime.freeMemory());
+        context.println(Text.zhEn("Java运行时内存:", "Java runtime memory:").text(), Colors.CYAN);
+        MemoryUtils.printMemoryValue(context, MemoryTexts.LABEL_INDENTED_MAX.text(), runtime.maxMemory());
+        MemoryUtils.printMemoryValue(context, MemoryTexts.LABEL_INDENTED_ALLOCATED.text(), runtime.totalMemory());
+        MemoryUtils.printMemoryValue(context, MemoryTexts.LABEL_INDENTED_FREE.text(), runtime.freeMemory());
+        MemoryUtils.printMemoryValue(context, MemoryTexts.LABEL_INDENTED_USED.text(), runtime.totalMemory() - runtime.freeMemory());
         context.println("");
 
-        context.println("原生堆内存:", Colors.CYAN);
-        MemoryUtils.printMemoryValue(context, "  已分配: ", android.os.Debug.getNativeHeapAllocatedSize());
-        MemoryUtils.printMemoryValue(context, "  已用: ", android.os.Debug.getNativeHeapSize());
-        MemoryUtils.printMemoryValue(context, "  空闲: ", android.os.Debug.getNativeHeapFreeSize());
+        context.println(Text.zhEn("原生堆内存:", "Native heap memory:").text(), Colors.CYAN);
+        MemoryUtils.printMemoryValue(context, MemoryTexts.LABEL_INDENTED_ALLOCATED.text(), android.os.Debug.getNativeHeapAllocatedSize());
+        MemoryUtils.printMemoryValue(context, MemoryTexts.LABEL_INDENTED_USED.text(), android.os.Debug.getNativeHeapSize());
+        MemoryUtils.printMemoryValue(context, MemoryTexts.LABEL_INDENTED_FREE.text(), android.os.Debug.getNativeHeapFreeSize());
         context.println("");
 
         Context appContext = getApplicationContext();
@@ -170,55 +172,55 @@ public abstract class AbstractMemoryCommand<Req extends CommandRequest<?>, Res e
                 ActivityManager.MemoryInfo memoryInfo = new ActivityManager.MemoryInfo();
                 activityManager.getMemoryInfo(memoryInfo);
 
-                context.println("系统内存:", Colors.CYAN);
-                MemoryUtils.printMemoryValue(context, "  可用: ", memoryInfo.availMem);
-                MemoryUtils.printMemoryValue(context, "  总计: ", memoryInfo.totalMem);
-                MemoryUtils.printMemoryValue(context, "  阈值: ", memoryInfo.threshold);
-                context.print("  低内存: ", Colors.GRAY);
-                context.println(memoryInfo.lowMemory ? "是" : "否",
+                context.println(MemoryTexts.LABEL_SYSTEM_MEMORY.text(), Colors.CYAN);
+                MemoryUtils.printMemoryValue(context, MemoryTexts.LABEL_INDENTED_AVAILABLE.text(), memoryInfo.availMem);
+                MemoryUtils.printMemoryValue(context, MemoryTexts.LABEL_INDENTED_TOTAL.text(), memoryInfo.totalMem);
+                MemoryUtils.printMemoryValue(context, Text.zhEn("  阈值: ", "  Threshold: ").text(), memoryInfo.threshold);
+                context.print(MemoryTexts.LABEL_INDENTED_LOW_MEMORY.text(), Colors.GRAY);
+                context.println(memoryInfo.lowMemory ? MemoryTexts.VALUE_YES.text() : MemoryTexts.VALUE_NO.text(),
                     memoryInfo.lowMemory ? Colors.RED : Colors.LIGHT_GREEN);
                 context.println("");
             }
         }
 
-        context.println("=== 内存详细信息 ===", Colors.CYAN);
+        context.println(Text.zhEn("=== 内存详细信息 ===", "=== Detailed memory information ===").text(), Colors.CYAN);
         context.println("");
         printMeminfoColored();
     }
 
     protected void dumpThreadInfoColored() {
-        context.println("=== 线程信息 ===", Colors.CYAN);
+        context.println(Text.zhEn("=== 线程信息 ===", "=== Thread information ===").text(), Colors.CYAN);
         context.println("");
 
         Map<Thread, StackTraceElement[]> allStackTraces = Thread.getAllStackTraces();
-        context.print("线程总数: ", Colors.GRAY);
+        context.print(MemoryTexts.LABEL_THREAD_COUNT.text(), Colors.GRAY);
         context.println(String.valueOf(allStackTraces.size()), Colors.YELLOW);
         context.println("");
 
-        context.println("=== 线程详情 ===", Colors.CYAN);
+        context.println(Text.zhEn("=== 线程详情 ===", "=== Thread details ===").text(), Colors.CYAN);
         context.println("");
 
         for (Map.Entry<Thread, StackTraceElement[]> entry : allStackTraces.entrySet()) {
             Thread thread = entry.getKey();
             StackTraceElement[] stackTrace = entry.getValue();
 
-            context.print("线程: ", Colors.CYAN);
+            context.print(MemoryTexts.LABEL_THREAD.text(), Colors.CYAN);
             context.println(thread.getName(), Colors.LIGHT_GREEN);
             context.print("  ID: ", Colors.GRAY);
             context.println(String.valueOf(thread.getId()), Colors.YELLOW);
-            context.print("  状态: ", Colors.GRAY);
+            context.print(MemoryTexts.LABEL_THREAD_STATE.text(), Colors.GRAY);
             context.println(thread.getState().toString(), Colors.LIGHT_GREEN);
-            context.print("  优先级: ", Colors.GRAY);
+            context.print(Text.zhEn("  优先级: ", "  Priority: ").text(), Colors.GRAY);
             context.println(String.valueOf(thread.getPriority()), Colors.YELLOW);
-            context.print("  守护: ", Colors.GRAY);
-            context.println(thread.isDaemon() ? "是" : "否",
+            context.print(Text.zhEn("  守护: ", "  Daemon: ").text(), Colors.GRAY);
+            context.println(thread.isDaemon() ? MemoryTexts.VALUE_YES.text() : MemoryTexts.VALUE_NO.text(),
                 thread.isDaemon() ? Colors.MAGENTA : Colors.LIGHT_GREEN);
-            context.print("  中断: ", Colors.GRAY);
-            context.println(thread.isInterrupted() ? "是" : "否",
+            context.print(Text.zhEn("  中断: ", "  Interrupted: ").text(), Colors.GRAY);
+            context.println(thread.isInterrupted() ? MemoryTexts.VALUE_YES.text() : MemoryTexts.VALUE_NO.text(),
                 thread.isInterrupted() ? Colors.RED : Colors.LIGHT_GREEN);
 
             if (stackTrace != null && stackTrace.length > 0) {
-                context.print("  堆栈:", Colors.GRAY);
+                context.print(Text.zhEn("  堆栈:", "  Stack trace:").text(), Colors.GRAY);
                 context.println("");
                 for (StackTraceElement element : stackTrace) {
                     context.print("    ", Colors.DEFAULT);
@@ -231,24 +233,24 @@ public abstract class AbstractMemoryCommand<Req extends CommandRequest<?>, Res e
 
     @SuppressWarnings("SameParameterValue")
     protected void dumpSystemInfoColored() {
-        context.println("=== 系统信息 ===", Colors.CYAN);
+        context.println(Text.zhEn("=== 系统信息 ===", "=== System information ===").text(), Colors.CYAN);
         context.println("");
 
-        context.print("操作系统: ", Colors.GRAY);
+        context.print(MemoryTexts.LABEL_OS.text(), Colors.GRAY);
         context.println(System.getProperty("os.name"), Colors.YELLOW);
-        context.print("系统版本: ", Colors.GRAY);
+        context.print(MemoryTexts.LABEL_OS_VERSION.text(), Colors.GRAY);
         context.println(System.getProperty("os.version"), Colors.YELLOW);
-        context.print("架构: ", Colors.GRAY);
+        context.print(MemoryTexts.LABEL_ARCH.text(), Colors.GRAY);
         context.println(System.getProperty("os.arch"), Colors.YELLOW);
-        context.print("处理器数: ", Colors.GRAY);
+        context.print(Text.zhEn("处理器数: ", "Processor count: ").text(), Colors.GRAY);
         context.println(String.valueOf(Runtime.getRuntime().availableProcessors()), Colors.YELLOW);
-        context.print("Java版本: ", Colors.GRAY);
+        context.print(Text.zhEn("Java版本: ", "Java version: ").text(), Colors.GRAY);
         context.println(System.getProperty("java.version"), Colors.YELLOW);
-        context.print("Java供应商: ", Colors.GRAY);
+        context.print(Text.zhEn("Java供应商: ", "Java vendor: ").text(), Colors.GRAY);
         context.println(System.getProperty("java.vendor"), Colors.YELLOW);
-        context.print("Java虚拟机: ", Colors.GRAY);
+        context.print(Text.zhEn("Java虚拟机: ", "Java VM: ").text(), Colors.GRAY);
         context.println(System.getProperty("java.vm.name"), Colors.YELLOW);
-        context.print("Java虚拟机版本: ", Colors.GRAY);
+        context.print(Text.zhEn("Java虚拟机版本: ", "Java VM version: ").text(), Colors.GRAY);
         context.println(System.getProperty("java.vm.version"), Colors.YELLOW);
         context.println("");
     }

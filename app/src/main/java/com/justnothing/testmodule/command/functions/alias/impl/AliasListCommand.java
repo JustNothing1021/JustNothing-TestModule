@@ -3,6 +3,7 @@ package com.justnothing.testmodule.command.functions.alias.impl;
 import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.model.AbstractCommand;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.functions.alias.request.AliasListRequest;
 import com.justnothing.testmodule.command.functions.alias.response.AliasResult;
 import com.justnothing.testmodule.command.functions.alias.model.AliasInfo;
@@ -45,13 +46,13 @@ public class AliasListCommand extends AbstractCommand<AliasListRequest, AliasRes
         result.setAliases(aliasInfos);
 
         if (context.isCli()) {
-            context.println("当前已定义的别名:", Colors.CYAN);
+            context.println(Text.zhEn("当前已定义的别名:", "Currently defined aliases:").text(), Colors.CYAN);
             for (AliasInfo info : aliasInfos) {
                 context.print("  " + info.getName(), Colors.GREEN);
                 context.println(" -> " + info.getCommand(), Colors.WHITE);
             }
             if (aliasInfos.isEmpty()) {
-                context.println("  (无别名)", Colors.GRAY);
+                context.println(Text.zhEn("  (无别名)", "  (no aliases)").text(), Colors.GRAY);
             }
         }
 

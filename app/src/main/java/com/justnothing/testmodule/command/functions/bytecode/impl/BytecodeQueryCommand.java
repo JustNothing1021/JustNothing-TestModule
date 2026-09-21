@@ -1,7 +1,10 @@
 package com.justnothing.testmodule.command.functions.bytecode.impl;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
+import com.justnothing.testmodule.command.functions.bytecode.BytecodeTexts;
 import com.justnothing.testmodule.command.functions.bytecode.extract.ClassDexExtractor;
 import com.justnothing.testmodule.command.functions.bytecode.extract.DexHeader;
 import com.justnothing.testmodule.command.functions.bytecode.extract.DexSource;
@@ -86,7 +89,7 @@ public class BytecodeQueryCommand extends AbstractBytecodeCommand<CommandRequest
             return handleSource(req, context);
         }
 
-        return buildErrorResult("不支持的请求类型: " + request.getClass().getSimpleName());
+        return buildErrorResult(BytecodeTexts.UNSUPPORTED_REQUEST.format(request.getClass().getSimpleName()));
     }
 
     /** 类的基本元数据 —— 纯反射，反映运行时真实状态。 */
@@ -99,16 +102,22 @@ public class BytecodeQueryCommand extends AbstractBytecodeCommand<CommandRequest
             Class<?> targetClass = loadClass(className, classLoader);
 
             StringBuilder sb = new StringBuilder();
-            sb.append("类名: ").append(targetClass.getName()).append("\n");
-            sb.append("类加载器: ").append(targetClass.getClassLoader()).append("\n");
-            sb.append("包名: ").append(targetClass.getPackage() != null ? targetClass.getPackage().getName() : "无")
+            sb.append(CliMessages.LABEL_CLASS_NAME.text()).append(targetClass.getName()).append("\n");
+            sb.append(CliMessages.LABEL_CLASS_LOADER.text()).append(targetClass.getClassLoader()).append("\n");
+            sb.append(CliMessages.LABEL_PACKAGE_NAME.text())
+                    .append(targetClass.getPackage() != null
+                            ? targetClass.getPackage().getName() : CliMessages.VALUE_NONE.text())
                     .append("\n");
-            sb.append("修饰符: ").append(Modifier.toString(targetClass.getModifiers())).append("\n");
-            sb.append("父类: ").append(targetClass.getSuperclass() != null ? targetClass.getSuperclass().getName() : "无")
+            sb.append(CliMessages.LABEL_MODIFIERS.text())
+                    .append(Modifier.toString(targetClass.getModifiers())).append("\n");
+            sb.append(CliMessages.LABEL_SUPER_CLASS.text())
+                    .append(targetClass.getSuperclass() != null
+                            ? targetClass.getSuperclass().getName() : CliMessages.VALUE_NONE.text())
                     .append("\n");
 
             Class<?>[] interfaces = targetClass.getInterfaces();
-            sb.append("接口: ").append(interfaces.length).append(" 个\n");
+            sb.append(CliMessages.LABEL_INTERFACES.text()).append(interfaces.length)
+                    .append(BytecodeTexts.COUNT_SUFFIX.text()).append("\n");
             if (verbose) {
                 for (Class<?> iface : interfaces) {
                     sb.append("  - ").append(iface.getName()).append("\n");
@@ -116,7 +125,8 @@ public class BytecodeQueryCommand extends AbstractBytecodeCommand<CommandRequest
             }
 
             Method[] methods = targetClass.getDeclaredMethods();
-            sb.append("方法: ").append(methods.length).append(" 个\n");
+            sb.append(CliMessages.LABEL_METHODS.text()).append(methods.length)
+                    .append(BytecodeTexts.COUNT_SUFFIX.text()).append("\n");
             if (verbose) {
                 for (Method method : methods) {
                     sb.append("  - ").append(method.getName())
@@ -125,7 +135,8 @@ public class BytecodeQueryCommand extends AbstractBytecodeCommand<CommandRequest
             }
 
             Field[] fields = targetClass.getDeclaredFields();
-            sb.append("字段: ").append(fields.length).append(" 个\n");
+            sb.append(CliMessages.LABEL_FIELDS.text()).append(fields.length)
+                    .append(BytecodeTexts.COUNT_SUFFIX.text()).append("\n");
             if (verbose) {
                 for (Field field : fields) {
                     sb.append("  - ").append(field.getType().getSimpleName()).append(" ").append(field.getName())
@@ -138,7 +149,8 @@ public class BytecodeQueryCommand extends AbstractBytecodeCommand<CommandRequest
 
         } catch (Exception e) {
             logger.error("获取类信息失败", e);
-            String errorMsg = CommandExceptionHandler.handleException("bytecode", e, context, "获取类信息失败");
+            String errorMsg = CommandExceptionHandler.handleException("bytecode", e, context,
+                    Text.zhEn("获取类信息失败", "Failed to read class info").text());
             return buildErrorResult(errorMsg);
         }
     }
@@ -165,38 +177,51 @@ public class BytecodeQueryCommand extends AbstractBytecodeCommand<CommandRequest
                 }
             }
             if (targetMethod == null) {
-                return buildErrorResult("找不到方法: " + methodName);
+                return buildErrorResult(Text.zhEn("找不到方法: %s", "Method not found: %s").format(methodName));
             }
 
             StringBuilder sb = new StringBuilder();
-            sb.append("方法: ").append(targetMethod.getName()).append("\n");
-            sb.append("修饰符: ").append(Modifier.toString(targetMethod.getModifiers())).append("\n");
-            sb.append("返回类型: ").append(targetMethod.getReturnType().getName()).append("\n");
-            sb.append("参数类型: ").append(Arrays.toString(targetMethod.getParameterTypes())).append("\n");
-            sb.append("异常: ").append(Arrays.toString(targetMethod.getExceptionTypes())).append("\n");
+            sb.append(CliMessages.LABEL_METHOD.text()).append(targetMethod.getName()).append("\n");
+            sb.append(CliMessages.LABEL_MODIFIERS.text())
+                    .append(Modifier.toString(targetMethod.getModifiers())).append("\n");
+            sb.append(Text.zhEn("返回类型: ", "Return type: ").text())
+                    .append(targetMethod.getReturnType().getName()).append("\n");
+            sb.append(Text.zhEn("参数类型: ", "Parameter types: ").text())
+                    .append(Arrays.toString(targetMethod.getParameterTypes())).append("\n");
+            sb.append(Text.zhEn("异常: ", "Exceptions: ").text())
+                    .append(Arrays.toString(targetMethod.getExceptionTypes())).append("\n");
 
-            sb.append("\n方法体拿不到：反射不暴露方法体，而 Android 上 ART 也不保留 JVM 的 .class。\n");
+            sb.append(Text.zhEn(
+                    "\n方法体拿不到：反射不暴露方法体，而 Android 上 ART 也不保留 JVM 的 .class。\n",
+                    "\nThe method body is not available: reflection does not expose it, and ART on Android does not keep the JVM .class either.\n")
+                    .text());
             // 这里刻意只"定位"不"提取"：定位只读类名表，永远有效；提取要复制整个 dex
             // （可能几十 MB），甚至 fork 一个 vdexExtractor —— 只是想告诉用户往哪走，不值这个代价。
             List<DexSource> sources = DexSourceLocator.locate(className);
             if (sources.isEmpty()) {
-                sb.append("也定位不到它落在哪个文件里（可能是运行期动态生成的类）。\n");
+                sb.append(Text.zhEn("也定位不到它落在哪个文件里（可能是运行期动态生成的类）。\n",
+                        "It could not be located in any file either (it may be a runtime-generated class).\n")
+                        .text());
             } else {
-                sb.append("它所在的来源:\n");
+                sb.append(Text.zhEn("它所在的来源:\n", "Sources containing it:\n").text());
                 for (DexSource source : sources) {
                     sb.append("  - ").append(source.getKind()).append("  ")
                             .append(source.getLabel()).append("\n");
                 }
-                sb.append("要看方法体:\n");
-                sb.append("  bytecode dump ").append(className).append("    导出 dex\n");
-                sb.append("  bytecode source ").append(className).append("  直接在设备上反编译成 Java\n");
+                sb.append(Text.zhEn("要看方法体:\n", "To view the method body:\n").text());
+                sb.append("  bytecode dump ").append(className)
+                        .append(Text.zhEn("    导出 dex\n", "    export the dex\n").text());
+                sb.append("  bytecode source ").append(className)
+                        .append(Text.zhEn("  直接在设备上反编译成 Java\n",
+                                "  decompile to Java on device\n").text());
             }
 
             out(context, sb.toString(), Colors.DEFAULT);
             return buildSuccessResult("method", className, sb.toString());
 
         } catch (Exception e) {
-            String errorMsg = CommandExceptionHandler.handleException("bytecode", e, context, "获取方法信息失败");
+            String errorMsg = CommandExceptionHandler.handleException("bytecode", e, context,
+                    Text.zhEn("获取方法信息失败", "Failed to read method info").text());
             return buildErrorResult(errorMsg);
         }
     }
@@ -213,28 +238,37 @@ public class BytecodeQueryCommand extends AbstractBytecodeCommand<CommandRequest
 
         ClassDexExtractor.Outcome outcome = resolveDex(className, context);
         if (outcome == null) {
-            return buildErrorResult("没能取出 " + className + " 所在的 dex，无法分析。\n"
-                    + "先用 `bytecode locate " + className + "` 确认它落在哪个文件里。");
+            return buildErrorResult(
+                    Text.zhEn("没能取出 %s 所在的 dex，无法分析。\n",
+                            "Could not extract the dex containing %s; cannot analyze it.\n")
+                            .format(className)
+                            + BytecodeTexts.LOCATE_HINT.format(className));
         }
 
         byte[] dex = outcome.result().dex();
         DexHeader header = DexHeader.parse(dex);
         if (header == null) {
-            return buildErrorResult("取出来的字节不是合法 dex（魔数不对），无法分析。");
+            return buildErrorResult(Text.zhEn("取出来的字节不是合法 dex（魔数不对），无法分析。",
+                    "The extracted bytes are not a valid dex (bad magic number); cannot analyze.").text());
         }
 
         StringBuilder sb = new StringBuilder();
-        sb.append("类: ").append(className).append("\n");
-        sb.append("来源: ").append(outcome.source().getLabel()).append("\n");
-        sb.append("可信度: ").append(outcome.result().trust().describe()).append("\n\n");
+        sb.append(CliMessages.LABEL_CLASS.text()).append(className).append("\n");
+        sb.append(BytecodeTexts.LABEL_SOURCE.text()).append(outcome.source().getLabel()).append("\n");
+        sb.append(BytecodeTexts.LABEL_TRUST.text()).append(outcome.result().trust().describe())
+                .append("\n\n");
         sb.append(header.describe());
         sb.append("\nchecksum: ")
-                .append(header.checksumMatches(dex) ? "自洽（内容未被改写）" : "对不上（内容被改写过）")
+                .append(header.checksumMatches(dex)
+                        ? Text.zhEn("自洽（内容未被改写）", "consistent (content not modified)").text()
+                        : Text.zhEn("对不上（内容被改写过）", "mismatch (content was modified)").text())
                 .append("\n");
 
         if (request.isVerbose()) {
-            sb.append("\ndex 实际大小: ").append(dex.length).append(" 字节\n");
-            sb.append("提取说明: ").append(outcome.result().note()).append("\n");
+            sb.append(Text.zhEn("\ndex 实际大小: ", "\nActual dex size: ").text())
+                    .append(dex.length).append(BytecodeTexts.UNIT_BYTES.text()).append("\n");
+            sb.append(Text.zhEn("提取说明: ", "Extraction note: ").text())
+                    .append(outcome.result().note()).append("\n");
         }
 
         out(context, sb.toString(), Colors.DEFAULT);
@@ -262,14 +296,21 @@ public class BytecodeQueryCommand extends AbstractBytecodeCommand<CommandRequest
         String methodName = request.getMethodName();
 
         if (!DexDisassembler.available()) {
-            return buildErrorResult("这台设备没有 /system/bin/dexdump，没法在这里反汇编。\n"
-                    + "可以改用 `bytecode dump " + className + "` 导出 dex，在电脑上用 baksmali 看。");
+            return buildErrorResult(Text.zhEn(
+                    "这台设备没有 /system/bin/dexdump，没法在这里反汇编。\n",
+                    "This device has no /system/bin/dexdump; cannot disassemble here.\n").text()
+                    + Text.zhEn("可以改用 `bytecode dump %s` 导出 dex，在电脑上用 baksmali 看。",
+                            "Use `bytecode dump %s` to export the dex and inspect it with baksmali on a PC.")
+                            .format(className));
         }
 
         ClassDexExtractor.Outcome outcome = resolveDex(className, context);
         if (outcome == null) {
-            return buildErrorResult("没能取出 " + className + " 所在的 dex，无法反汇编。\n"
-                    + "先用 `bytecode locate " + className + "` 确认它落在哪个文件里。");
+            return buildErrorResult(
+                    Text.zhEn("没能取出 %s 所在的 dex，无法反汇编。\n",
+                            "Could not extract the dex containing %s; cannot disassemble it.\n")
+                            .format(className)
+                            + BytecodeTexts.LOCATE_HINT.format(className));
         }
 
         String outputPath = request.getOutputPath();
@@ -279,7 +320,7 @@ public class BytecodeQueryCommand extends AbstractBytecodeCommand<CommandRequest
 
         File workDir = resolveOutputDir(null, "disasm");
         if (workDir == null) {
-            return buildErrorResult("找不到可写的中间目录，无法落盘 dex");
+            return buildErrorResult(BytecodeTexts.NO_WORK_DIR.text());
         }
 
         DexDisassembler.Result disasm;
@@ -290,7 +331,8 @@ public class BytecodeQueryCommand extends AbstractBytecodeCommand<CommandRequest
             disasm = DexDisassembler.disassembleClass(dexFile, className, methodName, maxLines);
         } catch (IOException e) {
             logger.error("反汇编 " + className + " 失败", e);
-            return buildErrorResult("反汇编失败: " + e.getMessage());
+            return buildErrorResult(Text.zhEn("反汇编失败: %s", "Disassembly failed: %s")
+                    .format(e.getMessage()));
         } finally {
             // 中间目录里那份 dex 可能有几十 MB，用完必须清掉
             deleteQuietly(workDir);
@@ -298,18 +340,22 @@ public class BytecodeQueryCommand extends AbstractBytecodeCommand<CommandRequest
 
         if (disasm == null) {
             return buildErrorResult(methodName != null && !methodName.isEmpty()
-                    ? "没读到指令：这个类里没有名为 " + methodName + " 的方法（也可能它被内联掉了）"
-                    : "没读到指令：dexdump 跑完了，但输出里没有这个类");
+                    ? Text.zhEn("没读到指令：这个类里没有名为 %s 的方法（也可能它被内联掉了）",
+                            "No instructions read: this class has no method named %s (it may have been inlined)")
+                            .format(methodName)
+                    : Text.zhEn("没读到指令：dexdump 跑完了，但输出里没有这个类",
+                            "No instructions read: dexdump finished but produced nothing for this class")
+                            .text());
         }
 
         boolean trustworthy = outcome.result().trust().isCodeTrustworthy();
         StringBuilder sb = new StringBuilder();
-        sb.append("类: ").append(className).append("\n");
+        sb.append(CliMessages.LABEL_CLASS.text()).append(className).append("\n");
         if (methodName != null && !methodName.isEmpty()) {
-            sb.append("方法: ").append(methodName).append("\n");
+            sb.append(CliMessages.LABEL_METHOD.text()).append(methodName).append("\n");
         }
-        sb.append("来源: ").append(outcome.source().getLabel()).append("\n");
-        sb.append("指令: dalvik（dexdump -d）\n\n");
+        sb.append(BytecodeTexts.LABEL_SOURCE.text()).append(outcome.source().getLabel()).append("\n");
+        sb.append(Text.zhEn("指令: dalvik（dexdump -d）\n\n", "Instructions: dalvik (dexdump -d)\n\n").text());
 
         if (toFile) {
             File target = new File(outputPath);
@@ -320,10 +366,12 @@ public class BytecodeQueryCommand extends AbstractBytecodeCommand<CommandRequest
                 writeOutput(target, disasm.text().getBytes(StandardCharsets.UTF_8));
             } catch (IOException e) {
                 logger.error("写出 " + target + " 失败", e);
-                return buildErrorResult("写出指令失败: " + e.getMessage());
+                return buildErrorResult(Text.zhEn("写出指令失败: %s", "Failed to write instructions: %s")
+                        .format(e.getMessage()));
             }
-            sb.append("已写入: ").append(target.getAbsolutePath())
-                    .append("  (").append(disasm.text().length()).append(" 字符)\n");
+            sb.append(BytecodeTexts.LABEL_WRITTEN.text()).append(target.getAbsolutePath())
+                    .append("  (").append(disasm.text().length())
+                    .append(Text.zhEn(" 字符)\n", " chars)\n").text());
             String summary = sb.toString();
             out(context, summary, Colors.LIGHT_GREEN);
 
@@ -339,13 +387,20 @@ public class BytecodeQueryCommand extends AbstractBytecodeCommand<CommandRequest
 
         StringBuilder tail = new StringBuilder();
         if (disasm.truncated()) {
-            tail.append("\n... 已截断（上限 ").append(MAX_DISASM_LINES)
-                    .append(" 行）。看全部用 -o <文件>，或加上方法名缩小范围。\n");
+            tail.append(Text.zhEn("\n... 已截断（上限 %s 行）。看全部用 -o <文件>，或加上方法名缩小范围。\n",
+                    "\n... truncated (limit %s lines). Use -o <file> for everything, or add a method name to narrow it down.\n")
+                    .format(MAX_DISASM_LINES));
         }
         if (!trustworthy) {
-            tail.append("\n注意: 这份 dex 被 ART 改写（").append(outcome.result().trust().describe())
-                    .append("），指令里的字段/方法索引指向优化后的槽位，\n");
-            tail.append("      和人写的代码对不上。结构能看，语义别信。\n");
+            tail.append(Text.zhEn("\n注意: 这份 dex 被 ART 改写（",
+                            "\nNote: this dex was rewritten by ART (")
+                    .text())
+                    .append(outcome.result().trust().describe())
+                    .append(Text.zhEn("），指令里的字段/方法索引指向优化后的槽位，\n",
+                            "); the field/method indices in the instructions point to optimized slots,\n").text());
+            tail.append(Text.zhEn("      和人写的代码对不上。结构能看，语义别信。\n",
+                    "      so they do not match hand-written code. The structure is readable; do not trust the semantics.\n")
+                    .text());
         }
 
         String text = header + instructions + tail;
@@ -372,9 +427,14 @@ public class BytecodeQueryCommand extends AbstractBytecodeCommand<CommandRequest
             Class<?> targetClass = loadClass(className, classLoader);
 
             StringBuilder sb = new StringBuilder();
-            sb.append("静态常量字段: ").append(className).append("\n\n");
-            sb.append("dex 里没有 JVM 那种\"常量池\"，所以这里列的是反射能读到的\n");
-            sb.append("static final 字段值 —— 真正有信息量的那部分。\n\n");
+            sb.append(Text.zhEn("静态常量字段: ", "Static constant fields: ").text())
+                    .append(className).append("\n\n");
+            sb.append(Text.zhEn("dex 里没有 JVM 那种\"常量池\"，所以这里列的是反射能读到的\n",
+                    "A dex has no JVM-style \"constant pool\", so what is listed here is what reflection can read:\n")
+                    .text());
+            sb.append(Text.zhEn("static final 字段值 —— 真正有信息量的那部分。\n\n",
+                    "the values of static final fields — the part that actually carries information.\n\n")
+                    .text());
 
             int count = 0;
             for (Field field : targetClass.getDeclaredFields()) {
@@ -389,21 +449,22 @@ public class BytecodeQueryCommand extends AbstractBytecodeCommand<CommandRequest
                     Object raw = field.get(null);
                     value = raw == null ? "null" : raw.toString();
                 } catch (Throwable t) {
-                    value = "[无法读取: " + t.getClass().getSimpleName() + "]";
+                    value = Text.zhEn("[无法读取: %s]", "[unreadable: %s]").format(t.getClass().getSimpleName());
                 }
                 sb.append("  ").append(field.getType().getSimpleName())
                         .append(" ").append(field.getName())
                         .append(" = ").append(value).append("\n");
             }
             if (count == 0) {
-                sb.append("  （没有 static final 字段）\n");
+                sb.append(Text.zhEn("  （没有 static final 字段）\n", "  (no static final fields)\n").text());
             }
 
             out(context, sb.toString(), Colors.DEFAULT);
             return buildSuccessResult("constants", className, sb.toString());
 
         } catch (Exception e) {
-            String errorMsg = CommandExceptionHandler.handleException("bytecode", e, context, "获取常量字段失败");
+            String errorMsg = CommandExceptionHandler.handleException("bytecode", e, context,
+                    Text.zhEn("获取常量字段失败", "Failed to read constant fields").text());
             return buildErrorResult(errorMsg);
         }
     }
@@ -415,43 +476,55 @@ public class BytecodeQueryCommand extends AbstractBytecodeCommand<CommandRequest
 
         ClassDexExtractor.Outcome outcome = resolveDex(className, context);
         if (outcome == null) {
-            return buildErrorResult("没能取出 " + className + " 所在的 dex，无法校验。\n"
-                    + "先用 `bytecode locate " + className + "` 确认它落在哪个文件里。");
+            return buildErrorResult(
+                    Text.zhEn("没能取出 %s 所在的 dex，无法校验。\n",
+                            "Could not extract the dex containing %s; cannot verify it.\n")
+                            .format(className)
+                            + BytecodeTexts.LOCATE_HINT.format(className));
         }
 
         byte[] dex = outcome.result().dex();
         StringBuilder sb = new StringBuilder();
-        sb.append("dex 校验: ").append(className).append("\n");
-        sb.append("来源: ").append(outcome.source().getLabel()).append("\n\n");
+        sb.append(Text.zhEn("dex 校验: ", "Dex verification: ").text()).append(className).append("\n");
+        sb.append(BytecodeTexts.LABEL_SOURCE.text()).append(outcome.source().getLabel()).append("\n\n");
 
         boolean valid = true;
         DexHeader header = DexHeader.parse(dex);
         if (header == null) {
-            sb.append("✗ 魔数不对，这不是一个 dex\n");
+            sb.append(Text.zhEn("✗ 魔数不对，这不是一个 dex\n",
+                    "✗ bad magic number, this is not a dex\n").text());
             valid = false;
         } else {
-            sb.append("✓ 魔数 dex ").append(header.version()).append("\n");
+            sb.append(Text.zhEn("✓ 魔数 dex %s\n", "✓ dex magic %s\n").format(header.version()));
 
             if (header.plausible(dex.length)) {
-                sb.append("✓ 头部声明的大小与文件长度自洽\n");
+                sb.append(Text.zhEn("✓ 头部声明的大小与文件长度自洽\n",
+                        "✓ the size declared in the header matches the file length\n").text());
             } else {
-                sb.append("✗ 头部声明 file_size=").append(header.fileSize())
-                        .append("，实际 ").append(dex.length).append(" 字节，对不上\n");
+                sb.append(Text.zhEn("✗ 头部声明 file_size=%s，实际 %s 字节，对不上\n",
+                                "✗ header declares file_size=%s but the file is %s bytes; mismatch\n")
+                        .format(header.fileSize(), dex.length));
                 valid = false;
             }
 
             if (header.checksumMatches(dex)) {
-                sb.append("✓ checksum 自洽 —— 内容未被改写\n");
+                sb.append(Text.zhEn("✓ checksum 自洽 —— 内容未被改写\n",
+                        "✓ checksum is consistent — content not modified\n").text());
             } else {
-                sb.append("✗ checksum 对不上 —— 内容被改写过（很可能被 ART quicken 过）\n");
+                sb.append(Text.zhEn("✗ checksum 对不上 —— 内容被改写过（很可能被 ART quicken 过）\n",
+                        "✗ checksum mismatch — content was modified (most likely quickened by ART)\n").text());
                 valid = false;
             }
         }
 
-        sb.append("\n可信度: ").append(outcome.result().trust().describe()).append("\n");
-        sb.append("结论: ").append(valid
-                ? "✓ 文件结构与头部一致，可以直接拿去反编译"
-                : "✗ 头部与内容不一致；类/方法/字段结构仍然可读，但代码不可信").append("\n");
+        sb.append("\n").append(BytecodeTexts.LABEL_TRUST.text())
+                .append(outcome.result().trust().describe()).append("\n");
+        sb.append(Text.zhEn("结论: ", "Conclusion: ").text()).append(valid
+                ? Text.zhEn("✓ 文件结构与头部一致，可以直接拿去反编译",
+                        "✓ the file structure matches the header; it is safe to decompile").text()
+                : Text.zhEn("✗ 头部与内容不一致；类/方法/字段结构仍然可读，但代码不可信",
+                        "✗ the header does not match the content; class/method/field structure is still readable, but the code is not trustworthy")
+                        .text()).append("\n");
 
         out(context, sb.toString(), valid ? Colors.LIGHT_GREEN : Colors.YELLOW);
         BytecodeResult result = buildSuccessResult("verify", className, sb.toString());
@@ -476,20 +549,27 @@ public class BytecodeQueryCommand extends AbstractBytecodeCommand<CommandRequest
 
         ClassDexExtractor.Outcome outcome = resolveDex(className, context);
         if (outcome == null) {
-            return buildErrorResult("没能取出 " + className + " 所在的 dex，无法反编译。\n"
-                    + "先用 `bytecode locate " + className + "` 确认它落在哪个文件里。");
+            return buildErrorResult(
+                    Text.zhEn("没能取出 %s 所在的 dex，无法反编译。\n",
+                            "Could not extract the dex containing %s; cannot decompile it.\n")
+                            .format(className)
+                            + BytecodeTexts.LOCATE_HINT.format(className));
         }
 
         StringBuilder sb = new StringBuilder();
         boolean trustworthy = outcome.result().trust().isCodeTrustworthy();
         if (!trustworthy) {
-            sb.append("注意: 这份 dex 已被 ART 改写（").append(outcome.result().trust().describe())
-                    .append("），下面反编译出的逻辑不可信，只能当结构参考。\n\n");
+            sb.append(Text.zhEn("注意: 这份 dex 已被 ART 改写（",
+                    "Note: this dex has been rewritten by ART (").text())
+                    .append(outcome.result().trust().describe())
+                    .append(Text.zhEn("），下面反编译出的逻辑不可信，只能当结构参考。\n\n",
+                            "); the decompiled logic below is not trustworthy and is only good for its structure.\n\n")
+                            .text());
         }
 
         File workDir = resolveOutputDir(null, "source");
         if (workDir == null) {
-            return buildErrorResult("找不到可写的中间目录，无法落盘 dex");
+            return buildErrorResult(BytecodeTexts.NO_WORK_DIR.text());
         }
 
         // 注意用 supportsRichOutput() 而不是 console() != null：agent 在目标进程里执行时
@@ -501,7 +581,8 @@ public class BytecodeQueryCommand extends AbstractBytecodeCommand<CommandRequest
         if (console != null && dexBytes >= CONFIRM_DEX_BYTES
                 && !confirmBigDex(console, className, dexBytes)) {
             deleteQuietly(workDir);
-            return buildErrorResult("已取消（这份 dex 有 " + (dexBytes / 1024 / 1024) + " MB）");
+            return buildErrorResult(Text.zhEn("已取消（这份 dex 有 %s MB）",
+                    "Cancelled (this dex is %s MB)").format(dexBytes / 1024 / 1024));
         }
 
         DexToJava.Result decompiled;
@@ -513,27 +594,36 @@ public class BytecodeQueryCommand extends AbstractBytecodeCommand<CommandRequest
         } catch (Throwable t) {
             logger.error("反编译 " + className + " 失败", t);
             deleteQuietly(workDir);
-            return buildErrorResult("反编译失败: " + t);
+            return buildErrorResult(Text.zhEn("反编译失败: %s", "Decompilation failed: %s").format(t));
         }
 
         if (decompiled == null) {
-            sb.append("没有产出源码。常见原因:\n");
-            sb.append("  - 这份 dex 被 ART 改写过（quicken），dex2jar 读不懂里面的指令\n");
-            sb.append("  - 这个类只有 native / 抽象方法，没有可还原的方法体\n");
-            sb.append("日志里搜 DexToJava 有更具体的原因。");
+            sb.append(Text.zhEn("没有产出源码。常见原因:\n", "No source was produced. Common causes:\n").text());
+            sb.append(Text.zhEn("  - 这份 dex 被 ART 改写过（quicken），dex2jar 读不懂里面的指令\n",
+                    "  - this dex was rewritten by ART (quicken) and dex2jar cannot read its instructions\n")
+                    .text());
+            sb.append(Text.zhEn("  - 这个类只有 native / 抽象方法，没有可还原的方法体\n",
+                    "  - this class has only native / abstract methods, so there is no method body to restore\n")
+                    .text());
+            sb.append(Text.zhEn("日志里搜 DexToJava 有更具体的原因。",
+                    "Search the logs for DexToJava for a more specific reason.").text());
             out(context, sb.toString(), Colors.YELLOW);
             deleteQuietly(workDir);
             return buildErrorResult(sb.toString());
         }
 
-        sb.append("类: ").append(className).append("\n");
-        sb.append("来源: ").append(outcome.source().getLabel()).append("\n");
-        sb.append("链路: dex2jar + CFR（按类处理，峰值堆 ")
-                .append(decompiled.peakHeapBytes() / 1024 / 1024).append(" MB，耗时 ")
-                .append(decompiled.elapsedMs()).append(" ms）\n");
-        sb.append("说明: 代码里可能会经常冒出多余的 (Object) 强转，\n");
-        sb.append("      甚至出现「String 变量被赋值成别的类型」这种假象。\n");
-        sb.append("      原因见 DexToJava 注释：多半是这份 dex 的调试信息被厂商 strip 了。\n\n");
+        sb.append(CliMessages.LABEL_CLASS.text()).append(className).append("\n");
+        sb.append(BytecodeTexts.LABEL_SOURCE.text()).append(outcome.source().getLabel()).append("\n");
+        sb.append(Text.zhEn("链路: dex2jar + CFR（按类处理，峰值堆 %s MB，耗时 %s ms）\n",
+                        "Pipeline: dex2jar + CFR (one class at a time, peak heap %s MB, %s ms)\n")
+                .format(decompiled.peakHeapBytes() / 1024 / 1024, decompiled.elapsedMs()));
+        sb.append(Text.zhEn("说明: 代码里可能会经常冒出多余的 (Object) 强转，\n",
+                "Note: the code may often contain superfluous (Object) casts,\n").text());
+        sb.append(Text.zhEn("      甚至出现「String 变量被赋值成别的类型」这种假象。\n",
+                "      or even the illusion of a String variable being assigned another type.\n").text());
+        sb.append(Text.zhEn("      原因见 DexToJava 注释：多半是这份 dex 的调试信息被厂商 strip 了。\n\n",
+                "      See the DexToJava comments for why: the dex debug info was most likely stripped by the vendor.\n\n")
+                .text());
         String header = sb.toString();
 
         String savedPath = null;
@@ -553,13 +643,13 @@ public class BytecodeQueryCommand extends AbstractBytecodeCommand<CommandRequest
         }
 
         String text = header + decompiled.javaSource()
-                + (savedPath != null ? "\n\n已写入: " + savedPath : "");
+                + (savedPath != null ? "\n\n" + BytecodeTexts.LABEL_WRITTEN.text() + savedPath : "");
 
         // 头部信息按普通文本打，源码走语法高亮 —— 两者分开，高亮失败也不会连累前面的信息
         out(context, header, trustworthy ? Colors.DEFAULT : Colors.YELLOW);
         printCode(context, decompiled.javaSource(), "java", request.isHighlight());
         if (savedPath != null) {
-            out(context, "\n已写入: " + savedPath, Colors.LIGHT_GREEN);
+            out(context, "\n" + BytecodeTexts.LABEL_WRITTEN.text() + savedPath, Colors.LIGHT_GREEN);
         }
 
         BytecodeResult result = buildSuccessResult("source", className, text);
@@ -575,9 +665,10 @@ public class BytecodeQueryCommand extends AbstractBytecodeCommand<CommandRequest
 
     /** 大 dex 的确认框。用户取消（Esc / Ctrl-C）也算"不继续"。 */
     private static boolean confirmBigDex(Console console, String className, long dexBytes) {
-        String question = String.format(
+        String question = Text.zhEn(
                 "这份 dex 有 %.1f MB（类 %s）。在手表上反编译可能要几十秒甚至更久，继续？",
-                dexBytes / 1024.0 / 1024.0, className);
+                "This dex is %.1f MB (class %s). Decompiling on a watch can take tens of seconds or more; continue?")
+                .format(dexBytes / 1024.0 / 1024.0, className);
         try {
             return ConfirmPrompt.ask(question, console, true);
         } catch (CancelledException e) {
@@ -597,7 +688,7 @@ public class BytecodeQueryCommand extends AbstractBytecodeCommand<CommandRequest
         if (console == null) {
             return DexToJava.decompile(dexFile, className, workDir);
         }
-        try (Status status = console.status("反编译 " + className + "…")) {
+        try (Status status = console.status(Text.zhEn("反编译 %s…", "Decompiling %s…").format(className))) {
             Thread ticker = new Thread(() -> {
                 long begin = System.currentTimeMillis();
                 try {
@@ -605,11 +696,13 @@ public class BytecodeQueryCommand extends AbstractBytecodeCommand<CommandRequest
                         Thread.sleep(2000);
                         long seconds = (System.currentTimeMillis() - begin) / 1000;
                         if (seconds >= VERY_SLOW_HINT_SECONDS) {
-                            status.update("反编译 " + className + "… 已 " + seconds
-                                    + " 秒，超出预期（可以 Ctrl-C 中断）");
+                            status.update(Text.zhEn("反编译 %s… 已 %s 秒，超出预期（可以 Ctrl-C 中断）",
+                                            "Decompiling %s… %s s elapsed, longer than expected (Ctrl-C to abort)")
+                                    .format(className, seconds));
                         } else if (seconds >= SLOW_HINT_SECONDS) {
-                            status.update("反编译 " + className + "… 已 " + seconds
-                                    + " 秒（这个类偏大）");
+                            status.update(Text.zhEn("反编译 %s… 已 %s 秒（这个类偏大）",
+                                            "Decompiling %s… %s s elapsed (this class is on the large side)")
+                                    .format(className, seconds));
                         }
                     }
                 } catch (InterruptedException ignored) {

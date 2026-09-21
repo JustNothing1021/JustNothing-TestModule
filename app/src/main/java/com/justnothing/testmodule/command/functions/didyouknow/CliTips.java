@@ -1,27 +1,34 @@
 package com.justnothing.testmodule.command.functions.didyouknow;
 
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.utils.tips.SimpleTipCallback;
 import com.justnothing.testmodule.utils.tips.SpecialTipCallback;
 import com.justnothing.testmodule.utils.tips.TipCallback;
 import com.justnothing.testmodule.utils.tips.TipSystem;
 import com.justnothing.testmodule.utils.tips.lang.ChineseTips;
+import com.justnothing.testmodule.utils.tips.lang.EnglishTips;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * CLI 版"你知道吗"提示的数据桥接层。
  * <p>
  * 数据来源有两个：
  * <ol>
- *   <li><b>App 端共享数据</b> — 通过 {@link TipSystem} 复用 {@link ChineseTips} 中
- *       的所有 DidYouKnow 提示和特殊日期提示，避免重复维护</li>
+ *   <li><b>App 端共享数据</b> — 复用 {@link ChineseTips} / {@link EnglishTips} 中的
+ *       所有 DidYouKnow 提示和特殊日期提示，避免重复维护</li>
  *   <li><b>CLI 专属彩蛋</b> — 终端/REPL/命令系统相关的趣味内容，
  *       只在 CLI 中显示</li>
  * </ol>
+ *
+ * <p>语言跟着 CLI 请求走（{@link CliMessages#chinese()}），不是跟本进程的 Locale ——
+ * 服务端可能跑在目标 app 的进程里，那个进程的语言跟客户端的界面语言是两回事。</p>
  */
 public class CliTips {
 
@@ -29,14 +36,37 @@ public class CliTips {
 
     private static final Random RANDOM = new Random(System.currentTimeMillis());
 
-    /** 共享的 TipSystem 实例（自动根据 Locale 选择中文/英文） */
-    private static final TipSystem TIP_SYSTEM = new TipSystem();
+    /**
+     * 按语言缓存共享的 {@link TipSystem}。
+     * <p>
+     * 它的构造函数会把两种提示全建一遍，不能每次调用都新建；而语言是按请求变的，
+     * 所以也不能只留一个 static 实例（那样先来的客户端会把语言钉死）。
+     */
+    private static final Map<String, TipSystem> TIP_SYSTEMS = new ConcurrentHashMap<>();
 
     /** CLI 专属彩蛋（终端相关内容，不在 App 端显示） */
     private static final List<TipEntry> CLI_EXCLUSIVE_TIPS = new ArrayList<>();
 
     static {
         initCliExclusiveTips();
+    }
+
+    /** App 端"你知道吗"提示，按当前语言取。 */
+    private static Map<Integer, SimpleTipCallback> didYouKnowTips() {
+        return CliMessages.chinese()
+                ? ChineseTips.DidYouKnowTips.getDidYouKnowTips()
+                : EnglishTips.DidYouKnowTips.getDidYouKnowTips();
+    }
+
+    /** App 端特殊日期提示，按当前语言取。 */
+    private static List<SpecialTipCallback> specialTips() {
+        return CliMessages.chinese()
+                ? ChineseTips.SpecialTips.getSpecialTips()
+                : EnglishTips.SpecialTips.getSpecialTips();
+    }
+
+    private static TipSystem tipSystem() {
+        return TIP_SYSTEMS.computeIfAbsent(CliMessages.language(), TipSystem::new);
     }
 
     // ==================== CLI 专属彩蛋初始化 ====================
@@ -88,13 +118,13 @@ public class CliTips {
         int total = appCount + cliCount;
 
         if (total == 0) {
-            return new TipEntry("（暂无提示内容）", "System", false);
+            return new TipEntry(Text.zhEn("（暂无提示内容）", "(no tips yet)").text(), "System", false);
         }
 
         int idx = RANDOM.nextInt(total);
         if (idx < appCount) {
             // App 共享数据
-            Map<Integer, SimpleTipCallback> map = ChineseTips.DidYouKnowTips.getDidYouKnowTips();
+            Map<Integer, SimpleTipCallback> map = didYouKnowTips();
             List<SimpleTipCallback> ordered = new ArrayList<>(map.values());
             SimpleTipCallback cb = ordered.get(idx);
             return new TipEntry(cb.getContent(), cb.getAuthor(), false);
@@ -118,7 +148,7 @@ public class CliTips {
 
         int appCount = getAppTipCount();
         if (index <= appCount) {
-            Map<Integer, SimpleTipCallback> map = ChineseTips.DidYouKnowTips.getDidYouKnowTips();
+            Map<Integer, SimpleTipCallback> map = didYouKnowTips();
             SimpleTipCallback cb = map.get(index);
             if (cb == null) return null;
             return new TipEntry(cb.getContent(), cb.getAuthor(), false);
@@ -140,7 +170,7 @@ public class CliTips {
         List<TipEntry> result = new ArrayList<>();
 
         // App 端 DidYouKnow 数据
-        Map<Integer, SimpleTipCallback> map = ChineseTips.DidYouKnowTips.getDidYouKnowTips();
+        Map<Integer, SimpleTipCallback> map = didYouKnowTips();
         for (Map.Entry<Integer, SimpleTipCallback> entry : map.entrySet()) {
             SimpleTipCallback cb = entry.getValue();
             result.add(new TipEntry(cb.getContent(), cb.getAuthor(), false));
@@ -163,7 +193,7 @@ public class CliTips {
      * 仅获取 App 端 DidYouKnow 提示数量。
      */
     public static int getAppTipCount() {
-        return ChineseTips.DidYouKnowTips.getDidYouKnowTips().size();
+        return didYouKnowTips().size();
     }
 
     /**
@@ -182,7 +212,7 @@ public class CliTips {
      * @return 特殊提示条目，或 null 如果今天没有特殊提示
      */
     public static TipEntry getSpecialForToday() {
-        TipCallback special = TIP_SYSTEM.getDisplayTipForWelcome();
+        TipCallback special = tipSystem().getDisplayTipForWelcome();
         if (special == null) return null;
         return new TipEntry(special.getContent(), special.getAuthor(), false);
     }
@@ -194,7 +224,7 @@ public class CliTips {
      */
     public static List<TipEntry> getAllSpecialTips() {
         List<TipEntry> result = new ArrayList<>();
-        for (SpecialTipCallback cb : ChineseTips.SpecialTips.getSpecialTips()) {
+        for (SpecialTipCallback cb : specialTips()) {
             String author = cb.getAuthor();
             if (author == null || author.isEmpty()) {
                 author = "TipSystem";

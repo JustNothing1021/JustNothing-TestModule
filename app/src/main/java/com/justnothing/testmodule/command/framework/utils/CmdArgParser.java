@@ -1,6 +1,7 @@
 package com.justnothing.testmodule.command.framework.utils;
 
 import com.justnothing.testmodule.command.framework.annotation.CmdParam;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import com.justnothing.testmodule.utils.logging.Logger;
 
@@ -419,10 +420,10 @@ public class CmdArgParser {
                 explicitlySet.add(field.getName());
                 return currentIndex + 2;
             } else {
-                throw new IllegalArgumentException("参数 " + param.name() + " 需要值");
+                throw new IllegalArgumentException(CliMessages.ERR_PARAM_NEEDS_VALUE.format(param.name()));
             }
         } catch (Exception e) {
-            throw new IllegalArgumentException("设置字段 " + field.getName() + " 失败: " + e.getMessage(), e);
+            throw new IllegalArgumentException(CliMessages.ERR_SET_FIELD_FAILED.format(field.getName(), e.getMessage()), e);
         }
     }
 

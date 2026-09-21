@@ -2,6 +2,7 @@ package com.justnothing.testmodule.command.functions.threads.impl;
 
 import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.annotation.SubCommandInfo;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.functions.threads.ThreadsTexts;
 import com.justnothing.testmodule.command.functions.threads.util.ProfileManager;
@@ -25,22 +26,22 @@ public class ThreadProfileStopCommand extends AbstractThreadsCommand<ThreadProfi
 
         try {
             manager.stopProfiling();
-            context.println("已停止性能分析", Colors.GREEN);
-            context.println("提示: 使用 'threads profile show' 查看结果", Colors.GRAY);
+            context.println(Text.zhEn("已停止性能分析", "Profiling stopped").text(), Colors.GREEN);
+            context.println(ThreadsTexts.HINT_VIEW_RESULTS.text(), Colors.GRAY);
 
             ThreadProfileStopResult result = new ThreadProfileStopResult();
             result.setSuccess(true);
-            result.setMessage("成功停止");
+            result.setMessage(Text.zhEn("成功停止", "Stopped successfully").text());
             return result;
         } catch (IllegalStateException e) {
-            context.println("当前没有正在进行的性能分析", Colors.YELLOW);
+            context.println(Text.zhEn("当前没有正在进行的性能分析", "No profiling session is currently running").text(), Colors.YELLOW);
             
             ThreadProfileStopResult result = new ThreadProfileStopResult();
             result.setSuccess(false);
             result.setMessage(e.getMessage());
             return result;
         } catch (Exception e) {
-            context.println("停止性能分析失败: " + e.getMessage(), Colors.RED);
+            context.println(Text.zhEn("停止性能分析失败: %s", "Failed to stop profiling: %s").format(e.getMessage()), Colors.RED);
             
             ThreadProfileStopResult result = new ThreadProfileStopResult();
             result.setSuccess(false);

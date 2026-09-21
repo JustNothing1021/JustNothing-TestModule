@@ -1,6 +1,7 @@
 package com.justnothing.testmodule.command.functions.nativecmd;
 
 import com.justnothing.testmodule.command.framework.i18n.CliTexts;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 
 import java.util.Map;
 
@@ -40,6 +41,24 @@ public final class NativeTexts {
     public static final String PARAM_NATIVE_STACK_THREADID_DESC = "param.native.stack.threadId.desc";
     public static final String PARAM_NATIVE_MAPS_VERBOSE_DESC = "param.native.maps.verbose.desc";
     public static final String PARAM_NATIVE_SEARCH_PATTERN_DESC = "param.native.search.pattern.desc";
+
+    // ==================== 输出文案 ====================
+    // 判据只看「在本族里出现了两次以上」；只用一次的就地写 Text.zhEn。
+    // LABEL_PATH / VALUE_UNKNOWN / UNIT_BYTES / COUNT_UNIT 这几条在别的命令族里也有同款文案，
+    // 先放在这里，等统一归位（见本族迁移报告）。
+    /** 「数量: 」——list / symbols / cli / search 四个子命令的计数行都用它。 */
+    public static final Text LABEL_COUNT = Text.zhEn("数量: ", "Count: ");
+    /** 「%s 个」这种量词后缀；英文没有量词，直接落回数字。 */
+    public static final Text COUNT_UNIT = Text.zhEn("%s 个", "%s");
+    /** 「N 字节」的后缀。带前导空格 —— 调用点是「数字 + 空格 + 单位」的拼法。 */
+    public static final Text UNIT_BYTES = Text.zhEn(" 字节", " bytes");
+    /** 「路径: 」标签。 */
+    public static final Text LABEL_PATH = Text.zhEn("路径: ", "Path: ");
+    /** 取不到值（库路径等）时当值用的「未知」。 */
+    public static final Text VALUE_UNKNOWN = Text.zhEn("未知", "unknown");
+    /** 请求对象和处理器对不上时的护栏异常文案。 */
+    public static final Text ERR_UNSUPPORTED_REQUEST_TYPE =
+            Text.zhEn("不支持的请求类型: %s", "Unsupported request type: %s");
 
     private NativeTexts() {
     }

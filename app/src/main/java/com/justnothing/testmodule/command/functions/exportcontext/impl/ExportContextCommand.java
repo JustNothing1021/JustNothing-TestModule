@@ -10,8 +10,11 @@ import android.text.TextUtils;
 
 import com.justnothing.testmodule.command.framework.model.AbstractCommand;
 import com.justnothing.testmodule.command.framework.CommandExecutor;
+import com.justnothing.testmodule.command.framework.i18n.CliMessages;
+import com.justnothing.testmodule.command.framework.i18n.Text;
 import com.justnothing.testmodule.command.framework.output.Colors;
 import com.justnothing.testmodule.command.framework.utils.CommandExceptionHandler;
+import com.justnothing.testmodule.command.functions.exportcontext.ExportContextTexts;
 import com.justnothing.testmodule.command.functions.exportcontext.model.ContextFieldInfo;
 import com.justnothing.testmodule.command.functions.exportcontext.request.ExportContextRequest;
 import com.justnothing.testmodule.command.functions.exportcontext.response.ExportContextResult;
@@ -48,9 +51,9 @@ public class ExportContextCommand extends AbstractCommand<ExportContextRequest, 
             Context appContext = getApplicationContext();
             if (appContext == null) {
                 logger.error("无法获取应用上下文");
-                context.println("错误: 无法获取应用上下文", Colors.RED);
+                context.println(CliMessages.ERROR_PREFIX.text() + ExportContextTexts.ERR_NO_APP_CONTEXT.text(), Colors.RED);
                 result.setSuccess(false);
-                result.setMessage("无法获取应用上下文");
+                result.setMessage(ExportContextTexts.ERR_NO_APP_CONTEXT.text());
                 return result;
             }
 
@@ -71,7 +74,9 @@ public class ExportContextCommand extends AbstractCommand<ExportContextRequest, 
                 if (context.getRequest().isPrettyPrinting()) {
                     StringBuilder sb = new StringBuilder();
                     sb.append("╔══════════════════════════════════════════╗\n");
-                    sb.append("║       设备上下文信息                       ║\n");
+                    sb.append(Text.zhEn(
+                            "║       设备上下文信息                       ║\n",
+                            "║       Device Context Information           ║\n").text());
                     sb.append("╠══════════════════════════════════════════╣\n");
 
                     String currentCategory = null;
@@ -92,17 +97,20 @@ public class ExportContextCommand extends AbstractCommand<ExportContextRequest, 
                         context.println(jsonOutput);
                     } catch (Exception e) {
                         logger.error("JSON序列化失败", e);
-                        context.print("错误: JSON序列化失败 - ", Colors.RED);
-                        context.println(Objects.requireNonNullElse(e.getMessage(), "无法获取错误信息"), Colors.YELLOW);
+                        context.print(CliMessages.ERROR_PREFIX.text() + Text.zhEn(
+                                "JSON序列化失败 - ", "JSON serialization failed - ").text(), Colors.RED);
+                        context.println(Objects.requireNonNullElse(e.getMessage(),
+                                Text.zhEn("无法获取错误信息", "Error message unavailable").text()), Colors.YELLOW);
                     }
                 }
             }
 
         } catch (Exception e) {
             logger.error("导出设备上下文信息失败", e);
-            CommandExceptionHandler.handleException("export-context", e, context, "导出设备上下文信息失败");
+            CommandExceptionHandler.handleException("export-context", e, context, Text.zhEn(
+                    "导出设备上下文信息失败", "Failed to export the device context").text());
             result.setSuccess(false);
-            result.setMessage("导出上下文失败: " + e.getMessage());
+            result.setMessage(Text.zhEn("导出上下文失败: %s", "Failed to export the context: %s").format(e.getMessage()));
         }
 
         return result;

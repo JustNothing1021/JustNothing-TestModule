@@ -1,5 +1,6 @@
 package com.justnothing.testmodule.command.functions.breakpoint.util;
 
+import com.justnothing.testmodule.command.functions.breakpoint.BreakpointTexts;
 import com.justnothing.testmodule.command.functions.intercept.base.AbstractInterceptManager;
 import com.justnothing.testmodule.command.functions.intercept.base.BreakpointInterceptTask;
 import com.justnothing.testmodule.command.functions.intercept.base.TaskType;
@@ -42,7 +43,7 @@ public class BreakpointManager extends AbstractInterceptManager<BreakpointInterc
             return addTask(task);
         } catch (Exception e) {
             logger.error("添加断点失败", e);
-            throw new RuntimeException("添加断点失败: " + e.getMessage(), e);
+            throw new RuntimeException(BreakpointTexts.ERR_ADD_FAILED.text() + ": " + e.getMessage(), e);
         }
     }
 

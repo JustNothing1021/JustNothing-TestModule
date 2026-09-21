@@ -1,5 +1,7 @@
 package com.justnothing.testmodule.command.functions.didyouknow;
 
+import com.justnothing.testmodule.command.framework.i18n.Text;
+
 import java.util.Map;
 
 /**
@@ -34,6 +36,10 @@ public final class DidYouKnowTexts {
     public static final String PARAM_DID_YOU_KNOW_SPECIAL_DESC = "param.did-you-know.special.desc";
     public static final String PARAM_DID_YOU_KNOW_SPECIAL_LIST_DESC = "param.did-you-know.special-list.desc";
     public static final String PARAM_DID_YOU_KNOW_HELP_DESC = "param.did-you-know.help.desc";
+
+    // ==================== 族内复用输出文案 ====================
+    // 统计面板里「N 条」这个值出现了 3 次（App 端 / CLI 专属 / 总计）。
+    public static final Text VALUE_TIP_COUNT = Text.zhEn("%s 条", "%s tips");
 
     private DidYouKnowTexts() {
     }
