@@ -5,6 +5,7 @@ import com.justnothing.richconsole.console.Group;
 import com.justnothing.richconsole.errors.ConsoleError;
 import com.justnothing.richconsole.layout.Layout;
 import com.justnothing.richconsole.panel.Panel;
+import com.justnothing.richconsole.segment.Segment;
 import com.justnothing.richconsole.table.Table;
 import com.justnothing.testmodule.command.framework.CommandExecutor;
 import com.justnothing.testmodule.command.framework.model.CommandRequest;
@@ -12,7 +13,9 @@ import com.justnothing.testmodule.command.framework.model.CommandRequest;
 import org.jline.terminal.Terminal;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -133,5 +136,49 @@ public class PlainConsoleFallbackTest {
         assertTrue("Layout 渲染出来是空的，真机上就是「仪表盘不见了」，实际内容: "
                 + (captured.isEmpty() ? "(空)" : captured),
                 captured.contains("Overall") && captured.contains("CPU"));
+    }
+
+    /**
+     * Table 渲染出来不能超过它自己拿到的最大宽度。
+     *
+     * <p>算列宽时只把「各列宽之和」控制在上限内，没扣表框自身的开销 —— 左右边 2 格加上
+     * {@code numCols-1} 格列间分隔。整表因此比 maxWidth 宽出 {@code numCols+1} 格。
+     * 裸着用时看不出来（终端自动折行），一旦外面套着 {@code Panel} / {@code Layout}，
+     * 多出来的那截就被裁掉：真机上的样子是 <b>Panel 里那张表丢了右边框</b>（jank 的每个面板都是
+     * {@code Panel(Table)}）。</p>
+     */
+    @Test
+    public void tableStaysWithinItsMaxWidth() {
+        Console console = contextWith(new StringBuilderCollector()).console();
+        Table table = Table.of(cfg -> cfg.expand(true).showHeader(false));
+        table.addColumn("Item", "cyan", null);
+        table.addColumn("", null, null);
+        table.addColumn("Value", null, "right");
+        table.addRow("Overall", "---", "12%");
+        table.addRow("Core #0", "---+", "30%");
+
+        int width = console.getWidth();
+        for (String line : renderToLines(console, table)) {
+            assertTrue("表格渲染出 " + line.length() + " 格，超过了可用宽度 " + width
+                    + "，超出的部分会被外层裁掉（就是「右边框消失」）：|" + line + "|",
+                    line.length() <= width);
+        }
+    }
+
+    /** 走 Segment 层取字符：这里只关心宽度，不经过终端编码。 */
+    private static List<String> renderToLines(Console console, Object renderable) {
+        List<String> lines = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        for (Segment segment : console.render(renderable, console.getOptions())) {
+            for (char c : segment.getText().toCharArray()) {
+                if (c == '\n') {
+                    lines.add(current.toString());
+                    current.setLength(0);
+                } else {
+                    current.append(c);
+                }
+            }
+        }
+        return lines;
     }
 }

@@ -2,6 +2,11 @@ plugins {
     alias(libs.plugins.android.application)
 }
 
+// 构建期生成的 Hook 组件包清单常量放这里（由 generateHookPackRegistry 写）。
+// 见 HookPackLoader 的类注释：这份清单必须是编译期常量，不能在 zygote 里读出来。
+// （要不是我加了可拆分根本就不知道还有这一出）
+def hookPackRegistryDir = file('build/generated/hookpack/java')
+
 
 android {
     namespace = 'com.justnothing.testmodule'
@@ -35,8 +40,10 @@ android {
     packaging {
         resources {
             excludes += ['META-INF/DEPENDENCIES', 'META-INF/LICENSE', 'META-INF/LICENSE.txt', 'META-INF/NOTICE', 'META-INF/NOTICE.txt']
-            // 多个 Hook 组件包会各带一份 hookpack.list，这里把它们拼起来而不是报重复
-            merges += ['hookpack.list']
+            // 每个 Hook 组件包都带一份 hookpack.list。清单已经在构建期被并进 HookPackRegistry 常量，
+            // 运行时不再需要它 —— 直接丢掉，顺便断绝"以后又有人去 classloader 里读它"的念想
+            // （读了就会在 zygote 里把 APK 打开并留下 fd，见 HookPackLoader 的类注释）。
+            excludes += ['hookpack.list']
         }
         jniLibs {
             useLegacyPackaging = true
@@ -74,6 +81,7 @@ android {
 
         getByName("main") {
             jniLibs.srcDirs("src/main/jniLibs")
+            java.srcDir(hookPackRegistryDir)
         }
     }
 
@@ -125,7 +133,7 @@ dependencies {
 }
 
 // 给 Hook 组件包编译用的 API 包（Hook API + xposed api），只给组件包当 compileOnly，不进 APK。
-// 组件包工程里写：compileOnly files("<本仓库>/app/build/hookApi/hook-api.jar")
+// 组件包工程里写：compileOnly files("<本仓库>/app/build/hook-api/hook-api.jar")
 // 注意：Hook 会碰 android.* 的类，所以组件包工程自己还得有 SDK 的 android.jar。
 configurations {
     hookApiExtra {
@@ -146,7 +154,7 @@ tasks.register('hookApiJar', Jar) {
     description = '打包 Hook 组件包编译所需的 hook-api.jar'
     dependsOn 'compileDebugJavaWithJavac'
     archiveFileName = 'hook-api.jar'
-    destinationDirectory = layout.buildDirectory.dir('hookApi')
+    destinationDirectory = layout.buildDirectory.dir('hook-api')
     // 组件包能看到的公开面。
     from(debugJavacClasses) {
         include 'com/justnothing/testmodule/hooks/**'
@@ -155,10 +163,84 @@ tasks.register('hookApiJar', Jar) {
         include 'com/justnothing/testmodule/service/**'
         exclude 'com/justnothing/testmodule/hooks/HookEntry.class'
         exclude 'com/justnothing/testmodule/hooks/HookPackLoader.class'
+        exclude 'com/justnothing/testmodule/hooks/HookPackRegistry.class'
     }
     from({ configurations.hookApiExtra.collect { zipTree(it) } }) {
         include 'de/robv/android/xposed/**'
     }
+}
+
+/**
+ * 把 app/hookpacks/*.jar 里的 hookpack.list 拼成一份**编译期常量**（HookPackRegistry.java）。
+ *
+ * 为什么不能在运行时 getResources("hookpack.list")：HookEntry 的静态块在 zygote 进程里执行
+ * （EdXposed 调 initZygote 之前得先初始化那个类），而 classloader 找这个条目时会把模块自己的
+ * APK 当 zip 打开 —— zygote 从此长期持有 /data/app/<pkg>-<后缀>/base.apk 的 fd。重装模块后
+ * 这条 fd 悬空，下一次 fork 时 native 层按路径重开失败，直接 SIGABRT 把整机的新进程全带走
+ * （com_android_internal_os_Zygote.cpp:1101 Unable to reopen whitelisted descriptors）。
+ *
+ * 挪到编译期之后 zygote 里一个文件都不用碰。实测对照过：改之前 zygote 握着那条 fd，
+ * 改之后没有。详细来龙去脉见 HookPackLoader 的类注释。
+ */
+tasks.register('generateHookPackRegistry') {
+    group = 'build'
+    description = '把 app/hookpacks/*.jar 里的 hookpack.list 拼成 HookPackRegistry.java'
+
+    def hookPackDir = file("$projectDir/hookpacks")
+    inputs.dir(hookPackDir).optional()
+    outputs.dir(hookPackRegistryDir)
+
+    doLast {
+        // 按 jar 文件名的顺序扫、按出现顺序去重，结果稳定（构建缓存才靠得住）。
+        def names = new LinkedHashSet<String>()
+        fileTree(dir: hookPackDir, include: ['*.jar']).files.sort { it.name }.each { jarFile ->
+            new java.util.zip.ZipFile(jarFile).withCloseable { zip ->
+                def entry = zip.getEntry('hookpack.list')
+                if (entry == null) {
+                    logger.lifecycle("组件包 ${jarFile.name} 里没有 hookpack.list，跳过")
+                    return
+                }
+                zip.getInputStream(entry).withCloseable { input ->
+                    input.newReader('UTF-8').readLines().each { line ->
+                        def name = line.trim()
+                        if (!name.isEmpty() && !name.startsWith('#')) {
+                            names.add(name)
+                        }
+                    }
+                }
+            }
+        }
+
+        def entries = names.collect { '            "' + it + '",' }.join('\n')
+        def outFile = new File(hookPackRegistryDir, 'com/justnothing/testmodule/hooks/HookPackRegistry.java')
+        outFile.parentFile.mkdirs()
+        outFile.setText("""package com.justnothing.testmodule.hooks;
+
+/**
+ * 由 {@code generateHookPackRegistry} 在构建期生成，<b>不要手改</b>。
+ *
+ * <p>内容 = {@code app/hookpacks/*.jar} 里所有 {@code hookpack.list} 的并集。</p>
+ *
+ * <p>之所以做成常量而不是运行时读清单，见 {@link HookPackLoader} 的类注释。</p>
+ */
+public final class HookPackRegistry {
+
+    /** 组件包要注册的 Hook 类的全限定名。 */
+    public static final String[] HOOK_CLASSES = {
+$entries
+    };
+
+    private HookPackRegistry() {
+        throw new UnsupportedOperationException("不能实例化 HookPackRegistry...");
+    }
+}
+""", 'UTF-8')
+        logger.lifecycle("HookPackRegistry: ${names.size()} 个 Hook 类 -> ${outFile}")
+    }
+}
+
+tasks.named('preBuild') {
+    dependsOn 'generateHookPackRegistry'
 }
 
 
@@ -187,30 +269,42 @@ tasks.register('prepareMagiskFiles', Task) {
         delete magiskDir
         magiskDir.mkdirs()
 
-        // 子目录
+        // 结构必须严格照 Magisk 25.x 的模块规范：
+        // module.prop / post-fs-data.sh / service.sh 都在**模块根**，
+        // 脚本放子目录（以前那个 common/）Magisk 一律不执行。
         file("${magiskDir}/system/bin").mkdirs()
         file("${magiskDir}/system/framework").mkdirs()
-        file("${magiskDir}/common/binary").mkdirs()
-        file("${magiskDir}/common").mkdirs()
+        file("${magiskDir}/META-INF/com/google/android").mkdirs()
 
-        file("${magiskDir}/module.prop").text = 
-            """
-            id=JustNothing-module
-            name=啥也不是的模块
-            version=${android.defaultConfig.versionName}
-            versionCode=${android.defaultConfig.versionCode}
-            author=JustNothing1021
-            description=一个用来调试安卓开发千奇百怪的诡异问题的Xposed模块/命令行工具, 这个是配套的magisk模块, 会给busybox也顺手装上
-            """
+        // 别用 """ 缩进写：那样每行都会带上前导空格，Magisk 就解析不出 id= 了
+        // （以前就是这么写的，很可能正是"安装时把文件解到 /data/adb/modules 根目录"的起因）。
+        file("${magiskDir}/module.prop").text =
+            "id=JustNothing-module\n" +
+            "name=啥也不是的模块\n" +
+            "version=${android.defaultConfig.versionName}\n" +
+            "versionCode=${android.defaultConfig.versionCode}\n" +
+            "author=JustNothing1021\n" +
+            "description=一个用来调试安卓开发千奇百怪的诡异问题的Xposed模块/命令行工具, 这个是配套的magisk模块, 会给busybox也顺手装上\n"
 
+        // META-INF 是"这个 zip 能被当成 Magisk 模块刷"的凭证：缺了它安装器不认，
+        // 表现是解压得莫名其妙。update-binary 会被 Magisk 自己覆盖（内容不重要，但文件得在），
+        // updater-script 里只写 #MAGISK。
         copy {
-            from file('magisk/install.sh')
+            from file('magisk/META-INF')
+            into file("${magiskDir}/META-INF")
+        }
+        // 官方文档明确要求不要在模块 zip 里放 install.sh（有历史包袱），权限改在 customize.sh 里设。
+        copy {
+            from file('magisk/customize.sh')
             into magiskDir
         }
-
         copy {
-            from fileTree(dir: 'magisk/common')
-            into file("${magiskDir}/common")
+            from file('magisk/post-fs-data.sh')
+            into magiskDir
+        }
+        copy {
+            from file('magisk/service.sh')
+            into magiskDir
         }
         copy {
             from fileTree(dir: 'magisk/system')
@@ -232,8 +326,8 @@ tasks.register('prepareMagiskFiles', Task) {
             into file("${magiskDir}/system/bin")
         }
 
-        // Magisk 侧的文件必须是 LF 行尾。
-        fileTree(dir: magiskDir, includes: ['**/*.sh', 'system/bin/**', 'module.prop']).files.each { f ->
+        // Magisk 侧的文件必须是 LF 行尾（包括 update-binary —— 它也是被 shell 执行的）。
+        fileTree(dir: magiskDir, includes: ['**/*.sh', 'META-INF/**', 'system/bin/**', 'module.prop']).files.each { f ->
             if (f.isFile()) {
                 f.setText(f.getText('UTF-8').replace('\r\n', '\n').replace('\r', '\n'), 'UTF-8')
             }

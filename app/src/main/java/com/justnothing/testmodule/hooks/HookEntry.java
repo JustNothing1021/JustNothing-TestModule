@@ -32,6 +32,9 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -68,6 +71,9 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
     static {
         packageHooks.add(new ShellServiceHook());
         packageHooks.add(new InspectionAgentHook());
+        // 清单是编译期生成好的常量（HookPackRegistry），这里一个文件都不读。
+        // ⚠ 别改回 getResources("hookpack.list")：这个静态块跑在 zygote 里，读资源会把
+        // 模块自己的 APK 打开并留下 fd，重装模块后整机新进程全崩。详见 HookPackLoader 的类注释。
         HookPackLoader.register(packageHooks, zygoteHooks);
         AppEnvironment.setHookEnv();
         logger.info("HookEntry已加载");
@@ -349,6 +355,41 @@ public final class HookEntry implements IXposedHookLoadPackage, IXposedHookZygot
                 String.format(Locale.getDefault(), "%.3f", end - begin));
 
         BootMonitor.logBootStatus();
+        warnIfOwnApkHeldOpen();
+    }
+
+    /**
+     * zygote 阶段的自检：fd 表里不该有我们自己的 APK。
+     *
+     * <p>zygote 一旦打开模块 APK 并留住 fd（典型来源：从 classloader 读资源），重装模块后
+     * 那条 fd 会悬空，之后每个新进程都在 fork 的 specialize 阶段 SIGABRT —— 那是 native 层、
+     * 在任何 Java 执行之前，打日志和 try/catch 都拦不住，现场只留一句 {@code Failed open}。
+     * 详见 {@link HookPackLoader} 的类注释。</p>
+     *
+     * <p>这里主动查一遍，把"平时完全静默的炸弹"变成启动时就能在日志里看见的 error。
+     * 此刻我们就在 zygote 进程里，所以 {@code /proc/self/fd} 就是 zygote 的 fd 表。</p>
+     */
+    private void warnIfOwnApkHeldOpen() {
+        String ownApk = DataBridge.getModulePath();
+        if (ownApk == null || ownApk.isEmpty()) {
+            return;
+        }
+        File[] fds = new File("/proc/self/fd").listFiles();
+        if (fds == null) {
+            return;
+        }
+        for (File fd : fds) {
+            try {
+                Path target = Files.readSymbolicLink(fd.toPath());
+                if (ownApk.equals(target.toString())) {
+                    logger.error("zygote 正持有自己的 APK fd（" + fd.getName() + " -> " + target + "）。"
+                            + "重装模块后这条 fd 会悬空，之后每个新进程启动都会 SIGABRT。"
+                            + "zygote 阶段（静态块 / initZygote）不要碰 APK，也不要从 classloader 读资源。");
+                }
+            } catch (IOException e) {
+                // 有几种 fd 读不了 targets（socket / anon_inode 等），跳过就是
+            }
+        }
     }
 
     @Override

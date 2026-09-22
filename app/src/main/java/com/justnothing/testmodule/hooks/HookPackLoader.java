@@ -2,24 +2,16 @@ package com.justnothing.testmodule.hooks;
 
 import com.justnothing.testmodule.utils.logging.Logger;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Enumeration;
-import java.util.HashSet;
+import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
 
 /**
  * Hook 组件包加载器。
  * <p>
- * 组件包是构建期可选塞进 {@code app/hookpacks/} 的 jar。每个 jar 里放一份清单
- * {@value #MANIFEST_RESOURCE}，一行一个 Hook 类的全限定名（{@code #} 开头算注释）。
- * 多个组件包的清单会被构建期拼接成一份，所以放几个都行，不用改代码。
+ * 组件包是构建期可选塞进 {@code app/hookpacks/} 的 jar。每个 jar 根目录放一份清单
+ * {@code hookpack.list}，一行一个 Hook 类的全限定名（{@code #} 开头算注释）。
+ * 多份清单由构建期的 {@code generateHookPackRegistry} 任务拼成一份，生成
+ * {@link HookPackRegistry} 常量类。所以放几个组件包都行，不用改代码。
  * </p>
  * <p>
  * Hook 的身份标识就是它的全限定类名（见 {@link XposedBasicHook#getHookName()}），
@@ -32,6 +24,34 @@ import java.util.Set;
  * </p>
  * <p>
  * 没有组件包时这里只打一条日志就跳过，所以公开构建照样能跑。
+ * </p>
+ *
+ * <h3>为什么清单是编译期常量，而不是运行时读出来的</h3>
+ * <p>
+ * <b>这是踩过一次大坑换来的，别改回去。</b> {@link HookEntry} 的静态块在 <b>zygote 进程</b>
+ * 里执行（EdXposed 调 {@code initZygote} 之前得先把那个类初始化）。静态块里只要调一次
+ * {@code ClassLoader.getResources("hookpack.list")}，classloader 就会把<b>模块自己的 APK</b>
+ * 当 zip 打开来翻条目 —— zygote 的 fd 表里从此多一条指向
+ * {@code /data/app/<pkg>-<后缀>/base.apk} 的 fd（{@code /proc/<zygote>/maps} 里也会多一条
+ * {@code r--s ... base.apk}）。
+ * </p>
+ * <p>
+ * 这条 fd 平时完全无害，但<b>重装模块</b>时 PackageManager 会把包挪到新的
+ * {@code /data/app/<pkg>-<新后缀>/} 并删掉旧目录，fd 就此悬空；之后<b>任何一个新进程启动</b>，
+ * fork 出来的子进程在 specialize 阶段要按路径重开 keep-list 里的描述符，{@code open()} 失败
+ * → {@code RuntimeAbort("Unable to reopen whitelisted descriptors")} → SIGABRT，
+ * 整机所有新进程级联崩掉，只能重启恢复。
+ * </p>
+ * <p>
+ * 这件事发生在 <b>native 层、任何 Java 执行之前</b>
+ * （{@code com_android_internal_os_Zygote.cpp:1101}），所以打日志、抛异常都拦不住，
+ * 崩溃现场也只有一句 {@code Failed open}。实测对照：留着那次 {@code getResources} 的开机，
+ * zygote 握着 {@code base.apk} 的 fd；把清单挪到编译期之后，fd 消失。八个已启用模块里
+ * 也只有我们这样（其余七个的 zygote 阶段只碰 oat，从不打开 APK）。
+ * </p>
+ * <p>
+ * 一句话：<b>zygote 阶段（含 {@link HookEntry} 的静态块和 {@code initZygote}）不要碰自己的
+ * APK，也不要从 classloader 读任何资源。</b> {@link HookEntry} 结尾有一道自检盯着这条。
  * </p>
  *
  * <h3>怎么写一个组件包</h3>
@@ -49,7 +69,8 @@ import java.util.Set;
  *       -cp "app/build/hookApi/hook-api.jar;$ANDROID_HOME/platforms/android-36/android.jar" \
  *       -d classes YourHook.java</pre></li>
  *   <li>{@code jar cf my-hookpack.jar -C classes .}，把 jar 丢进 {@code app/hookpacks/}
- *       再正常构建 APK 就行。里面的 Hook 会和内置 Hook 一起在系统启动时装上。</li>
+ *       再正常构建 APK 就行。清单会在构建期被并进 {@link HookPackRegistry}，
+ *       里面的 Hook 和内置 Hook 一起在系统启动时装上。</li>
  * </ol>
  * <p>
  * 注意 {@code hook-api.jar} 里的 {@code include} 白名单在 {@code app/build.gradle} 的
@@ -60,9 +81,6 @@ public final class HookPackLoader {
 
     private static final Logger logger = Logger.getLoggerForName("HookPackLoader");
 
-    /** 组件包清单在 jar 里的路径。多份由 {@code packaging.resources.merges} 拼成一份。 */
-    private static final String MANIFEST_RESOURCE = "hookpack.list";
-
     private HookPackLoader() {}
 
     /**
@@ -72,7 +90,7 @@ public final class HookPackLoader {
      * @param zygoteHooks  组件包可往里追加 Zygote Hook 的列表
      */
     public static void register(List<PackageHook> packageHooks, List<ZygoteHook> zygoteHooks) {
-        List<String> classNames = readManifest();
+        List<String> classNames = Arrays.asList(HookPackRegistry.HOOK_CLASSES);
         if (classNames.isEmpty()) {
             logger.info("未发现 Hook 组件包，只加载内置 Hook");
             return;
@@ -104,35 +122,5 @@ public final class HookPackLoader {
         }
         logger.info("已注册组件包的 Hook: " + ((XposedBasicHook<?>) hook).getHookName());
         return true;
-    }
-
-    /** 读出所有组件包清单里的类名，按出现顺序去重。 */
-    private static List<String> readManifest() {
-        List<String> classNames = new ArrayList<>();
-        Set<String> seen = new HashSet<>();
-        try {
-            Enumeration<URL> manifests = HookPackLoader.class.getClassLoader()
-                    .getResources(MANIFEST_RESOURCE);
-            while (manifests.hasMoreElements()) {
-                collectFrom(manifests.nextElement(), classNames, seen);
-            }
-        } catch (IOException e) {
-            logger.error("读取组件包清单失败", e);
-        }
-        return classNames;
-    }
-
-    private static void collectFrom(URL manifest, List<String> classNames, Set<String> seen)
-            throws IOException {
-        try (InputStream in = manifest.openStream();
-             BufferedReader reader = new BufferedReader(
-                     new InputStreamReader(in, StandardCharsets.UTF_8))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String className = line.trim();
-                if (className.isEmpty() || className.startsWith("#")) continue;
-                if (seen.add(className)) classNames.add(className);
-            }
-        }
     }
 }
